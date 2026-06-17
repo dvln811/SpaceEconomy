@@ -534,16 +534,15 @@ function animate(){
 
   // Move ships: client-side prediction between API updates
   const lerpSpeed=0.05;
-  const tickRate=1.0; // server ticks per second
-  const progressPerFrame=(0.1/60)*tickRate; // approximate server progress rate per render frame
   shipMeshes.forEach((mesh,i)=>{
     if(i>=liveShips.length) return;
     const ship=liveShips[i];
     const locIdx=systemIdToIndex[ship?.location];
     const destIdx=systemIdToIndex[ship?.destination];
-    // Predict forward for traveling ships
+    // Predict forward for traveling ships (server does 0.1*speed per second, we do per frame at 60fps)
     if(ship&&ship.state==='traveling'&&locIdx!==undefined&&destIdx!==undefined){
-      mesh.userData.clientProgress=(mesh.userData.clientProgress||ship.progress)+progressPerFrame*ship.progress*0.5;
+      const serverRate=0.1*(ship.speed||1.0); // progress per second
+      mesh.userData.clientProgress=(mesh.userData.clientProgress||ship.progress)+(serverRate/60);
       if(mesh.userData.clientProgress>1) mesh.userData.clientProgress=1;
       const a=systems[locIdx],b=systems[destIdx];
       const p=mesh.userData.clientProgress;

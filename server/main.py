@@ -100,7 +100,7 @@ def api_ships():
         ships.append({
             "name": s.name, "role": s.role, "ship_class": s.ship_class,
             "state": s.state, "location": s.location, "destination": s.destination,
-            "progress": round(s.progress, 2), "cargo": s.cargo,
+            "progress": round(s.progress, 2), "speed": round(s.speed, 2), "cargo": s.cargo,
         })
     return jsonify({"tick": sim.tick_count, "ships": ships})
 
