@@ -453,7 +453,7 @@ async function drawRouteLines(){
         routes.push([fromIdx,toIdx]);
         const pts=[new THREE.Vector3(systems[fromIdx].x,systems[fromIdx].y,systems[fromIdx].z),new THREE.Vector3(systems[toIdx].x,systems[toIdx].y,systems[toIdx].z)];
         const geo=new THREE.BufferGeometry().setFromPoints(pts);
-        const mat=new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.1});
+        const mat=new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.3});
         const line=new THREE.Line(geo,mat);
         scene.add(line);
         routeLines.push(line);
