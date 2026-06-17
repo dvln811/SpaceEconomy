@@ -484,14 +484,30 @@ routes.forEach(([a,b])=>{
 const shipData=[];
 const shipMeshes=[];
 let liveShips=[];
-const shipColors=[0x4fc3f7,0x66bb6a,0xffd54f,0xff8a65,0xab47bc];
+
+function makeShipTexture(shape){
+  const c=document.createElement('canvas');c.width=32;c.height=32;
+  const ctx=c.getContext('2d');
+  ctx.strokeStyle='#b0d4f0';ctx.lineWidth=2;ctx.fillStyle='rgba(176,212,240,0.15)';
+  ctx.beginPath();
+  if(shape==='triangle'){ctx.moveTo(16,4);ctx.lineTo(28,28);ctx.lineTo(4,28);ctx.closePath();}
+  else if(shape==='square'){ctx.rect(6,6,20,20);}
+  else if(shape==='pentagon'){for(let i=0;i<5;i++){const a=Math.PI*2*i/5-Math.PI/2;ctx.lineTo(16+12*Math.cos(a),16+12*Math.sin(a));}ctx.closePath();}
+  else{ctx.arc(16,16,10,0,Math.PI*2);} // circle fallback
+  ctx.fill();ctx.stroke();
+  return new THREE.CanvasTexture(c);
+}
+
+const traderTex=makeShipTexture('square');
+const minerTex=makeShipTexture('triangle');
+
 for(let i=0;i<40;i++){
-  const col=shipColors[Math.floor(Math.random()*5)];
-  const geo=new THREE.SphereGeometry(2.5,8,8);
-  const mat=new THREE.MeshBasicMaterial({color:col});
-  const mesh=new THREE.Mesh(geo,mat);
-  scene.add(mesh);
-  shipMeshes.push(mesh);
+  const tex=i<30?traderTex:minerTex;
+  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,opacity:0.9});
+  const sprite=new THREE.Sprite(mat);
+  sprite.scale.set(8,8,1);
+  scene.add(sprite);
+  shipMeshes.push(sprite);
   shipData.push({route:Math.floor(Math.random()*routes.length),progress:Math.random(),speed:0.0004+Math.random()*0.0008});
 }
 
