@@ -40,12 +40,20 @@ class Simulation:
         trader_classes = ["Bison Mk.III", "Ox Hauler", "Mule Freighter", "Clydesdale", "Pinto Runner"]
         for i in range(count):
             loc = random.choice(system_ids)
-            self.ships.append(NPCShip(
+            ship = NPCShip(
                 id=f"trader_{i}", name=NPC_TRADER_NAMES[i % len(NPC_TRADER_NAMES)],
                 cargo_capacity=150 + random.randint(0, 200), fuel=100.0,
                 location=loc, speed=0.8 + random.random() * 0.6, state="idle", role="trader",
                 ship_class=trader_classes[i % len(trader_classes)],
-            ))
+            )
+            # Stagger starts: some begin already traveling
+            if random.random() < 0.6:
+                dest = random.choice(self.universe[loc].connections) if self.universe[loc].connections else ""
+                if dest:
+                    ship.destination = dest
+                    ship.state = "traveling"
+                    ship.progress = random.random() * 0.5
+            self.ships.append(ship)
 
     def _spawn_miners(self, count: int):
         mining_systems = [sid for sid, sys in self.universe.items() if sys.asteroid_fields]

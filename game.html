@@ -891,7 +891,7 @@ function updateLiveShipList(){
     div.innerHTML=`<div class="ship-name">${ship.name}</div><div class="ship-detail">${ship.ship_class||ship.role} · ${status}</div><div class="ship-route">${locName}</div>`;
     div.addEventListener('click',()=>focusShip(i));
     shipList.appendChild(div);
-    if(selectedShip===i) div.scrollIntoView({block:'nearest'});
+    if(selectedShip===i) setTimeout(()=>div.scrollIntoView({block:'nearest',behavior:'smooth'}),0);
   });
 }
 
