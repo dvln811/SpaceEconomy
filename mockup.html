@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Space Economy - Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Orbitron:wght@400;600;700;900&display=swap" rel="stylesheet">
+<div style="position:absolute;opacity:0;pointer-events:none;font-family:Orbitron;font-weight:600">.</div>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:13px}
+
+/* Layout */
+.app{display:grid;grid-template-columns:280px 1fr 320px;grid-template-rows:48px 1fr 180px;height:100vh;gap:1px;background:#1a2030}
+
+/* Header */
+.header{grid-column:1/-1;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:0 20px;gap:20px}
+.header h1{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:#4fc3f7;letter-spacing:3px;text-transform:uppercase}
+.header .clock{margin-left:auto;color:#5a7a9a;font-size:11px}
+.header .credits{color:#ffd54f;font-size:12px;margin-left:20px}
+.header .credits span{color:#fff;font-weight:600}
+.header .rep{color:#66bb6a;font-size:12px;margin-left:16px}
+
+/* Left Panel - Systems */
+.left-panel{background:#0a0e18;overflow-y:auto;padding:12px;border-right:1px solid #1a2844}
+.panel-title{font-family:'Orbitron',sans-serif;font-size:10px;color:#4a6a8a;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #152238}
+.system-item{padding:8px 10px;border-radius:4px;margin-bottom:4px;cursor:pointer;border:1px solid transparent;transition:all .15s}
+.system-item:hover{background:#111a2a;border-color:#1a3050}
+.system-item.active{background:#0d1a2f;border-color:#4fc3f7;box-shadow:0 0 8px #4fc3f710}
+.system-name{font-size:12px;font-weight:500;color:#e0e8f0}
+.system-type{font-size:10px;color:#5a7a9a;margin-top:2px}
+.system-prices{display:flex;gap:8px;margin-top:4px}
+.price-up{color:#66bb6a;font-size:10px}
+.price-down{color:#ef5350;font-size:10px}
+.price-neutral{color:#5a7a9a;font-size:10px}
+
+/* Main - Star Map */
+.main{background:#05080f;position:relative;overflow:hidden}
+.starfield{position:absolute;inset:0;width:100%;height:100%}
+.map-label{position:absolute;bottom:12px;left:12px;font-size:10px;color:#3a5a7a;letter-spacing:1px;text-transform:uppercase}
+.map-zoom{position:absolute;bottom:12px;right:12px;display:flex;flex-direction:column;gap:4px}
+.map-zoom button{width:28px;height:28px;background:#0a1020;border:1px solid #1a3050;color:#4fc3f7;border-radius:3px;cursor:pointer;font-size:14px}
+
+/* Right Panel - Market */
+.right-panel{background:#0a0e18;overflow-y:auto;padding:12px;border-left:1px solid #1a2844}
+.commodity-row{display:flex;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid #0f1a28;transition:background .15s}
+.commodity-row:hover{background:#111a28}
+.commodity-name{font-size:11px;color:#b0c4d8}
+.commodity-price{font-size:12px;font-weight:600;color:#ffd54f}
+.commodity-change{font-size:10px;width:50px;text-align:right}
+.commodity-change.up{color:#66bb6a}
+.commodity-change.down{color:#ef5350}
+.commodity-vol{font-size:9px;color:#3a5a7a;text-align:right;width:40px}
+.sparkline{width:60px;height:20px}
+.sparkline polyline{fill:none;stroke-width:1.2}
+
+/* Bottom Panel - Ship/Activity */
+.bottom{grid-column:1/-1;background:#0a0e18;border-top:1px solid #1a2844;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px}
+.bottom-section{padding:12px 16px}
+.ship-stat{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #0f1a28}
+.ship-stat .label{color:#5a7a9a;font-size:10px}
+.ship-stat .value{color:#e0e8f0;font-size:11px}
+.activity-item{padding:4px 0;font-size:10px;color:#6a8aa0;border-bottom:1px solid #0a1420}
+.activity-item .time{color:#3a5a7a;margin-right:8px}
+.activity-item .highlight{color:#4fc3f7}
+.activity-item .profit{color:#66bb6a}
+.activity-item .loss{color:#ef5350}
+.route-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #0f1a28}
+.route-dot{width:6px;height:6px;border-radius:50%;background:#4fc3f7;box-shadow:0 0 4px #4fc3f7}
+.route-dot.warning{background:#ffd54f;box-shadow:0 0 4px #ffd54f}
+.route-dot.danger{background:#ef5350;box-shadow:0 0 4px #ef5350}
+.route-info{font-size:10px;color:#8aa0b8}
+.route-profit{margin-left:auto;font-size:11px;color:#66bb6a}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <h1>Hauler's Almanac</h1>
+    <a href="design.html" style="font-size:10px;color:#5a7a9a;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:Orbitron,sans-serif;transition:all .15s" onmouseover="this.style.color='#4fc3f7';this.style.borderColor='#4fc3f7'" onmouseout="this.style.color='#5a7a9a';this.style.borderColor='#1a2844'">Design Doc</a>
+    <div class="credits">Balance: <span>₡ 847,320</span></div>
+    <div class="rep">Rep: Merchant Guild ★★★☆</div>
+    <div class="clock">Cycle 2847.3 | 14:32 GST</div>
+  </div>
+
+  <!-- Left: Systems List -->
+  <div class="left-panel">
+    <div class="panel-title">Known Systems</div>
+    <div class="system-item active">
+      <div class="system-name">⬡ Cygnus Station</div>
+      <div class="system-type">Industrial Hub · Pop 2.4M</div>
+      <div class="system-prices"><span class="price-up">▲ Ore +12%</span><span class="price-down">▼ Food -8%</span></div>
+    </div>
+    <div class="system-item">
+      <div class="system-name">⬡ Vega Outpost</div>
+      <div class="system-type">Mining Colony · Pop 180K</div>
+      <div class="system-prices"><span class="price-up">▲ Meds +22%</span><span class="price-neutral">— Ore 0%</span></div>
+    </div>
+    <div class="system-item">
+      <div class="system-name">⬡ Kepler Freeport</div>
+      <div class="system-type">Trade Hub · Pop 5.1M</div>
+      <div class="system-prices"><span class="price-down">▼ Electronics -4%</span><span class="price-up">▲ Luxuries +9%</span></div>
+    </div>
+    <div class="system-item">
+      <div class="system-name">⬡ Arcturus Refinery</div>
+      <div class="system-type">Processing · Pop 420K</div>
+      <div class="system-prices"><span class="price-up">▲ Fuel +6%</span><span class="price-down">▼ Polymers -15%</span></div>
+    </div>
+    <div class="system-item">
+      <div class="system-name">⬡ Tau Ceti Prime</div>
+      <div class="system-type">Agricultural · Pop 8.2M</div>
+      <div class="system-prices"><span class="price-down">▼ Food -18%</span><span class="price-up">▲ Machinery +11%</span></div>
+    </div>
+    <div class="system-item">
+      <div class="system-name">⬡ Wolf 359 Depot</div>
+      <div class="system-type">Frontier · Pop 12K</div>
+      <div class="system-prices"><span class="price-up">▲ Everything +30%</span></div>
+    </div>
+    <div class="system-item">
+      <div class="system-name">⬡ Procyon Gate</div>
+      <div class="system-type">Jump Nexus · Pop 1.1M</div>
+      <div class="system-prices"><span class="price-neutral">— Stable market</span></div>
+    </div>
+    <div class="system-item">
+      <div class="system-name">⬡ Sirius Dockyard</div>
+      <div class="system-type">Shipbuilding · Pop 900K</div>
+      <div class="system-prices"><span class="price-up">▲ Alloys +8%</span><span class="price-down">▼ Components -5%</span></div>
+    </div>
+  </div>
+
+  <!-- Main: Star Map -->
+  <div class="main">
+    <canvas id="starmap" class="starfield"></canvas>
+    <div class="map-label">Sector 7G · Local Cluster</div>
+    <div class="map-zoom">
+      <button>+</button>
+      <button>−</button>
+    </div>
+  </div>
+
+  <!-- Right: Market Data -->
+  <div class="right-panel">
+    <div class="panel-title">Cygnus Station · Market</div>
+    <div class="commodity-row">
+      <div class="commodity-name">Iron Ore</div>
+      <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#66bb6a" points="0,18 8,15 16,12 24,14 32,10 40,8 48,6 56,4 60,3"/></svg>
+      <div class="commodity-price">₡ 284</div>
+      <div class="commodity-change up">+12.3%</div>
+    </div>
+    <div class="commodity-row">
+      <div class="commodity-name">Processed Food</div>
+      <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#ef5350" points="0,4 8,6 16,8 24,7 32,10 40,13 48,15 56,16 60,17"/></svg>
+      <div class="commodity-price">₡ 52</div>
+      <div class="commodity-change down">-8.1%</div>
+    </div>
+    <div class="commodity-row">
+      <div class="commodity-name">Medical Supplies</div>
+      <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#4fc3f7" points="0,10 8,11 16,9 24,10 32,10 40,9 48,11 56,10 60,10"/></svg>
+      <div class="commodity-price">₡ 1,240</div>
+      <div class="commodity-change up">+1.2%</div>
+    </div>
+    <div class="commodity-row">
+      <div class="commodity-name">Fuel Cells</div>
+      <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#66bb6a" points="0,14 8,13 16,11 24,12 32,10 40,9 48,8 56,7 60,7"/></svg>
+      <div class="commodity-price">₡ 890</div>
+      <div class="commodity-change up">+5.8%</div>
+    </div>
+    <div class="commodity-row">
+      <div class="commodity-name">Electronics</div>
+      <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#ef5350" points="0,8 8,9 16,10 24,11 32,10 40,12 48,13 56,14 60,13"/></svg>
+      <div class="commodity-price">₡ 3,450</div>
+      <div class="commodity-change down">-3.9%</div>
+    </div>
+    <div class="commodity-row">
+      <div class="commodity-name">Luxury Goods</div>
+      <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#66bb6a" points="0,16 8,14 16,12 24,11 32,10 40,8 48,7 56,5 60,4"/></svg>
+      <div class="commodity-price">₡ 7,820</div>
+      <div class="commodity-change up">+9.4%</div>
+    </div>
+    <div class="commodity-row">
+      <div class="commodity-name">Polymers</div>
+      <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#ef5350" points="0,6 8,8 16,9 24,11 32,13 40,14 48,16 56,17 60,18"/></svg>
+      <div class="commodity-price">₡ 156</div>
+      <div class="commodity-change down">-14.7%</div>
+    </div>
+    <div class="commodity-row">
+      <div class="commodity-name">Alloys</div>
+      <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#66bb6a" points="0,12 8,11 16,12 24,10 32,9 40,8 48,7 56,6 60,5"/></svg>
+      <div class="commodity-price">₡ 2,100</div>
+      <div class="commodity-change up">+8.2%</div>
+    </div>
+    <div class="commodity-row">
+      <div class="commodity-name">Narcotics</div>
+      <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#ffd54f" points="0,10 8,6 16,14 24,4 32,16 40,8 48,12 56,5 60,15"/></svg>
+      <div class="commodity-price">₡ 12,400</div>
+      <div class="commodity-change up">+44.1%</div>
+    </div>
+  </div>
+
+  <!-- Bottom: Ship + Activity + Routes -->
+  <div class="bottom">
+    <div class="bottom-section">
+      <div class="panel-title">Your Ship · "Rusty Venture"</div>
+      <div class="ship-stat"><span class="label">Class</span><span class="value">Bison Mk.III Freighter</span></div>
+      <div class="ship-stat"><span class="label">Cargo</span><span class="value">340 / 500 units</span></div>
+      <div class="ship-stat"><span class="label">Fuel</span><span class="value" style="color:#ffd54f">62% ████████░░░░</span></div>
+      <div class="ship-stat"><span class="label">Hull</span><span class="value" style="color:#66bb6a">94% ██████████░░</span></div>
+      <div class="ship-stat"><span class="label">Location</span><span class="value">Docked · Cygnus Station</span></div>
+      <div class="ship-stat"><span class="label">Manifest</span><span class="value">220× Ore, 80× Meds, 40× Fuel</span></div>
+    </div>
+    <div class="bottom-section">
+      <div class="panel-title">Activity Feed</div>
+      <div class="activity-item"><span class="time">14:28</span>NPC hauler <span class="highlight">Meridian Express</span> arrived at Cygnus (180× Food)</div>
+      <div class="activity-item"><span class="time">14:25</span>Ore price at Cygnus <span class="profit">▲ +2.1%</span> (supply shortage)</div>
+      <div class="activity-item"><span class="time">14:20</span>Pirate activity reported near <span class="loss">Wolf 359 corridor</span></div>
+      <div class="activity-item"><span class="time">14:12</span>You sold 60× Electronics at Cygnus for <span class="profit">₡ 207,000</span></div>
+      <div class="activity-item"><span class="time">14:08</span>Fuel price spiked at Arcturus <span class="profit">▲ +6%</span> (refinery fire)</div>
+      <div class="activity-item"><span class="time">13:55</span>Trade Guild contract available: deliver Meds to Vega (+22% bonus)</div>
+    </div>
+    <div class="bottom-section">
+      <div class="panel-title">Profitable Routes</div>
+      <div class="route-item"><span class="route-dot"></span><div class="route-info">Cygnus → Vega Outpost<br><span style="color:#5a7a9a">Medical Supplies · 3.2 hr</span></div><div class="route-profit">+₡ 34,200</div></div>
+      <div class="route-item"><span class="route-dot"></span><div class="route-info">Tau Ceti → Cygnus<br><span style="color:#5a7a9a">Food · 1.8 hr</span></div><div class="route-profit">+₡ 18,400</div></div>
+      <div class="route-item"><span class="route-dot warning"></span><div class="route-info">Kepler → Wolf 359<br><span style="color:#5a7a9a">Everything · 6.1 hr · ⚠ Risky</span></div><div class="route-profit">+₡ 89,000</div></div>
+      <div class="route-item"><span class="route-dot danger"></span><div class="route-info">Anywhere → Frontier<br><span style="color:#5a7a9a">Narcotics · Illegal · 8+ hr</span></div><div class="route-profit">+₡ 200,000+</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('starmap');
+const ctx = canvas.getContext('2d');
+
+// Camera
+let cam = {x:0, y:0, zoom:1};
+let dragging = false, dragStart = {x:0,y:0}, camStart = {x:0,y:0};
+
+const systems = [
+  {name:'Cygnus Station', x:0, y:0, size:8, color:'#4fc3f7', type:'industrial'},
+  {name:'Vega Outpost', x:320, y:-180, size:5, color:'#ffd54f', type:'mining'},
+  {name:'Kepler Freeport', x:-200, y:150, size:9, color:'#4fc3f7', type:'trade'},
+  {name:'Arcturus Refinery', x:250, y:200, size:6, color:'#ff8a65', type:'processing'},
+  {name:'Tau Ceti Prime', x:-300, y:-120, size:7, color:'#66bb6a', type:'agricultural'},
+  {name:'Wolf 359 Depot', x:480, y:350, size:4, color:'#ef5350', type:'frontier'},
+  {name:'Procyon Gate', x:60, y:280, size:6, color:'#ab47bc', type:'nexus'},
+  {name:'Sirius Dockyard', x:-380, y:200, size:6, color:'#78909c', type:'shipyard'},
+  {name:'Barnard\'s Reach', x:-150, y:-320, size:5, color:'#ffd54f', type:'mining'},
+  {name:'Altair Junction', x:150, y:-300, size:7, color:'#4fc3f7', type:'trade'},
+  {name:'Deneb Anchorage', x:-480, y:-50, size:5, color:'#78909c', type:'military'},
+  {name:'Rigel Depot', x:500, y:-100, size:4, color:'#ef5350', type:'frontier'},
+  {name:'Polaris Haven', x:-100, y:420, size:6, color:'#66bb6a', type:'agricultural'},
+  {name:'Antares Forge', x:380, y:80, size:6, color:'#ff8a65', type:'processing'},
+  {name:'Capella Market', x:-350, y:380, size:7, color:'#4fc3f7', type:'trade'},
+  {name:'Betelgeuse Yard', x:200, y:450, size:5, color:'#78909c', type:'shipyard'},
+  {name:'Aldebaran Mine', x:-500, y:-280, size:4, color:'#ffd54f', type:'mining'},
+  {name:'Spica Terminal', x:600, y:200, size:5, color:'#ab47bc', type:'nexus'},
+  {name:'Fomalhaut Colony', x:-200, y:-480, size:4, color:'#66bb6a', type:'agricultural'},
+  {name:'Canopus Station', x:100, y:600, size:6, color:'#4fc3f7', type:'industrial'},
+  {name:'Regulus Port', x:-600, y:150, size:5, color:'#ffd54f', type:'mining'},
+  {name:'Castor Relay', x:450, y:-280, size:4, color:'#ab47bc', type:'nexus'},
+  {name:'Pollux Outpost', x:-400, y:-400, size:4, color:'#ef5350', type:'frontier'},
+  {name:'Achernar Base', x:300, y:-450, size:5, color:'#78909c', type:'military'},
+];
+
+// Generate routes (connect nearby systems)
+const routes = [];
+for(let i=0;i<systems.length;i++){
+  let dists=[];
+  for(let j=0;j<systems.length;j++){
+    if(i===j)continue;
+    const dx=systems[i].x-systems[j].x, dy=systems[i].y-systems[j].y;
+    dists.push({j,d:Math.sqrt(dx*dx+dy*dy)});
+  }
+  dists.sort((a,b)=>a.d-b.d);
+  for(let k=0;k<Math.min(3,dists.length);k++){
+    const pair=[Math.min(i,dists[k].j),Math.max(i,dists[k].j)];
+    if(!routes.some(r=>r[0]===pair[0]&&r[1]===pair[1]))routes.push(pair);
+  }
+}
+
+// NPC ships
+let ships=[];
+for(let i=0;i<15;i++){
+  ships.push({
+    route:Math.floor(Math.random()*routes.length),
+    progress:Math.random(),
+    speed:0.0004+Math.random()*0.0008,
+    color:['#4fc3f7','#66bb6a','#ffd54f','#ff8a65','#ab47bc'][Math.floor(Math.random()*5)]
+  });
+}
+
+// Background stars (in world space, large area)
+let stars=[];
+for(let i=0;i<800;i++){
+  stars.push({x:(Math.random()-0.5)*2000,y:(Math.random()-0.5)*2000,b:Math.random()*0.4+0.1,s:Math.random()*1.2+0.3});
+}
+
+function resize(){
+  const parent=canvas.parentElement;
+  canvas.width=parent.clientWidth;
+  canvas.height=parent.clientHeight;
+}
+window.addEventListener('resize',resize);
+
+function worldToScreen(wx,wy){
+  const cx=canvas.width/2, cy=canvas.height/2;
+  return {x:cx+(wx-cam.x)*cam.zoom, y:cy+(wy-cam.y)*cam.zoom};
+}
+
+function draw(){
+  const w=canvas.width, h=canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  // Nebula bg
+  const grd=ctx.createRadialGradient(w*0.4,h*0.4,0,w*0.5,h*0.5,w*0.6);
+  grd.addColorStop(0,'rgba(15,30,60,0.2)');
+  grd.addColorStop(0.5,'rgba(10,15,40,0.1)');
+  grd.addColorStop(1,'rgba(5,8,15,0)');
+  ctx.fillStyle=grd;
+  ctx.fillRect(0,0,w,h);
+
+  // Stars (parallax - move slower)
+  stars.forEach(s=>{
+    const p=worldToScreen(s.x*0.6, s.y*0.6);
+    if(p.x<-5||p.x>w+5||p.y<-5||p.y>h+5)return;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,s.s*cam.zoom,0,Math.PI*2);
+    ctx.fillStyle=`rgba(180,200,220,${s.b})`;
+    ctx.fill();
+  });
+
+  // Trade routes
+  routes.forEach(([a,b])=>{
+    const pa=worldToScreen(systems[a].x,systems[a].y);
+    const pb=worldToScreen(systems[b].x,systems[b].y);
+    ctx.beginPath();
+    ctx.moveTo(pa.x,pa.y);
+    ctx.lineTo(pb.x,pb.y);
+    ctx.strokeStyle='rgba(79,195,247,0.07)';
+    ctx.lineWidth=1*cam.zoom;
+    ctx.stroke();
+    ctx.setLineDash([4*cam.zoom,8*cam.zoom]);
+    ctx.strokeStyle='rgba(79,195,247,0.14)';
+    ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  // Ships
+  ships.forEach(ship=>{
+    const [a,b]=routes[ship.route];
+    const ax=systems[a].x,ay=systems[a].y;
+    const bx=systems[b].x,by=systems[b].y;
+    const wx=ax+(bx-ax)*ship.progress;
+    const wy=ay+(by-ay)*ship.progress;
+    const p=worldToScreen(wx,wy);
+    if(p.x>-20&&p.x<w+20&&p.y>-20&&p.y<h+20){
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,2.5*cam.zoom,0,Math.PI*2);
+      ctx.fillStyle=ship.color;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,5*cam.zoom,0,Math.PI*2);
+      ctx.fillStyle=ship.color+'33';
+      ctx.fill();
+    }
+    ship.progress+=ship.speed;
+    if(ship.progress>1){ship.progress=0;ship.route=Math.floor(Math.random()*routes.length);}
+  });
+
+  // Systems
+  systems.forEach((s,i)=>{
+    const p=worldToScreen(s.x,s.y);
+    if(p.x<-50||p.x>w+50||p.y<-50||p.y>h+50)return;
+    const r=s.size*cam.zoom;
+    // Glow
+    const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r*3);
+    g.addColorStop(0,s.color+'55');
+    g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,r*3,0,Math.PI*2);
+    ctx.fill();
+    // Dot
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,r,0,Math.PI*2);
+    ctx.fillStyle=s.color;
+    ctx.fill();
+    // Ring
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,r+3*cam.zoom,0,Math.PI*2);
+    ctx.strokeStyle=s.color+'44';
+    ctx.lineWidth=1;
+    ctx.stroke();
+    // Label
+    if(cam.zoom>0.5){
+      ctx.fillStyle='rgba(200,212,224,0.8)';
+      ctx.font=`600 ${Math.max(9,10*cam.zoom)}px Orbitron, sans-serif`;
+      ctx.textAlign='center';
+      ctx.fillText(s.name, p.x, p.y+r+12*cam.zoom);
+    }
+  });
+
+  // Player at Cygnus
+  const pp=worldToScreen(systems[0].x,systems[0].y);
+  ctx.beginPath();
+  ctx.arc(pp.x,pp.y,14*cam.zoom,0,Math.PI*2);
+  ctx.strokeStyle='#4fc3f7';
+  ctx.lineWidth=2;
+  ctx.setLineDash([3*cam.zoom,3*cam.zoom]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#4fc3f7';
+  ctx.font=`bold ${Math.max(8,9*cam.zoom)}px "JetBrains Mono"`;
+  ctx.textAlign='center';
+  ctx.fillText('YOU', pp.x, pp.y-20*cam.zoom);
+
+  requestAnimationFrame(draw);
+}
+
+// Pan
+canvas.addEventListener('mousedown',e=>{dragging=true;dragStart={x:e.clientX,y:e.clientY};camStart={x:cam.x,y:cam.y};canvas.style.cursor='grabbing'});
+canvas.addEventListener('mousemove',e=>{if(!dragging)return;cam.x=camStart.x-(e.clientX-dragStart.x)/cam.zoom;cam.y=camStart.y-(e.clientY-dragStart.y)/cam.zoom;});
+canvas.addEventListener('mouseup',()=>{dragging=false;canvas.style.cursor='grab'});
+canvas.addEventListener('mouseleave',()=>{dragging=false;canvas.style.cursor='grab'});
+canvas.style.cursor='grab';
+
+// Zoom
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const factor=e.deltaY>0?0.9:1.1;
+  cam.zoom=Math.max(0.3,Math.min(4,cam.zoom*factor));
+},{passive:false});
+
+// Zoom buttons
+document.querySelectorAll('.map-zoom button').forEach((btn,i)=>{
+  btn.addEventListener('click',()=>{cam.zoom=Math.max(0.3,Math.min(4,cam.zoom*(i===0?1.3:0.7)))});
+});
+
+resize();
+document.fonts.ready.then(()=>{draw();});
+</script>
+</body>
+</html>

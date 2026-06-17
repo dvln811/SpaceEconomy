@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Space Economy - Game Design Document</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Orbitron:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html{height:100%}
+body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:14px;line-height:1.7;min-height:100%}
+
+/* Nav */
+.nav{position:sticky;top:0;z-index:100;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:0 24px;height:48px;gap:20px}
+.nav h1{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:#4fc3f7;letter-spacing:3px;text-transform:uppercase}
+.nav a{font-size:11px;color:#5a7a9a;text-decoration:none;padding:6px 14px;border:1px solid #1a2844;border-radius:3px;transition:all .15s;letter-spacing:1px;text-transform:uppercase;font-family:'Orbitron',sans-serif}
+.nav a:hover{color:#4fc3f7;border-color:#4fc3f7;background:#0d1a2f}
+
+/* Content */
+.content{max-width:900px;margin:0 auto;padding:48px 24px 96px}
+.content h2{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:700;color:#4fc3f7;letter-spacing:2px;text-transform:uppercase;margin:48px 0 16px;padding-bottom:8px;border-bottom:1px solid #1a2844}
+.content h2:first-child{margin-top:0}
+.content h3{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:600;color:#ffd54f;letter-spacing:1px;text-transform:uppercase;margin:32px 0 12px}
+.content p{margin-bottom:16px;color:#a0b4c8}
+.content ul{margin:0 0 16px 20px;color:#a0b4c8}
+.content li{margin-bottom:8px}
+.content strong{color:#e0e8f0}
+.content em{color:#4fc3f7;font-style:normal}
+
+/* Cards */
+.card{background:#0a0e18;border:1px solid #1a2844;border-radius:6px;padding:20px;margin:16px 0}
+.card-title{font-family:'Orbitron',sans-serif;font-size:11px;color:#4a6a8a;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
+
+/* Tags */
+.tag{display:inline-block;font-size:10px;padding:3px 8px;border-radius:3px;margin:2px 4px 2px 0;letter-spacing:1px;text-transform:uppercase}
+.tag-green{background:#66bb6a22;color:#66bb6a;border:1px solid #66bb6a44}
+.tag-cyan{background:#4fc3f722;color:#4fc3f7;border:1px solid #4fc3f744}
+.tag-gold{background:#ffd54f22;color:#ffd54f;border:1px solid #ffd54f44}
+.tag-red{background:#ef535022;color:#ef5350;border:1px solid #ef535044}
+.tag-purple{background:#ab47bc22;color:#ab47bc;border:1px solid #ab47bc44}
+
+/* Table */
+table{width:100%;border-collapse:collapse;margin:16px 0}
+th{font-family:'Orbitron',sans-serif;font-size:10px;color:#4a6a8a;letter-spacing:1px;text-transform:uppercase;text-align:left;padding:8px;border-bottom:1px solid #1a2844}
+td{padding:8px;border-bottom:1px solid #0f1a28;font-size:12px;color:#a0b4c8}
+
+/* Blockquote */
+blockquote{border-left:3px solid #4fc3f7;padding:12px 16px;margin:16px 0;background:#0a0f1a;color:#8aa0b8;font-style:italic}
+</style>
+</head>
+<body>
+<div class="nav">
+  <h1>Hauler's Almanac</h1>
+  <a href="mockup.html">Mockup</a>
+  <a href="design.html" style="color:#4fc3f7;border-color:#4fc3f7">Design Doc</a>
+</div>
+
+<div class="content">
+<h2>Core Vision</h2>
+
+<blockquote>
+"I'm navigating a complex, living system that I can never fully master."
+</blockquote>
+
+<p>A browser-based space economy simulation. Single-player. You are one actor, a hauler and trader, in a functioning economy driven by autonomous NPC agents. The economy is the game: emergent, agent-based, and realistic. Knowing how it works does not trivialize it, because the system is complex enough that you are always making educated bets, never guaranteed plays.</p>
+
+<div class="card">
+<div class="card-title">Design Pillars</div>
+<ul>
+<li><strong>Economy simulation IS the game</strong> - agent-based, emergent, realistic supply/demand</li>
+<li><strong>High-level decisions, not unit-level commands</strong> - you decide where to go and what to haul, not how to dodge bullets</li>
+<li><strong>Atmospheric "space trucker" vibe</strong> - Alien-era industrial space, working-class, not Star Trek polish</li>
+<li><strong>Imperfect information</strong> - you see prices where you have been recently, not omniscient market data</li>
+<li><strong>Emergent complexity</strong> - simple rules produce unpredictable outcomes</li>
+</ul>
+</div>
+
+<h2>The Player Fantasy</h2>
+
+<p>You are a scrappy independent operator making your way through a universe of shifting economics, faction politics, and calculated risk. You read the market, pick your routes, weigh danger against profit, and try to come out ahead. The universe does not revolve around you. It is indifferent to you. You succeed by being smart, not powerful.</p>
+
+<h3>Inspirations</h3>
+<ul>
+<li><em>Eve Online</em> - economy depth, market dynamics, information as power</li>
+<li><em>X4 Foundations</em> - trading loops, but less tedious micromanagement</li>
+<li><em>Stellaris</em> - grand scale, faction politics</li>
+<li><em>Alien (1979)</em> - aesthetic, working-class space, industrial grime</li>
+<li><em>Euro Truck Simulator</em> - the satisfaction of hauling, route planning</li>
+</ul>
+
+<h2>Core Loop</h2>
+
+<div class="card">
+<div class="card-title">Moment-to-Moment Gameplay</div>
+<ol style="margin-left:20px;color:#a0b4c8">
+<li style="margin-bottom:8px"><strong>Read the market</strong> - check prices, identify opportunities, assess risk</li>
+<li style="margin-bottom:8px"><strong>Plan your route</strong> - buy low here, sell high there, factor in distance, fuel, danger</li>
+<li style="margin-bottom:8px"><strong>Execute the haul</strong> - travel through space, encounter events, make in-the-moment decisions</li>
+<li style="margin-bottom:8px"><strong>Sell and assess</strong> - did prices shift while you were in transit? Did you profit?</li>
+<li style="margin-bottom:8px"><strong>Reinvest</strong> - upgrade ship, expand range, take on bigger/riskier contracts</li>
+</ol>
+</div>
+
+<h2>Progression</h2>
+
+<h3>Progression as Access, Not Power</h3>
+<p>You do not become stronger in a traditional sense. You gain <strong>access to more of the system</strong>. Progression expands what you CAN engage with, not how easily you win.</p>
+
+<table>
+<tr><th>Phase</th><th>Ship</th><th>Space</th><th>Economy</th><th>Risk</th></tr>
+<tr><td><span class="tag tag-green">Early</span></td><td>Small cargo shuttle</td><td>High-sec only</td><td>Safe, low-margin routes</td><td>Minimal</td></tr>
+<tr><td><span class="tag tag-cyan">Mid</span></td><td>Proper freighter</td><td>Low-sec accessible</td><td>Riskier goods, faction contracts</td><td>Moderate</td></tr>
+<tr><td><span class="tag tag-gold">Late</span></td><td>Specialized vessels</td><td>Null-sec, frontier</td><td>Rare goods, smuggling, infrastructure</td><td>High</td></tr>
+<tr><td><span class="tag tag-purple">Endgame</span></td><td>Fleet / flagship</td><td>Everywhere</td><td>Own stations, shape the economy</td><td>Strategic</td></tr>
+</table>
+
+<h3>What You Spend Money On</h3>
+<ul>
+<li><strong>Ships</strong> - bulk hauler, fast smuggler, long-range explorer, armored convoy</li>
+<li><strong>Upgrades</strong> - cargo capacity, fuel efficiency, scanner range, stealth systems</li>
+<li><strong>Reputation</strong> - faction standing unlocks contracts, docking rights, intel</li>
+<li><strong>Infrastructure</strong> - (late game) buy a warehouse, a refinery, a station</li>
+<li><strong>Information</strong> - buy market data, scout reports, faction intelligence</li>
+</ul>
+
+<h2>The Living Economy</h2>
+
+<h3>How It Works</h3>
+<p>Each star system has <strong>production rates</strong> and <strong>consumption rates</strong> per commodity. Prices follow supply/demand curves. NPC agents (haulers, miners, traders) operate autonomously, creating the baseline market activity that you participate in.</p>
+
+<div class="card">
+<div class="card-title">Price Formula</div>
+<p style="font-family:'JetBrains Mono';color:#ffd54f;margin:0">price = base_price * (demand / supply) ^ elasticity</p>
+</div>
+
+<h3>Key Properties</h3>
+<ul>
+<li><strong>Emergent</strong> - prices are not scripted, they result from agent behavior</li>
+<li><strong>Cascading</strong> - a disruption at one node ripples through supply chains</li>
+<li><strong>Imperfect information</strong> - price data goes stale; you only know what you have seen recently</li>
+<li><strong>Player impact</strong> - large trades move prices; you can manipulate small markets</li>
+<li><strong>NPC adaptation</strong> - NPC traders adjust routes based on profitability, creating competition</li>
+</ul>
+
+<h3>Commodities</h3>
+<table>
+<tr><th>Commodity</th><th>Type</th><th>Notes</th></tr>
+<tr><td>Iron Ore</td><td><span class="tag tag-green">Raw</span></td><td>Bulk, low margin, always in demand</td></tr>
+<tr><td>Processed Food</td><td><span class="tag tag-green">Basic</span></td><td>Every station needs it, low profit</td></tr>
+<tr><td>Medical Supplies</td><td><span class="tag tag-cyan">Essential</span></td><td>High value, spikes during crises</td></tr>
+<tr><td>Fuel Cells</td><td><span class="tag tag-cyan">Essential</span></td><td>You also consume this; strategic good</td></tr>
+<tr><td>Electronics</td><td><span class="tag tag-gold">Advanced</span></td><td>High value, industrial demand</td></tr>
+<tr><td>Luxury Goods</td><td><span class="tag tag-gold">Advanced</span></td><td>High margin, volatile demand</td></tr>
+<tr><td>Polymers</td><td><span class="tag tag-green">Raw</span></td><td>Industrial feedstock</td></tr>
+<tr><td>Alloys</td><td><span class="tag tag-cyan">Processed</span></td><td>Shipyard demand, steady</td></tr>
+<tr><td>Narcotics</td><td><span class="tag tag-red">Illegal</span></td><td>Massive margins, massive risk</td></tr>
+</table>
+
+<h2>Conflict and Opposition</h2>
+
+<p>This is not a combat game. You do not fight. But the universe is dangerous, and conflict shapes the economy you operate in.</p>
+
+<h3>Security Gradient</h3>
+<table>
+<tr><th>Zone</th><th>Risk</th><th>Reward</th><th>Character</th></tr>
+<tr><td><span class="tag tag-green">High-Sec</span></td><td>Minimal</td><td>Low margins</td><td>Patrolled, safe, crowded with NPC traders</td></tr>
+<tr><td><span class="tag tag-gold">Low-Sec</span></td><td>Moderate</td><td>Better margins</td><td>Less patrol, pirate activity, faction disputes</td></tr>
+<tr><td><span class="tag tag-red">Null-Sec</span></td><td>High</td><td>Rare goods, huge margins</td><td>Lawless, blockades, interdiction</td></tr>
+<tr><td><span class="tag tag-purple">Frontier</span></td><td>Unknown</td><td>Exploration, anomalies</td><td>Uncharted, mysteries, unique finds</td></tr>
+</table>
+
+<h3>Sources of Conflict</h3>
+<ul>
+<li><strong>Faction warfare</strong> - NPC factions fight over territory. Borders shift. Safe systems become warzones. Supply chains break overnight.</li>
+<li><strong>Blockades and interdiction</strong> - you don't fight pirates, you avoid them, pay them, or find alternate routes. Risk is a cost you price into decisions.</li>
+<li><strong>Choke points</strong> - certain jump routes are the only path between regions. Control of these means control of trade flow.</li>
+<li><strong>Economic warfare</strong> - factions embargo each other. Smuggling becomes viable. Prices spike in blockaded systems.</li>
+<li><strong>Piracy</strong> - not combat encounters, but economic hazards. Lose cargo, lose time, lose reputation with insurers.</li>
+</ul>
+
+<h3>Mystery and Intrigue</h3>
+<ul>
+<li>Anomalous signals, derelict ships, uncharted systems that appear temporarily</li>
+<li>Rare commodities with unknown or shifting sources</li>
+<li>Faction espionage: shady contracts, smuggling jobs, intel runs</li>
+<li>Events that reward paying attention to the simulation's state</li>
+<li>Things that cannot be wiki'd because they are emergent, not scripted</li>
+</ul>
+
+<h2>Time Model</h2>
+
+<p><strong>Player-controlled tick speed</strong> (like Stellaris). Pause, play, 2x, 4x. Time does not pass when you are not playing. The simulation advances in discrete cycles, giving the economy time to breathe between your actions.</p>
+
+<h2>Systems and Star Map</h2>
+
+<h3>System Types</h3>
+<table>
+<tr><th>Type</th><th>Produces</th><th>Consumes</th><th>Character</th></tr>
+<tr><td>Industrial Hub</td><td>Manufactured goods</td><td>Raw materials, fuel</td><td>High traffic, stable prices</td></tr>
+<tr><td>Mining Colony</td><td>Ore, raw materials</td><td>Food, meds, equipment</td><td>Remote, price spikes on essentials</td></tr>
+<tr><td>Trade Hub</td><td>Nothing (broker)</td><td>Everything (resells)</td><td>Best prices, highest competition</td></tr>
+<tr><td>Agricultural</td><td>Food, organics</td><td>Machinery, fuel</td><td>Steady supply, low drama</td></tr>
+<tr><td>Processing</td><td>Refined goods, fuel</td><td>Raw inputs</td><td>Transforms commodities, chain link</td></tr>
+<tr><td>Frontier</td><td>Rare finds</td><td>Everything</td><td>Desperate prices, high risk</td></tr>
+<tr><td>Jump Nexus</td><td>Nothing</td><td>Fuel</td><td>Chokepoint, strategic, contested</td></tr>
+<tr><td>Shipyard</td><td>Ships, upgrades</td><td>Alloys, electronics</td><td>Where you spend big</td></tr>
+<tr><td>Military</td><td>Security</td><td>Everything</td><td>Faction controlled, contracts</td></tr>
+</table>
+
+<h2>Technical Direction</h2>
+
+<div class="card">
+<div class="card-title">Architecture</div>
+<ul>
+<li><strong>Frontend:</strong> Vanilla JS + Canvas/WebGL (star map) + HTML/CSS panels (UI)</li>
+<li><strong>Backend:</strong> Pure client-side with localStorage (no server needed for single-player)</li>
+<li><strong>Economy Engine:</strong> Agent-based tick simulation</li>
+<li><strong>Save/Load:</strong> localStorage + JSON export/import</li>
+</ul>
+</div>
+
+<h3>Open Questions</h3>
+<ul>
+<li>Scope for v1: how many systems, commodities, ship types?</li>
+<li>How many NPC agents is the browser performant with?</li>
+<li>How deep does faction AI go in v1?</li>
+<li>What is the minimum viable "interesting" economy?</li>
+</ul>
+
+</div>
+</body>
+</html>
