@@ -24,7 +24,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .stat .value{color:#4fc3f7;font-weight:500}
 .event{padding:2px 0;border-bottom:1px solid #0a1420;color:#b0c8e0;font-size:10px}
 .event .tick-num{color:#5a8aaa;margin-right:6px}
-.ship-row{display:grid;grid-template-columns:90px 120px 60px 1fr 1fr;gap:4px;align-items:center;padding:2px 0;border-bottom:1px solid #0f1a28;font-size:10px}
+.ship-row{display:grid;grid-template-columns:50px 90px 120px 60px 1fr 1fr;gap:4px;align-items:center;padding:2px 0;border-bottom:1px solid #0f1a28;font-size:10px}
 .ship-row .role{color:#8aa0b8;font-size:9px;text-transform:uppercase}
 .ship-row .name{color:#e0e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ship-row .state{padding:1px 4px;border-radius:2px;text-align:center;font-size:9px}
@@ -115,7 +115,7 @@ async function refresh(){
       if(s.state==='traveling') loc=`> ${s.destination} (${Math.round(s.progress*100)}%)`;
       else if(s.timer>0) loc=`${s.location} [${s.timer}t]`;
       const cargo=Object.entries(s.cargo).map(([k,v])=>`${Math.round(v)} ${k}`).join(', ')||'empty';
-      return `<div class="ship-row"><span class="role">${s.role}, ${s.ship_class}</span><span class="name">${s.name}</span><span class="state state-${s.state}">${s.state}</span><span class="loc">${loc}</span><span class="cargo">${cargo}</span></div>`;
+      return `<div class="ship-row"><span class="role">${s.role}</span><span class="loc">${s.ship_class}</span><span class="name">${s.name}</span><span class="state state-${s.state}">${s.state}</span><span class="loc">${loc}</span><span class="cargo">${cargo}</span></div>`;
     }).join('');
 
     // Prices - with view filter
