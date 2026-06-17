@@ -1,4 +1,4 @@
-app = "space-economy"
+app = "spaceeconomy"
 primary_region = "iad"
 
 [build]
