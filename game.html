@@ -531,10 +531,23 @@ function animate(){
   requestAnimationFrame(animate);
   controls.update();
 
-  // Move ships (now handled by updateMapShips from live data)
-  // Smoothly lerp ship meshes toward their targets
-  const lerpSpeed=0.03;
-  shipMeshes.forEach(mesh=>{
+  // Move ships: client-side prediction between API updates
+  const lerpSpeed=0.05;
+  const tickRate=1.0; // server ticks per second
+  const progressPerFrame=(0.1/60)*tickRate; // approximate server progress rate per render frame
+  shipMeshes.forEach((mesh,i)=>{
+    if(i>=liveShips.length) return;
+    const ship=liveShips[i];
+    const locIdx=systemIdToIndex[ship?.location];
+    const destIdx=systemIdToIndex[ship?.destination];
+    // Predict forward for traveling ships
+    if(ship&&ship.state==='traveling'&&locIdx!==undefined&&destIdx!==undefined){
+      mesh.userData.clientProgress=(mesh.userData.clientProgress||ship.progress)+progressPerFrame*ship.progress*0.5;
+      if(mesh.userData.clientProgress>1) mesh.userData.clientProgress=1;
+      const a=systems[locIdx],b=systems[destIdx];
+      const p=mesh.userData.clientProgress;
+      mesh.userData.target={x:a.x+(b.x-a.x)*p, y:a.y+(b.y-a.y)*p, z:a.z+(b.z-a.z)*p};
+    }
     const t=mesh.userData.target;
     if(t){
       mesh.position.x+=(t.x-mesh.position.x)*lerpSpeed;
@@ -826,6 +839,7 @@ function updateMapShips(){
   // Set ship target positions from live data (actual movement is lerped in animate loop)
   liveShips.forEach((ship,i)=>{
     if(i>=shipMeshes.length) return;
+    shipMeshes[i].userData.clientProgress=ship.progress; // sync to server
     const locIdx=systemIdToIndex[ship.location];
     const destIdx=systemIdToIndex[ship.destination];
     if(ship.state==='traveling'&&locIdx!==undefined&&destIdx!==undefined){
