@@ -483,6 +483,7 @@ routes.forEach(([a,b])=>{
 // NPC ships (40 total: 30 traders + 10 miners)
 const shipData=[];
 const shipMeshes=[];
+let liveShips=[];
 const shipColors=[0x4fc3f7,0x66bb6a,0xffd54f,0xff8a65,0xab47bc];
 for(let i=0;i<40;i++){
   const col=shipColors[Math.floor(Math.random()*5)];
@@ -536,7 +537,7 @@ function animate(){
   const tickRate=1.0; // server ticks per second
   const progressPerFrame=(0.1/60)*tickRate; // approximate server progress rate per render frame
   shipMeshes.forEach((mesh,i)=>{
-    if(typeof liveShips==='undefined'||i>=liveShips.length) return;
+    if(i>=liveShips.length) return;
     const ship=liveShips[i];
     const locIdx=systemIdToIndex[ship?.location];
     const destIdx=systemIdToIndex[ship?.destination];
@@ -744,7 +745,6 @@ const systemIdToIndex={};
 const systemIdList=['cygnus','vega','kepler','arcturus','tau_ceti','wolf359','procyon','sirius','barnards','altair','deneb','rigel','polaris','antares','capella','betelgeuse','aldebaran','spica','fomalhaut','canopus','regulus','castor','pollux','achernar'];
 systemIdList.forEach((id,i)=>{systemIdToIndex[id]=i;});
 
-let liveShips=[];
 let liveState=null;
 let prevPrices={};
 
