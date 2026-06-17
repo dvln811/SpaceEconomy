@@ -507,7 +507,7 @@ let liveShips=[];
 function makeShipTexture(shape){
   const c=document.createElement('canvas');c.width=32;c.height=32;
   const ctx=c.getContext('2d');
-  ctx.strokeStyle='rgba(176,212,240,0.5)';ctx.lineWidth=1;ctx.fillStyle='rgba(176,212,240,0.06)';
+  ctx.strokeStyle='rgba(140,170,200,0.8)';ctx.lineWidth=1;ctx.fillStyle='rgba(140,170,200,0.2)';
   ctx.beginPath();
   if(shape==='triangle'){ctx.moveTo(16,4);ctx.lineTo(28,28);ctx.lineTo(4,28);ctx.closePath();}
   else if(shape==='square'){ctx.rect(6,6,20,20);}
@@ -524,7 +524,7 @@ for(let i=0;i<40;i++){
   const tex=i<30?traderTex:minerTex;
   const mat=new THREE.SpriteMaterial({map:tex,transparent:true,opacity:0.9});
   const sprite=new THREE.Sprite(mat);
-  sprite.scale.set(8,8,1);
+  sprite.scale.set(5,5,1);
   scene.add(sprite);
   shipMeshes.push(sprite);
   shipData.push({route:Math.floor(Math.random()*routes.length),progress:Math.random(),speed:0.0004+Math.random()*0.0008});
@@ -537,6 +537,15 @@ const playerRing = new THREE.Mesh(
 );
 playerRing.position.set(0,0,0);
 scene.add(playerRing);
+
+// Selected ship label
+const shipLabelDiv=document.createElement('div');
+shipLabelDiv.className='system-label';
+shipLabelDiv.style.color='#b0d4f0';
+shipLabelDiv.style.fontSize='8px';
+const shipLabel=new CSS2DObject(shipLabelDiv);
+shipLabel.visible=false;
+scene.add(shipLabel);
 
 // System labels (CSS2D)
 systems.forEach((s,i)=>{
@@ -599,6 +608,16 @@ function animate(){
 
   // Rotate player ring to face camera
   playerRing.lookAt(camera.position);
+
+  // Update selected ship label
+  if(selectedShip>=0&&selectedShip<shipMeshes.length&&shipMeshes[selectedShip].visible){
+    const sp=shipMeshes[selectedShip].position;
+    shipLabel.position.set(sp.x,sp.y+8,sp.z);
+    shipLabel.visible=true;
+    if(liveShips[selectedShip]) shipLabelDiv.textContent=liveShips[selectedShip].name;
+  }else{
+    shipLabel.visible=false;
+  }
 
   renderer.render(scene,camera);
   labelRenderer.render(scene,camera);
