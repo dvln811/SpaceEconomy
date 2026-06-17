@@ -25,6 +25,16 @@ else:
 TICK_RATE = float(os.getenv("TICK_RATE", "1.0"))
 SAVE_INTERVAL = 10  # save every N ticks
 
+# Backfill ship_class for ships loaded from old saves
+_trader_classes = ["Bison Mk.III", "Ox Hauler", "Mule Freighter", "Clydesdale", "Pinto Runner"]
+_miner_classes = ["Burro Driller", "Pickaxe Mk.II", "Anvil Corer"]
+for _i, _s in enumerate(sim.ships):
+    if not _s.ship_class:
+        if _s.role == "miner":
+            _s.ship_class = _miner_classes[_i % len(_miner_classes)]
+        else:
+            _s.ship_class = _trader_classes[_i % len(_trader_classes)]
+
 
 def economy_loop():
     while True:

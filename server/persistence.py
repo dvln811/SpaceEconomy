@@ -51,6 +51,8 @@ def save_simulation(sim):
             "cargo_capacity": s.cargo_capacity, "fuel": s.fuel,
             "location": s.location, "destination": s.destination,
             "progress": s.progress, "speed": s.speed, "state": s.state,
+            "state_timer": s.state_timer, "role": s.role,
+            "ship_class": s.ship_class, "route_path": s.route_path,
         })
 
     conn = _get_conn()
@@ -98,10 +100,13 @@ def load_simulation(sim) -> bool:
         sim.ships.clear()
         for sd in ships_data:
             sim.ships.append(NPCShip(
-                id=sd["id"], name=sd["name"], cargo=sd["cargo"],
-                cargo_capacity=sd["cargo_capacity"], fuel=sd["fuel"],
-                location=sd["location"], destination=sd["destination"],
-                progress=sd["progress"], speed=sd["speed"], state=sd["state"],
+                id=sd["id"], name=sd["name"], cargo=sd.get("cargo", {}),
+                cargo_capacity=sd.get("cargo_capacity", 200), fuel=sd.get("fuel", 100),
+                location=sd["location"], destination=sd.get("destination", ""),
+                progress=sd.get("progress", 0), speed=sd.get("speed", 1.0),
+                state=sd.get("state", "idle"), state_timer=sd.get("state_timer", 0),
+                role=sd.get("role", "trader"), ship_class=sd.get("ship_class", ""),
+                route_path=sd.get("route_path", []),
             ))
 
     conn.close()
