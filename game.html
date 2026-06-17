@@ -547,6 +547,9 @@ const shipLabel=new CSS2DObject(shipLabelDiv);
 shipLabel.visible=false;
 scene.add(shipLabel);
 
+let selectedSystem=-1;
+let selectedShip=-1;
+
 // System labels (CSS2D)
 systems.forEach((s,i)=>{
   const div=document.createElement('div');
@@ -644,8 +647,6 @@ document.querySelectorAll('.map-zoom button').forEach((btn,i)=>{
 
 // ── Camera focus animation ────────────────────────────────────────────────────
 let animating=false;
-let selectedSystem=-1;
-let selectedShip=-1;
 
 function focusSystem(index){
   selectedSystem=index;
