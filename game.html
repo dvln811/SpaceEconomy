@@ -533,7 +533,6 @@ function animate(){
   controls.update();
 
   // Move ships: client-side prediction between API updates
-  const lerpSpeed=0.05;
   shipMeshes.forEach((mesh,i)=>{
     if(i>=liveShips.length) return;
     const ship=liveShips[i];
@@ -541,7 +540,7 @@ function animate(){
     const destIdx=systemIdToIndex[ship?.destination];
     // Predict forward for traveling ships (server does 0.1*speed per second, we do per frame at 60fps)
     if(ship&&ship.state==='traveling'&&locIdx!==undefined&&destIdx!==undefined){
-      const serverRate=0.1*(ship.speed||1.0); // progress per second
+      const serverRate=0.1*(ship.speed||1.0);
       mesh.userData.clientProgress=(mesh.userData.clientProgress||ship.progress)+(serverRate/60);
       if(mesh.userData.clientProgress>1) mesh.userData.clientProgress=1;
       const a=systems[locIdx],b=systems[destIdx];
@@ -550,9 +549,13 @@ function animate(){
     }
     const t=mesh.userData.target;
     if(t){
-      mesh.position.x+=(t.x-mesh.position.x)*lerpSpeed;
-      mesh.position.y+=(t.y-mesh.position.y)*lerpSpeed;
-      mesh.position.z+=(t.z-mesh.position.z)*lerpSpeed;
+      // Lerp faster when far away (prevents shoot-out on state changes)
+      const dx=t.x-mesh.position.x,dy=t.y-mesh.position.y,dz=t.z-mesh.position.z;
+      const dist=Math.sqrt(dx*dx+dy*dy+dz*dz);
+      const lerp=dist>50?0.3:0.05;
+      mesh.position.x+=dx*lerp;
+      mesh.position.y+=dy*lerp;
+      mesh.position.z+=dz*lerp;
     }
   });
 
