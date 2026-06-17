@@ -92,6 +92,19 @@ def api_state():
     return jsonify({"tick": sim.tick_count, "systems": systems})
 
 
+@app.route("/api/ships")
+def api_ships():
+    """Ship positions and state for the game map."""
+    ships = []
+    for s in sim.ships:
+        ships.append({
+            "name": s.name, "role": s.role, "ship_class": s.ship_class,
+            "state": s.state, "location": s.location, "destination": s.destination,
+            "progress": round(s.progress, 2), "cargo": s.cargo,
+        })
+    return jsonify({"tick": sim.tick_count, "ships": ships})
+
+
 @app.route("/api/debug")
 def api_debug():
     """Debug summary for the monitor page."""

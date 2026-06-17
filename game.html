@@ -184,61 +184,8 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
       <div id="system-info-content"><div style="color:#5a7a9a;font-size:10px">Select a system to view info</div></div>
     </div>
     <div class="tab-content" id="tab-r-market">
-      <div class="panel-title">Cygnus Station · Market</div>
-      <div class="commodity-row">
-        <div class="commodity-name">Iron Ore</div>
-        <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#66bb6a" points="0,18 8,15 16,12 24,14 32,10 40,8 48,6 56,4 60,3"/></svg>
-        <div class="commodity-price">₡ 284</div>
-        <div class="commodity-change up">+12.3%</div>
-      </div>
-      <div class="commodity-row">
-        <div class="commodity-name">Processed Food</div>
-        <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#ef5350" points="0,4 8,6 16,8 24,7 32,10 40,13 48,15 56,16 60,17"/></svg>
-        <div class="commodity-price">₡ 52</div>
-        <div class="commodity-change down">-8.1%</div>
-      </div>
-      <div class="commodity-row">
-        <div class="commodity-name">Medical Supplies</div>
-        <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#4fc3f7" points="0,10 8,11 16,9 24,10 32,10 40,9 48,11 56,10 60,10"/></svg>
-        <div class="commodity-price">₡ 1,240</div>
-        <div class="commodity-change up">+1.2%</div>
-      </div>
-      <div class="commodity-row">
-        <div class="commodity-name">Fuel Cells</div>
-        <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#66bb6a" points="0,14 8,13 16,11 24,12 32,10 40,9 48,8 56,7 60,7"/></svg>
-        <div class="commodity-price">₡ 890</div>
-        <div class="commodity-change up">+5.8%</div>
-      </div>
-      <div class="commodity-row">
-        <div class="commodity-name">Electronics</div>
-        <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#ef5350" points="0,8 8,9 16,10 24,11 32,10 40,12 48,13 56,14 60,13"/></svg>
-        <div class="commodity-price">₡ 3,450</div>
-        <div class="commodity-change down">-3.9%</div>
-      </div>
-      <div class="commodity-row">
-        <div class="commodity-name">Luxury Goods</div>
-        <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#66bb6a" points="0,16 8,14 16,12 24,11 32,10 40,8 48,7 56,5 60,4"/></svg>
-        <div class="commodity-price">₡ 7,820</div>
-        <div class="commodity-change up">+9.4%</div>
-      </div>
-      <div class="commodity-row">
-        <div class="commodity-name">Polymers</div>
-        <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#ef5350" points="0,6 8,8 16,9 24,11 32,13 40,14 48,16 56,17 60,18"/></svg>
-        <div class="commodity-price">₡ 156</div>
-        <div class="commodity-change down">-14.7%</div>
-      </div>
-      <div class="commodity-row">
-        <div class="commodity-name">Alloys</div>
-        <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#66bb6a" points="0,12 8,11 16,12 24,10 32,9 40,8 48,7 56,6 60,5"/></svg>
-        <div class="commodity-price">₡ 2,100</div>
-        <div class="commodity-change up">+8.2%</div>
-      </div>
-      <div class="commodity-row">
-        <div class="commodity-name">Narcotics</div>
-        <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#ffd54f" points="0,10 8,6 16,14 24,4 32,16 40,8 48,12 56,5 60,15"/></svg>
-        <div class="commodity-price">₡ 12,400</div>
-        <div class="commodity-change up">+44.1%</div>
-      </div>
+      <div class="panel-title">Market Prices</div>
+      <div id="live-market"></div>
     </div>
   </div>
 
@@ -533,11 +480,11 @@ routes.forEach(([a,b])=>{
   scene.add(new THREE.Line(geo,mat));
 });
 
-// NPC ships
+// NPC ships (40 total: 30 traders + 10 miners)
 const shipData=[];
 const shipMeshes=[];
 const shipColors=[0x4fc3f7,0x66bb6a,0xffd54f,0xff8a65,0xab47bc];
-for(let i=0;i<15;i++){
+for(let i=0;i<40;i++){
   const col=shipColors[Math.floor(Math.random()*5)];
   const geo=new THREE.SphereGeometry(2.5,8,8);
   const mat=new THREE.MeshBasicMaterial({color:col});
@@ -584,19 +531,7 @@ function animate(){
   requestAnimationFrame(animate);
   controls.update();
 
-  // Move ships
-  shipData.forEach((ship,i)=>{
-    const [a,b]=routes[ship.route];
-    const ax=systems[a].x,ay=systems[a].y,az=systems[a].z;
-    const bx=systems[b].x,by=systems[b].y,bz=systems[b].z;
-    shipMeshes[i].position.set(
-      ax+(bx-ax)*ship.progress,
-      ay+(by-ay)*ship.progress,
-      az+(bz-az)*ship.progress
-    );
-    ship.progress+=ship.speed;
-    if(ship.progress>1){ship.progress=0;ship.route=Math.floor(Math.random()*routes.length);}
-  });
+  // Move ships (now handled by updateMapShips from live data)
 
   // Rotate player ring to face camera
   playerRing.lookAt(camera.position);
@@ -777,38 +712,128 @@ document.querySelectorAll('.panel-tab').forEach(tab=>{
   });
 });
 
-// ── Ships panel (player + NPC) ────────────────────────────────────────────────
-const shipNames=['Meridian Express','Iron Vagrant','Solar Wind','Deep Haul','Star Drifter','Cobalt Runner','Void Trader','Nebula Fox','Red Kestrel','Arc Pilgrim','Hull Breaker','Quiet Flame','Dust Devil','Long Reach','Silver Mule'];
-const playerShip={name:'Rusty Venture',class:'Bison Mk.III',cargo:'340/500',fuel:62,hull:94,location:'Cygnus Station',manifest:'220x Ore, 80x Meds, 40x Fuel'};
+// ── Ships panel (live from API) ────────────────────────────────────────────────
 const shipList=document.getElementById('ship-list');
+const playerShip={name:'Rusty Venture',class:'Bison Mk.III',cargo:'340/500',fuel:62,hull:94,location:'Cygnus Station',manifest:'220x Ore, 80x Meds, 40x Fuel'};
 
-function updateShipList(){
+// Map system IDs to our 3D positions
+const systemIdToIndex={};
+const systemIdList=['cygnus','vega','kepler','arcturus','tau_ceti','wolf359','procyon','sirius','barnards','altair','deneb','rigel','polaris','antares','capella','betelgeuse','aldebaran','spica','fomalhaut','canopus','regulus','castor','pollux','achernar'];
+systemIdList.forEach((id,i)=>{systemIdToIndex[id]=i;});
+
+let liveShips=[];
+let liveState=null;
+let prevPrices={};
+
+async function fetchLiveData(){
+  try{
+    const [stateRes, shipsRes]=await Promise.all([fetch('/api/state'),fetch('/api/ships')]);
+    liveState=await stateRes.json();
+    const shipsData=await shipsRes.json();
+    liveShips=shipsData.ships;
+    updateLiveMarket();
+    updateSystemCards();
+    updateLiveShipList();
+    updateMapShips();
+  }catch(e){console.error('Live fetch error:',e);}
+}
+
+function updateLiveMarket(){
+  if(!liveState||selectedSystem<0) return;
+  const sysId=systemIdList[selectedSystem];
+  const sysData=liveState.systems[sysId];
+  if(!sysData) return;
+  const market=document.getElementById('live-market');
+  let html=`<div style="font-size:10px;color:#8aa0b8;margin-bottom:8px">${sysData.name}</div>`;
+  for(const station of sysData.stations){
+    const entries=Object.entries(station.prices).filter(([k])=>station.inventory[k]>0).sort((a,b)=>b[1]-a[1]);
+    for(const [commodity,price] of entries.slice(0,12)){
+      const stock=Math.round(station.inventory[commodity]||0);
+      const prevKey=sysId+'_'+commodity;
+      const prev=prevPrices[prevKey]||price;
+      const change=prev>0?((price-prev)/prev*100).toFixed(1):'0.0';
+      const cls=change>0?'up':change<0?'down':'';
+      prevPrices[prevKey]=price;
+      html+=`<div class="commodity-row"><div class="commodity-name">${commodity}</div><div class="commodity-price">${Math.round(price)}</div><div class="commodity-change ${cls}">${change>0?'+':''}${change}%</div></div>`;
+    }
+  }
+  market.innerHTML=html;
+}
+
+function updateSystemCards(){
+  if(!liveState) return;
+  document.querySelectorAll('.system-item').forEach(el=>{
+    const idx=parseInt(el.dataset.index);
+    const sysId=systemIdList[idx];
+    const sysData=liveState.systems[sysId];
+    if(!sysData) return;
+    // Find top price movement
+    let topUp='',topDown='';
+    for(const station of sysData.stations){
+      for(const [commodity,price] of Object.entries(station.prices)){
+        const prevKey=sysId+'_'+commodity;
+        const prev=prevPrices[prevKey]||price;
+        const pct=prev>0?(price-prev)/prev*100:0;
+        if(pct>2&&!topUp) topUp=`<span class="price-up">▲ ${commodity} +${pct.toFixed(0)}%</span>`;
+        if(pct<-2&&!topDown) topDown=`<span class="price-down">▼ ${commodity} ${pct.toFixed(0)}%</span>`;
+      }
+    }
+    let pricesDiv=el.querySelector('.system-prices');
+    if(!pricesDiv){pricesDiv=document.createElement('div');pricesDiv.className='system-prices';el.appendChild(pricesDiv);}
+    pricesDiv.innerHTML=topUp+topDown||(topUp||topDown||'<span class="price-neutral">-- stable</span>');
+  });
+}
+
+function updateLiveShipList(){
   shipList.innerHTML='';
   // Player ship first
   const pdiv=document.createElement('div');
   pdiv.className='ship-item player'+(selectedShip===-2?' active':'');
   pdiv.innerHTML=`<div class="ship-name">⬡ ${playerShip.name} <span style="color:#4fc3f7;font-size:9px">[YOU]</span></div>
     <div class="ship-detail">${playerShip.class} · Docked</div>
-    <div class="ship-stats">
-      <div>Cargo: ${playerShip.cargo} · Fuel: ${playerShip.fuel}%</div>
-      <div>Hull: ${playerShip.hull}% · ${playerShip.location}</div>
-      <div style="color:#5a7a9a">${playerShip.manifest}</div>
-    </div>`;
-  pdiv.addEventListener('click',()=>{selectedShip=-2;selectedSystem=-1;focusSystem(0);updateShipList();});
+    <div class="ship-stats"><div>Cargo: ${playerShip.cargo} · Fuel: ${playerShip.fuel}%</div><div>Hull: ${playerShip.hull}% · ${playerShip.location}</div></div>`;
+  pdiv.addEventListener('click',()=>{selectedShip=-2;selectedSystem=-1;focusSystem(0);});
   shipList.appendChild(pdiv);
-
-  // NPC ships
-  shipData.forEach((ship,i)=>{
-    const [a,b]=routes[ship.route];
+  // NPC ships from live data
+  liveShips.forEach((ship,i)=>{
     const div=document.createElement('div');
     div.className='ship-item'+(selectedShip===i?' active':'');
-    div.innerHTML=`<div class="ship-name">${shipNames[i]}</div><div class="ship-detail">En route (${Math.round(ship.progress*100)}%)</div><div class="ship-route">${systems[a].name} → ${systems[b].name}</div>`;
-    div.addEventListener('click',()=>focusShip(i));
+    const locIdx=systemIdToIndex[ship.location];
+    const locName=locIdx!==undefined?systems[locIdx].name:ship.location;
+    let status=ship.state;
+    if(ship.state==='traveling'&&ship.destination){
+      const destIdx=systemIdToIndex[ship.destination];
+      const destName=destIdx!==undefined?systems[destIdx].name:ship.destination;
+      status=`-> ${destName} (${Math.round(ship.progress*100)}%)`;
+    }
+    div.innerHTML=`<div class="ship-name">${ship.name}</div><div class="ship-detail">${ship.ship_class||ship.role} · ${status}</div><div class="ship-route">${locName}</div>`;
+    div.addEventListener('click',()=>{selectedShip=i;if(locIdx!==undefined)focusSystem(locIdx);});
     shipList.appendChild(div);
   });
 }
-updateShipList();
-setInterval(updateShipList, 3000);
+
+function updateMapShips(){
+  // Position ship meshes based on live data
+  liveShips.forEach((ship,i)=>{
+    if(i>=shipMeshes.length) return;
+    const locIdx=systemIdToIndex[ship.location];
+    const destIdx=systemIdToIndex[ship.destination];
+    if(ship.state==='traveling'&&locIdx!==undefined&&destIdx!==undefined){
+      const a=systems[locIdx],b=systems[destIdx];
+      shipMeshes[i].position.set(
+        a.x+(b.x-a.x)*ship.progress,
+        a.y+(b.y-a.y)*ship.progress,
+        a.z+(b.z-a.z)*ship.progress
+      );
+    }else if(locIdx!==undefined){
+      const s=systems[locIdx];
+      shipMeshes[i].position.set(s.x+5*(i%4-2), s.y+3, s.z+5*(Math.floor(i/4)%3-1));
+    }
+  });
+}
+
+fetchLiveData();
+setInterval(fetchLiveData, 3000);
 
 // ── Hover tooltip ─────────────────────────────────────────────────────────────
 const tooltip=document.getElementById('map-tooltip');
@@ -868,29 +893,26 @@ container.addEventListener('mousemove',(e)=>{
 });
 container.addEventListener('mouseleave',()=>{tooltip.classList.remove('visible');ttVisible=false;});
 
-// ── Mock activity feed ────────────────────────────────────────────────────────
+// ── Live activity feed from simulation events ─────────────────────────────────
 const activityFeed=document.getElementById('activity-feed');
-const activityTemplates=[
-  ()=>{const s=shipNames[Math.floor(Math.random()*15)];const sys=systems[Math.floor(Math.random()*24)].name;return `NPC hauler <span class="highlight">${s}</span> arrived at ${sys}`;},
-  ()=>{const c=['Ore','Food','Fuel','Meds','Electronics','Alloys','Polymers'][Math.floor(Math.random()*7)];const sys=systems[Math.floor(Math.random()*24)].name;const v=(Math.random()*8+1).toFixed(1);return `${c} price at ${sys} <span class="profit">▲ +${v}%</span>`;},
-  ()=>{const c=['Ore','Food','Fuel','Meds','Electronics'][Math.floor(Math.random()*5)];const sys=systems[Math.floor(Math.random()*24)].name;const v=(Math.random()*6+1).toFixed(1);return `${c} price dropped at ${sys} <span class="loss">▼ -${v}%</span>`;},
-  ()=>{const sys=systems[Math.floor(Math.random()*24)].name;return `Pirate activity reported near <span class="loss">${sys} corridor</span>`;},
-  ()=>{const sys=systems[Math.floor(Math.random()*24)].name;const c=['Meds','Food','Fuel','Electronics'][Math.floor(Math.random()*4)];return `Trade Guild contract: deliver ${c} to ${sys} (+${Math.floor(Math.random()*20+10)}% bonus)`;},
-  ()=>{const s=shipNames[Math.floor(Math.random()*15)];return `<span class="highlight">${s}</span> jumped to hyperspace`;},
-  ()=>{const sys=systems[Math.floor(Math.random()*24)].name;return `Supply shortage declared at ${sys}`;},
-];
-
-function addActivity(){
-  const tpl=activityTemplates[Math.floor(Math.random()*activityTemplates.length)];
-  const now=new Date();
-  const time=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
-  const div=document.createElement('div');
-  div.className='activity-item';
-  div.innerHTML=`<span class="time">${time}</span>${tpl()}`;
-  activityFeed.insertBefore(div,activityFeed.firstChild);
-  if(activityFeed.children.length>20) activityFeed.removeChild(activityFeed.lastChild);
+let lastEventTick=0;
+async function fetchActivity(){
+  try{
+    const r=await fetch('/api/debug');
+    const d=await r.json();
+    const newEvents=d.recent_events.filter(e=>e.tick>lastEventTick);
+    for(const e of newEvents){
+      const div=document.createElement('div');
+      div.className='activity-item';
+      div.innerHTML=`<span class="time">T${e.tick}</span><span class="highlight">${e.msg}</span>`;
+      activityFeed.insertBefore(div,activityFeed.firstChild);
+      lastEventTick=e.tick;
+    }
+    while(activityFeed.children.length>20) activityFeed.removeChild(activityFeed.lastChild);
+  }catch(e){}
 }
-setInterval(addActivity, 4000+Math.random()*4000);
+fetchActivity();
+setInterval(fetchActivity, 4000);
 </script>
 </body>
 </html>
