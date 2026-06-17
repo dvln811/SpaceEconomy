@@ -1,19 +1,24 @@
-app = "space-economy"
-primary_region = "iad"
+# fly.toml app configuration file generated for spaceeconomy on 2026-06-17T17:56:37Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'spaceeconomy'
+primary_region = 'iad'
 
 [build]
+
+[[mounts]]
+  source = 'se_data'
+  destination = '/app/data'
 
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = "off"
+  auto_stop_machines = 'off'
   auto_start_machines = true
   min_machines_running = 1
 
 [[vm]]
-  size = "shared-cpu-2x"
-  memory = "1gb"
-
-[mounts]
-  source = "se_data"
-  destination = "/app/data"
+  size = 'shared-cpu-2x'
+  memory = '1gb'
