@@ -119,17 +119,53 @@ class Simulation:
             ship.state = "mining"
             ship.state_timer = MINING_TICKS
 
+    def _find_path(self, from_id: str, to_id: str) -> list[str]:
+        """BFS shortest path. Returns list of system IDs (excluding from_id)."""
+        if from_id == to_id:
+            return []
+        visited = {from_id}
+        queue = [(from_id, [])]
+        while queue:
+            current, path = queue.pop(0)
+            for neighbor in self.universe[current].connections:
+                if neighbor in visited:
+                    continue
+                new_path = path + [neighbor]
+                if neighbor == to_id:
+                    return new_path
+                visited.add(neighbor)
+                queue.append((neighbor, new_path))
+        return []  # no path found
+
+    def _send_ship(self, ship: NPCShip, dest_id: str):
+        """Set a ship traveling along the shortest path to dest_id."""
+        path = self._find_path(ship.location, dest_id)
+        if not path:
+            return False
+        ship.route_path = path
+        ship.destination = path[0]
+        ship.state = "traveling"
+        ship.progress = 0.0
+        return True
+
     def _move_ships(self):
         for ship in self.ships:
             if ship.state != "traveling" or not ship.destination:
                 continue
-            ship.progress += 0.01 * ship.speed  # ~70-120 ticks per trip
+            ship.progress += 0.01 * ship.speed
             if ship.progress >= 1.0:
                 ship.progress = 0.0
                 ship.location = ship.destination
-                ship.destination = ""
-                ship.state = "idle"
-                self._log(f"{ship.name} arrived at {self.universe[ship.location].name}")
+                # Check if there are more hops in the route
+                if ship.route_path and ship.location == ship.route_path[0]:
+                    ship.route_path.pop(0)
+                if ship.route_path:
+                    ship.destination = ship.route_path[0]
+                    self._log(f"{ship.name} transiting through {self.universe[ship.location].name}")
+                else:
+                    ship.destination = ""
+                    ship.state = "idle"
+                    self._log(f"{ship.name} arrived at {self.universe[ship.location].name}")
 
     def _npc_decisions(self):
         for ship in self.ships:
@@ -168,14 +204,14 @@ class Simulation:
                 ship.cargo[commodity] = qty
                 ship.state = "loading"
                 ship.state_timer = LOADING_TICKS
-                ship.destination = dest_id
+                ship.route_path = self._find_path(ship.location, dest_id)
+                ship.destination = ship.route_path[0] if ship.route_path else dest_id
                 self._log(f"{ship.name} loading {qty:.0f}x {COMMODITIES[commodity].name} ({LOADING_TICKS}t), dest: {self.universe[dest_id].name}")
                 return
 
-        # Nothing good, roam
+        # Nothing good, roam to a random system within 2 hops
         if loc.connections:
-            ship.destination = random.choice(loc.connections)
-            ship.state = "traveling"
+            self._send_ship(ship, random.choice(loc.connections))
 
     def _miner_decision(self, ship: NPCShip):
         loc = self.universe[ship.location]
@@ -192,10 +228,9 @@ class Simulation:
                 ship.state_timer = UNLOADING_TICKS
                 self._log(f"{ship.name} selling {qty:.0f}x {COMMODITIES[commodity].name} at {loc.name}")
                 return
-            # No buyer here, travel to a neighbor
+            # No buyer here, find one
             if loc.connections:
-                ship.destination = random.choice(loc.connections)
-                ship.state = "traveling"
+                self._send_ship(ship, random.choice(loc.connections))
             return
 
         # If in a system with asteroids, mine
@@ -205,12 +240,12 @@ class Simulation:
             return
 
         # Travel to a system with asteroids
-        mining_neighbors = [c for c in loc.connections if self.universe[c].asteroid_fields]
-        if mining_neighbors:
-            ship.destination = random.choice(mining_neighbors)
+        mining_systems = [sid for sid, s in self.universe.items() if s.asteroid_fields]
+        if mining_systems:
+            target = random.choice(mining_systems)
+            self._send_ship(ship, target)
         elif loc.connections:
-            ship.destination = random.choice(loc.connections)
-        ship.state = "traveling"
+            self._send_ship(ship, random.choice(loc.connections))
 
     def _find_best_sell(self, ship: NPCShip, loc: System):
         best = None
@@ -223,6 +258,7 @@ class Simulation:
 
     def _find_best_trade(self, ship: NPCShip, loc: System):
         best = None
+        checked = set()
         for station in loc.stations:
             for commodity, stock in station.inventory.items():
                 if stock < 10:
@@ -235,6 +271,16 @@ class Simulation:
                         profit = sell_price - buy_price
                         if profit > 0 and (best is None or profit > best[3]):
                             best = (commodity, station, neighbor_id, profit)
+                    # 2nd hop
+                    for hop2_id in neighbor.connections:
+                        if hop2_id == ship.location:
+                            continue
+                        hop2 = self.universe[hop2_id]
+                        for dest_station in hop2.stations:
+                            sell_price = dest_station.price_cache.get(commodity, 0)
+                            profit = (sell_price - buy_price) * 0.8
+                            if profit > 0 and (best is None or profit > best[3]):
+                                best = (commodity, station, hop2_id, profit)
         return best
 
     def _update_all_prices(self):

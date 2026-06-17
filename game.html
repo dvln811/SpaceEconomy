@@ -550,8 +550,11 @@ function animate(){
 
   // Move ships: client-side prediction between API updates
   shipMeshes.forEach((mesh,i)=>{
-    if(i>=liveShips.length) return;
+    if(i>=liveShips.length){mesh.visible=false;return;}
     const ship=liveShips[i];
+    // Only show traveling ships
+    if(!ship||ship.state!=='traveling'){mesh.visible=false;return;}
+    mesh.visible=true;
     const locIdx=systemIdToIndex[ship?.location];
     const destIdx=systemIdToIndex[ship?.destination];
     // Predict forward for traveling ships (server does 0.01*speed per second, we do per frame at 60fps)

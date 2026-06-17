@@ -60,6 +60,7 @@ class NPCShip:
     state_timer: int = 0     # ticks remaining in current state
     role: str = "trader"     # trader, miner
     ship_class: str = ""     # hull class name
+    route_path: list[str] = field(default_factory=list)  # multi-hop path (system IDs)
 
 
 # All commodities in the game
