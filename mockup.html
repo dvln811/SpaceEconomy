@@ -38,7 +38,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 
 /* Main - Star Map */
 .main{background:#05080f;position:relative;overflow:hidden}
-.starfield{position:absolute;inset:0;width:100%;height:100%}
+.main canvas{position:absolute;inset:0;width:100%!important;height:100%!important}
 .map-label{position:absolute;bottom:12px;left:12px;font-size:10px;color:#3a5a7a;letter-spacing:1px;text-transform:uppercase}
 .map-zoom{position:absolute;bottom:12px;right:12px;display:flex;flex-direction:column;gap:4px}
 .map-zoom button{width:28px;height:28px;background:#0a1020;border:1px solid #1a3050;color:#4fc3f7;border-radius:3px;cursor:pointer;font-size:14px}
@@ -133,7 +133,6 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 
   <!-- Main: Star Map -->
   <div class="main">
-    <canvas id="starmap" class="starfield"></canvas>
     <div class="map-label">Sector 7G · Local Cluster</div>
     <div class="map-zoom">
       <button>+</button>
@@ -230,217 +229,199 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   </div>
 </div>
 
-<script>
-const canvas = document.getElementById('starmap');
-const ctx = canvas.getContext('2d');
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 
-// Camera
-let cam = {x:0, y:0, zoom:1};
-let dragging = false, dragStart = {x:0,y:0}, camStart = {x:0,y:0};
+const container = document.querySelector('.main');
+const renderer = new THREE.WebGLRenderer({antialias:true,alpha:true});
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(container.clientWidth, container.clientHeight);
+renderer.setClearColor(0x05080f);
+container.insertBefore(renderer.domElement, container.firstChild);
+// Remove old canvas
+const oldCanvas = document.getElementById('starmap');
+if(oldCanvas) oldCanvas.remove();
 
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, container.clientWidth/container.clientHeight, 1, 5000);
+camera.position.set(0, 300, 600);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 150;
+controls.maxDistance = 2000;
+controls.maxPolarAngle = Math.PI * 0.85;
+
+// Systems data (adding z coordinate for 3D depth)
 const systems = [
-  {name:'Cygnus Station', x:0, y:0, size:8, color:'#4fc3f7', type:'industrial'},
-  {name:'Vega Outpost', x:320, y:-180, size:5, color:'#ffd54f', type:'mining'},
-  {name:'Kepler Freeport', x:-200, y:150, size:9, color:'#4fc3f7', type:'trade'},
-  {name:'Arcturus Refinery', x:250, y:200, size:6, color:'#ff8a65', type:'processing'},
-  {name:'Tau Ceti Prime', x:-300, y:-120, size:7, color:'#66bb6a', type:'agricultural'},
-  {name:'Wolf 359 Depot', x:480, y:350, size:4, color:'#ef5350', type:'frontier'},
-  {name:'Procyon Gate', x:60, y:280, size:6, color:'#ab47bc', type:'nexus'},
-  {name:'Sirius Dockyard', x:-380, y:200, size:6, color:'#78909c', type:'shipyard'},
-  {name:'Barnard\'s Reach', x:-150, y:-320, size:5, color:'#ffd54f', type:'mining'},
-  {name:'Altair Junction', x:150, y:-300, size:7, color:'#4fc3f7', type:'trade'},
-  {name:'Deneb Anchorage', x:-480, y:-50, size:5, color:'#78909c', type:'military'},
-  {name:'Rigel Depot', x:500, y:-100, size:4, color:'#ef5350', type:'frontier'},
-  {name:'Polaris Haven', x:-100, y:420, size:6, color:'#66bb6a', type:'agricultural'},
-  {name:'Antares Forge', x:380, y:80, size:6, color:'#ff8a65', type:'processing'},
-  {name:'Capella Market', x:-350, y:380, size:7, color:'#4fc3f7', type:'trade'},
-  {name:'Betelgeuse Yard', x:200, y:450, size:5, color:'#78909c', type:'shipyard'},
-  {name:'Aldebaran Mine', x:-500, y:-280, size:4, color:'#ffd54f', type:'mining'},
-  {name:'Spica Terminal', x:600, y:200, size:5, color:'#ab47bc', type:'nexus'},
-  {name:'Fomalhaut Colony', x:-200, y:-480, size:4, color:'#66bb6a', type:'agricultural'},
-  {name:'Canopus Station', x:100, y:600, size:6, color:'#4fc3f7', type:'industrial'},
-  {name:'Regulus Port', x:-600, y:150, size:5, color:'#ffd54f', type:'mining'},
-  {name:'Castor Relay', x:450, y:-280, size:4, color:'#ab47bc', type:'nexus'},
-  {name:'Pollux Outpost', x:-400, y:-400, size:4, color:'#ef5350', type:'frontier'},
-  {name:'Achernar Base', x:300, y:-450, size:5, color:'#78909c', type:'military'},
+  {name:'Cygnus Station', x:0, y:0, z:0, size:8, color:0x4fc3f7, type:'industrial'},
+  {name:'Vega Outpost', x:320, y:60, z:-180, size:5, color:0xffd54f, type:'mining'},
+  {name:'Kepler Freeport', x:-200, y:-40, z:150, size:9, color:0x4fc3f7, type:'trade'},
+  {name:'Arcturus Refinery', x:250, y:80, z:200, size:6, color:0xff8a65, type:'processing'},
+  {name:'Tau Ceti Prime', x:-300, y:-70, z:-120, size:7, color:0x66bb6a, type:'agricultural'},
+  {name:'Wolf 359 Depot', x:480, y:120, z:350, size:4, color:0xef5350, type:'frontier'},
+  {name:'Procyon Gate', x:60, y:-90, z:280, size:6, color:0xab47bc, type:'nexus'},
+  {name:'Sirius Dockyard', x:-380, y:50, z:200, size:6, color:0x78909c, type:'shipyard'},
+  {name:"Barnard's Reach", x:-150, y:100, z:-320, size:5, color:0xffd54f, type:'mining'},
+  {name:'Altair Junction', x:150, y:-110, z:-300, size:7, color:0x4fc3f7, type:'trade'},
+  {name:'Deneb Anchorage', x:-480, y:30, z:-50, size:5, color:0x78909c, type:'military'},
+  {name:'Rigel Depot', x:500, y:-60, z:-100, size:4, color:0xef5350, type:'frontier'},
+  {name:'Polaris Haven', x:-100, y:-80, z:420, size:6, color:0x66bb6a, type:'agricultural'},
+  {name:'Antares Forge', x:380, y:40, z:80, size:6, color:0xff8a65, type:'processing'},
+  {name:'Capella Market', x:-350, y:90, z:380, size:7, color:0x4fc3f7, type:'trade'},
+  {name:'Betelgeuse Yard', x:200, y:-50, z:450, size:5, color:0x78909c, type:'shipyard'},
+  {name:'Aldebaran Mine', x:-500, y:70, z:-280, size:4, color:0xffd54f, type:'mining'},
+  {name:'Spica Terminal', x:600, y:-30, z:200, size:5, color:0xab47bc, type:'nexus'},
+  {name:'Fomalhaut Colony', x:-200, y:110, z:-480, size:4, color:0x66bb6a, type:'agricultural'},
+  {name:'Canopus Station', x:100, y:-100, z:600, size:6, color:0x4fc3f7, type:'industrial'},
+  {name:'Regulus Port', x:-600, y:40, z:150, size:5, color:0xffd54f, type:'mining'},
+  {name:'Castor Relay', x:450, y:80, z:-280, size:4, color:0xab47bc, type:'nexus'},
+  {name:'Pollux Outpost', x:-400, y:-60, z:-400, size:4, color:0xef5350, type:'frontier'},
+  {name:'Achernar Base', x:300, y:90, z:-450, size:5, color:0x78909c, type:'military'},
 ];
 
-// Generate routes (connect nearby systems)
+// Generate routes
 const routes = [];
 for(let i=0;i<systems.length;i++){
   let dists=[];
   for(let j=0;j<systems.length;j++){
     if(i===j)continue;
-    const dx=systems[i].x-systems[j].x, dy=systems[i].y-systems[j].y;
-    dists.push({j,d:Math.sqrt(dx*dx+dy*dy)});
+    const dx=systems[i].x-systems[j].x,dy=systems[i].y-systems[j].y,dz=systems[i].z-systems[j].z;
+    dists.push({j,d:Math.sqrt(dx*dx+dy*dy+dz*dz)});
   }
   dists.sort((a,b)=>a.d-b.d);
-  for(let k=0;k<Math.min(3,dists.length);k++){
+  for(let k=0;k<3;k++){
     const pair=[Math.min(i,dists[k].j),Math.max(i,dists[k].j)];
     if(!routes.some(r=>r[0]===pair[0]&&r[1]===pair[1]))routes.push(pair);
   }
 }
 
+// Background stars
+const starGeo = new THREE.BufferGeometry();
+const starVerts = new Float32Array(2000*3);
+for(let i=0;i<2000;i++){
+  starVerts[i*3]=(Math.random()-0.5)*3000;
+  starVerts[i*3+1]=(Math.random()-0.5)*3000;
+  starVerts[i*3+2]=(Math.random()-0.5)*3000;
+}
+starGeo.setAttribute('position',new THREE.BufferAttribute(starVerts,3));
+const starMat = new THREE.PointsMaterial({color:0xb4c8dc,size:1.5,sizeAttenuation:true,transparent:true,opacity:0.5});
+scene.add(new THREE.Points(starGeo,starMat));
+
+// System nodes
+const systemMeshes = [];
+systems.forEach(s=>{
+  // Glow sprite
+  const spriteMat = new THREE.SpriteMaterial({
+    color:s.color,transparent:true,opacity:0.3,
+    map:generateGlowTexture()
+  });
+  const sprite = new THREE.Sprite(spriteMat);
+  sprite.scale.set(s.size*6,s.size*6,1);
+  sprite.position.set(s.x,s.y,s.z);
+  scene.add(sprite);
+
+  // Core sphere
+  const geo = new THREE.SphereGeometry(s.size*0.8,16,16);
+  const mat = new THREE.MeshBasicMaterial({color:s.color});
+  const mesh = new THREE.Mesh(geo,mat);
+  mesh.position.set(s.x,s.y,s.z);
+  scene.add(mesh);
+  systemMeshes.push(mesh);
+});
+
+// Route lines
+routes.forEach(([a,b])=>{
+  const pts=[new THREE.Vector3(systems[a].x,systems[a].y,systems[a].z),new THREE.Vector3(systems[b].x,systems[b].y,systems[b].z)];
+  const geo=new THREE.BufferGeometry().setFromPoints(pts);
+  const mat=new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.12});
+  scene.add(new THREE.Line(geo,mat));
+});
+
 // NPC ships
-let ships=[];
+const shipData=[];
+const shipMeshes=[];
+const shipColors=[0x4fc3f7,0x66bb6a,0xffd54f,0xff8a65,0xab47bc];
 for(let i=0;i<15;i++){
-  ships.push({
-    route:Math.floor(Math.random()*routes.length),
-    progress:Math.random(),
-    speed:0.0004+Math.random()*0.0008,
-    color:['#4fc3f7','#66bb6a','#ffd54f','#ff8a65','#ab47bc'][Math.floor(Math.random()*5)]
-  });
+  const col=shipColors[Math.floor(Math.random()*5)];
+  const geo=new THREE.SphereGeometry(2.5,8,8);
+  const mat=new THREE.MeshBasicMaterial({color:col});
+  const mesh=new THREE.Mesh(geo,mat);
+  scene.add(mesh);
+  shipMeshes.push(mesh);
+  shipData.push({route:Math.floor(Math.random()*routes.length),progress:Math.random(),speed:0.0004+Math.random()*0.0008});
 }
 
-// Background stars (in world space, large area)
-let stars=[];
-for(let i=0;i<800;i++){
-  stars.push({x:(Math.random()-0.5)*2000,y:(Math.random()-0.5)*2000,b:Math.random()*0.4+0.1,s:Math.random()*1.2+0.3});
+// Player indicator at Cygnus
+const playerRing = new THREE.Mesh(
+  new THREE.RingGeometry(12,14,32),
+  new THREE.MeshBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.7,side:THREE.DoubleSide})
+);
+playerRing.position.set(0,0,0);
+scene.add(playerRing);
+
+// Labels (CSS2D would be cleaner but keeping it simple with sprites)
+// We skip text labels in 3D for now to keep perf clean
+
+function generateGlowTexture(){
+  const c=document.createElement('canvas');
+  c.width=64;c.height=64;
+  const ctx=c.getContext('2d');
+  const g=ctx.createRadialGradient(32,32,0,32,32,32);
+  g.addColorStop(0,'rgba(255,255,255,1)');
+  g.addColorStop(0.3,'rgba(255,255,255,0.4)');
+  g.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=g;
+  ctx.fillRect(0,0,64,64);
+  const tex=new THREE.CanvasTexture(c);
+  return tex;
 }
 
-function resize(){
-  const parent=canvas.parentElement;
-  canvas.width=parent.clientWidth;
-  canvas.height=parent.clientHeight;
-}
-window.addEventListener('resize',resize);
+// Animate
+function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
 
-function worldToScreen(wx,wy){
-  const cx=canvas.width/2, cy=canvas.height/2;
-  return {x:cx+(wx-cam.x)*cam.zoom, y:cy+(wy-cam.y)*cam.zoom};
-}
-
-function draw(){
-  const w=canvas.width, h=canvas.height;
-  ctx.clearRect(0,0,w,h);
-
-  // Nebula bg
-  const grd=ctx.createRadialGradient(w*0.4,h*0.4,0,w*0.5,h*0.5,w*0.6);
-  grd.addColorStop(0,'rgba(15,30,60,0.2)');
-  grd.addColorStop(0.5,'rgba(10,15,40,0.1)');
-  grd.addColorStop(1,'rgba(5,8,15,0)');
-  ctx.fillStyle=grd;
-  ctx.fillRect(0,0,w,h);
-
-  // Stars (parallax - move slower)
-  stars.forEach(s=>{
-    const p=worldToScreen(s.x*0.6, s.y*0.6);
-    if(p.x<-5||p.x>w+5||p.y<-5||p.y>h+5)return;
-    ctx.beginPath();
-    ctx.arc(p.x,p.y,s.s*cam.zoom,0,Math.PI*2);
-    ctx.fillStyle=`rgba(180,200,220,${s.b})`;
-    ctx.fill();
-  });
-
-  // Trade routes
-  routes.forEach(([a,b])=>{
-    const pa=worldToScreen(systems[a].x,systems[a].y);
-    const pb=worldToScreen(systems[b].x,systems[b].y);
-    ctx.beginPath();
-    ctx.moveTo(pa.x,pa.y);
-    ctx.lineTo(pb.x,pb.y);
-    ctx.strokeStyle='rgba(79,195,247,0.07)';
-    ctx.lineWidth=1*cam.zoom;
-    ctx.stroke();
-    ctx.setLineDash([4*cam.zoom,8*cam.zoom]);
-    ctx.strokeStyle='rgba(79,195,247,0.14)';
-    ctx.stroke();
-    ctx.setLineDash([]);
-  });
-
-  // Ships
-  ships.forEach(ship=>{
+  // Move ships
+  shipData.forEach((ship,i)=>{
     const [a,b]=routes[ship.route];
-    const ax=systems[a].x,ay=systems[a].y;
-    const bx=systems[b].x,by=systems[b].y;
-    const wx=ax+(bx-ax)*ship.progress;
-    const wy=ay+(by-ay)*ship.progress;
-    const p=worldToScreen(wx,wy);
-    if(p.x>-20&&p.x<w+20&&p.y>-20&&p.y<h+20){
-      ctx.beginPath();
-      ctx.arc(p.x,p.y,2.5*cam.zoom,0,Math.PI*2);
-      ctx.fillStyle=ship.color;
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(p.x,p.y,5*cam.zoom,0,Math.PI*2);
-      ctx.fillStyle=ship.color+'33';
-      ctx.fill();
-    }
+    const ax=systems[a].x,ay=systems[a].y,az=systems[a].z;
+    const bx=systems[b].x,by=systems[b].y,bz=systems[b].z;
+    shipMeshes[i].position.set(
+      ax+(bx-ax)*ship.progress,
+      ay+(by-ay)*ship.progress,
+      az+(bz-az)*ship.progress
+    );
     ship.progress+=ship.speed;
     if(ship.progress>1){ship.progress=0;ship.route=Math.floor(Math.random()*routes.length);}
   });
 
-  // Systems
-  systems.forEach((s,i)=>{
-    const p=worldToScreen(s.x,s.y);
-    if(p.x<-50||p.x>w+50||p.y<-50||p.y>h+50)return;
-    const r=s.size*cam.zoom;
-    // Glow
-    const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r*3);
-    g.addColorStop(0,s.color+'55');
-    g.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=g;
-    ctx.beginPath();
-    ctx.arc(p.x,p.y,r*3,0,Math.PI*2);
-    ctx.fill();
-    // Dot
-    ctx.beginPath();
-    ctx.arc(p.x,p.y,r,0,Math.PI*2);
-    ctx.fillStyle=s.color;
-    ctx.fill();
-    // Ring
-    ctx.beginPath();
-    ctx.arc(p.x,p.y,r+3*cam.zoom,0,Math.PI*2);
-    ctx.strokeStyle=s.color+'44';
-    ctx.lineWidth=1;
-    ctx.stroke();
-    // Label
-    if(cam.zoom>0.5){
-      ctx.fillStyle='rgba(200,212,224,0.8)';
-      ctx.font=`600 ${Math.max(9,10*cam.zoom)}px Orbitron, sans-serif`;
-      ctx.textAlign='center';
-      ctx.fillText(s.name, p.x, p.y+r+12*cam.zoom);
-    }
-  });
+  // Rotate player ring to face camera
+  playerRing.lookAt(camera.position);
 
-  // Player at Cygnus
-  const pp=worldToScreen(systems[0].x,systems[0].y);
-  ctx.beginPath();
-  ctx.arc(pp.x,pp.y,14*cam.zoom,0,Math.PI*2);
-  ctx.strokeStyle='#4fc3f7';
-  ctx.lineWidth=2;
-  ctx.setLineDash([3*cam.zoom,3*cam.zoom]);
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle='#4fc3f7';
-  ctx.font=`bold ${Math.max(8,9*cam.zoom)}px "JetBrains Mono"`;
-  ctx.textAlign='center';
-  ctx.fillText('YOU', pp.x, pp.y-20*cam.zoom);
-
-  requestAnimationFrame(draw);
+  renderer.render(scene,camera);
 }
+animate();
 
-// Pan
-canvas.addEventListener('mousedown',e=>{dragging=true;dragStart={x:e.clientX,y:e.clientY};camStart={x:cam.x,y:cam.y};canvas.style.cursor='grabbing'});
-canvas.addEventListener('mousemove',e=>{if(!dragging)return;cam.x=camStart.x-(e.clientX-dragStart.x)/cam.zoom;cam.y=camStart.y-(e.clientY-dragStart.y)/cam.zoom;});
-canvas.addEventListener('mouseup',()=>{dragging=false;canvas.style.cursor='grab'});
-canvas.addEventListener('mouseleave',()=>{dragging=false;canvas.style.cursor='grab'});
-canvas.style.cursor='grab';
-
-// Zoom
-canvas.addEventListener('wheel',e=>{
-  e.preventDefault();
-  const factor=e.deltaY>0?0.9:1.1;
-  cam.zoom=Math.max(0.3,Math.min(4,cam.zoom*factor));
-},{passive:false});
+// Resize
+window.addEventListener('resize',()=>{
+  const w=container.clientWidth,h=container.clientHeight;
+  camera.aspect=w/h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w,h);
+});
 
 // Zoom buttons
 document.querySelectorAll('.map-zoom button').forEach((btn,i)=>{
-  btn.addEventListener('click',()=>{cam.zoom=Math.max(0.3,Math.min(4,cam.zoom*(i===0?1.3:0.7)))});
+  btn.addEventListener('click',()=>{
+    const dir=i===0?-1:1;
+    camera.position.multiplyScalar(1+dir*0.2);
+    controls.update();
+  });
 });
-
-resize();
-document.fonts.ready.then(()=>{draw();});
 </script>
 </body>
 </html>
