@@ -536,7 +536,7 @@ function animate(){
   const tickRate=1.0; // server ticks per second
   const progressPerFrame=(0.1/60)*tickRate; // approximate server progress rate per render frame
   shipMeshes.forEach((mesh,i)=>{
-    if(i>=liveShips.length) return;
+    if(typeof liveShips==='undefined'||i>=liveShips.length) return;
     const ship=liveShips[i];
     const locIdx=systemIdToIndex[ship?.location];
     const destIdx=systemIdToIndex[ship?.destination];
