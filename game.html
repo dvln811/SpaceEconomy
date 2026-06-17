@@ -488,7 +488,7 @@ let liveShips=[];
 function makeShipTexture(shape){
   const c=document.createElement('canvas');c.width=32;c.height=32;
   const ctx=c.getContext('2d');
-  ctx.strokeStyle='#b0d4f0';ctx.lineWidth=2;ctx.fillStyle='rgba(176,212,240,0.15)';
+  ctx.strokeStyle='rgba(176,212,240,0.5)';ctx.lineWidth=1;ctx.fillStyle='rgba(176,212,240,0.06)';
   ctx.beginPath();
   if(shape==='triangle'){ctx.moveTo(16,4);ctx.lineTo(28,28);ctx.lineTo(4,28);ctx.closePath();}
   else if(shape==='square'){ctx.rect(6,6,20,20);}
