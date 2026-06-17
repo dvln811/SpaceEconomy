@@ -123,7 +123,7 @@ class Simulation:
         for ship in self.ships:
             if ship.state != "traveling" or not ship.destination:
                 continue
-            ship.progress += 0.1 * ship.speed
+            ship.progress += 0.01 * ship.speed  # ~70-120 ticks per trip
             if ship.progress >= 1.0:
                 ship.progress = 0.0
                 ship.location = ship.destination

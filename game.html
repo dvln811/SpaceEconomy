@@ -538,9 +538,9 @@ function animate(){
     const ship=liveShips[i];
     const locIdx=systemIdToIndex[ship?.location];
     const destIdx=systemIdToIndex[ship?.destination];
-    // Predict forward for traveling ships (server does 0.1*speed per second, we do per frame at 60fps)
+    // Predict forward for traveling ships (server does 0.01*speed per second, we do per frame at 60fps)
     if(ship&&ship.state==='traveling'&&locIdx!==undefined&&destIdx!==undefined){
-      const serverRate=0.1*(ship.speed||1.0);
+      const serverRate=0.01*(ship.speed||1.0);
       mesh.userData.clientProgress=(mesh.userData.clientProgress||ship.progress)+(serverRate/60);
       if(mesh.userData.clientProgress>1) mesh.userData.clientProgress=1;
       const a=systems[locIdx],b=systems[destIdx];
