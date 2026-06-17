@@ -422,21 +422,46 @@ const systems = [
   {name:'Achernar Base', x:300, y:90, z:-450, size:5, color:0x78909c, type:'military'},
 ];
 
-// Generate routes
+// System ID mapping (matches server universe.py order -> systems array index)
+const systemIdToIndex={};
+const systemIdList=['cygnus','vega','kepler','arcturus','tau_ceti','wolf359','procyon','sirius','barnards','altair','deneb','rigel','polaris','antares','capella','betelgeuse','aldebaran','spica','fomalhaut','canopus','regulus','castor','pollux','achernar'];
+systemIdList.forEach((id,i)=>{systemIdToIndex[id]=i;});
+
+// Generate routes (placeholder until live connections load)
 const routes = [];
-for(let i=0;i<systems.length;i++){
-  let dists=[];
-  for(let j=0;j<systems.length;j++){
-    if(i===j)continue;
-    const dx=systems[i].x-systems[j].x,dy=systems[i].y-systems[j].y,dz=systems[i].z-systems[j].z;
-    dists.push({j,d:Math.sqrt(dx*dx+dy*dy+dz*dz)});
-  }
-  dists.sort((a,b)=>a.d-b.d);
-  for(let k=0;k<3;k++){
-    const pair=[Math.min(i,dists[k].j),Math.max(i,dists[k].j)];
-    if(!routes.some(r=>r[0]===pair[0]&&r[1]===pair[1]))routes.push(pair);
-  }
+const routeLines = [];
+
+// Route lines will be drawn from live API connections
+async function drawRouteLines(){
+  try{
+    const r=await fetch('/api/state');
+    const d=await r.json();
+    // Remove old lines
+    routeLines.forEach(l=>scene.remove(l));
+    routeLines.length=0;
+    routes.length=0;
+    const drawn=new Set();
+    for(const [sid,sys] of Object.entries(d.systems)){
+      const fromIdx=systemIdToIndex[sid];
+      if(fromIdx===undefined) continue;
+      for(const connId of sys.connections){
+        const toIdx=systemIdToIndex[connId];
+        if(toIdx===undefined) continue;
+        const key=Math.min(fromIdx,toIdx)+'-'+Math.max(fromIdx,toIdx);
+        if(drawn.has(key)) continue;
+        drawn.add(key);
+        routes.push([fromIdx,toIdx]);
+        const pts=[new THREE.Vector3(systems[fromIdx].x,systems[fromIdx].y,systems[fromIdx].z),new THREE.Vector3(systems[toIdx].x,systems[toIdx].y,systems[toIdx].z)];
+        const geo=new THREE.BufferGeometry().setFromPoints(pts);
+        const mat=new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.1});
+        const line=new THREE.Line(geo,mat);
+        scene.add(line);
+        routeLines.push(line);
+      }
+    }
+  }catch(e){}
 }
+drawRouteLines();
 
 // Background stars
 const starGeo = new THREE.BufferGeometry();
@@ -472,13 +497,7 @@ systems.forEach(s=>{
   systemMeshes.push(mesh);
 });
 
-// Route lines
-routes.forEach(([a,b])=>{
-  const pts=[new THREE.Vector3(systems[a].x,systems[a].y,systems[a].z),new THREE.Vector3(systems[b].x,systems[b].y,systems[b].z)];
-  const geo=new THREE.BufferGeometry().setFromPoints(pts);
-  const mat=new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.12});
-  scene.add(new THREE.Line(geo,mat));
-});
+// Route lines drawn by drawRouteLines() from API
 
 // NPC ships (40 total: 30 traders + 10 miners)
 const shipData=[];
@@ -761,10 +780,7 @@ document.querySelectorAll('.panel-tab').forEach(tab=>{
 const shipList=document.getElementById('ship-list');
 const playerShip={name:'Rusty Venture',class:'Bison Mk.III',cargo:'340/500',fuel:62,hull:94,location:'Cygnus Station',manifest:'220x Ore, 80x Meds, 40x Fuel'};
 
-// Map system IDs to our 3D positions
-const systemIdToIndex={};
-const systemIdList=['cygnus','vega','kepler','arcturus','tau_ceti','wolf359','procyon','sirius','barnards','altair','deneb','rigel','polaris','antares','capella','betelgeuse','aldebaran','spica','fomalhaut','canopus','regulus','castor','pollux','achernar'];
-systemIdList.forEach((id,i)=>{systemIdToIndex[id]=i;});
+// Map system IDs to our 3D positions (defined above)
 
 let liveState=null;
 let prevPrices={};
