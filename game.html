@@ -507,7 +507,7 @@ let liveShips=[];
 function makeShipTexture(shape){
   const c=document.createElement('canvas');c.width=32;c.height=32;
   const ctx=c.getContext('2d');
-  ctx.strokeStyle='rgba(140,170,200,0.8)';ctx.lineWidth=1;ctx.fillStyle='rgba(140,170,200,0.2)';
+  ctx.strokeStyle='rgba(180,210,240,0.9)';ctx.lineWidth=1.5;ctx.fillStyle='rgba(180,210,240,0.3)';
   ctx.beginPath();
   if(shape==='triangle'){ctx.moveTo(16,4);ctx.lineTo(28,28);ctx.lineTo(4,28);ctx.closePath();}
   else if(shape==='square'){ctx.rect(6,6,20,20);}
@@ -524,7 +524,7 @@ for(let i=0;i<40;i++){
   const tex=i<30?traderTex:minerTex;
   const mat=new THREE.SpriteMaterial({map:tex,transparent:true,opacity:0.9});
   const sprite=new THREE.Sprite(mat);
-  sprite.scale.set(5,5,1);
+  sprite.scale.set(6,6,1);
   scene.add(sprite);
   shipMeshes.push(sprite);
   shipData.push({route:Math.floor(Math.random()*routes.length),progress:Math.random(),speed:0.0004+Math.random()*0.0008});
@@ -675,7 +675,8 @@ function focusSystem(index){
   const item=document.querySelector(`.system-item[data-index="${index}"]`);
   if(item){item.classList.add('active');item.scrollIntoView({block:'nearest'});}
   updateSystemDetail(index);
-  updateShipList();
+  updateLiveShipList();
+  updateLiveMarket();
 }
 
 function focusShip(index){
@@ -701,11 +702,12 @@ function focusShip(index){
   }
   step();
   // Switch to ships tab and highlight
-  document.querySelectorAll('.panel-tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-  document.querySelector('[data-tab="ships"]').classList.add('active');
+  const lp=document.querySelector('.left-panel');
+  lp.querySelectorAll('.panel-tab').forEach(t=>t.classList.remove('active'));
+  lp.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  lp.querySelector('[data-tab="ships"]').classList.add('active');
   document.getElementById('tab-ships').classList.add('active');
-  updateShipList();
+  updateLiveShipList();
 }
 
 // ── Rich system data ──────────────────────────────────────────────────────────
