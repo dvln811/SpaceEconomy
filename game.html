@@ -532,6 +532,16 @@ function animate(){
   controls.update();
 
   // Move ships (now handled by updateMapShips from live data)
+  // Smoothly lerp ship meshes toward their targets
+  const lerpSpeed=0.03;
+  shipMeshes.forEach(mesh=>{
+    const t=mesh.userData.target;
+    if(t){
+      mesh.position.x+=(t.x-mesh.position.x)*lerpSpeed;
+      mesh.position.y+=(t.y-mesh.position.y)*lerpSpeed;
+      mesh.position.z+=(t.z-mesh.position.z)*lerpSpeed;
+    }
+  });
 
   // Rotate player ring to face camera
   playerRing.lookAt(camera.position);
@@ -813,21 +823,17 @@ function updateLiveShipList(){
 }
 
 function updateMapShips(){
-  // Position ship meshes based on live data
+  // Set ship target positions from live data (actual movement is lerped in animate loop)
   liveShips.forEach((ship,i)=>{
     if(i>=shipMeshes.length) return;
     const locIdx=systemIdToIndex[ship.location];
     const destIdx=systemIdToIndex[ship.destination];
     if(ship.state==='traveling'&&locIdx!==undefined&&destIdx!==undefined){
       const a=systems[locIdx],b=systems[destIdx];
-      shipMeshes[i].position.set(
-        a.x+(b.x-a.x)*ship.progress,
-        a.y+(b.y-a.y)*ship.progress,
-        a.z+(b.z-a.z)*ship.progress
-      );
+      shipMeshes[i].userData.target={x:a.x+(b.x-a.x)*ship.progress, y:a.y+(b.y-a.y)*ship.progress, z:a.z+(b.z-a.z)*ship.progress};
     }else if(locIdx!==undefined){
       const s=systems[locIdx];
-      shipMeshes[i].position.set(s.x+5*(i%4-2), s.y+3, s.z+5*(Math.floor(i/4)%3-1));
+      shipMeshes[i].userData.target={x:s.x+5*(i%4-2), y:s.y+3, z:s.z+5*(Math.floor(i/4)%3-1)};
     }
   });
 }
