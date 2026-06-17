@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Space Economy - Debug Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Orbitron:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:12px;padding:0}
+.nav{position:sticky;top:0;z-index:100;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:0 24px;height:48px;gap:20px}
+.nav h1{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:#ef5350;letter-spacing:3px;text-transform:uppercase}
+.nav a{font-size:11px;color:#5a7a9a;text-decoration:none;padding:6px 14px;border:1px solid #1a2844;border-radius:3px;transition:all .15s;letter-spacing:1px;text-transform:uppercase;font-family:'Orbitron',sans-serif}
+.nav a:hover{color:#4fc3f7;border-color:#4fc3f7}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;padding:12px;height:calc(100vh - 48px)}
+.panel{background:#0a0e18;border:1px solid #1a2844;border-radius:4px;padding:12px;overflow-y:auto}
+.panel-title{font-family:'Orbitron',sans-serif;font-size:10px;color:#4a6a8a;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #152238}
+.stat{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #0f1a28}
+.stat .label{color:#5a7a9a}
+.stat .value{color:#4fc3f7;font-weight:500}
+.event{padding:3px 0;border-bottom:1px solid #0a1420;color:#6a8aa0;font-size:11px}
+.event .tick-num{color:#3a5a7a;margin-right:8px;font-size:10px}
+.event .msg{color:#8aa0b8}
+.ship-row{padding:3px 0;border-bottom:1px solid #0f1a28;display:flex;gap:8px;align-items:center}
+.ship-row .name{color:#e0e8f0;width:130px}
+.ship-row .state{font-size:10px;padding:1px 6px;border-radius:2px}
+.ship-row .state-idle{background:#66bb6a22;color:#66bb6a}
+.ship-row .state-traveling{background:#4fc3f722;color:#4fc3f7}
+.ship-row .loc{color:#5a7a9a;font-size:10px;flex:1}
+.price-row{display:flex;gap:6px;padding:2px 0;border-bottom:1px solid #0f1a28;font-size:11px}
+.price-row .commodity{color:#ffd54f;width:120px}
+.price-row .sys{color:#5a7a9a;width:140px}
+.price-row .val{color:#e0e8f0;width:60px;text-align:right}
+.price-row .stock{color:#3a5a7a;width:50px;text-align:right}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#66bb6a;animation:pulse 1s infinite;margin-right:8px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+</style>
+</head>
+<body>
+<div class="nav">
+  <div class="live-dot"></div>
+  <h1>Debug Monitor</h1>
+  <a href="/">Mockup</a>
+  <a href="/design">Design</a>
+</div>
+<div class="grid">
+  <div class="panel">
+    <div class="panel-title">Simulation State</div>
+    <div id="stats"></div>
+    <div class="panel-title" style="margin-top:16px">Recent Events</div>
+    <div id="events"></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">NPC Ships (30)</div>
+    <div id="ships"></div>
+  </div>
+  <div class="panel" style="grid-column:1/-1;max-height:300px">
+    <div class="panel-title">Price Monitor (top commodities by volume)</div>
+    <div id="prices"></div>
+  </div>
+</div>
+<script>
+async function refresh(){
+  try{
+    const r=await fetch('/api/debug');
+    const d=await r.json();
+    // Stats
+    const uptime=d.uptime_seconds;
+    const h=Math.floor(uptime/3600);
+    const m=Math.floor((uptime%3600)/60);
+    const s=uptime%60;
+    document.getElementById('stats').innerHTML=`
+      <div class="stat"><span class="label">Tick</span><span class="value">${d.tick}</span></div>
+      <div class="stat"><span class="label">Uptime</span><span class="value">${h}h ${m}m ${s}s</span></div>
+      <div class="stat"><span class="label">Systems</span><span class="value">${d.systems}</span></div>
+      <div class="stat"><span class="label">NPC Ships</span><span class="value">${d.npc_ships}</span></div>
+      <div class="stat"><span class="label">Ships Idle</span><span class="value">${d.ships_by_state.idle||0}</span></div>
+      <div class="stat"><span class="label">Ships Traveling</span><span class="value">${d.ships_by_state.traveling||0}</span></div>
+    `;
+    // Events
+    const events=d.recent_events.slice().reverse();
+    document.getElementById('events').innerHTML=events.map(e=>`<div class="event"><span class="tick-num">T${e.tick}</span><span class="msg">${e.msg}</span></div>`).join('');
+    // Ships
+    document.getElementById('ships').innerHTML=d.ships.map(s=>{
+      const stateClass=s.state==='idle'?'state-idle':'state-traveling';
+      const loc=s.state==='traveling'?`${s.location} → ${s.destination} (${Math.round(s.progress*100)}%)`:s.location;
+      const cargo=Object.entries(s.cargo).map(([k,v])=>`${Math.round(v)}x ${k}`).join(', ')||'-';
+      return `<div class="ship-row"><span class="name">${s.name}</span><span class="state ${stateClass}">${s.state}</span><span class="loc">${loc}</span><span class="loc">${cargo}</span></div>`;
+    }).join('');
+    // Prices
+    const priceHtml=[];
+    const commodities=Object.keys(d.prices).sort();
+    for(const c of commodities.slice(0,10)){
+      const entries=d.prices[c].sort((a,b)=>b.stock-a.stock).slice(0,3);
+      for(const e of entries){
+        priceHtml.push(`<div class="price-row"><span class="commodity">${c}</span><span class="sys">${e.station}</span><span class="val">₡${e.price.toFixed(0)}</span><span class="stock">${Math.round(e.stock)}</span></div>`);
+      }
+    }
+    document.getElementById('prices').innerHTML=priceHtml.join('');
+  }catch(e){console.error(e)}
+}
+refresh();
+setInterval(refresh,2000);
+</script>
+</body>
+</html>
