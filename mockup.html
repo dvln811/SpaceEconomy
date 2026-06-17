@@ -65,10 +65,31 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .system-label{font-family:'Orbitron',sans-serif;font-size:9px;color:#8ab4d4;letter-spacing:1px;text-transform:uppercase;pointer-events:none;white-space:nowrap;text-shadow:0 0 4px #05080f,0 0 8px #05080f}
 
 /* Ship list items */
-.ship-item{padding:6px 10px;border-radius:4px;margin-bottom:4px;border:1px solid transparent;font-size:11px}
+.ship-item{padding:6px 10px;border-radius:4px;margin-bottom:4px;border:1px solid transparent;font-size:11px;cursor:pointer;transition:all .15s}
+.ship-item:hover{background:#111a2a;border-color:#1a3050}
+.ship-item.active{background:#0d1a2f;border-color:#4fc3f7;box-shadow:0 0 8px #4fc3f710}
+.ship-item.player{border-left:2px solid #4fc3f7}
 .ship-item .ship-name{color:#e0e8f0;font-weight:500}
 .ship-item .ship-detail{font-size:10px;color:#5a7a9a;margin-top:2px}
 .ship-item .ship-route{font-size:9px;color:#4fc3f7;margin-top:2px}
+.ship-item .ship-stats{margin-top:4px;font-size:10px;color:#8aa0b8}
+.ship-item .ship-stats div{padding:1px 0}
+
+/* System detail card */
+.system-detail{margin-top:8px;padding:8px;background:#0a1020;border:1px solid #1a2844;border-radius:4px;font-size:10px}
+.system-detail .detail-row{display:flex;justify-content:space-between;padding:2px 0;color:#8aa0b8}
+.system-detail .detail-row .val{color:#e0e8f0}
+.system-detail .detail-section{margin-top:6px;padding-top:4px;border-top:1px solid #152238}
+.system-detail .detail-section-title{font-family:'Orbitron',sans-serif;font-size:8px;color:#4a6a8a;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
+.system-detail .planet-item{color:#8ab4d4;padding:1px 0}
+.system-detail .station-item{color:#ffd54f;padding:1px 0}
+
+/* Hover tooltip */
+.map-tooltip{position:absolute;pointer-events:none;background:#0a0f1aee;border:1px solid #4fc3f7;border-radius:4px;padding:8px 12px;font-size:11px;color:#e0e8f0;z-index:100;max-width:220px;box-shadow:0 0 12px #4fc3f720,0 4px 8px #00000060;opacity:0;transition:opacity .15s}
+.map-tooltip.visible{opacity:1}
+.map-tooltip .tt-title{font-family:'Orbitron',sans-serif;font-size:10px;color:#4fc3f7;letter-spacing:1px;margin-bottom:4px}
+.map-tooltip .tt-row{font-size:10px;color:#8aa0b8;padding:1px 0}
+.map-tooltip .tt-row .tt-val{color:#e0e8f0;float:right}
 
 /* Goto button */
 .goto-btn{font-size:9px;color:#4fc3f7;background:#0a1428;border:1px solid #1a3050;border-radius:3px;padding:2px 8px;cursor:pointer;float:right;margin-top:2px;font-family:'JetBrains Mono',monospace;transition:all .15s}
@@ -169,6 +190,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 
   <!-- Main: Star Map -->
   <div class="main">
+    <div class="map-tooltip" id="map-tooltip"></div>
     <div class="map-label">Sector 7G · Local Cluster</div>
     <div class="map-zoom">
       <button>+</button>
@@ -478,7 +500,12 @@ document.querySelectorAll('.map-zoom button').forEach((btn,i)=>{
 
 // ── Camera focus animation ────────────────────────────────────────────────────
 let animating=false;
+let selectedSystem=-1;
+let selectedShip=-1;
+
 function focusSystem(index){
+  selectedSystem=index;
+  selectedShip=-1;
   const s=systems[index];
   const target=new THREE.Vector3(s.x,s.y,s.z);
   const offset=new THREE.Vector3(s.size*8,s.size*6,s.size*12);
@@ -491,7 +518,7 @@ function focusSystem(index){
   function step(){
     const elapsed=performance.now()-t0;
     const t=Math.min(elapsed/duration,1);
-    const ease=1-Math.pow(1-t,3); // ease-out cubic
+    const ease=1-Math.pow(1-t,3);
     camera.position.lerpVectors(startPos,dest,ease);
     controls.target.lerpVectors(startTarget,target,ease);
     controls.update();
@@ -499,10 +526,83 @@ function focusSystem(index){
     else animating=false;
   }
   step();
-  // Highlight in panel
   document.querySelectorAll('.system-item').forEach(el=>el.classList.remove('active'));
   const item=document.querySelector(`.system-item[data-index="${index}"]`);
-  if(item) item.classList.add('active');
+  if(item){item.classList.add('active');item.scrollIntoView({block:'nearest'});}
+  updateSystemDetail(index);
+  updateShipList();
+}
+
+function focusShip(index){
+  selectedShip=index;
+  selectedSystem=-1;
+  const pos=shipMeshes[index].position;
+  const target=new THREE.Vector3(pos.x,pos.y,pos.z);
+  const dest=target.clone().add(new THREE.Vector3(30,20,40));
+  const startPos=camera.position.clone();
+  const startTarget=controls.target.clone();
+  const duration=800;
+  const t0=performance.now();
+  animating=true;
+  function step(){
+    const elapsed=performance.now()-t0;
+    const t=Math.min(elapsed/duration,1);
+    const ease=1-Math.pow(1-t,3);
+    camera.position.lerpVectors(startPos,dest,ease);
+    controls.target.lerpVectors(startTarget,target,ease);
+    controls.update();
+    if(t<1) requestAnimationFrame(step);
+    else animating=false;
+  }
+  step();
+  // Switch to ships tab and highlight
+  document.querySelectorAll('.panel-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.querySelector('[data-tab="ships"]').classList.add('active');
+  document.getElementById('tab-ships').classList.add('active');
+  updateShipList();
+}
+
+// ── Rich system data ──────────────────────────────────────────────────────────
+const systemDetails = [
+  {planets:['Cygnus IV (Terran)','Cygnus V (Barren)'],stations:['Orbital Foundry','Commerce Hub'],resources:['Iron','Titanium','Water'],pop:'2.4M',security:'High',faction:'Trade Guild'},
+  {planets:['Vega II (Rocky)'],stations:['Mining Platform Alpha'],resources:['Rare Ores','Helium-3'],pop:'180K',security:'Medium',faction:'Miners Union'},
+  {planets:['Kepler Prime (Ocean)','Kepler III (Gas Giant)'],stations:['Grand Exchange','Freeport Bazaar','Fuel Depot'],resources:['Organics','Exotic Goods'],pop:'5.1M',security:'High',faction:'Free Traders'},
+  {planets:['Arcturus B (Volcanic)'],stations:['Refinery Omega'],resources:['Fuel','Polymers','Chemicals'],pop:'420K',security:'Medium',faction:'Industrial Corp'},
+  {planets:['Tau Ceti e (Garden)','Tau Ceti f (Arid)'],stations:['Agri-Orbital','Seed Vault'],resources:['Food','Biotech','Livestock'],pop:'8.2M',security:'High',faction:'Agrarian League'},
+  {planets:['Wolf 359b (Frozen)'],stations:['Frontier Post'],resources:['Salvage','Unknown Artifacts'],pop:'12K',security:'Low',faction:'None'},
+  {planets:['None'],stations:['Jump Gate Alpha','Nav Beacon'],resources:['Energy'],pop:'1.1M',security:'High',faction:'Gateway Authority'},
+  {planets:['Sirius III (Metallic)'],stations:['Dockyard Prime','Dry Dock Beta'],resources:['Alloys','Components','Composites'],pop:'900K',security:'High',faction:'Shipwrights Guild'},
+];
+
+function updateSystemDetail(index){
+  const detail=systemDetails[index];
+  const rightPanel=document.querySelector('.right-panel');
+  if(!detail){
+    rightPanel.innerHTML=`<div class="panel-title">${systems[index].name} · Info</div><div style="color:#5a7a9a;font-size:10px;margin-top:8px">No detailed data available</div>`;
+    return;
+  }
+  const s=systems[index];
+  rightPanel.innerHTML=`
+    <div class="panel-title">${s.name} · Info</div>
+    <div class="system-detail">
+      <div class="detail-row"><span>Type</span><span class="val">${s.type}</span></div>
+      <div class="detail-row"><span>Population</span><span class="val">${detail.pop}</span></div>
+      <div class="detail-row"><span>Security</span><span class="val">${detail.security}</span></div>
+      <div class="detail-row"><span>Faction</span><span class="val">${detail.faction}</span></div>
+      <div class="detail-section">
+        <div class="detail-section-title">Planets</div>
+        ${detail.planets.map(p=>`<div class="planet-item">◦ ${p}</div>`).join('')}
+      </div>
+      <div class="detail-section">
+        <div class="detail-section-title">Stations</div>
+        ${detail.stations.map(st=>`<div class="station-item">▪ ${st}</div>`).join('')}
+      </div>
+      <div class="detail-section">
+        <div class="detail-section-title">Resources</div>
+        <div style="color:#8aa0b8">${detail.resources.join(' · ')}</div>
+      </div>
+    </div>`;
 }
 
 // ── Click system in 3D map ────────────────────────────────────────────────────
@@ -514,6 +614,12 @@ renderer.domElement.addEventListener('click',(e)=>{
   mouse.x=((e.clientX-rect.left)/rect.width)*2-1;
   mouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
   raycaster.setFromCamera(mouse,camera);
+  // Check ships first (smaller targets)
+  const shipHits=raycaster.intersectObjects(shipMeshes);
+  if(shipHits.length>0){
+    const idx=shipMeshes.indexOf(shipHits[0].object);
+    if(idx>=0){focusShip(idx);return;}
+  }
   const hits=raycaster.intersectObjects(systemMeshes);
   if(hits.length>0){
     const idx=systemMeshes.indexOf(hits[0].object);
@@ -547,21 +653,96 @@ document.querySelectorAll('.panel-tab').forEach(tab=>{
   });
 });
 
-// ── Ships panel ───────────────────────────────────────────────────────────────
+// ── Ships panel (player + NPC) ────────────────────────────────────────────────
 const shipNames=['Meridian Express','Iron Vagrant','Solar Wind','Deep Haul','Star Drifter','Cobalt Runner','Void Trader','Nebula Fox','Red Kestrel','Arc Pilgrim','Hull Breaker','Quiet Flame','Dust Devil','Long Reach','Silver Mule'];
+const playerShip={name:'Rusty Venture',class:'Bison Mk.III',cargo:'340/500',fuel:62,hull:94,location:'Cygnus Station',manifest:'220x Ore, 80x Meds, 40x Fuel'};
 const shipList=document.getElementById('ship-list');
+
 function updateShipList(){
   shipList.innerHTML='';
+  // Player ship first
+  const pdiv=document.createElement('div');
+  pdiv.className='ship-item player'+(selectedShip===-2?' active':'');
+  pdiv.innerHTML=`<div class="ship-name">⬡ ${playerShip.name} <span style="color:#4fc3f7;font-size:9px">[YOU]</span></div>
+    <div class="ship-detail">${playerShip.class} · Docked</div>
+    <div class="ship-stats">
+      <div>Cargo: ${playerShip.cargo} · Fuel: ${playerShip.fuel}%</div>
+      <div>Hull: ${playerShip.hull}% · ${playerShip.location}</div>
+      <div style="color:#5a7a9a">${playerShip.manifest}</div>
+    </div>`;
+  pdiv.addEventListener('click',()=>{selectedShip=-2;selectedSystem=-1;focusSystem(0);updateShipList();});
+  shipList.appendChild(pdiv);
+
+  // NPC ships
   shipData.forEach((ship,i)=>{
     const [a,b]=routes[ship.route];
     const div=document.createElement('div');
-    div.className='ship-item';
+    div.className='ship-item'+(selectedShip===i?' active':'');
     div.innerHTML=`<div class="ship-name">${shipNames[i]}</div><div class="ship-detail">En route (${Math.round(ship.progress*100)}%)</div><div class="ship-route">${systems[a].name} → ${systems[b].name}</div>`;
+    div.addEventListener('click',()=>focusShip(i));
     shipList.appendChild(div);
   });
 }
 updateShipList();
 setInterval(updateShipList, 3000);
+
+// ── Hover tooltip ─────────────────────────────────────────────────────────────
+const tooltip=document.getElementById('map-tooltip');
+const ttRaycaster=new THREE.Raycaster();
+const ttMouse=new THREE.Vector2();
+let ttVisible=false;
+
+container.addEventListener('mousemove',(e)=>{
+  const rect=renderer.domElement.getBoundingClientRect();
+  ttMouse.x=((e.clientX-rect.left)/rect.width)*2-1;
+  ttMouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
+  ttRaycaster.setFromCamera(ttMouse,camera);
+
+  // Check ships
+  const shipHits=ttRaycaster.intersectObjects(shipMeshes);
+  if(shipHits.length>0){
+    const idx=shipMeshes.indexOf(shipHits[0].object);
+    if(idx>=0){
+      const [a,b]=routes[shipData[idx].route];
+      tooltip.innerHTML=`<div class="tt-title">${shipNames[idx]}</div>
+        <div class="tt-row">Status: <span class="tt-val">En route</span></div>
+        <div class="tt-row">From: <span class="tt-val">${systems[a].name}</span></div>
+        <div class="tt-row">To: <span class="tt-val">${systems[b].name}</span></div>
+        <div class="tt-row">Progress: <span class="tt-val">${Math.round(shipData[idx].progress*100)}%</span></div>`;
+      tooltip.style.left=(e.clientX-rect.left+12)+'px';
+      tooltip.style.top=(e.clientY-rect.top-8)+'px';
+      tooltip.classList.add('visible');
+      ttVisible=true;
+      return;
+    }
+  }
+
+  // Check systems
+  const sysHits=ttRaycaster.intersectObjects(systemMeshes);
+  if(sysHits.length>0){
+    const idx=systemMeshes.indexOf(sysHits[0].object);
+    if(idx>=0){
+      const s=systems[idx];
+      const d=systemDetails[idx];
+      let html=`<div class="tt-title">${s.name}</div>
+        <div class="tt-row">Type: <span class="tt-val">${s.type}</span></div>`;
+      if(d){
+        html+=`<div class="tt-row">Pop: <span class="tt-val">${d.pop}</span></div>
+          <div class="tt-row">Security: <span class="tt-val">${d.security}</span></div>
+          <div class="tt-row">Stations: <span class="tt-val">${d.stations.length}</span></div>`;
+      }
+      tooltip.innerHTML=html;
+      tooltip.style.left=(e.clientX-rect.left+12)+'px';
+      tooltip.style.top=(e.clientY-rect.top-8)+'px';
+      tooltip.classList.add('visible');
+      ttVisible=true;
+      return;
+    }
+  }
+
+  if(ttVisible){tooltip.classList.remove('visible');ttVisible=false;}
+});
+container.addEventListener('mouseleave',()=>{tooltip.classList.remove('visible');ttVisible=false;});
 </script>
 </body>
 </html>
