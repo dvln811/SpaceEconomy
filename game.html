@@ -889,8 +889,9 @@ function updateLiveShipList(){
       status=`-> ${destName} (${Math.round(ship.progress*100)}%)`;
     }
     div.innerHTML=`<div class="ship-name">${ship.name}</div><div class="ship-detail">${ship.ship_class||ship.role} · ${status}</div><div class="ship-route">${locName}</div>`;
-    div.addEventListener('click',()=>{selectedShip=i;if(locIdx!==undefined)focusSystem(locIdx);});
+    div.addEventListener('click',()=>focusShip(i));
     shipList.appendChild(div);
+    if(selectedShip===i) div.scrollIntoView({block:'nearest'});
   });
 }
 
