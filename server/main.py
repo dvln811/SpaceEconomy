@@ -13,14 +13,24 @@ app = Flask(__name__, static_folder=None)
 
 # ── Simulation ─────────────────────────────────────────────────────────────────
 from server.simulation import Simulation
+from server.persistence import init_db, save_simulation, load_simulation, clear_db
 
+init_db()
 sim = Simulation()
+if load_simulation(sim):
+    log.info(f"Loaded saved state at tick {sim.tick_count}")
+else:
+    log.info("No saved state found, starting fresh")
+
 TICK_RATE = float(os.getenv("TICK_RATE", "1.0"))
+SAVE_INTERVAL = 10  # save every N ticks
 
 
 def economy_loop():
     while True:
         sim.tick()
+        if sim.tick_count % SAVE_INTERVAL == 0:
+            save_simulation(sim)
         time.sleep(TICK_RATE)
 
 
@@ -31,7 +41,7 @@ log.info(f"Economy loop started ({TICK_RATE}s/tick, {len(sim.ships)} NPCs)")
 # ── Routes ─────────────────────────────────────────────────────────────────────
 @app.route("/")
 def index():
-    return send_from_directory(BASE_DIR, "mockup.html")
+    return send_from_directory(BASE_DIR, "game.html")
 
 
 @app.route("/design")
@@ -97,6 +107,16 @@ def api_debug():
     # Ship details
     summary["ships"] = [{"name": s.name, "state": s.state, "location": sim.universe[s.location].name if s.location in sim.universe else s.location, "destination": sim.universe[s.destination].name if s.destination in sim.universe else s.destination, "cargo": s.cargo, "progress": round(s.progress, 2)} for s in sim.ships]
     return jsonify(summary)
+
+
+@app.route("/api/nuke", methods=["POST"])
+def api_nuke():
+    """Reset simulation to initial state."""
+    global sim
+    clear_db()
+    sim = Simulation()
+    log.info("NUKE: Simulation reset to initial state")
+    return jsonify({"status": "reset", "tick": sim.tick_count})
 
 
 if __name__ == "__main__":

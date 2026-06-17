@@ -12,8 +12,9 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .nav a{font-size:11px;color:#5a7a9a;text-decoration:none;padding:6px 14px;border:1px solid #1a2844;border-radius:3px;transition:all .15s;letter-spacing:1px;text-transform:uppercase;font-family:'Orbitron',sans-serif}
 .nav a:hover{color:#4fc3f7;border-color:#4fc3f7}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;padding:12px;height:calc(100vh - 48px)}
-.panel{background:#0a0e18;border:1px solid #1a2844;border-radius:4px;padding:12px;overflow-y:auto}
-.panel-title{font-family:'Orbitron',sans-serif;font-size:10px;color:#4a6a8a;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #152238}
+.panel{background:#0a0e18;border:1px solid #1a2844;border-radius:4px;padding:12px;display:flex;flex-direction:column;overflow:hidden}
+.panel-title{font-family:'Orbitron',sans-serif;font-size:10px;color:#4a6a8a;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #152238;flex-shrink:0}
+.panel-scroll{overflow-y:auto;flex:1}
 .stat{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #0f1a28}
 .stat .label{color:#5a7a9a}
 .stat .value{color:#4fc3f7;font-weight:500}
@@ -39,23 +40,26 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 <div class="nav">
   <div class="live-dot"></div>
   <h1>Debug Monitor</h1>
-  <a href="/">Mockup</a>
+  <a href="/">Game</a>
   <a href="/design">Design</a>
+  <button id="nuke-btn" style="margin-left:auto;font-size:10px;color:#ef5350;background:#1a0a0a;border:1px solid #ef5350;border-radius:3px;padding:6px 14px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;font-family:Orbitron,sans-serif;transition:all .15s" onmouseover="this.style.background='#ef5350';this.style.color='#fff'" onmouseout="this.style.background='#1a0a0a';this.style.color='#ef5350'">⚠ Nuke / Reset</button>
 </div>
 <div class="grid">
   <div class="panel">
     <div class="panel-title">Simulation State</div>
+    <div class="panel-scroll">
     <div id="stats"></div>
     <div class="panel-title" style="margin-top:16px">Recent Events</div>
     <div id="events"></div>
+    </div>
   </div>
   <div class="panel">
     <div class="panel-title">NPC Ships (30)</div>
-    <div id="ships"></div>
+    <div class="panel-scroll" id="ships"></div>
   </div>
   <div class="panel" style="grid-column:1/-1;max-height:300px">
     <div class="panel-title">Price Monitor (top commodities by volume)</div>
-    <div id="prices"></div>
+    <div class="panel-scroll" id="prices"></div>
   </div>
 </div>
 <script>
@@ -100,6 +104,12 @@ async function refresh(){
 }
 refresh();
 setInterval(refresh,2000);
+
+document.getElementById('nuke-btn').addEventListener('click',async()=>{
+  if(!confirm('NUKE: Reset the entire simulation to initial state?')) return;
+  await fetch('/api/nuke',{method:'POST'});
+  refresh();
+});
 </script>
 </body>
 </html>
