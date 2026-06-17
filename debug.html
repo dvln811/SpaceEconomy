@@ -115,7 +115,7 @@ async function refresh(){
       if(s.state==='traveling') loc=`> ${s.destination} (${Math.round(s.progress*100)}%)`;
       else if(s.timer>0) loc=`${s.location} [${s.timer}t]`;
       const cargo=Object.entries(s.cargo).map(([k,v])=>`${Math.round(v)} ${k}`).join(', ')||'empty';
-      return `<div class="ship-row"><span class="role">${s.role} ${s.id}</span><span class="name">${s.name}</span><span class="state state-${s.state}">${s.state}</span><span class="loc">${loc}</span><span class="cargo">${cargo}</span></div>`;
+      return `<div class="ship-row"><span class="role">${s.role}, ${s.ship_class}</span><span class="name">${s.name}</span><span class="state state-${s.state}">${s.state}</span><span class="loc">${loc}</span><span class="cargo">${cargo}</span></div>`;
     }).join('');
 
     // Prices - with view filter

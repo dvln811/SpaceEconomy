@@ -111,7 +111,8 @@ def api_debug():
         dest_name = sim.universe[s.destination].name if s.destination in sim.universe else s.destination or "-"
         ships.append({
             "id": s.id, "name": s.name, "state": s.state, "role": s.role,
-            "timer": s.state_timer, "location": loc_name, "destination": dest_name,
+            "ship_class": s.ship_class, "timer": s.state_timer,
+            "location": loc_name, "destination": dest_name,
             "cargo": s.cargo, "progress": round(s.progress, 2),
         })
     summary["ships"] = ships

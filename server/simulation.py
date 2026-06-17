@@ -37,23 +37,26 @@ class Simulation:
 
     def _spawn_traders(self, count: int):
         system_ids = list(self.universe.keys())
+        trader_classes = ["Bison Mk.III", "Ox Hauler", "Mule Freighter", "Clydesdale", "Pinto Runner"]
         for i in range(count):
             loc = random.choice(system_ids)
             self.ships.append(NPCShip(
                 id=f"trader_{i}", name=NPC_TRADER_NAMES[i % len(NPC_TRADER_NAMES)],
                 cargo_capacity=150 + random.randint(0, 200), fuel=100.0,
                 location=loc, speed=0.8 + random.random() * 0.6, state="idle", role="trader",
+                ship_class=trader_classes[i % len(trader_classes)],
             ))
 
     def _spawn_miners(self, count: int):
-        # Place miners in systems that have asteroid fields
         mining_systems = [sid for sid, sys in self.universe.items() if sys.asteroid_fields]
+        miner_classes = ["Burro Driller", "Pickaxe Mk.II", "Anvil Corer"]
         for i in range(count):
             loc = random.choice(mining_systems)
             self.ships.append(NPCShip(
                 id=f"miner_{i}", name=NPC_MINER_NAMES[i % len(NPC_MINER_NAMES)],
                 cargo_capacity=100 + random.randint(0, 100), fuel=100.0,
                 location=loc, speed=0.6 + random.random() * 0.4, state="idle", role="miner",
+                ship_class=miner_classes[i % len(miner_classes)],
             ))
 
     def tick(self):
