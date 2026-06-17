@@ -105,7 +105,7 @@ def api_debug():
                     prices.setdefault(commodity, []).append({"system": sys.name, "station": st.name, "price": price, "stock": st.inventory.get(commodity, 0)})
     summary["prices"] = prices
     # Ship details
-    summary["ships"] = [{"name": s.name, "state": s.state, "location": sim.universe[s.location].name if s.location in sim.universe else s.location, "destination": sim.universe[s.destination].name if s.destination in sim.universe else s.destination, "cargo": s.cargo, "progress": round(s.progress, 2)} for s in sim.ships]
+    summary["ships"] = [{"name": s.name, "state": s.state, "role": s.role, "timer": s.state_timer, "location": sim.universe[s.location].name if s.location in sim.universe else s.location, "destination": sim.universe[s.destination].name if s.destination in sim.universe else s.destination, "cargo": s.cargo, "progress": round(s.progress, 2)} for s in sim.ships]
     return jsonify(summary)
 
 

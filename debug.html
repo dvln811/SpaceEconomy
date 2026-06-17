@@ -26,6 +26,9 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .ship-row .state{font-size:10px;padding:1px 6px;border-radius:2px}
 .ship-row .state-idle{background:#66bb6a22;color:#66bb6a}
 .ship-row .state-traveling{background:#4fc3f722;color:#4fc3f7}
+.ship-row .state-loading{background:#ffd54f22;color:#ffd54f}
+.ship-row .state-unloading{background:#ff8a6522;color:#ff8a65}
+.ship-row .state-mining{background:#ab47bc22;color:#ab47bc}
 .ship-row .loc{color:#5a7a9a;font-size:10px;flex:1}
 .price-row{display:flex;gap:6px;padding:2px 0;border-bottom:1px solid #0f1a28;font-size:11px}
 .price-row .commodity{color:#ffd54f;width:120px}
@@ -47,18 +50,18 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 <div class="grid">
   <div class="panel">
     <div class="panel-title">Simulation State</div>
-    <div class="panel-scroll">
-    <div id="stats"></div>
-    <div class="panel-title" style="margin-top:16px">Recent Events</div>
-    <div id="events"></div>
-    </div>
+    <div class="panel-scroll" id="stats"></div>
   </div>
   <div class="panel">
-    <div class="panel-title">NPC Ships (30)</div>
+    <div class="panel-title">Recent Events</div>
+    <div class="panel-scroll" id="events"></div>
+  </div>
+  <div class="panel" style="grid-column:1/-1">
+    <div class="panel-title">NPC Ships</div>
     <div class="panel-scroll" id="ships"></div>
   </div>
   <div class="panel" style="grid-column:1/-1;max-height:300px">
-    <div class="panel-title">Price Monitor (top commodities by volume)</div>
+    <div class="panel-title">Price Monitor</div>
     <div class="panel-scroll" id="prices"></div>
   </div>
 </div>
@@ -85,10 +88,13 @@ async function refresh(){
     document.getElementById('events').innerHTML=events.map(e=>`<div class="event"><span class="tick-num">T${e.tick}</span><span class="msg">${e.msg}</span></div>`).join('');
     // Ships
     document.getElementById('ships').innerHTML=d.ships.map(s=>{
-      const stateClass=s.state==='idle'?'state-idle':'state-traveling';
-      const loc=s.state==='traveling'?`${s.location} → ${s.destination} (${Math.round(s.progress*100)}%)`:s.location;
+      const stateClass='state-'+s.state;
+      let loc=s.location;
+      if(s.state==='traveling') loc=`${s.location} → ${s.destination} (${Math.round(s.progress*100)}%)`;
+      else if(s.state==='loading'||s.state==='unloading'||s.state==='mining') loc=`${s.location} [${s.timer}t left]`;
       const cargo=Object.entries(s.cargo).map(([k,v])=>`${Math.round(v)}x ${k}`).join(', ')||'-';
-      return `<div class="ship-row"><span class="name">${s.name}</span><span class="state ${stateClass}">${s.state}</span><span class="loc">${loc}</span><span class="loc">${cargo}</span></div>`;
+      const role=s.role==='miner'?'⛏':'🚛';
+      return `<div class="ship-row"><span class="name">${role} ${s.name}</span><span class="state ${stateClass}">${s.state}</span><span class="loc">${loc}</span><span class="loc">${cargo}</span></div>`;
     }).join('');
     // Prices
     const priceHtml=[];

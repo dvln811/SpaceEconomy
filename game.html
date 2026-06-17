@@ -13,7 +13,12 @@ html,body{height:100%;overflow:hidden}
 body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:13px}
 
 /* Layout */
-.app{display:grid;grid-template-columns:280px 1fr 320px;grid-template-rows:48px 1fr auto;height:100vh;gap:1px;background:#1a2030}
+.app{display:grid;grid-template-columns:280px 4px 1fr 4px 320px;grid-template-rows:48px 1fr auto auto;height:100vh;gap:0;background:#1a2030}
+
+/* Side resize handles */
+.side-handle{background:#0a0f1a;cursor:ew-resize;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.side-handle:hover{background:#1a2844}
+.side-handle::after{content:'';width:2px;height:30px;background:#3a5a7a;border-radius:1px}
 
 /* Resize handle */
 .resize-handle{grid-column:1/-1;height:6px;background:#0a0f1a;cursor:ns-resize;display:flex;align-items:center;justify-content:center;transition:background .15s}
@@ -54,7 +59,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .map-zoom button{width:28px;height:28px;background:#0a1020;border:1px solid #1a3050;color:#4fc3f7;border-radius:3px;cursor:pointer;font-size:14px}
 
 /* Right Panel - Market */
-.right-panel{background:#0a0e18;overflow-y:auto;padding:12px;border-left:1px solid #1a2844}
+.right-panel{background:#0a0e18;overflow-y:auto;padding:12px;border-left:1px solid #1a2844;display:flex;flex-direction:column}
 .commodity-row{display:flex;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid #0f1a28;transition:background .15s}
 .commodity-row:hover{background:#111a28}
 .commodity-name{font-size:11px;color:#b0c4d8}
@@ -95,10 +100,6 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .map-tooltip .tt-title{font-family:'Orbitron',sans-serif;font-size:10px;color:#4fc3f7;letter-spacing:1px;margin-bottom:4px}
 .map-tooltip .tt-row{font-size:10px;color:#8aa0b8;padding:1px 0}
 .map-tooltip .tt-row .tt-val{color:#e0e8f0;float:right}
-
-/* Goto button */
-.goto-btn{font-size:9px;color:#4fc3f7;background:#0a1428;border:1px solid #1a3050;border-radius:3px;padding:2px 8px;cursor:pointer;float:right;margin-top:2px;font-family:'JetBrains Mono',monospace;transition:all .15s}
-.goto-btn:hover{background:#1a2844;border-color:#4fc3f7}
 
 /* Bottom Panel - Ship/Activity */
 .bottom{grid-column:1/-1;background:#0a0e18;border-top:1px solid #1a2844;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px}
@@ -144,49 +145,41 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     <div class="tab-content active" id="tab-systems">
     <div class="panel-title">Known Systems</div>
     <div class="system-item active" data-index="0">
-      <button class="goto-btn">Goto</button>
       <div class="system-name">⬡ Cygnus Station</div>
       <div class="system-type">Industrial Hub · Pop 2.4M</div>
       <div class="system-prices"><span class="price-up">▲ Ore +12%</span><span class="price-down">▼ Food -8%</span></div>
     </div>
     <div class="system-item" data-index="1">
-      <button class="goto-btn">Goto</button>
       <div class="system-name">⬡ Vega Outpost</div>
       <div class="system-type">Mining Colony · Pop 180K</div>
       <div class="system-prices"><span class="price-up">▲ Meds +22%</span><span class="price-neutral">— Ore 0%</span></div>
     </div>
     <div class="system-item" data-index="2">
-      <button class="goto-btn">Goto</button>
       <div class="system-name">⬡ Kepler Freeport</div>
       <div class="system-type">Trade Hub · Pop 5.1M</div>
       <div class="system-prices"><span class="price-down">▼ Electronics -4%</span><span class="price-up">▲ Luxuries +9%</span></div>
     </div>
     <div class="system-item" data-index="3">
-      <button class="goto-btn">Goto</button>
       <div class="system-name">⬡ Arcturus Refinery</div>
       <div class="system-type">Processing · Pop 420K</div>
       <div class="system-prices"><span class="price-up">▲ Fuel +6%</span><span class="price-down">▼ Polymers -15%</span></div>
     </div>
     <div class="system-item" data-index="4">
-      <button class="goto-btn">Goto</button>
       <div class="system-name">⬡ Tau Ceti Prime</div>
       <div class="system-type">Agricultural · Pop 8.2M</div>
       <div class="system-prices"><span class="price-down">▼ Food -18%</span><span class="price-up">▲ Machinery +11%</span></div>
     </div>
     <div class="system-item" data-index="5">
-      <button class="goto-btn">Goto</button>
       <div class="system-name">⬡ Wolf 359 Depot</div>
       <div class="system-type">Frontier · Pop 12K</div>
       <div class="system-prices"><span class="price-up">▲ Everything +30%</span></div>
     </div>
     <div class="system-item" data-index="6">
-      <button class="goto-btn">Goto</button>
       <div class="system-name">⬡ Procyon Gate</div>
       <div class="system-type">Jump Nexus · Pop 1.1M</div>
       <div class="system-prices"><span class="price-neutral">— Stable market</span></div>
     </div>
     <div class="system-item" data-index="7">
-      <button class="goto-btn">Goto</button>
       <div class="system-name">⬡ Sirius Dockyard</div>
       <div class="system-type">Shipbuilding · Pop 900K</div>
       <div class="system-prices"><span class="price-up">▲ Alloys +8%</span><span class="price-down">▼ Components -5%</span></div>
@@ -198,6 +191,9 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     </div>
   </div>
 
+  <!-- Side Handle Left -->
+  <div class="side-handle" id="left-handle"></div>
+
   <!-- Main: Star Map -->
   <div class="main">
     <div class="map-tooltip" id="map-tooltip"></div>
@@ -208,62 +204,74 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     </div>
   </div>
 
-  <!-- Right: Market Data -->
+  <!-- Side Handle Right -->
+  <div class="side-handle" id="right-handle"></div>
+
+  <!-- Right: System Info + Market (tabbed) -->
   <div class="right-panel">
-    <div class="panel-title">Cygnus Station · Market</div>
-    <div class="commodity-row">
-      <div class="commodity-name">Iron Ore</div>
-      <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#66bb6a" points="0,18 8,15 16,12 24,14 32,10 40,8 48,6 56,4 60,3"/></svg>
-      <div class="commodity-price">₡ 284</div>
-      <div class="commodity-change up">+12.3%</div>
+    <div class="panel-tabs">
+      <div class="panel-tab active" data-tab="r-info">System Info</div>
+      <div class="panel-tab" data-tab="r-market">Market</div>
     </div>
-    <div class="commodity-row">
-      <div class="commodity-name">Processed Food</div>
-      <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#ef5350" points="0,4 8,6 16,8 24,7 32,10 40,13 48,15 56,16 60,17"/></svg>
-      <div class="commodity-price">₡ 52</div>
-      <div class="commodity-change down">-8.1%</div>
+    <div class="tab-content active" id="tab-r-info">
+      <div id="system-info-content"><div style="color:#5a7a9a;font-size:10px">Select a system to view info</div></div>
     </div>
-    <div class="commodity-row">
-      <div class="commodity-name">Medical Supplies</div>
-      <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#4fc3f7" points="0,10 8,11 16,9 24,10 32,10 40,9 48,11 56,10 60,10"/></svg>
-      <div class="commodity-price">₡ 1,240</div>
-      <div class="commodity-change up">+1.2%</div>
-    </div>
-    <div class="commodity-row">
-      <div class="commodity-name">Fuel Cells</div>
-      <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#66bb6a" points="0,14 8,13 16,11 24,12 32,10 40,9 48,8 56,7 60,7"/></svg>
-      <div class="commodity-price">₡ 890</div>
-      <div class="commodity-change up">+5.8%</div>
-    </div>
-    <div class="commodity-row">
-      <div class="commodity-name">Electronics</div>
-      <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#ef5350" points="0,8 8,9 16,10 24,11 32,10 40,12 48,13 56,14 60,13"/></svg>
-      <div class="commodity-price">₡ 3,450</div>
-      <div class="commodity-change down">-3.9%</div>
-    </div>
-    <div class="commodity-row">
-      <div class="commodity-name">Luxury Goods</div>
-      <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#66bb6a" points="0,16 8,14 16,12 24,11 32,10 40,8 48,7 56,5 60,4"/></svg>
-      <div class="commodity-price">₡ 7,820</div>
-      <div class="commodity-change up">+9.4%</div>
-    </div>
-    <div class="commodity-row">
-      <div class="commodity-name">Polymers</div>
-      <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#ef5350" points="0,6 8,8 16,9 24,11 32,13 40,14 48,16 56,17 60,18"/></svg>
-      <div class="commodity-price">₡ 156</div>
-      <div class="commodity-change down">-14.7%</div>
-    </div>
-    <div class="commodity-row">
-      <div class="commodity-name">Alloys</div>
-      <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#66bb6a" points="0,12 8,11 16,12 24,10 32,9 40,8 48,7 56,6 60,5"/></svg>
-      <div class="commodity-price">₡ 2,100</div>
-      <div class="commodity-change up">+8.2%</div>
-    </div>
-    <div class="commodity-row">
-      <div class="commodity-name">Narcotics</div>
-      <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#ffd54f" points="0,10 8,6 16,14 24,4 32,16 40,8 48,12 56,5 60,15"/></svg>
-      <div class="commodity-price">₡ 12,400</div>
-      <div class="commodity-change up">+44.1%</div>
+    <div class="tab-content" id="tab-r-market">
+      <div class="panel-title">Cygnus Station · Market</div>
+      <div class="commodity-row">
+        <div class="commodity-name">Iron Ore</div>
+        <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#66bb6a" points="0,18 8,15 16,12 24,14 32,10 40,8 48,6 56,4 60,3"/></svg>
+        <div class="commodity-price">₡ 284</div>
+        <div class="commodity-change up">+12.3%</div>
+      </div>
+      <div class="commodity-row">
+        <div class="commodity-name">Processed Food</div>
+        <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#ef5350" points="0,4 8,6 16,8 24,7 32,10 40,13 48,15 56,16 60,17"/></svg>
+        <div class="commodity-price">₡ 52</div>
+        <div class="commodity-change down">-8.1%</div>
+      </div>
+      <div class="commodity-row">
+        <div class="commodity-name">Medical Supplies</div>
+        <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#4fc3f7" points="0,10 8,11 16,9 24,10 32,10 40,9 48,11 56,10 60,10"/></svg>
+        <div class="commodity-price">₡ 1,240</div>
+        <div class="commodity-change up">+1.2%</div>
+      </div>
+      <div class="commodity-row">
+        <div class="commodity-name">Fuel Cells</div>
+        <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#66bb6a" points="0,14 8,13 16,11 24,12 32,10 40,9 48,8 56,7 60,7"/></svg>
+        <div class="commodity-price">₡ 890</div>
+        <div class="commodity-change up">+5.8%</div>
+      </div>
+      <div class="commodity-row">
+        <div class="commodity-name">Electronics</div>
+        <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#ef5350" points="0,8 8,9 16,10 24,11 32,10 40,12 48,13 56,14 60,13"/></svg>
+        <div class="commodity-price">₡ 3,450</div>
+        <div class="commodity-change down">-3.9%</div>
+      </div>
+      <div class="commodity-row">
+        <div class="commodity-name">Luxury Goods</div>
+        <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#66bb6a" points="0,16 8,14 16,12 24,11 32,10 40,8 48,7 56,5 60,4"/></svg>
+        <div class="commodity-price">₡ 7,820</div>
+        <div class="commodity-change up">+9.4%</div>
+      </div>
+      <div class="commodity-row">
+        <div class="commodity-name">Polymers</div>
+        <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#ef5350" points="0,6 8,8 16,9 24,11 32,13 40,14 48,16 56,17 60,18"/></svg>
+        <div class="commodity-price">₡ 156</div>
+        <div class="commodity-change down">-14.7%</div>
+      </div>
+      <div class="commodity-row">
+        <div class="commodity-name">Alloys</div>
+        <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#66bb6a" points="0,12 8,11 16,12 24,10 32,9 40,8 48,7 56,6 60,5"/></svg>
+        <div class="commodity-price">₡ 2,100</div>
+        <div class="commodity-change up">+8.2%</div>
+      </div>
+      <div class="commodity-row">
+        <div class="commodity-name">Narcotics</div>
+        <svg class="sparkline" viewBox="0 0 60 20"><polyline stroke="#ffd54f" points="0,10 8,6 16,14 24,4 32,16 40,8 48,12 56,5 60,15"/></svg>
+        <div class="commodity-price">₡ 12,400</div>
+        <div class="commodity-change up">+44.1%</div>
+      </div>
     </div>
   </div>
 
@@ -405,6 +413,35 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   });
   document.addEventListener('mouseup',()=>{
     if(dragging){dragging=false;document.body.style.cursor='';}
+  });
+})();
+
+// Side panel resize
+(function(){
+  const app=document.querySelector('.app');
+  let leftW=280, rightW=320;
+
+  function updateCols(){
+    app.style.gridTemplateColumns=`${leftW}px 4px 1fr 4px ${rightW}px`;
+    window.dispatchEvent(new Event('resize'));
+  }
+
+  // Left handle
+  const lh=document.getElementById('left-handle');
+  let ldrag=false, lStartX, lStartW;
+  lh.addEventListener('mousedown',(e)=>{ldrag=true;lStartX=e.clientX;lStartW=leftW;document.body.style.cursor='ew-resize';e.preventDefault();});
+
+  // Right handle
+  const rh=document.getElementById('right-handle');
+  let rdrag=false, rStartX, rStartW;
+  rh.addEventListener('mousedown',(e)=>{rdrag=true;rStartX=e.clientX;rStartW=rightW;document.body.style.cursor='ew-resize';e.preventDefault();});
+
+  document.addEventListener('mousemove',(e)=>{
+    if(ldrag){leftW=Math.max(180,Math.min(500,lStartW+(e.clientX-lStartX)));updateCols();}
+    if(rdrag){rightW=Math.max(200,Math.min(600,rStartW-(e.clientX-rStartX)));updateCols();}
+  });
+  document.addEventListener('mouseup',()=>{
+    if(ldrag||rdrag){ldrag=false;rdrag=false;document.body.style.cursor='';}
   });
 })();
 </script>
@@ -699,14 +736,14 @@ const systemDetails = [
 
 function updateSystemDetail(index){
   const detail=systemDetails[index];
-  const rightPanel=document.querySelector('.right-panel');
+  const infoPanel=document.getElementById('system-info-content');
   if(!detail){
-    rightPanel.innerHTML=`<div class="panel-title">${systems[index].name} · Info</div><div style="color:#5a7a9a;font-size:10px;margin-top:8px">No detailed data available</div>`;
+    infoPanel.innerHTML=`<div class="panel-title">${systems[index].name}</div><div style="color:#5a7a9a;font-size:10px;margin-top:8px">No detailed data available</div>`;
     return;
   }
   const s=systems[index];
-  rightPanel.innerHTML=`
-    <div class="panel-title">${s.name} · Info</div>
+  infoPanel.innerHTML=`
+    <div class="panel-title">${s.name}</div>
     <div class="system-detail">
       <div class="detail-row"><span>Type</span><span class="val">${s.type}</span></div>
       <div class="detail-row"><span>Population</span><span class="val">${detail.pop}</span></div>
@@ -750,14 +787,6 @@ renderer.domElement.addEventListener('click',(e)=>{
 });
 
 // ── Click Goto in left panel ──────────────────────────────────────────────────
-document.querySelectorAll('.goto-btn').forEach(btn=>{
-  btn.addEventListener('click',(e)=>{
-    e.stopPropagation();
-    const item=btn.closest('.system-item');
-    const idx=parseInt(item.dataset.index);
-    focusSystem(idx);
-  });
-});
 document.querySelectorAll('.system-item').forEach(item=>{
   item.addEventListener('click',()=>{
     const idx=parseInt(item.dataset.index);
@@ -768,8 +797,9 @@ document.querySelectorAll('.system-item').forEach(item=>{
 // ── Tab switching ─────────────────────────────────────────────────────────────
 document.querySelectorAll('.panel-tab').forEach(tab=>{
   tab.addEventListener('click',()=>{
-    document.querySelectorAll('.panel-tab').forEach(t=>t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    const parent=tab.closest('.left-panel,.right-panel');
+    parent.querySelectorAll('.panel-tab').forEach(t=>t.classList.remove('active'));
+    parent.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('tab-'+tab.dataset.tab).classList.add('active');
   });

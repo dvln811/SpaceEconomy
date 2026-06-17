@@ -56,7 +56,9 @@ class NPCShip:
     destination: str = ""    # system_id
     progress: float = 0.0    # 0-1 travel progress
     speed: float = 1.0
-    state: str = "idle"      # idle, traveling, buying, selling
+    state: str = "idle"      # idle, traveling, loading, unloading, mining
+    state_timer: int = 0     # ticks remaining in current state
+    role: str = "trader"     # trader, miner
 
 
 # All commodities in the game
