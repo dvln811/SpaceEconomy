@@ -97,8 +97,10 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 
 /* Bottom Panel - Ship/Activity */
 .bottom{grid-column:1/-1;background:#0a0e18;border-top:1px solid #1a2844;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px}
-.bottom-section{padding:12px 16px;overflow-y:auto}
-.ship-schematic{display:flex;justify-content:center;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #152238}
+.bottom-section{padding:12px 16px;display:flex;flex-direction:column;overflow:hidden}
+.bottom-section .panel-title{flex-shrink:0}
+.bottom-scroll{overflow-y:auto;flex:1}
+.ship-schematic{display:flex;justify-content:center;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #152238;flex-shrink:0}
 .ship-schematic svg{width:100%;max-width:240px;height:50px}
 .ship-stat{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #0f1a28}
 .ship-stat .label{color:#5a7a9a;font-size:10px}
@@ -274,11 +276,11 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
           <!-- Cargo bay center line -->
           <line x1="90" y1="28" x2="150" y2="28" stroke="#1a3050" stroke-width="0.5" stroke-dasharray="2,2"/>
           <!-- Hardpoints -->
-          <circle cx="100" cy="14" r="3" stroke="#ffd54f" stroke-width="1" fill="none"/><!-- top-left -->
-          <circle cx="140" cy="14" r="3" stroke="#ffd54f" stroke-width="1" fill="none"/><!-- top-right -->
-          <circle cx="100" cy="42" r="3" stroke="#66bb6a" stroke-width="1" fill="none"/><!-- bot-left -->
-          <circle cx="140" cy="42" r="3" stroke="#66bb6a" stroke-width="1" fill="none"/><!-- bot-right -->
-          <circle cx="172" cy="28" r="3" stroke="#ef5350" stroke-width="1" fill="none"/><!-- nose -->
+          <circle cx="100" cy="14" r="3" stroke="#ffd54f" stroke-width="1" fill="none"/>
+          <circle cx="140" cy="14" r="3" stroke="#ffd54f" stroke-width="1" fill="none"/>
+          <circle cx="100" cy="42" r="3" stroke="#66bb6a" stroke-width="1" fill="none"/>
+          <circle cx="140" cy="42" r="3" stroke="#66bb6a" stroke-width="1" fill="none"/>
+          <circle cx="172" cy="28" r="3" stroke="#ef5350" stroke-width="1" fill="none"/>
           <!-- Hardpoint labels -->
           <text x="100" y="11" text-anchor="middle" font-size="4" fill="#ffd54f" font-family="JetBrains Mono">SCAN</text>
           <text x="140" y="11" text-anchor="middle" font-size="4" fill="#ffd54f" font-family="JetBrains Mono">SHLD</text>
@@ -293,16 +295,18 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
           <circle cx="172" cy="28" r="1.2" fill="#ef5350"/>
         </svg>
       </div>
+      <div class="bottom-scroll">
       <div class="ship-stat"><span class="label">Class</span><span class="value">Bison Mk.III Freighter</span></div>
       <div class="ship-stat"><span class="label">Cargo</span><span class="value">340 / 500 units</span></div>
       <div class="ship-stat"><span class="label">Fuel</span><span class="value" style="color:#ffd54f">62% ████████░░░░</span></div>
       <div class="ship-stat"><span class="label">Hull</span><span class="value" style="color:#66bb6a">94% ██████████░░</span></div>
       <div class="ship-stat"><span class="label">Location</span><span class="value">Docked · Cygnus Station</span></div>
       <div class="ship-stat"><span class="label">Manifest</span><span class="value">220× Ore, 80× Meds, 40× Fuel</span></div>
+      </div>
     </div>
     <div class="bottom-section">
       <div class="panel-title">Activity Feed</div>
-      <div id="activity-feed">
+      <div class="bottom-scroll" id="activity-feed">
       <div class="activity-item"><span class="time">14:28</span>NPC hauler <span class="highlight">Meridian Express</span> arrived at Cygnus (180× Food)</div>
       <div class="activity-item"><span class="time">14:25</span>Ore price at Cygnus <span class="profit">▲ +2.1%</span> (supply shortage)</div>
       <div class="activity-item"><span class="time">14:20</span>Pirate activity reported near <span class="loss">Wolf 359 corridor</span></div>
@@ -313,10 +317,12 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     </div>
     <div class="bottom-section">
       <div class="panel-title">Profitable Routes</div>
+      <div class="bottom-scroll">
       <div class="route-item"><span class="route-dot"></span><div class="route-info">Cygnus → Vega Outpost<br><span style="color:#5a7a9a">Medical Supplies · 3.2 hr</span></div><div class="route-profit">+₡ 34,200</div></div>
       <div class="route-item"><span class="route-dot"></span><div class="route-info">Tau Ceti → Cygnus<br><span style="color:#5a7a9a">Food · 1.8 hr</span></div><div class="route-profit">+₡ 18,400</div></div>
       <div class="route-item"><span class="route-dot warning"></span><div class="route-info">Kepler → Wolf 359<br><span style="color:#5a7a9a">Everything · 6.1 hr · ⚠ Risky</span></div><div class="route-profit">+₡ 89,000</div></div>
       <div class="route-item"><span class="route-dot danger"></span><div class="route-info">Anywhere → Frontier<br><span style="color:#5a7a9a">Narcotics · Illegal · 8+ hr</span></div><div class="route-profit">+₡ 200,000+</div></div>
+      </div>
     </div>
   </div>
 </div>
