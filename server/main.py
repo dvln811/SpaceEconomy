@@ -38,6 +38,11 @@ def design():
     return send_from_directory(BASE_DIR, "design.html")
 
 
+@app.route("/universe")
+def universe():
+    return send_from_directory(BASE_DIR, "universe.html")
+
+
 @app.route("/health")
 def health():
     return {"status": "ok", "tick": tick_count}
