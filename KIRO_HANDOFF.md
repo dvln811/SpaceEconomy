@@ -64,7 +64,7 @@ Knowing how the economy works does not trivialize it. The system is emergent and
 
 ## Time Model (Decided)
 
-Player-controlled tick speed (Stellaris-style). Pause/play/2x/4x. Time does not pass when not playing. Economy advances in discrete cycles.
+**Real-time, always-on.** The economy runs 24/7/365 on a fly.io server. No player-controlled tick speed. The world is persistent and keeps running whether you are online or not, like an MMO.
 
 ---
 
@@ -86,28 +86,39 @@ Player-controlled tick speed (Stellaris-style). Pause/play/2x/4x. Time does not 
   - Full writeup of vision, progression, economy, conflict, systems
   - Accessible via nav button in mockup header
 
+- `server/` - Python backend scaffolding (asyncio + aiohttp)
+  - `server/main.py` - Entry point: real-time economy tick loop + websocket server
+  - `server/config.py` - TICK_RATE, HOST, PORT (env-configurable)
+  - `requirements.txt` - aiohttp, watchfiles
+
 - `KIRO_HANDOFF.md` - This file
 
 ### What Does NOT Exist Yet
-- No economy simulation engine (agent-based tick system)
+- No economy simulation logic (agent-based, runs in tick loop)
 - No actual trading mechanics (buy/sell/haul)
-- No save/load
+- No save/load or database
 - No progression system
 - No ship upgrades or ship variety
-- No NPC AI decision-making (current ships are visual only)
+- No NPC AI decision-making
 - No events/disruptions system
 - No faction system
 - No security zones
 - No information fog (stale price data)
+- No fly.io deployment config (Dockerfile, fly.toml)
 
 ---
 
 ## Architecture Direction
 
+- **Backend:** Python (asyncio + aiohttp), always-on server on fly.io
+  - Real-time economy tick loop drives simulation
+  - WebSocket server for client connections (`/ws`)
+  - Health endpoint (`/health`) for fly.io monitoring
 - **Frontend:** Vanilla JS + Three.js (3D star map) + HTML/CSS panels (UI)
-- **Backend:** Pure client-side with localStorage (no server for single-player)
-- **Economy Engine:** Agent-based tick simulation (borrow patterns from PatternFoundry's tick engine)
-- **Save/Load:** localStorage + JSON export/import
+- **Local dev:** `watchfiles` auto-restarts server on code changes, random port
+- **Economy Engine:** Agent-based real-time simulation (Python, asyncio)
+- **Deployment:** fly.io (always-on machine)
+- **Future:** Free MMORPG, multiple players in shared persistent world
 
 ---
 
