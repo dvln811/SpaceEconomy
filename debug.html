@@ -20,12 +20,12 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .panel-title{font-family:'Orbitron',sans-serif;font-size:9px;color:#4a6a8a;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #152238;flex-shrink:0}
 .panel-scroll{overflow-y:auto;flex:1}
 .stat{display:flex;justify-content:space-between;padding:2px 0}
-.stat .label{color:#5a7a9a}
+.stat .label{color:#8aa0b8}
 .stat .value{color:#4fc3f7;font-weight:500}
-.event{padding:2px 0;border-bottom:1px solid #0a1420;color:#6a8aa0;font-size:10px}
-.event .tick-num{color:#3a5a7a;margin-right:6px}
-.ship-row{display:grid;grid-template-columns:14px 120px 60px 1fr 1fr;gap:4px;align-items:center;padding:2px 0;border-bottom:1px solid #0f1a28;font-size:10px}
-.ship-row .icon{width:10px;height:10px}
+.event{padding:2px 0;border-bottom:1px solid #0a1420;color:#b0c8e0;font-size:10px}
+.event .tick-num{color:#5a8aaa;margin-right:6px}
+.ship-row{display:grid;grid-template-columns:90px 120px 60px 1fr 1fr;gap:4px;align-items:center;padding:2px 0;border-bottom:1px solid #0f1a28;font-size:10px}
+.ship-row .role{color:#8aa0b8;font-size:9px;text-transform:uppercase}
 .ship-row .name{color:#e0e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ship-row .state{padding:1px 4px;border-radius:2px;text-align:center;font-size:9px}
 .state-idle{background:#66bb6a22;color:#66bb6a}
@@ -33,13 +33,13 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .state-loading{background:#ffd54f22;color:#ffd54f}
 .state-unloading{background:#ff8a6522;color:#ff8a65}
 .state-mining{background:#ab47bc22;color:#ab47bc}
-.ship-row .loc{color:#5a7a9a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ship-row .cargo{color:#3a5a7a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ship-row .loc{color:#8aa0b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ship-row .cargo{color:#6a8aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .price-row{display:grid;grid-template-columns:1fr 1fr 60px 50px;gap:4px;padding:2px 0;border-bottom:1px solid #0f1a28;font-size:10px}
 .price-row .commodity{color:#ffd54f}
-.price-row .sys{color:#5a7a9a}
+.price-row .sys{color:#8aa0b8}
 .price-row .val{color:#e0e8f0;text-align:right}
-.price-row .stock{color:#3a5a7a;text-align:right}
+.price-row .stock{color:#6a8aaa;text-align:right}
 .live-dot{width:8px;height:8px;border-radius:50%;background:#66bb6a;animation:pulse 1s infinite;margin-right:8px}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 .view-select{background:#0a1020;border:1px solid #1a3050;color:#8aa0b8;font-size:10px;padding:2px 6px;border-radius:3px;font-family:inherit;margin-left:8px}
@@ -109,16 +109,13 @@ async function refresh(){
     const events=d.recent_events.slice().reverse();
     document.getElementById('events').innerHTML=events.map(e=>`<div class="event"><span class="tick-num">T${e.tick}</span>${e.msg}</div>`).join('');
 
-    // Ships - SVG shapes for roles
-    const traderIcon='<svg class="icon" viewBox="0 0 10 10"><rect x="2" y="2" width="6" height="6" fill="none" stroke="#4fc3f7" stroke-width="1.2"/></svg>';
-    const minerIcon='<svg class="icon" viewBox="0 0 10 10"><polygon points="5,1 9,5 5,9 1,5" fill="none" stroke="#ab47bc" stroke-width="1.2"/></svg>';
+    // Ships
     document.getElementById('ships').innerHTML=d.ships.map(s=>{
-      const icon=s.role==='miner'?minerIcon:traderIcon;
       let loc=s.location;
-      if(s.state==='traveling') loc=`→ ${s.destination} (${Math.round(s.progress*100)}%)`;
+      if(s.state==='traveling') loc=`> ${s.destination} (${Math.round(s.progress*100)}%)`;
       else if(s.timer>0) loc=`${s.location} [${s.timer}t]`;
       const cargo=Object.entries(s.cargo).map(([k,v])=>`${Math.round(v)} ${k}`).join(', ')||'empty';
-      return `<div class="ship-row">${icon}<span class="name">${s.name}</span><span class="state state-${s.state}">${s.state}</span><span class="loc">${loc}</span><span class="cargo">${cargo}</span></div>`;
+      return `<div class="ship-row"><span class="role">${s.role} ${s.id}</span><span class="name">${s.name}</span><span class="state state-${s.state}">${s.state}</span><span class="loc">${loc}</span><span class="cargo">${cargo}</span></div>`;
     }).join('');
 
     // Prices - with view filter

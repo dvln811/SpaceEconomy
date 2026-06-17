@@ -86,7 +86,7 @@ class Simulation:
                     if ship.state == "loading":
                         # Done loading, now travel to destination
                         ship.state = "traveling"
-                        self._log(f"{ship.name} departed {self.universe[ship.location].name} → {self.universe[ship.destination].name}")
+                        self._log(f"{ship.name} departed {self.universe[ship.location].name} -> {self.universe[ship.destination].name}")
                     elif ship.state == "unloading":
                         ship.state = "idle"
                         self._log(f"{ship.name} finished unloading at {self.universe[ship.location].name}")

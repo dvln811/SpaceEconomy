@@ -98,14 +98,23 @@ def api_debug():
     summary = sim.get_state_summary()
     # Add per-system price snapshot
     prices = {}
-    for sid, sys in sim.universe.items():
-        for st in sys.stations:
+    for sid, sys_obj in sim.universe.items():
+        for st in sys_obj.stations:
             for commodity, price in st.price_cache.items():
                 if st.inventory.get(commodity, 0) > 0:
-                    prices.setdefault(commodity, []).append({"system": sys.name, "station": st.name, "price": price, "stock": st.inventory.get(commodity, 0)})
+                    prices.setdefault(commodity, []).append({"system": sys_obj.name, "station": st.name, "price": price, "stock": st.inventory.get(commodity, 0)})
     summary["prices"] = prices
     # Ship details
-    summary["ships"] = [{"name": s.name, "state": s.state, "role": s.role, "timer": s.state_timer, "location": sim.universe[s.location].name if s.location in sim.universe else s.location, "destination": sim.universe[s.destination].name if s.destination in sim.universe else s.destination, "cargo": s.cargo, "progress": round(s.progress, 2)} for s in sim.ships]
+    ships = []
+    for s in sim.ships:
+        loc_name = sim.universe[s.location].name if s.location in sim.universe else s.location or "-"
+        dest_name = sim.universe[s.destination].name if s.destination in sim.universe else s.destination or "-"
+        ships.append({
+            "id": s.id, "name": s.name, "state": s.state, "role": s.role,
+            "timer": s.state_timer, "location": loc_name, "destination": dest_name,
+            "cargo": s.cargo, "progress": round(s.progress, 2),
+        })
+    summary["ships"] = ships
     return jsonify(summary)
 
 
