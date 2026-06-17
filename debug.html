@@ -6,37 +6,43 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Orbitron:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:12px;padding:0}
+body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:11px;padding:0}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#0a0e18}
+::-webkit-scrollbar-thumb{background:#1a3050;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#2a4060}
 .nav{position:sticky;top:0;z-index:100;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:0 24px;height:48px;gap:20px}
 .nav h1{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:#ef5350;letter-spacing:3px;text-transform:uppercase}
 .nav a{font-size:11px;color:#5a7a9a;text-decoration:none;padding:6px 14px;border:1px solid #1a2844;border-radius:3px;transition:all .15s;letter-spacing:1px;text-transform:uppercase;font-family:'Orbitron',sans-serif}
 .nav a:hover{color:#4fc3f7;border-color:#4fc3f7}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;padding:12px;height:calc(100vh - 48px)}
-.panel{background:#0a0e18;border:1px solid #1a2844;border-radius:4px;padding:12px;display:flex;flex-direction:column;overflow:hidden}
-.panel-title{font-family:'Orbitron',sans-serif;font-size:10px;color:#4a6a8a;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #152238;flex-shrink:0}
+.grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr;gap:8px;padding:12px;height:calc(100vh - 48px)}
+.panel{background:#0a0e18;border:1px solid #1a2844;border-radius:4px;padding:10px;display:flex;flex-direction:column;overflow:hidden}
+.panel-title{font-family:'Orbitron',sans-serif;font-size:9px;color:#4a6a8a;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #152238;flex-shrink:0}
 .panel-scroll{overflow-y:auto;flex:1}
-.stat{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #0f1a28}
+.stat{display:flex;justify-content:space-between;padding:2px 0}
 .stat .label{color:#5a7a9a}
 .stat .value{color:#4fc3f7;font-weight:500}
-.event{padding:3px 0;border-bottom:1px solid #0a1420;color:#6a8aa0;font-size:11px}
-.event .tick-num{color:#3a5a7a;margin-right:8px;font-size:10px}
-.event .msg{color:#8aa0b8}
-.ship-row{padding:3px 0;border-bottom:1px solid #0f1a28;display:flex;gap:8px;align-items:center}
-.ship-row .name{color:#e0e8f0;width:130px}
-.ship-row .state{font-size:10px;padding:1px 6px;border-radius:2px}
-.ship-row .state-idle{background:#66bb6a22;color:#66bb6a}
-.ship-row .state-traveling{background:#4fc3f722;color:#4fc3f7}
-.ship-row .state-loading{background:#ffd54f22;color:#ffd54f}
-.ship-row .state-unloading{background:#ff8a6522;color:#ff8a65}
-.ship-row .state-mining{background:#ab47bc22;color:#ab47bc}
-.ship-row .loc{color:#5a7a9a;font-size:10px;flex:1}
-.price-row{display:flex;gap:6px;padding:2px 0;border-bottom:1px solid #0f1a28;font-size:11px}
-.price-row .commodity{color:#ffd54f;width:120px}
-.price-row .sys{color:#5a7a9a;width:140px}
-.price-row .val{color:#e0e8f0;width:60px;text-align:right}
-.price-row .stock{color:#3a5a7a;width:50px;text-align:right}
+.event{padding:2px 0;border-bottom:1px solid #0a1420;color:#6a8aa0;font-size:10px}
+.event .tick-num{color:#3a5a7a;margin-right:6px}
+.ship-row{display:grid;grid-template-columns:14px 120px 60px 1fr 1fr;gap:4px;align-items:center;padding:2px 0;border-bottom:1px solid #0f1a28;font-size:10px}
+.ship-row .icon{width:10px;height:10px}
+.ship-row .name{color:#e0e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ship-row .state{padding:1px 4px;border-radius:2px;text-align:center;font-size:9px}
+.state-idle{background:#66bb6a22;color:#66bb6a}
+.state-traveling{background:#4fc3f722;color:#4fc3f7}
+.state-loading{background:#ffd54f22;color:#ffd54f}
+.state-unloading{background:#ff8a6522;color:#ff8a65}
+.state-mining{background:#ab47bc22;color:#ab47bc}
+.ship-row .loc{color:#5a7a9a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ship-row .cargo{color:#3a5a7a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.price-row{display:grid;grid-template-columns:1fr 1fr 60px 50px;gap:4px;padding:2px 0;border-bottom:1px solid #0f1a28;font-size:10px}
+.price-row .commodity{color:#ffd54f}
+.price-row .sys{color:#5a7a9a}
+.price-row .val{color:#e0e8f0;text-align:right}
+.price-row .stock{color:#3a5a7a;text-align:right}
 .live-dot{width:8px;height:8px;border-radius:50%;background:#66bb6a;animation:pulse 1s infinite;margin-right:8px}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.view-select{background:#0a1020;border:1px solid #1a3050;color:#8aa0b8;font-size:10px;padding:2px 6px;border-radius:3px;font-family:inherit;margin-left:8px}
 </style>
 </head>
 <body>
@@ -45,9 +51,10 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <h1>Debug Monitor</h1>
   <a href="/">Game</a>
   <a href="/design">Design</a>
-  <button id="nuke-btn" style="margin-left:auto;font-size:10px;color:#ef5350;background:#1a0a0a;border:1px solid #ef5350;border-radius:3px;padding:6px 14px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;font-family:Orbitron,sans-serif;transition:all .15s" onmouseover="this.style.background='#ef5350';this.style.color='#fff'" onmouseout="this.style.background='#1a0a0a';this.style.color='#ef5350'">⚠ Nuke / Reset</button>
+  <button id="nuke-btn" style="margin-left:auto;font-size:10px;color:#ef5350;background:#1a0a0a;border:1px solid #ef5350;border-radius:3px;padding:6px 14px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;font-family:Orbitron,sans-serif;transition:all .15s" onmouseover="this.style.background='#ef5350';this.style.color='#fff'" onmouseout="this.style.background='#1a0a0a';this.style.color='#ef5350'">Nuke</button>
 </div>
 <div class="grid">
+  <!-- Row 1: State + Events -->
   <div class="panel">
     <div class="panel-title">Simulation State</div>
     <div class="panel-scroll" id="stats"></div>
@@ -56,56 +63,86 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     <div class="panel-title">Recent Events</div>
     <div class="panel-scroll" id="events"></div>
   </div>
-  <div class="panel" style="grid-column:1/-1">
-    <div class="panel-title">NPC Ships</div>
+  <!-- Row 2: Ships + Prices side by side -->
+  <div class="panel">
+    <div class="panel-title">NPC Ships (40)</div>
     <div class="panel-scroll" id="ships"></div>
   </div>
-  <div class="panel" style="grid-column:1/-1;max-height:300px">
-    <div class="panel-title">Price Monitor</div>
+  <div class="panel">
+    <div class="panel-title">Price Monitor <select id="price-view" class="view-select"><option value="all">All Systems</option></select></div>
     <div class="panel-scroll" id="prices"></div>
   </div>
 </div>
 <script>
+let priceView='all';
+document.getElementById('price-view').addEventListener('change',(e)=>{priceView=e.target.value;});
+
 async function refresh(){
   try{
     const r=await fetch('/api/debug');
     const d=await r.json();
-    // Stats
     const uptime=d.uptime_seconds;
-    const h=Math.floor(uptime/3600);
-    const m=Math.floor((uptime%3600)/60);
-    const s=uptime%60;
-    document.getElementById('stats').innerHTML=`
+    const h=Math.floor(uptime/3600),m=Math.floor((uptime%3600)/60),s=uptime%60;
+
+    // Stats
+    const states=d.ships_by_state;
+    const totalInv=d.total_inventory||{};
+    const topInv=Object.entries(totalInv).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    let statsHtml=`
       <div class="stat"><span class="label">Tick</span><span class="value">${d.tick}</span></div>
       <div class="stat"><span class="label">Uptime</span><span class="value">${h}h ${m}m ${s}s</span></div>
       <div class="stat"><span class="label">Systems</span><span class="value">${d.systems}</span></div>
       <div class="stat"><span class="label">NPC Ships</span><span class="value">${d.npc_ships}</span></div>
-      <div class="stat"><span class="label">Ships Idle</span><span class="value">${d.ships_by_state.idle||0}</span></div>
-      <div class="stat"><span class="label">Ships Traveling</span><span class="value">${d.ships_by_state.traveling||0}</span></div>
-    `;
+      <div class="stat" style="border-top:1px solid #152238;margin-top:4px;padding-top:4px"><span class="label">Idle</span><span class="value">${states.idle||0}</span></div>
+      <div class="stat"><span class="label">Traveling</span><span class="value">${states.traveling||0}</span></div>
+      <div class="stat"><span class="label">Loading</span><span class="value">${states.loading||0}</span></div>
+      <div class="stat"><span class="label">Unloading</span><span class="value">${states.unloading||0}</span></div>
+      <div class="stat"><span class="label">Mining</span><span class="value">${states.mining||0}</span></div>
+      <div class="stat" style="border-top:1px solid #152238;margin-top:4px;padding-top:4px"><span class="label" style="color:#4a6a8a">Total Inventories</span><span class="value"></span></div>`;
+    for(const [k,v] of topInv){
+      statsHtml+=`<div class="stat"><span class="label">${k}</span><span class="value">${Math.round(v)}</span></div>`;
+    }
+    if(d.trade_volume!==undefined) statsHtml+=`<div class="stat" style="border-top:1px solid #152238;margin-top:4px;padding-top:4px"><span class="label">Trades this session</span><span class="value">${d.trade_volume}</span></div>`;
+    document.getElementById('stats').innerHTML=statsHtml;
+
     // Events
     const events=d.recent_events.slice().reverse();
-    document.getElementById('events').innerHTML=events.map(e=>`<div class="event"><span class="tick-num">T${e.tick}</span><span class="msg">${e.msg}</span></div>`).join('');
-    // Ships
+    document.getElementById('events').innerHTML=events.map(e=>`<div class="event"><span class="tick-num">T${e.tick}</span>${e.msg}</div>`).join('');
+
+    // Ships - SVG shapes for roles
+    const traderIcon='<svg class="icon" viewBox="0 0 10 10"><rect x="2" y="2" width="6" height="6" fill="none" stroke="#4fc3f7" stroke-width="1.2"/></svg>';
+    const minerIcon='<svg class="icon" viewBox="0 0 10 10"><polygon points="5,1 9,5 5,9 1,5" fill="none" stroke="#ab47bc" stroke-width="1.2"/></svg>';
     document.getElementById('ships').innerHTML=d.ships.map(s=>{
-      const stateClass='state-'+s.state;
+      const icon=s.role==='miner'?minerIcon:traderIcon;
       let loc=s.location;
-      if(s.state==='traveling') loc=`${s.location} → ${s.destination} (${Math.round(s.progress*100)}%)`;
-      else if(s.state==='loading'||s.state==='unloading'||s.state==='mining') loc=`${s.location} [${s.timer}t left]`;
-      const cargo=Object.entries(s.cargo).map(([k,v])=>`${Math.round(v)}x ${k}`).join(', ')||'-';
-      const role=s.role==='miner'?'⛏':'🚛';
-      return `<div class="ship-row"><span class="name">${role} ${s.name}</span><span class="state ${stateClass}">${s.state}</span><span class="loc">${loc}</span><span class="loc">${cargo}</span></div>`;
+      if(s.state==='traveling') loc=`→ ${s.destination} (${Math.round(s.progress*100)}%)`;
+      else if(s.timer>0) loc=`${s.location} [${s.timer}t]`;
+      const cargo=Object.entries(s.cargo).map(([k,v])=>`${Math.round(v)} ${k}`).join(', ')||'empty';
+      return `<div class="ship-row">${icon}<span class="name">${s.name}</span><span class="state state-${s.state}">${s.state}</span><span class="loc">${loc}</span><span class="cargo">${cargo}</span></div>`;
     }).join('');
-    // Prices
+
+    // Prices - with view filter
+    const select=document.getElementById('price-view');
+    const systemNames=new Set();
     const priceHtml=[];
     const commodities=Object.keys(d.prices).sort();
-    for(const c of commodities.slice(0,10)){
-      const entries=d.prices[c].sort((a,b)=>b.stock-a.stock).slice(0,3);
-      for(const e of entries){
-        priceHtml.push(`<div class="price-row"><span class="commodity">${c}</span><span class="sys">${e.station}</span><span class="val">₡${e.price.toFixed(0)}</span><span class="stock">${Math.round(e.stock)}</span></div>`);
+    for(const c of commodities){
+      let entries=d.prices[c].sort((a,b)=>b.stock-a.stock);
+      for(const e of entries) systemNames.add(e.system);
+      if(priceView!=='all') entries=entries.filter(e=>e.system===priceView);
+      for(const e of entries.slice(0,4)){
+        priceHtml.push(`<div class="price-row"><span class="commodity">${c}</span><span class="sys">${e.station}</span><span class="val">${e.price.toFixed(0)}</span><span class="stock">${Math.round(e.stock)}</span></div>`);
       }
     }
-    document.getElementById('prices').innerHTML=priceHtml.join('');
+    document.getElementById('prices').innerHTML=priceHtml.join('')||'<div style="color:#3a5a7a">No data for this view</div>';
+
+    // Update select options
+    const currentOpts=new Set([...select.options].map(o=>o.value));
+    for(const name of [...systemNames].sort()){
+      if(!currentOpts.has(name)){
+        const opt=document.createElement('option');opt.value=name;opt.textContent=name;select.appendChild(opt);
+      }
+    }
   }catch(e){console.error(e)}
 }
 refresh();

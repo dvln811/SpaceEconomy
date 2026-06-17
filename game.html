@@ -12,6 +12,12 @@
 html,body{height:100%;overflow:hidden}
 body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:13px}
 
+/* Scrollbar theming (Chromium/Edge) */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#0a0e18}
+::-webkit-scrollbar-thumb{background:#1a3050;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#2a4060}
+
 /* Layout */
 .app{display:grid;grid-template-columns:280px 4px 1fr 4px 320px;grid-template-rows:48px 1fr auto auto;height:100vh;gap:0;background:#1a2030}
 
@@ -144,46 +150,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     </div>
     <div class="tab-content active" id="tab-systems">
     <div class="panel-title">Known Systems</div>
-    <div class="system-item active" data-index="0">
-      <div class="system-name">⬡ Cygnus Station</div>
-      <div class="system-type">Industrial Hub · Pop 2.4M</div>
-      <div class="system-prices"><span class="price-up">▲ Ore +12%</span><span class="price-down">▼ Food -8%</span></div>
-    </div>
-    <div class="system-item" data-index="1">
-      <div class="system-name">⬡ Vega Outpost</div>
-      <div class="system-type">Mining Colony · Pop 180K</div>
-      <div class="system-prices"><span class="price-up">▲ Meds +22%</span><span class="price-neutral">— Ore 0%</span></div>
-    </div>
-    <div class="system-item" data-index="2">
-      <div class="system-name">⬡ Kepler Freeport</div>
-      <div class="system-type">Trade Hub · Pop 5.1M</div>
-      <div class="system-prices"><span class="price-down">▼ Electronics -4%</span><span class="price-up">▲ Luxuries +9%</span></div>
-    </div>
-    <div class="system-item" data-index="3">
-      <div class="system-name">⬡ Arcturus Refinery</div>
-      <div class="system-type">Processing · Pop 420K</div>
-      <div class="system-prices"><span class="price-up">▲ Fuel +6%</span><span class="price-down">▼ Polymers -15%</span></div>
-    </div>
-    <div class="system-item" data-index="4">
-      <div class="system-name">⬡ Tau Ceti Prime</div>
-      <div class="system-type">Agricultural · Pop 8.2M</div>
-      <div class="system-prices"><span class="price-down">▼ Food -18%</span><span class="price-up">▲ Machinery +11%</span></div>
-    </div>
-    <div class="system-item" data-index="5">
-      <div class="system-name">⬡ Wolf 359 Depot</div>
-      <div class="system-type">Frontier · Pop 12K</div>
-      <div class="system-prices"><span class="price-up">▲ Everything +30%</span></div>
-    </div>
-    <div class="system-item" data-index="6">
-      <div class="system-name">⬡ Procyon Gate</div>
-      <div class="system-type">Jump Nexus · Pop 1.1M</div>
-      <div class="system-prices"><span class="price-neutral">— Stable market</span></div>
-    </div>
-    <div class="system-item" data-index="7">
-      <div class="system-name">⬡ Sirius Dockyard</div>
-      <div class="system-type">Shipbuilding · Pop 900K</div>
-      <div class="system-prices"><span class="price-up">▲ Alloys +8%</span><span class="price-down">▼ Components -5%</span></div>
-    </div>
+    <div id="system-list"></div>
     </div>
     <div class="tab-content" id="tab-ships">
     <div class="panel-title">Visible Ships</div>
@@ -787,11 +754,16 @@ renderer.domElement.addEventListener('click',(e)=>{
 });
 
 // ── Click Goto in left panel ──────────────────────────────────────────────────
-document.querySelectorAll('.system-item').forEach(item=>{
-  item.addEventListener('click',()=>{
-    const idx=parseInt(item.dataset.index);
-    if(!isNaN(idx)) focusSystem(idx);
-  });
+// Generate system cards dynamically
+const systemList=document.getElementById('system-list');
+const typeLabels={industrial:'Industrial Hub',mining:'Mining Colony',trade:'Trade Hub',agricultural:'Agricultural',processing:'Processing',frontier:'Frontier',nexus:'Jump Nexus',shipyard:'Shipyard',military:'Military Base'};
+systems.forEach((s,i)=>{
+  const div=document.createElement('div');
+  div.className='system-item'+(i===0?' active':'');
+  div.dataset.index=i;
+  div.innerHTML=`<div class="system-name">⬡ ${s.name}</div><div class="system-type">${typeLabels[s.type]||s.type}</div>`;
+  div.addEventListener('click',()=>focusSystem(i));
+  systemList.appendChild(div);
 });
 
 // ── Tab switching ─────────────────────────────────────────────────────────────

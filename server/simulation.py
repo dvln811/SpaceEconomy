@@ -30,6 +30,7 @@ class Simulation:
         self.tick_count = 0
         self.start_time = time.time()
         self.events: list[dict] = []
+        self.trade_volume = 0
         self._spawn_traders(30)
         self._spawn_miners(10)
         self._update_all_prices()
@@ -83,8 +84,9 @@ class Simulation:
                 ship.state_timer -= 1
                 if ship.state_timer <= 0:
                     if ship.state == "loading":
-                        ship.state = "idle"
-                        self._log(f"{ship.name} finished loading at {self.universe[ship.location].name}")
+                        # Done loading, now travel to destination
+                        ship.state = "traveling"
+                        self._log(f"{ship.name} departed {self.universe[ship.location].name} → {self.universe[ship.destination].name}")
                     elif ship.state == "unloading":
                         ship.state = "idle"
                         self._log(f"{ship.name} finished unloading at {self.universe[ship.location].name}")
@@ -146,6 +148,7 @@ class Simulation:
                 qty = ship.cargo.pop(commodity)
                 station.inventory.setdefault(commodity, 0)
                 station.inventory[commodity] += qty
+                self.trade_volume += 1
                 ship.state = "unloading"
                 ship.state_timer = UNLOADING_TICKS
                 self._log(f"{ship.name} unloading {qty:.0f}x {COMMODITIES[commodity].name} at {loc.name} ({UNLOADING_TICKS}t)")
@@ -247,11 +250,20 @@ class Simulation:
         ships_by_state = {}
         for s in self.ships:
             ships_by_state[s.state] = ships_by_state.get(s.state, 0) + 1
+        # Total inventory across all stations
+        total_inv = {}
+        for sys in self.universe.values():
+            for st in sys.stations:
+                for commodity, qty in st.inventory.items():
+                    if qty > 0:
+                        total_inv[commodity] = total_inv.get(commodity, 0) + qty
         return {
             "tick": self.tick_count,
             "uptime_seconds": round(time.time() - self.start_time),
             "systems": len(self.universe),
             "npc_ships": len(self.ships),
             "ships_by_state": ships_by_state,
+            "total_inventory": total_inv,
+            "trade_volume": self.trade_volume,
             "recent_events": self.events[-20:],
         }
