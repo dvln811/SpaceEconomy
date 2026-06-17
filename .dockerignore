@@ -1,0 +1,7 @@
+.git
+.idea
+__pycache__
+*.pyc
+server.log
+server_err.log
+restart_server.ps1

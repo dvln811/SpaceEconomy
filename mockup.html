@@ -24,7 +24,12 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .header .rep{color:#66bb6a;font-size:12px;margin-left:16px}
 
 /* Left Panel - Systems */
-.left-panel{background:#0a0e18;overflow-y:auto;padding:12px;border-right:1px solid #1a2844}
+.left-panel{background:#0a0e18;overflow-y:auto;padding:12px;border-right:1px solid #1a2844;display:flex;flex-direction:column}
+.panel-tabs{display:flex;gap:2px;margin-bottom:10px}
+.panel-tab{flex:1;padding:6px 0;text-align:center;font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#5a7a9a;background:#0f1520;border:1px solid #1a2844;border-radius:3px;cursor:pointer;transition:all .15s}
+.panel-tab.active{color:#4fc3f7;border-color:#4fc3f7;background:#0d1a2f}
+.tab-content{display:none;overflow-y:auto;flex:1}
+.tab-content.active{display:block}
 .panel-title{font-family:'Orbitron',sans-serif;font-size:10px;color:#4a6a8a;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #152238}
 .system-item{padding:8px 10px;border-radius:4px;margin-bottom:4px;cursor:pointer;border:1px solid transparent;transition:all .15s}
 .system-item:hover{background:#111a2a;border-color:#1a3050}
@@ -55,6 +60,19 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .commodity-vol{font-size:9px;color:#3a5a7a;text-align:right;width:40px}
 .sparkline{width:60px;height:20px}
 .sparkline polyline{fill:none;stroke-width:1.2}
+
+/* 3D System Labels */
+.system-label{font-family:'Orbitron',sans-serif;font-size:9px;color:#8ab4d4;letter-spacing:1px;text-transform:uppercase;pointer-events:none;white-space:nowrap;text-shadow:0 0 4px #05080f,0 0 8px #05080f}
+
+/* Ship list items */
+.ship-item{padding:6px 10px;border-radius:4px;margin-bottom:4px;border:1px solid transparent;font-size:11px}
+.ship-item .ship-name{color:#e0e8f0;font-weight:500}
+.ship-item .ship-detail{font-size:10px;color:#5a7a9a;margin-top:2px}
+.ship-item .ship-route{font-size:9px;color:#4fc3f7;margin-top:2px}
+
+/* Goto button */
+.goto-btn{font-size:9px;color:#4fc3f7;background:#0a1428;border:1px solid #1a3050;border-radius:3px;padding:2px 8px;cursor:pointer;float:right;margin-top:2px;font-family:'JetBrains Mono',monospace;transition:all .15s}
+.goto-btn:hover{background:#1a2844;border-color:#4fc3f7}
 
 /* Bottom Panel - Ship/Activity */
 .bottom{grid-column:1/-1;background:#0a0e18;border-top:1px solid #1a2844;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px}
@@ -88,46 +106,64 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 
   <!-- Left: Systems List -->
   <div class="left-panel">
+    <div class="panel-tabs">
+      <div class="panel-tab active" data-tab="systems">Systems</div>
+      <div class="panel-tab" data-tab="ships">Ships</div>
+    </div>
+    <div class="tab-content active" id="tab-systems">
     <div class="panel-title">Known Systems</div>
-    <div class="system-item active">
+    <div class="system-item active" data-index="0">
+      <button class="goto-btn">Goto</button>
       <div class="system-name">⬡ Cygnus Station</div>
       <div class="system-type">Industrial Hub · Pop 2.4M</div>
       <div class="system-prices"><span class="price-up">▲ Ore +12%</span><span class="price-down">▼ Food -8%</span></div>
     </div>
-    <div class="system-item">
+    <div class="system-item" data-index="1">
+      <button class="goto-btn">Goto</button>
       <div class="system-name">⬡ Vega Outpost</div>
       <div class="system-type">Mining Colony · Pop 180K</div>
       <div class="system-prices"><span class="price-up">▲ Meds +22%</span><span class="price-neutral">— Ore 0%</span></div>
     </div>
-    <div class="system-item">
+    <div class="system-item" data-index="2">
+      <button class="goto-btn">Goto</button>
       <div class="system-name">⬡ Kepler Freeport</div>
       <div class="system-type">Trade Hub · Pop 5.1M</div>
       <div class="system-prices"><span class="price-down">▼ Electronics -4%</span><span class="price-up">▲ Luxuries +9%</span></div>
     </div>
-    <div class="system-item">
+    <div class="system-item" data-index="3">
+      <button class="goto-btn">Goto</button>
       <div class="system-name">⬡ Arcturus Refinery</div>
       <div class="system-type">Processing · Pop 420K</div>
       <div class="system-prices"><span class="price-up">▲ Fuel +6%</span><span class="price-down">▼ Polymers -15%</span></div>
     </div>
-    <div class="system-item">
+    <div class="system-item" data-index="4">
+      <button class="goto-btn">Goto</button>
       <div class="system-name">⬡ Tau Ceti Prime</div>
       <div class="system-type">Agricultural · Pop 8.2M</div>
       <div class="system-prices"><span class="price-down">▼ Food -18%</span><span class="price-up">▲ Machinery +11%</span></div>
     </div>
-    <div class="system-item">
+    <div class="system-item" data-index="5">
+      <button class="goto-btn">Goto</button>
       <div class="system-name">⬡ Wolf 359 Depot</div>
       <div class="system-type">Frontier · Pop 12K</div>
       <div class="system-prices"><span class="price-up">▲ Everything +30%</span></div>
     </div>
-    <div class="system-item">
+    <div class="system-item" data-index="6">
+      <button class="goto-btn">Goto</button>
       <div class="system-name">⬡ Procyon Gate</div>
       <div class="system-type">Jump Nexus · Pop 1.1M</div>
       <div class="system-prices"><span class="price-neutral">— Stable market</span></div>
     </div>
-    <div class="system-item">
+    <div class="system-item" data-index="7">
+      <button class="goto-btn">Goto</button>
       <div class="system-name">⬡ Sirius Dockyard</div>
       <div class="system-type">Shipbuilding · Pop 900K</div>
       <div class="system-prices"><span class="price-up">▲ Alloys +8%</span><span class="price-down">▼ Components -5%</span></div>
+    </div>
+    </div>
+    <div class="tab-content" id="tab-ships">
+    <div class="panel-title">Visible Ships</div>
+    <div id="ship-list"></div>
     </div>
   </div>
 
@@ -233,6 +269,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 <script type="module">
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {CSS2DRenderer, CSS2DObject} from 'three/addons/renderers/CSS2DRenderer.js';
 
 const container = document.querySelector('.main');
 const renderer = new THREE.WebGLRenderer({antialias:true,alpha:true});
@@ -240,6 +277,13 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(container.clientWidth, container.clientHeight);
 renderer.setClearColor(0x05080f);
 container.insertBefore(renderer.domElement, container.firstChild);
+
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(container.clientWidth, container.clientHeight);
+labelRenderer.domElement.style.position='absolute';
+labelRenderer.domElement.style.top='0';
+labelRenderer.domElement.style.pointerEvents='none';
+container.appendChild(labelRenderer.domElement);
 // Remove old canvas
 const oldCanvas = document.getElementById('starmap');
 if(oldCanvas) oldCanvas.remove();
@@ -363,8 +407,15 @@ const playerRing = new THREE.Mesh(
 playerRing.position.set(0,0,0);
 scene.add(playerRing);
 
-// Labels (CSS2D would be cleaner but keeping it simple with sprites)
-// We skip text labels in 3D for now to keep perf clean
+// System labels (CSS2D)
+systems.forEach((s,i)=>{
+  const div=document.createElement('div');
+  div.className='system-label';
+  div.textContent=s.name;
+  const label=new CSS2DObject(div);
+  label.position.set(s.x, s.y+s.size*2+6, s.z);
+  scene.add(label);
+});
 
 function generateGlowTexture(){
   const c=document.createElement('canvas');
@@ -403,6 +454,7 @@ function animate(){
   playerRing.lookAt(camera.position);
 
   renderer.render(scene,camera);
+  labelRenderer.render(scene,camera);
 }
 animate();
 
@@ -412,6 +464,7 @@ window.addEventListener('resize',()=>{
   camera.aspect=w/h;
   camera.updateProjectionMatrix();
   renderer.setSize(w,h);
+  labelRenderer.setSize(w,h);
 });
 
 // Zoom buttons
@@ -422,6 +475,93 @@ document.querySelectorAll('.map-zoom button').forEach((btn,i)=>{
     controls.update();
   });
 });
+
+// ── Camera focus animation ────────────────────────────────────────────────────
+let animating=false;
+function focusSystem(index){
+  const s=systems[index];
+  const target=new THREE.Vector3(s.x,s.y,s.z);
+  const offset=new THREE.Vector3(s.size*8,s.size*6,s.size*12);
+  const dest=target.clone().add(offset);
+  const startPos=camera.position.clone();
+  const startTarget=controls.target.clone();
+  const duration=800;
+  const t0=performance.now();
+  animating=true;
+  function step(){
+    const elapsed=performance.now()-t0;
+    const t=Math.min(elapsed/duration,1);
+    const ease=1-Math.pow(1-t,3); // ease-out cubic
+    camera.position.lerpVectors(startPos,dest,ease);
+    controls.target.lerpVectors(startTarget,target,ease);
+    controls.update();
+    if(t<1) requestAnimationFrame(step);
+    else animating=false;
+  }
+  step();
+  // Highlight in panel
+  document.querySelectorAll('.system-item').forEach(el=>el.classList.remove('active'));
+  const item=document.querySelector(`.system-item[data-index="${index}"]`);
+  if(item) item.classList.add('active');
+}
+
+// ── Click system in 3D map ────────────────────────────────────────────────────
+const raycaster=new THREE.Raycaster();
+const mouse=new THREE.Vector2();
+renderer.domElement.addEventListener('click',(e)=>{
+  if(animating) return;
+  const rect=renderer.domElement.getBoundingClientRect();
+  mouse.x=((e.clientX-rect.left)/rect.width)*2-1;
+  mouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
+  raycaster.setFromCamera(mouse,camera);
+  const hits=raycaster.intersectObjects(systemMeshes);
+  if(hits.length>0){
+    const idx=systemMeshes.indexOf(hits[0].object);
+    if(idx>=0) focusSystem(idx);
+  }
+});
+
+// ── Click Goto in left panel ──────────────────────────────────────────────────
+document.querySelectorAll('.goto-btn').forEach(btn=>{
+  btn.addEventListener('click',(e)=>{
+    e.stopPropagation();
+    const item=btn.closest('.system-item');
+    const idx=parseInt(item.dataset.index);
+    focusSystem(idx);
+  });
+});
+document.querySelectorAll('.system-item').forEach(item=>{
+  item.addEventListener('click',()=>{
+    const idx=parseInt(item.dataset.index);
+    if(!isNaN(idx)) focusSystem(idx);
+  });
+});
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+document.querySelectorAll('.panel-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.panel-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-'+tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Ships panel ───────────────────────────────────────────────────────────────
+const shipNames=['Meridian Express','Iron Vagrant','Solar Wind','Deep Haul','Star Drifter','Cobalt Runner','Void Trader','Nebula Fox','Red Kestrel','Arc Pilgrim','Hull Breaker','Quiet Flame','Dust Devil','Long Reach','Silver Mule'];
+const shipList=document.getElementById('ship-list');
+function updateShipList(){
+  shipList.innerHTML='';
+  shipData.forEach((ship,i)=>{
+    const [a,b]=routes[ship.route];
+    const div=document.createElement('div');
+    div.className='ship-item';
+    div.innerHTML=`<div class="ship-name">${shipNames[i]}</div><div class="ship-detail">En route (${Math.round(ship.progress*100)}%)</div><div class="ship-route">${systems[a].name} → ${systems[b].name}</div>`;
+    shipList.appendChild(div);
+  });
+}
+updateShipList();
+setInterval(updateShipList, 3000);
 </script>
 </body>
 </html>

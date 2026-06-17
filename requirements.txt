@@ -1,2 +1,2 @@
-aiohttp==3.9.5
-watchfiles==0.22.0
+flask==3.1.1
+gunicorn==23.0.0
