@@ -2,139 +2,164 @@
 
 ## What This Is
 
-A browser-based space economy simulation game. Single-player. The core appeal is a living, agent-driven commodity market spread across a network of star systems. You are one actor (a hauler/trader) in a functioning economy, not the god of it.
+A browser-based space economy simulation game. Currently single-player with plans for a free MMORPG. The core appeal is a living, agent-driven commodity market spread across a network of star systems. You are one actor (a hauler/trader/miner) in a functioning economy, not the god of it. The economy runs 24/7 on a fly.io server.
 
 **Owner:** Devlyn Napoli
 **Repo:** https://github.com/dvln811/SpaceEconomy
+**Live:** https://spaceeconomy.fly.dev
+**Debug:** https://spaceeconomy.fly.dev/debug
 
 ---
 
 ## WORKFLOW RULES
 
-1. **Commit and push automatically after completing each task/change.** Use `GIT_TERMINAL_PROMPT=0 git push` to avoid interactive prompt hangs.
+1. **Commit and push automatically after completing each task/change.**
 2. Read this file at the start of every session.
 3. Check `git log --oneline -5` and `git status` before starting.
 4. Ask the user what they want to work on.
-5. **NO M-DASHES (—) IN REPLIES.** Use commas, periods, or rewrite the sentence instead.
+5. **NO M-DASHES in replies.** Use commas, periods, or rewrite the sentence instead.
+6. **No local server start needed.** Work against the remote fly.io deployment.
+7. GitHub Actions auto-deploys on push to master.
+8. Use the **Nuke** button on /debug to reset simulation state after breaking schema changes.
 
 ---
 
-## Core Design (Decided)
+## Current State (Phase 1 COMPLETE)
 
-**The Player Fantasy:** "I'm navigating a complex, living system that I can never fully master."
-
-Knowing how the economy works does not trivialize it. The system is emergent and NPC agents constantly change conditions. You read signals, make educated bets, never guaranteed plays.
-
-**Genre:** Space trading/economy sim (Eve Online's economy + X4 Foundations, minus micromanagement)
-
-**Design Pillars:**
-- Economy simulation IS the game (agent-based, emergent, realistic)
-- High-level decisions, not unit-level commands
-- Imperfect information (stale price data, limited visibility)
-- Atmospheric "space trucker" vibe (Alien-era industrial space, working-class)
-- Browser-based, no install, single-player
-
-**NOT a combat game.** Conflict exists (faction warfare, piracy, blockades) but as economic hazards you navigate around, not fight through.
-
----
-
-## Progression Model (Decided)
-
-**Progression as access, not power.** You gain access to more of the system, not raw strength.
-
-- **Early:** Small cargo shuttle, high-sec only, safe low-margin routes
-- **Mid:** Proper freighter, low-sec accessible, faction contracts, riskier goods
-- **Late:** Specialized vessels, null-sec/frontier, rare goods, smuggling, infrastructure ownership
-- **Endgame:** Fleet/flagship, own stations, shape the economy as a major actor
-
-**Money sinks:** Ships, upgrades, reputation, infrastructure, information (market intel)
-
----
-
-## Conflict and Opposition (Decided)
-
-- **Security gradient:** High-sec (safe, low margins) > Low-sec (risky, better margins) > Null-sec (lawless, huge margins) > Frontier (unknown, exploration)
-- **Faction warfare:** NPC factions fight over territory, borders shift, supply chains break
-- **Blockades/interdiction:** Avoid pirates, pay them, or find alternate routes
-- **Choke points:** Key jump routes control trade flow between regions
-- **Economic warfare:** Embargoes, smuggling opportunities, price spikes
-- **Mystery/intrigue:** Anomalous signals, derelicts, rare commodity sources, espionage contracts
-
----
-
-## Time Model (Decided)
-
-**Real-time, always-on.** The economy runs 24/7/365 on a fly.io server. No player-controlled tick speed. The world is persistent and keeps running whether you are online or not, like an MMO.
-
----
-
-## Current State
+### Architecture
+- **Backend:** Python (Flask), always-on server on fly.io (shared-cpu-2x, 1GB)
+- **Frontend:** Vanilla JS + Three.js (3D star map) + HTML/CSS panels
+- **Economy Engine:** Real-time agent-based tick simulation (1 tick/sec, background thread)
+- **Database:** SQLite on persistent fly.io volume (`/app/data/game.db`), saves every 10 ticks
+- **Deployment:** fly.io, auto-deploy via GitHub Actions on push to master
+- **Local dev:** `restart_server.ps1` runs Flask with debug=True on port 8000
 
 ### What Exists
-- `mockup.html` - Interactive UI mockup with **3D star map** (Three.js)
-  - 24 star systems with 3D positioning (OrbitControls: rotate, zoom, pan)
-  - Animated NPC ships moving along auto-generated trade routes
-  - Glowing system nodes with color-coded types
-  - Left panel: system list with station types, populations, price movements
-  - Right panel: commodity market with sparkline charts
-  - Bottom bar: ship stats, activity feed, profitable route suggestions
-  - Header nav linking to design doc
-  - Fonts: Orbitron (titles/labels), JetBrains Mono (data/body)
-  - Palette: dark navy bg, cyan accents (#4fc3f7), gold currency (#ffd54f), green profit (#66bb6a), red loss (#ef5350)
 
-- `design.html` - Game design document (dark-themed, matching mockup aesthetic)
-  - Full writeup of vision, progression, economy, conflict, systems
-  - Accessible via nav button in mockup header
+**Server (`server/`)**
+- `server/main.py` - Flask app, tick loop thread, API endpoints
+- `server/simulation.py` - Economy engine: production/consumption, NPC AI, pathfinding, mining
+- `server/models.py` - Dataclasses: Commodity (20 types), Station, System, NPCShip, AsteroidField
+- `server/universe.py` - 24-system universe seed data (3 clusters, connections, asteroid fields)
+- `server/persistence.py` - SQLite save/load state, nuke/reset
 
-- `server/` - Python backend scaffolding (asyncio + aiohttp)
-  - `server/main.py` - Entry point: real-time economy tick loop + websocket server
-  - `server/config.py` - TICK_RATE, HOST, PORT (env-configurable)
-  - `requirements.txt` - aiohttp, watchfiles
+**Frontend**
+- `game.html` - Main game UI with live 3D star map
+  - 24 star systems with CSS2D labels, billboarded ship sprites
+  - Left panel: tabbed (Systems list / Ships list), all cards dynamically generated
+  - Right panel: tabbed (System Info / Market), live prices from API
+  - Bottom panel: ship schematic, activity feed (live from sim events), routes
+  - Resizable panels (left/right/bottom drag handles)
+  - Click-to-focus navigation (map <-> panels, both directions)
+  - Hover tooltips on systems and ships
+  - Ships: billboarded shapes (square=trader, triangle=miner), hidden when docked
+  - Client-side ship interpolation (smooth movement between API refreshes)
+  - Selected ship shows floating label
 
-- `KIRO_HANDOFF.md` - This file
+- `debug.html` - Debug monitor at /debug
+  - Simulation state (tick, uptime, ship counts by state, total inventories, trade volume)
+  - Recent events (live from simulation)
+  - NPC ships (role, class, name, state, location, cargo)
+  - Price monitor with per-system filter
+  - Nuke/Reset button
 
-### What Does NOT Exist Yet
-- No economy simulation logic (agent-based, runs in tick loop)
-- No actual trading mechanics (buy/sell/haul)
-- No save/load or database
-- No progression system
-- No ship upgrades or ship variety
-- No NPC AI decision-making
-- No events/disruptions system
-- No faction system
-- No security zones
-- No information fog (stale price data)
-- No fly.io deployment config (Dockerfile, fly.toml)
+- `design.html` - Game design document (vision, pillars, progression, economy, conflict)
+- `universe.html` - Universe design (clusters, systems, mining mechanic, equipment tiers)
+
+**Infrastructure**
+- `Dockerfile` - Python 3.12-slim, gunicorn
+- `fly.toml` - spaceeconomy app, iad, shared-cpu-2x/1GB, always-on, se_data volume
+- `.github/workflows/deploy.yml` - Auto-deploy on push to master
+- `restart_server.ps1` - Local dev server launcher (port 8000)
+
+### Simulation Details
+- **40 NPC ships:** 30 traders (5 hull classes), 10 miners (3 hull classes)
+- **Ship states:** idle, loading (3t), unloading (2t), traveling, mining (5t)
+- **BFS pathfinding:** Ships route through multi-hop paths along system connections
+- **Trade AI:** NPCs scan 2-hop radius for profitable buy/sell opportunities
+- **Mining:** NPCs find asteroid fields, mine ore over time, sell when cargo 80% full
+- **Price engine:** `price = base * (demand/supply)^elasticity` per commodity per station
+- **Production/consumption:** Each station produces and consumes goods every tick
+- **20 commodities:** raw (ore, ice, helium3, etc), basic (food), essential (meds, fuel), advanced (electronics, alloys), illegal (narcotics)
+- **Staggered spawns:** 60% of traders start mid-route for immediate visual activity
+
+### API Endpoints
+- `GET /` - Game UI
+- `GET /design` - Design document
+- `GET /universe` - Universe design document
+- `GET /debug` - Debug monitor
+- `GET /health` - Health check (tick count)
+- `GET /api/state` - Full universe state (systems, stations, prices, inventories)
+- `GET /api/ships` - All NPC ship positions and states
+- `GET /api/debug` - Debug summary (stats, events, prices, ship details)
+- `POST /api/nuke` - Reset simulation to initial state
 
 ---
 
-## Architecture Direction
+## Build Phases
 
-- **Backend:** Python (asyncio + aiohttp), always-on server on fly.io
-  - Real-time economy tick loop drives simulation
-  - WebSocket server for client connections (`/ws`)
-  - Health endpoint (`/health`) for fly.io monitoring
-- **Frontend:** Vanilla JS + Three.js (3D star map) + HTML/CSS panels (UI)
-- **Local dev:** `watchfiles` auto-restarts server on code changes, random port
-- **Economy Engine:** Agent-based real-time simulation (Python, asyncio)
-- **Deployment:** fly.io (always-on machine)
-- **Future:** Free MMORPG, multiple players in shared persistent world
+### Phase 1: Living Economy - COMPLETE
+- System/station data model
+- Commodity inventories with production/consumption per tick
+- Price engine (supply/demand/elasticity)
+- NPC hauler agents with trade AI
+- NPC miners working asteroid fields
+- BFS pathfinding for multi-hop routes
+- SQLite persistence
+- Frontend connected to live API
+
+### Phase 2: Player Can Trade (NEXT)
+- Player can buy/sell commodities at current station
+- Player can set destination, travel takes real time
+- Fuel consumption during travel
+- Balance and cargo tracking
+- Ship upgrades (cargo capacity, fuel efficiency, speed)
+- Player mining (use mining laser hardpoint on asteroid fields)
+
+### Phase 3: Information and Risk
+- Price data staleness (only see prices from last visit)
+- Security zones with piracy risk (random cargo loss in low-sec)
+- Basic events (supply disruptions, price spikes, faction skirmishes)
+- Contracts and reputation
+
+### Phase 4: Factions and Depth
+- Faction territories, diplomacy, warfare
+- Shifting borders that reshape trade routes
+- Smuggling mechanics in embargoed systems
+- Fleet ownership and infrastructure (late-game)
+- Multiplayer (shared persistent world)
 
 ---
 
-## Open Questions
+## Universe Structure
 
-1. **V1 scope:** How many systems, commodities, ship types for first playable?
-2. **NPC agent count:** How many agents can browser handle performantly?
-3. **Faction depth:** How complex is faction AI in v1?
-4. **Minimum viable economy:** What is the smallest system that produces interesting emergent behavior?
-5. **Win condition:** Sandbox/endless, or are there goals/milestones?
+**3 Clusters, 24 Systems:**
+- **Core (High-Sec, 8 systems):** Cygnus, Kepler, Tau Ceti, Procyon, Sirius, Deneb, Polaris, Fomalhaut
+- **Rim (Low-Sec, 11 systems):** Vega, Arcturus, Barnard's, Altair, Antares, Capella, Betelgeuse, Castor, Achernar, Aldebaran, Regulus
+- **Frontier (Null-Sec, 5 systems):** Wolf 359, Rigel, Pollux, Canopus, Spica
+
+Connected by jump nexus chokepoints (Procyon, Castor, Spica).
 
 ---
 
-## Related Project
+## Key Design Decisions
 
-PatternFoundry (`/media/devlyn/Leviathan/Projects/PatternFoundry`) uses a similar agent-based simulation for financial market microstructure. The economy engine here could borrow architectural patterns from its tick engine.
+- **Real-time, always-on.** Economy ticks 24/7, world persists whether player is online or not.
+- **Mining as safety net.** You can always mine. Slow money but guaranteed. No going broke.
+- **Progression as access, not power.** You gain access to more of the system, not raw strength.
+- **NOT a combat game.** Conflict is an economic hazard, not a gameplay mechanic.
+- **Universe will be regenerated** before "real" launch so owner has no pre-conceived knowledge.
+
+---
+
+## Tech Notes
+
+- Git push uses a fine-grained PAT token (set in remote URL) with repo + workflow scopes
+- fly.io deploy token stored as GitHub Actions secret `FLY_API_TOKEN`
+- SQLite DB on fly.io volume `se_data` mounted at `/app/data`
+- `DATA_DIR` env var controls DB location (defaults to local `data/` dir)
+- Schema changes require a nuke (saved state won't have new fields)
+- Ship sprites use CanvasTexture on THREE.Sprite for billboarding
 
 ---
 
