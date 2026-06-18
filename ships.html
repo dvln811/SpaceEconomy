@@ -14,33 +14,29 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .nav h1{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:#4fc3f7;letter-spacing:3px;text-transform:uppercase}
 .nav a{font-size:11px;color:#5a7a9a;text-decoration:none;padding:6px 14px;border:1px solid #1a2844;border-radius:3px;transition:all .15s;letter-spacing:1px;text-transform:uppercase;font-family:'Orbitron',sans-serif}
 .nav a:hover{color:#4fc3f7;border-color:#4fc3f7}
-.content{max-width:1100px;margin:0 auto;padding:48px 24px 96px}
-h2{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:700;color:#4fc3f7;letter-spacing:2px;text-transform:uppercase;margin:48px 0 16px;padding-bottom:8px;border-bottom:1px solid #1a2844}
-h2:first-child{margin-top:0}
-.ship-card{background:#0a0e18;border:1px solid #1a2844;border-radius:8px;margin:24px 0;overflow:hidden;display:grid;grid-template-columns:1fr 1fr;gap:0}
-.ship-info{padding:24px}
-.ship-info h3{font-family:'Orbitron',sans-serif;font-size:14px;color:#e0e8f0;letter-spacing:1px;margin-bottom:4px}
-.ship-info .subtitle{font-size:11px;color:#8aa0b8;margin-bottom:16px}
-.ship-info .desc{font-size:12px;color:#8aa0b8;margin-bottom:16px;line-height:1.6}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:4px}
-.stat-item{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #0f1a28;font-size:11px}
-.stat-item .label{color:#6a8aaa}
-.stat-item .val{color:#e0e8f0;font-weight:500}
-.hardpoints{margin-top:12px;font-size:10px;color:#8aa0b8}
-.hardpoints span{display:inline-block;padding:2px 8px;margin:2px;border-radius:3px;border:1px solid #1a3050;background:#0a1020}
-.hp-mining{color:#ab47bc;border-color:#ab47bc44}
-.hp-utility{color:#4fc3f7;border-color:#4fc3f744}
-.hp-defense{color:#66bb6a;border-color:#66bb6a44}
-.hp-weapon{color:#ef5350;border-color:#ef535044}
-.hp-industrial{color:#ffd54f;border-color:#ffd54f44}
-.ship-schematic{background:#060a12;display:flex;align-items:center;justify-content:center;padding:20px;border-left:1px solid #1a2844}
-.ship-schematic svg{width:100%;max-width:400px;height:180px}
-.tier-badge{display:inline-block;font-family:'Orbitron',sans-serif;font-size:9px;padding:2px 8px;border-radius:3px;margin-left:8px;letter-spacing:1px}
-.t1{background:#66bb6a22;color:#66bb6a;border:1px solid #66bb6a44}
-.t2{background:#4fc3f722;color:#4fc3f7;border:1px solid #4fc3f744}
-.t3{background:#ffd54f22;color:#ffd54f;border:1px solid #ffd54f44}
-.t4{background:#ef535022;color:#ef5350;border:1px solid #ef535044}
-.role-section{margin-top:16px;padding-top:8px}
+.content{max-width:1100px;margin:0 auto;padding:32px 24px 96px}
+h2{font-family:'Orbitron',sans-serif;font-size:16px;color:#4fc3f7;letter-spacing:2px;text-transform:uppercase;margin:32px 0 16px}
+.ship-grid{display:grid;grid-template-columns:200px 1fr;gap:16px;height:calc(100vh - 120px)}
+.ship-list{overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.ship-btn{display:block;width:100%;padding:10px 12px;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;color:#8aa0b8;font-family:inherit;font-size:11px;cursor:pointer;text-align:left;transition:all .15s}
+.ship-btn:hover{border-color:#2a4060;background:#0d1a2f}
+.ship-btn.active{border-color:#4fc3f7;background:#0d1a2f}
+.ship-btn .name{color:#e0e8f0;font-weight:500;display:block}
+.ship-btn .meta{font-size:9px;color:#6a9ab8;text-transform:uppercase;margin-top:2px}
+.viewer-area{display:flex;flex-direction:column;gap:12px}
+.viewer-3d{flex:1;background:#060a12;border:1px solid #1a2844;border-radius:6px;min-height:350px}
+.ship-stats{background:#0a0e18;border:1px solid #1a2844;border-radius:6px;padding:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.stat-group h3{font-family:'Orbitron',sans-serif;font-size:9px;color:#6a9ab8;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.stat-row{display:flex;justify-content:space-between;padding:2px 0;font-size:11px}
+.stat-row .label{color:#6a8aaa}
+.stat-row .val{color:#e0e8f0}
+.hp-tag{display:inline-block;font-size:9px;padding:2px 6px;border-radius:3px;margin:1px}
+.hp-defense{background:#66bb6a22;color:#66bb6a;border:1px solid #66bb6a44}
+.hp-utility{background:#4fc3f722;color:#4fc3f7;border:1px solid #4fc3f744}
+.hp-industrial{background:#ffd54f22;color:#ffd54f;border:1px solid #ffd54f44}
+.hp-mining{background:#ab47bc22;color:#ab47bc;border:1px solid #ab47bc44}
+.hp-weapon{background:#ef535022;color:#ef5350;border:1px solid #ef535044}
+.hp-shield{background:#66bb6a22;color:#66bb6a;border:1px solid #66bb6a44}
 </style>
 </head>
 <body>
@@ -51,442 +47,120 @@ h2:first-child{margin-top:0}
   <a href="/ships" style="color:#4fc3f7;border-color:#4fc3f7">Ships</a>
 </div>
 <div class="content">
-<h2>Ship Designs</h2>
-
-
-<!-- TRADERS -->
-<div class="role-section"><h2>Trader Hulls</h2></div>
-
-<!-- Pinto Runner -->
-<div class="ship-card">
-  <div class="ship-info">
-    <h3>Pinto Runner <span class="tier-badge t1">Tier 1</span></h3>
-    <div class="subtitle">Light Courier</div>
-    <div class="desc">Fast, light courier. Low capacity but quick turnaround. The go-to for new traders running safe routes in high-sec space.</div>
-    <div class="stats">
-      <div class="stat-item"><span class="label">Cargo</span><span class="val">120 units</span></div>
-      <div class="stat-item"><span class="label">Fuel</span><span class="val">60</span></div>
-      <div class="stat-item"><span class="label">Speed</span><span class="val">1.2x</span></div>
-      <div class="stat-item"><span class="label">Hull HP</span><span class="val">80</span></div>
-    </div>
-    <div class="hardpoints"><span class="hp-utility">UTIL x1</span><span class="hp-defense">DEF x1</span></div>
-  </div>
-  <div class="ship-schematic">
-    <svg viewBox="0 0 400 180" fill="none">
-      <defs><pattern id="g1" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1a2844" stroke-width="0.3"/></pattern></defs>
-      <rect width="400" height="180" fill="url(#g1)" opacity="0.3"/>
-      <!-- Sleek courier hull - narrow, fast-looking -->
-      <path d="M80 90 L120 72 L280 68 L340 78 L360 90 L340 102 L280 112 L120 108 Z" stroke="#4fc3f7" stroke-width="0.8" fill="none" opacity="0.7"/>
-      <!-- Cockpit -->
-      <path d="M340 82 L370 88 L370 92 L340 98" stroke="#8ab4d4" stroke-width="0.6" fill="none"/>
-      <!-- Engine -->
-      <path d="M80 82 L60 84 L55 90 L60 96 L80 98" stroke="#5a7a9a" stroke-width="0.7" fill="none"/>
-      <line x1="55" y1="87" x2="40" y2="87" stroke="#ef5350" stroke-width="0.5" opacity="0.5"/>
-      <line x1="55" y1="90" x2="35" y2="90" stroke="#ef5350" stroke-width="0.7" opacity="0.4"/>
-      <line x1="55" y1="93" x2="40" y2="93" stroke="#ef5350" stroke-width="0.5" opacity="0.5"/>
-      <!-- Hull details -->
-      <line x1="150" y1="70" x2="150" y2="110" stroke="#4fc3f7" stroke-width="0.3" opacity="0.3"/>
-      <line x1="220" y1="68" x2="220" y2="112" stroke="#4fc3f7" stroke-width="0.3" opacity="0.3"/>
-      <line x1="280" y1="68" x2="280" y2="112" stroke="#4fc3f7" stroke-width="0.3" opacity="0.3"/>
-      <!-- Small cargo bay -->
-      <rect x="140" y="78" width="80" height="24" rx="2" stroke="#ffd54f" stroke-width="0.5" fill="none" opacity="0.4"/>
-      <!-- Hardpoints -->
-      <rect x="170" y="64" width="10" height="6" rx="1" stroke="#4fc3f7" stroke-width="0.6" fill="#4fc3f710"/>
-      <rect x="300" y="100" width="10" height="6" rx="1" stroke="#66bb6a" stroke-width="0.6" fill="#66bb6a10"/>
-      <!-- Labels -->
-      <text x="390" y="15" text-anchor="end" font-size="6" fill="#3a5a7a" font-family="Orbitron" letter-spacing="0.5">PINTO RUNNER</text>
-      <text x="390" y="23" text-anchor="end" font-size="4" fill="#2a4a6a" font-family="JetBrains Mono">LIGHT COURIER</text>
-    </svg>
+<div class="ship-grid">
+  <div class="ship-list" id="shipList"></div>
+  <div class="viewer-area">
+    <div class="viewer-3d" id="viewer3d"></div>
+    <div class="ship-stats" id="shipStats"></div>
   </div>
 </div>
-
-<!-- Bison Mk.III -->
-<div class="ship-card">
-  <div class="ship-info">
-    <h3>Bison Mk.III <span class="tier-badge t2">Tier 2</span></h3>
-    <div class="subtitle">Medium Freighter</div>
-    <div class="desc">Solid all-rounder for established traders. Good balance of cargo capacity, speed, and survivability. The backbone of interstellar commerce.</div>
-    <div class="stats">
-      <div class="stat-item"><span class="label">Cargo</span><span class="val">350 units</span></div>
-      <div class="stat-item"><span class="label">Fuel</span><span class="val">100</span></div>
-      <div class="stat-item"><span class="label">Speed</span><span class="val">1.0x</span></div>
-      <div class="stat-item"><span class="label">Hull HP</span><span class="val">180</span></div>
-    </div>
-    <div class="hardpoints"><span class="hp-utility">UTIL x2</span><span class="hp-defense">DEF x1</span><span class="hp-industrial">IND x1</span></div>
-  </div>
-  <div class="ship-schematic">
-    <svg viewBox="0 0 400 180" fill="none">
-      <defs><pattern id="g2" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1a2844" stroke-width="0.3"/></pattern></defs>
-      <rect width="400" height="180" fill="url(#g2)" opacity="0.3"/>
-      <!-- Chunky freighter hull -->
-      <path d="M90 55 L280 50 L300 55 L310 65 L310 115 L300 125 L280 130 L90 125 L75 115 L70 100 L70 80 L75 65 Z" stroke="#4fc3f7" stroke-width="0.8" fill="none" opacity="0.7"/>
-      <!-- Bridge -->
-      <path d="M310 70 L340 75 L350 85 L350 95 L340 105 L310 110" stroke="#4fc3f7" stroke-width="0.7" fill="none" opacity="0.6"/>
-      <path d="M335 80 L345 85 L345 95 L335 100" stroke="#8ab4d4" stroke-width="0.5" fill="none"/>
-      <!-- Dual engines -->
-      <path d="M70 70 L50 68 L42 72 L40 80 L42 84 L50 85 L70 82" stroke="#5a7a9a" stroke-width="0.7" fill="none"/>
-      <path d="M70 98 L50 96 L42 100 L40 105 L42 110 L50 112 L70 110" stroke="#5a7a9a" stroke-width="0.7" fill="none"/>
-      <line x1="40" y1="75" x2="25" y2="75" stroke="#ef5350" stroke-width="0.6" opacity="0.5"/>
-      <line x1="40" y1="78" x2="20" y2="78" stroke="#ef5350" stroke-width="0.8" opacity="0.4"/>
-      <line x1="40" y1="105" x2="25" y2="105" stroke="#ef5350" stroke-width="0.6" opacity="0.5"/>
-      <line x1="40" y1="108" x2="20" y2="108" stroke="#ef5350" stroke-width="0.8" opacity="0.4"/>
-      <!-- Hull plating -->
-      <line x1="130" y1="52" x2="130" y2="128" stroke="#4fc3f7" stroke-width="0.3" opacity="0.3"/>
-      <line x1="190" y1="50" x2="190" y2="130" stroke="#4fc3f7" stroke-width="0.3" opacity="0.3"/>
-      <line x1="250" y1="50" x2="250" y2="130" stroke="#4fc3f7" stroke-width="0.3" opacity="0.3"/>
-      <!-- Large cargo hold -->
-      <rect x="100" y="65" width="150" height="50" rx="3" stroke="#ffd54f" stroke-width="0.5" fill="none" opacity="0.4"/>
-      <line x1="100" y1="90" x2="250" y2="90" stroke="#1a3050" stroke-width="0.4" stroke-dasharray="3,2"/>
-      <!-- Hardpoints -->
-      <rect x="140" y="44" width="10" height="6" rx="1" stroke="#4fc3f7" stroke-width="0.6" fill="#4fc3f710"/>
-      <rect x="210" y="44" width="10" height="6" rx="1" stroke="#4fc3f7" stroke-width="0.6" fill="#4fc3f710"/>
-      <rect x="280" y="55" width="10" height="6" rx="1" stroke="#66bb6a" stroke-width="0.6" fill="#66bb6a10"/>
-      <rect x="140" y="130" width="10" height="6" rx="1" stroke="#ffd54f" stroke-width="0.6" fill="#ffd54f10"/>
-      <!-- Antenna -->
-      <line x1="200" y1="50" x2="200" y2="38" stroke="#5a7a9a" stroke-width="0.4"/>
-      <line x1="197" y1="38" x2="203" y2="38" stroke="#5a7a9a" stroke-width="0.4"/>
-      <text x="390" y="15" text-anchor="end" font-size="6" fill="#3a5a7a" font-family="Orbitron" letter-spacing="0.5">BISON MK.III</text>
-      <text x="390" y="23" text-anchor="end" font-size="4" fill="#2a4a6a" font-family="JetBrains Mono">MEDIUM FREIGHTER</text>
-    </svg>
-  </div>
 </div>
 
-<!-- Clydesdale -->
-<div class="ship-card">
-  <div class="ship-info">
-    <h3>Clydesdale <span class="tier-badge t4">Tier 4</span></h3>
-    <div class="subtitle">Bulk Freighter</div>
-    <div class="desc">Enormous capacity, slow and fuel-hungry. The king of bulk hauling. Requires convoy protection in low-sec. A mobile warehouse.</div>
-    <div class="stats">
-      <div class="stat-item"><span class="label">Cargo</span><span class="val">800 units</span></div>
-      <div class="stat-item"><span class="label">Fuel</span><span class="val">160</span></div>
-      <div class="stat-item"><span class="label">Speed</span><span class="val">0.7x</span></div>
-      <div class="stat-item"><span class="label">Hull HP</span><span class="val">400</span></div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {buildShipFromData} from '/static/ship_renderer.js';
+
+let renderer, scene, camera, controls, animId;
+let allShips = {};
+let currentShip = null;
+
+async function init() {
+  const resp = await fetch('/api/ship_model/all');
+  allShips = await resp.json();
+
+  // Build ship list
+  const list = document.getElementById('shipList');
+  const roles = {hauler:[], miner:[], military:[]};
+  for (const [id, data] of Object.entries(allShips)) {
+    (roles[data.role] || roles.hauler).push([id, data]);
+  }
+  for (const [role, ships] of Object.entries(roles)) {
+    if (!ships.length) continue;
+    const header = document.createElement('div');
+    header.style.cssText = 'font-family:Orbitron;font-size:8px;color:#ffd54f;letter-spacing:1px;text-transform:uppercase;padding:8px 0 4px';
+    header.textContent = role + 's';
+    list.appendChild(header);
+    for (const [id, data] of ships) {
+      const btn = document.createElement('button');
+      btn.className = 'ship-btn';
+      btn.dataset.id = id;
+      btn.innerHTML = `<span class="name">${data.name}</span><span class="meta">T${data.tier} ${data.role}</span>`;
+      btn.addEventListener('click', () => loadShip(id));
+      list.appendChild(btn);
+    }
+  }
+  // Load first
+  loadShip(Object.keys(allShips)[0]);
+}
+
+function loadShip(id) {
+  const data = allShips[id];
+  if (!data) return;
+  currentShip = id;
+
+  // Update active button
+  document.querySelectorAll('.ship-btn').forEach(b => b.classList.toggle('active', b.dataset.id === id));
+
+  // 3D viewer
+  const el = document.getElementById('viewer3d');
+  if (renderer) { el.removeChild(renderer.domElement); cancelAnimationFrame(animId); renderer.dispose(); }
+
+  const w = el.clientWidth, h = el.clientHeight;
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(50, w/h, 0.1, 100);
+  const bounds = data.bounds || {length:4, height:1, width:1.5};
+  const dist = Math.max(bounds.length, bounds.width, bounds.height) * 1.1;
+  camera.position.set(dist*0.6, dist*0.4, dist*0.7);
+  renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  renderer.setSize(w, h); renderer.setClearColor(0x060a12);
+  el.appendChild(renderer.domElement);
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true; controls.dampingFactor = 0.1;
+  scene.add(new THREE.AmbientLight(0x4fc3f7, 0.3));
+  const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+  dir.position.set(3, 4, 2); scene.add(dir);
+
+  buildShipFromData(scene, data);
+
+  function animate(){animId=requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);}
+  animate();
+
+  // Stats panel
+  const hardpoints = data.components.filter(c => c.type === 'hardpoint');
+  const hpHtml = hardpoints.map(h => `<span class="hp-tag hp-${h.params.slot_type}">${h.params.slot_type}</span>`).join('');
+  document.getElementById('shipStats').innerHTML = `
+    <div class="stat-group">
+      <h3>Specifications</h3>
+      <div class="stat-row"><span class="label">Name</span><span class="val">${data.name}</span></div>
+      <div class="stat-row"><span class="label">Role</span><span class="val">${data.role}</span></div>
+      <div class="stat-row"><span class="label">Tier</span><span class="val">${data.tier}</span></div>
+      <div class="stat-row"><span class="label">Components</span><span class="val">${data.components.length}</span></div>
     </div>
-    <div class="hardpoints"><span class="hp-utility">UTIL x3</span><span class="hp-defense">DEF x2</span><span class="hp-industrial">IND x2</span></div>
-  </div>
-  <div class="ship-schematic">
-    <svg viewBox="0 0 400 180" fill="none">
-      <defs><pattern id="g3" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1a2844" stroke-width="0.3"/></pattern></defs>
-      <rect width="400" height="180" fill="url(#g3)" opacity="0.3"/>
-      <!-- Massive blocky hull -->
-      <path d="M60 40 L300 35 L320 42 L330 55 L330 125 L320 138 L300 145 L60 140 L45 130 L40 115 L40 65 L45 50 Z" stroke="#4fc3f7" stroke-width="0.9" fill="none" opacity="0.7"/>
-      <!-- Bridge (small relative to hull) -->
-      <path d="M330 65 L355 70 L362 80 L362 100 L355 110 L330 115" stroke="#4fc3f7" stroke-width="0.7" fill="none" opacity="0.6"/>
-      <path d="M350 78 L358 82 L358 98 L350 102" stroke="#8ab4d4" stroke-width="0.5" fill="none"/>
-      <!-- Four engines -->
-      <path d="M40 50 L22 48 L16 52 L14 58 L16 62 L22 64 L40 62" stroke="#5a7a9a" stroke-width="0.6" fill="none"/>
-      <path d="M40 72 L22 70 L16 74 L14 78 L16 82 L22 84 L40 82" stroke="#5a7a9a" stroke-width="0.6" fill="none"/>
-      <path d="M40 98 L22 96 L16 100 L14 104 L16 108 L22 110 L40 108" stroke="#5a7a9a" stroke-width="0.6" fill="none"/>
-      <path d="M40 118 L22 116 L16 120 L14 124 L16 128 L22 130 L40 128" stroke="#5a7a9a" stroke-width="0.6" fill="none"/>
-      <!-- Exhaust -->
-      <line x1="14" y1="55" x2="4" y2="55" stroke="#ef5350" stroke-width="0.7" opacity="0.4"/>
-      <line x1="14" y1="76" x2="4" y2="76" stroke="#ef5350" stroke-width="0.7" opacity="0.4"/>
-      <line x1="14" y1="103" x2="4" y2="103" stroke="#ef5350" stroke-width="0.7" opacity="0.4"/>
-      <line x1="14" y1="123" x2="4" y2="123" stroke="#ef5350" stroke-width="0.7" opacity="0.4"/>
-      <!-- Hull plating (many segments) -->
-      <line x1="100" y1="37" x2="100" y2="143" stroke="#4fc3f7" stroke-width="0.3" opacity="0.25"/>
-      <line x1="150" y1="36" x2="150" y2="144" stroke="#4fc3f7" stroke-width="0.3" opacity="0.25"/>
-      <line x1="200" y1="35" x2="200" y2="145" stroke="#4fc3f7" stroke-width="0.3" opacity="0.25"/>
-      <line x1="250" y1="35" x2="250" y2="145" stroke="#4fc3f7" stroke-width="0.3" opacity="0.25"/>
-      <line x1="300" y1="36" x2="300" y2="144" stroke="#4fc3f7" stroke-width="0.3" opacity="0.25"/>
-      <!-- Massive cargo bays -->
-      <rect x="70" y="50" width="110" height="80" rx="3" stroke="#ffd54f" stroke-width="0.5" fill="none" opacity="0.3"/>
-      <rect x="190" y="50" width="100" height="80" rx="3" stroke="#ffd54f" stroke-width="0.5" fill="none" opacity="0.3"/>
-      <line x1="70" y1="90" x2="180" y2="90" stroke="#1a3050" stroke-width="0.3" stroke-dasharray="3,2"/>
-      <line x1="190" y1="90" x2="290" y2="90" stroke="#1a3050" stroke-width="0.3" stroke-dasharray="3,2"/>
-      <!-- Hardpoints -->
-      <rect x="100" y="30" width="10" height="6" rx="1" stroke="#4fc3f7" stroke-width="0.6" fill="#4fc3f710"/>
-      <rect x="170" y="30" width="10" height="6" rx="1" stroke="#4fc3f7" stroke-width="0.6" fill="#4fc3f710"/>
-      <rect x="240" y="30" width="10" height="6" rx="1" stroke="#4fc3f7" stroke-width="0.6" fill="#4fc3f710"/>
-      <rect x="100" y="144" width="10" height="6" rx="1" stroke="#66bb6a" stroke-width="0.6" fill="#66bb6a10"/>
-      <rect x="200" y="144" width="10" height="6" rx="1" stroke="#66bb6a" stroke-width="0.6" fill="#66bb6a10"/>
-      <rect x="280" y="140" width="10" height="6" rx="1" stroke="#ffd54f" stroke-width="0.6" fill="#ffd54f10"/>
-      <rect x="80" y="140" width="10" height="6" rx="1" stroke="#ffd54f" stroke-width="0.6" fill="#ffd54f10"/>
-      <text x="390" y="15" text-anchor="end" font-size="6" fill="#3a5a7a" font-family="Orbitron" letter-spacing="0.5">CLYDESDALE</text>
-      <text x="390" y="23" text-anchor="end" font-size="4" fill="#2a4a6a" font-family="JetBrains Mono">BULK FREIGHTER</text>
-    </svg>
-  </div>
-</div>
-
-
-<!-- Mammoth -->
-<div class="ship-card">
-  <div class="ship-info">
-    <h3>Mammoth <span class="tier-badge t3">Tier 3</span></h3>
-    <div class="subtitle">Heavy Transport</div>
-    <div class="desc">High capacity with decent defenses for low-sec runs. The step up from the Ox for haulers who need volume and protection.</div>
-    <div class="stats">
-      <div class="stat-item"><span class="label">Cargo</span><span class="val">600 units</span></div>
-      <div class="stat-item"><span class="label">Fuel</span><span class="val">140</span></div>
-      <div class="stat-item"><span class="label">Speed</span><span class="val">0.85x</span></div>
-      <div class="stat-item"><span class="label">Hull HP</span><span class="val">320</span></div>
+    <div class="stat-group">
+      <h3>Dimensions</h3>
+      <div class="stat-row"><span class="label">Length</span><span class="val">${bounds.length}m</span></div>
+      <div class="stat-row"><span class="label">Height</span><span class="val">${bounds.height}m</span></div>
+      <div class="stat-row"><span class="label">Width</span><span class="val">${bounds.width}m</span></div>
     </div>
-    <div class="hardpoints"><span class="hp-utility">UTIL x2</span><span class="hp-defense">DEF x2</span><span class="hp-industrial">IND x2</span></div>
-  </div>
-  <div class="ship-schematic">
-    <svg viewBox="0 0 400 180" fill="none">
-      <defs><pattern id="gM" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1a2844" stroke-width="0.3"/></pattern></defs>
-      <rect width="400" height="180" fill="url(#gM)" opacity="0.3"/>
-      <!-- Wide heavy transport hull -->
-      <path d="M70 45 L290 40 L310 48 L320 60 L320 120 L310 132 L290 140 L70 135 L55 125 L50 110 L50 70 L55 55 Z" stroke="#4fc3f7" stroke-width="0.8" fill="none" opacity="0.7"/>
-      <!-- Reinforced bridge -->
-      <path d="M320 68 L348 72 L356 82 L356 98 L348 108 L320 112" stroke="#4fc3f7" stroke-width="0.7" fill="none" opacity="0.6"/>
-      <path d="M345 80 L352 84 L352 96 L345 100" stroke="#8ab4d4" stroke-width="0.5" fill="none"/>
-      <!-- Armor plating (thick lines) -->
-      <path d="M70 50 L70 130" stroke="#4fc3f7" stroke-width="1.2" opacity="0.3"/>
-      <path d="M290 42 L290 138" stroke="#4fc3f7" stroke-width="1.2" opacity="0.3"/>
-      <!-- Triple engines -->
-      <path d="M50 58 L32 56 L26 62 L24 70 L26 74 L32 76 L50 73" stroke="#5a7a9a" stroke-width="0.7" fill="none"/>
-      <path d="M50 83 L32 81 L26 87 L24 93 L26 97 L32 99 L50 97" stroke="#5a7a9a" stroke-width="0.7" fill="none"/>
-      <path d="M50 108 L32 106 L26 112 L24 118 L26 122 L32 124 L50 122" stroke="#5a7a9a" stroke-width="0.7" fill="none"/>
-      <line x1="24" y1="66" x2="12" y2="66" stroke="#ef5350" stroke-width="0.6" opacity="0.4"/>
-      <line x1="24" y1="90" x2="10" y2="90" stroke="#ef5350" stroke-width="0.8" opacity="0.4"/>
-      <line x1="24" y1="115" x2="12" y2="115" stroke="#ef5350" stroke-width="0.6" opacity="0.4"/>
-      <!-- Hull segments -->
-      <line x1="120" y1="42" x2="120" y2="138" stroke="#4fc3f7" stroke-width="0.3" opacity="0.25"/>
-      <line x1="180" y1="41" x2="180" y2="139" stroke="#4fc3f7" stroke-width="0.3" opacity="0.25"/>
-      <line x1="240" y1="40" x2="240" y2="140" stroke="#4fc3f7" stroke-width="0.3" opacity="0.25"/>
-      <!-- Cargo bays -->
-      <rect x="80" y="55" width="90" height="70" rx="3" stroke="#ffd54f" stroke-width="0.5" fill="none" opacity="0.3"/>
-      <rect x="180" y="55" width="90" height="70" rx="3" stroke="#ffd54f" stroke-width="0.5" fill="none" opacity="0.3"/>
-      <!-- Defense turret mounts -->
-      <circle cx="130" cy="38" r="4" stroke="#66bb6a" stroke-width="0.6" fill="#66bb6a10"/>
-      <circle cx="230" cy="38" r="4" stroke="#66bb6a" stroke-width="0.6" fill="#66bb6a10"/>
-      <text x="390" y="15" text-anchor="end" font-size="6" fill="#3a5a7a" font-family="Orbitron" letter-spacing="0.5">MAMMOTH</text>
-      <text x="390" y="23" text-anchor="end" font-size="4" fill="#2a4a6a" font-family="JetBrains Mono">HEAVY TRANSPORT</text>
-    </svg>
-  </div>
-</div>
-
-<!-- MINERS -->
-<div class="role-section"><h2>Miner Hulls</h2></div>
-
-<!-- Deep Core Borer -->
-<div class="ship-card">
-  <div class="ship-info">
-    <h3>Deep Core Borer <span class="tier-badge t3">Tier 3</span></h3>
-    <div class="subtitle">Heavy Mining Rig</div>
-    <div class="desc">Can crack dense asteroids with triple mining arrays. Huge ore bay for extended operations in remote belts. The serious miner's choice.</div>
-    <div class="stats">
-      <div class="stat-item"><span class="label">Cargo</span><span class="val">300 units</span></div>
-      <div class="stat-item"><span class="label">Fuel</span><span class="val">100</span></div>
-      <div class="stat-item"><span class="label">Speed</span><span class="val">0.7x</span></div>
-      <div class="stat-item"><span class="label">Hull HP</span><span class="val">220</span></div>
+    <div class="stat-group">
+      <h3>Hardpoints (${hardpoints.length})</h3>
+      <div>${hpHtml || '<span style="color:#3a5a7a">None</span>'}</div>
     </div>
-    <div class="hardpoints"><span class="hp-mining">MINE x3</span><span class="hp-utility">UTIL x2</span><span class="hp-defense">DEF x1</span></div>
-  </div>
-  <div class="ship-schematic">
-    <svg viewBox="0 0 400 180" fill="none">
-      <defs><pattern id="g4" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1a2844" stroke-width="0.3"/></pattern></defs>
-      <rect width="400" height="180" fill="url(#g4)" opacity="0.3"/>
-      <!-- Industrial mining hull - wide, functional -->
-      <path d="M80 55 L250 50 L270 55 L280 70 L280 110 L270 125 L250 130 L80 125 L65 115 L60 100 L60 80 L65 65 Z" stroke="#ab47bc" stroke-width="0.8" fill="none" opacity="0.7"/>
-      <!-- Mining arm assembly (front) -->
-      <path d="M280 65 L320 55 L340 58 L345 65" stroke="#ab47bc" stroke-width="0.7" fill="none" opacity="0.6"/>
-      <path d="M280 90 L330 90 L350 88" stroke="#ab47bc" stroke-width="0.7" fill="none" opacity="0.6"/>
-      <path d="M280 115 L320 125 L340 122 L345 115" stroke="#ab47bc" stroke-width="0.7" fill="none" opacity="0.6"/>
-      <!-- Mining laser emitters -->
-      <circle cx="345" cy="65" r="4" stroke="#ab47bc" stroke-width="0.8" fill="#ab47bc20"/>
-      <circle cx="350" cy="88" r="4" stroke="#ab47bc" stroke-width="0.8" fill="#ab47bc20"/>
-      <circle cx="345" cy="115" r="4" stroke="#ab47bc" stroke-width="0.8" fill="#ab47bc20"/>
-      <!-- Laser beams (decorative) -->
-      <line x1="349" y1="65" x2="385" y2="55" stroke="#ab47bc" stroke-width="0.4" opacity="0.3" stroke-dasharray="2,3"/>
-      <line x1="354" y1="88" x2="390" y2="88" stroke="#ab47bc" stroke-width="0.4" opacity="0.3" stroke-dasharray="2,3"/>
-      <line x1="349" y1="115" x2="385" y2="125" stroke="#ab47bc" stroke-width="0.4" opacity="0.3" stroke-dasharray="2,3"/>
-      <!-- Engine -->
-      <path d="M60 70 L42 68 L36 75 L34 90 L36 105 L42 112 L60 110" stroke="#5a7a9a" stroke-width="0.7" fill="none"/>
-      <line x1="34" y1="82" x2="20" y2="82" stroke="#ef5350" stroke-width="0.6" opacity="0.4"/>
-      <line x1="34" y1="90" x2="15" y2="90" stroke="#ef5350" stroke-width="0.8" opacity="0.4"/>
-      <line x1="34" y1="98" x2="20" y2="98" stroke="#ef5350" stroke-width="0.6" opacity="0.4"/>
-      <!-- Ore bay -->
-      <rect x="90" y="62" width="140" height="56" rx="3" stroke="#ffd54f" stroke-width="0.5" fill="none" opacity="0.3"/>
-      <!-- Plating -->
-      <line x1="140" y1="52" x2="140" y2="128" stroke="#ab47bc" stroke-width="0.3" opacity="0.2"/>
-      <line x1="200" y1="51" x2="200" y2="129" stroke="#ab47bc" stroke-width="0.3" opacity="0.2"/>
-      <text x="390" y="15" text-anchor="end" font-size="6" fill="#3a5a7a" font-family="Orbitron" letter-spacing="0.5">DEEP CORE BORER</text>
-      <text x="390" y="23" text-anchor="end" font-size="4" fill="#2a4a6a" font-family="JetBrains Mono">HEAVY MINING RIG</text>
-    </svg>
-  </div>
-</div>
+  `;
+}
 
-<!-- Rock Hopper -->
-<div class="ship-card">
-  <div class="ship-info">
-    <h3>Rock Hopper <span class="tier-badge t1">Tier 1</span></h3>
-    <div class="subtitle">Belt Runner</div>
-    <div class="desc">Nimble belt runner with better survivability than the Skiff. The defense hardpoint lets it work contested fields.</div>
-    <div class="stats">
-      <div class="stat-item"><span class="label">Cargo</span><span class="val">100 units</span></div>
-      <div class="stat-item"><span class="label">Fuel</span><span class="val">55</span></div>
-      <div class="stat-item"><span class="label">Speed</span><span class="val">1.0x</span></div>
-      <div class="stat-item"><span class="label">Hull HP</span><span class="val">75</span></div>
-    </div>
-    <div class="hardpoints"><span class="hp-mining">MINE x1</span><span class="hp-utility">UTIL x1</span><span class="hp-defense">DEF x1</span></div>
-  </div>
-  <div class="ship-schematic">
-    <svg viewBox="0 0 400 180" fill="none">
-      <defs><pattern id="gR" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1a2844" stroke-width="0.3"/></pattern></defs>
-      <rect width="400" height="180" fill="url(#gR)" opacity="0.3"/>
-      <!-- Compact, angular miner -->
-      <path d="M100 75 L250 68 L280 75 L290 85 L290 95 L280 105 L250 112 L100 105 L85 98 L80 90 L85 82 Z" stroke="#ab47bc" stroke-width="0.8" fill="none" opacity="0.7"/>
-      <!-- Mining arm (single) -->
-      <path d="M290 85 L320 80 L340 82 L348 88" stroke="#ab47bc" stroke-width="0.7" fill="none" opacity="0.6"/>
-      <circle cx="348" cy="88" r="3.5" stroke="#ab47bc" stroke-width="0.7" fill="#ab47bc20"/>
-      <line x1="351" y1="88" x2="380" y2="85" stroke="#ab47bc" stroke-width="0.3" opacity="0.3" stroke-dasharray="2,3"/>
-      <!-- Engine -->
-      <path d="M80 82 L62 80 L56 85 L54 90 L56 95 L62 98 L80 96" stroke="#5a7a9a" stroke-width="0.7" fill="none"/>
-      <line x1="54" y1="87" x2="40" y2="87" stroke="#ef5350" stroke-width="0.5" opacity="0.5"/>
-      <line x1="54" y1="90" x2="36" y2="90" stroke="#ef5350" stroke-width="0.7" opacity="0.4"/>
-      <line x1="54" y1="93" x2="40" y2="93" stroke="#ef5350" stroke-width="0.5" opacity="0.5"/>
-      <!-- Ore hold -->
-      <rect x="120" y="76" width="80" height="28" rx="2" stroke="#ffd54f" stroke-width="0.5" fill="none" opacity="0.4"/>
-      <!-- Defense turret -->
-      <circle cx="220" cy="65" r="3" stroke="#66bb6a" stroke-width="0.6" fill="#66bb6a10"/>
-      <text x="390" y="15" text-anchor="end" font-size="6" fill="#3a5a7a" font-family="Orbitron" letter-spacing="0.5">ROCK HOPPER</text>
-      <text x="390" y="23" text-anchor="end" font-size="4" fill="#2a4a6a" font-family="JetBrains Mono">BELT RUNNER</text>
-    </svg>
-  </div>
-</div>
+// Handle resize
+window.addEventListener('resize', () => {
+  if (!renderer) return;
+  const el = document.getElementById('viewer3d');
+  const w = el.clientWidth, h = el.clientHeight;
+  camera.aspect = w/h; camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+});
 
-<!-- Excavator -->
-<div class="ship-card">
-  <div class="ship-info">
-    <h3>Excavator <span class="tier-badge t2">Tier 2</span></h3>
-    <div class="subtitle">Industrial Extraction Vessel</div>
-    <div class="desc">Enhanced scanning arrays and dual bore lasers. The Excavator finds the richest rocks and strips them efficiently.</div>
-    <div class="stats">
-      <div class="stat-item"><span class="label">Cargo</span><span class="val">220 units</span></div>
-      <div class="stat-item"><span class="label">Fuel</span><span class="val">90</span></div>
-      <div class="stat-item"><span class="label">Speed</span><span class="val">0.85x</span></div>
-      <div class="stat-item"><span class="label">Hull HP</span><span class="val">160</span></div>
-    </div>
-    <div class="hardpoints"><span class="hp-mining">MINE x2</span><span class="hp-utility">UTIL x2</span><span class="hp-defense">DEF x1</span></div>
-  </div>
-  <div class="ship-schematic">
-    <svg viewBox="0 0 400 180" fill="none">
-      <defs><pattern id="gE" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1a2844" stroke-width="0.3"/></pattern></defs>
-      <rect width="400" height="180" fill="url(#gE)" opacity="0.3"/>
-      <!-- Wide industrial hull -->
-      <path d="M80 55 L260 50 L280 58 L290 70 L290 110 L280 122 L260 130 L80 125 L65 115 L60 100 L60 80 L65 65 Z" stroke="#ab47bc" stroke-width="0.8" fill="none" opacity="0.7"/>
-      <!-- Dual mining arms -->
-      <path d="M290 68 L325 60 L342 64 L348 72" stroke="#ab47bc" stroke-width="0.7" fill="none" opacity="0.6"/>
-      <path d="M290 112 L325 120 L342 116 L348 108" stroke="#ab47bc" stroke-width="0.7" fill="none" opacity="0.6"/>
-      <circle cx="348" cy="72" r="4" stroke="#ab47bc" stroke-width="0.7" fill="#ab47bc20"/>
-      <circle cx="348" cy="108" r="4" stroke="#ab47bc" stroke-width="0.7" fill="#ab47bc20"/>
-      <line x1="352" y1="72" x2="385" y2="65" stroke="#ab47bc" stroke-width="0.3" opacity="0.3" stroke-dasharray="2,3"/>
-      <line x1="352" y1="108" x2="385" y2="115" stroke="#ab47bc" stroke-width="0.3" opacity="0.3" stroke-dasharray="2,3"/>
-      <!-- Scanner dish (top) -->
-      <path d="M170 50 L170 38 L160 32 L180 32 L170 38" stroke="#4fc3f7" stroke-width="0.5" fill="none"/>
-      <circle cx="170" cy="30" r="3" stroke="#4fc3f7" stroke-width="0.4" fill="none"/>
-      <!-- Engine -->
-      <path d="M60 72 L42 70 L36 77 L34 90 L36 103 L42 110 L60 108" stroke="#5a7a9a" stroke-width="0.7" fill="none"/>
-      <line x1="34" y1="83" x2="20" y2="83" stroke="#ef5350" stroke-width="0.6" opacity="0.4"/>
-      <line x1="34" y1="90" x2="16" y2="90" stroke="#ef5350" stroke-width="0.8" opacity="0.4"/>
-      <line x1="34" y1="97" x2="20" y2="97" stroke="#ef5350" stroke-width="0.6" opacity="0.4"/>
-      <!-- Ore bay -->
-      <rect x="90" y="65" width="130" height="50" rx="3" stroke="#ffd54f" stroke-width="0.5" fill="none" opacity="0.3"/>
-      <line x1="155" y1="65" x2="155" y2="115" stroke="#1a3050" stroke-width="0.3" stroke-dasharray="2,2"/>
-      <text x="390" y="15" text-anchor="end" font-size="6" fill="#3a5a7a" font-family="Orbitron" letter-spacing="0.5">EXCAVATOR</text>
-      <text x="390" y="23" text-anchor="end" font-size="4" fill="#2a4a6a" font-family="JetBrains Mono">INDUSTRIAL EXTRACTION</text>
-    </svg>
-  </div>
-</div>
-
-<!-- MILITARY -->
-<div class="role-section"><h2>Military Hulls</h2></div>
-
-<!-- Viper Interceptor -->
-<div class="ship-card">
-  <div class="ship-info">
-    <h3>Viper Interceptor <span class="tier-badge t2">Tier 2</span></h3>
-    <div class="subtitle">Fast Patrol Craft</div>
-    <div class="desc">Lightning-fast interdiction vessel. Used by system security for patrols and customs enforcement. Not a ship you want on your tail.</div>
-    <div class="stats">
-      <div class="stat-item"><span class="label">Cargo</span><span class="val">20 units</span></div>
-      <div class="stat-item"><span class="label">Fuel</span><span class="val">40</span></div>
-      <div class="stat-item"><span class="label">Speed</span><span class="val">1.8x</span></div>
-      <div class="stat-item"><span class="label">Hull HP</span><span class="val">100</span></div>
-    </div>
-    <div class="hardpoints"><span class="hp-weapon">WPN x2</span><span class="hp-defense">DEF x1</span></div>
-  </div>
-  <div class="ship-schematic">
-    <svg viewBox="0 0 400 180" fill="none">
-      <defs><pattern id="g5" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1a2844" stroke-width="0.3"/></pattern></defs>
-      <rect width="400" height="180" fill="url(#g5)" opacity="0.3"/>
-      <!-- Aggressive angular interceptor -->
-      <path d="M100 90 L140 70 L280 65 L340 75 L355 85 L360 90 L355 95 L340 105 L280 115 L140 110 Z" stroke="#ef5350" stroke-width="0.8" fill="none" opacity="0.7"/>
-      <!-- Swept wings -->
-      <path d="M180 65 L160 35 L200 40 L220 60" stroke="#ef5350" stroke-width="0.6" fill="none" opacity="0.5"/>
-      <path d="M180 115 L160 145 L200 140 L220 120" stroke="#ef5350" stroke-width="0.6" fill="none" opacity="0.5"/>
-      <!-- Cockpit (fighter-style) -->
-      <path d="M340 80 L352 86 L355 90 L352 94 L340 100" stroke="#8ab4d4" stroke-width="0.6" fill="none"/>
-      <!-- Twin engines -->
-      <path d="M100 80 L75 78 L68 82 L65 87 L68 90 L75 91 L100 89" stroke="#5a7a9a" stroke-width="0.6" fill="none"/>
-      <path d="M100 91 L75 89 L68 93 L65 97 L68 100 L75 102 L100 100" stroke="#5a7a9a" stroke-width="0.6" fill="none"/>
-      <line x1="65" y1="85" x2="45" y2="85" stroke="#ef5350" stroke-width="0.8" opacity="0.5"/>
-      <line x1="65" y1="96" x2="45" y2="96" stroke="#ef5350" stroke-width="0.8" opacity="0.5"/>
-      <!-- Weapon hardpoints (nose-mounted) -->
-      <rect x="320" y="72" width="8" height="5" rx="1" stroke="#ef5350" stroke-width="0.6" fill="#ef535020"/>
-      <rect x="320" y="103" width="8" height="5" rx="1" stroke="#ef5350" stroke-width="0.6" fill="#ef535020"/>
-      <!-- Gun barrels -->
-      <line x1="328" y1="74" x2="370" y2="70" stroke="#ef5350" stroke-width="0.4" opacity="0.4"/>
-      <line x1="328" y1="106" x2="370" y2="110" stroke="#ef5350" stroke-width="0.4" opacity="0.4"/>
-      <text x="390" y="15" text-anchor="end" font-size="6" fill="#3a5a7a" font-family="Orbitron" letter-spacing="0.5">VIPER INTERCEPTOR</text>
-      <text x="390" y="23" text-anchor="end" font-size="4" fill="#2a4a6a" font-family="JetBrains Mono">FAST PATROL CRAFT</text>
-    </svg>
-  </div>
-<!-- Warden Frigate -->
-<div class="ship-card">
-  <div class="ship-info">
-    <h3>Warden Frigate <span class="tier-badge t3">Tier 3</span></h3>
-    <div class="subtitle">Heavy Enforcement Frigate</div>
-    <div class="desc">Gate camps, blockade duty, anti-piracy ops. Four weapon hardpoints and thick armor make it the law in contested space.</div>
-    <div class="stats">
-      <div class="stat-item"><span class="label">Cargo</span><span class="val">80 units</span></div>
-      <div class="stat-item"><span class="label">Fuel</span><span class="val">100</span></div>
-      <div class="stat-item"><span class="label">Speed</span><span class="val">1.1x</span></div>
-      <div class="stat-item"><span class="label">Hull HP</span><span class="val">450</span></div>
-    </div>
-    <div class="hardpoints"><span class="hp-weapon">WPN x4</span><span class="hp-defense">DEF x3</span><span class="hp-utility">UTIL x1</span></div>
-  </div>
-  <div class="ship-schematic">
-    <svg viewBox="0 0 400 180" fill="none">
-      <defs><pattern id="gW" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1a2844" stroke-width="0.3"/></pattern></defs>
-      <rect width="400" height="180" fill="url(#gW)" opacity="0.3"/>
-      <!-- Heavy angular frigate hull -->
-      <path d="M80 60 L260 52 L290 58 L310 70 L315 90 L310 110 L290 122 L260 128 L80 120 L60 110 L55 90 L60 70 Z" stroke="#ef5350" stroke-width="0.9" fill="none" opacity="0.7"/>
-      <!-- Armored bridge -->
-      <path d="M315 75 L340 78 L350 85 L350 95 L340 102 L315 105" stroke="#ef5350" stroke-width="0.8" fill="none" opacity="0.6"/>
-      <path d="M340 82 L346 86 L346 94 L340 98" stroke="#8ab4d4" stroke-width="0.5" fill="none"/>
-      <!-- Armor plating (heavy) -->
-      <line x1="120" y1="54" x2="120" y2="126" stroke="#ef5350" stroke-width="0.5" opacity="0.2"/>
-      <line x1="180" y1="53" x2="180" y2="127" stroke="#ef5350" stroke-width="0.5" opacity="0.2"/>
-      <line x1="240" y1="52" x2="240" y2="128" stroke="#ef5350" stroke-width="0.5" opacity="0.2"/>
-      <!-- Weapon batteries (4 turrets) -->
-      <circle cx="140" cy="49" r="4" stroke="#ef5350" stroke-width="0.7" fill="#ef535020"/>
-      <circle cx="210" cy="48" r="4" stroke="#ef5350" stroke-width="0.7" fill="#ef535020"/>
-      <circle cx="140" cy="131" r="4" stroke="#ef5350" stroke-width="0.7" fill="#ef535020"/>
-      <circle cx="210" cy="132" r="4" stroke="#ef5350" stroke-width="0.7" fill="#ef535020"/>
-      <!-- Gun barrels -->
-      <line x1="140" y1="45" x2="140" y2="35" stroke="#ef5350" stroke-width="0.5" opacity="0.5"/>
-      <line x1="210" y1="44" x2="210" y2="34" stroke="#ef5350" stroke-width="0.5" opacity="0.5"/>
-      <line x1="140" y1="135" x2="140" y2="145" stroke="#ef5350" stroke-width="0.5" opacity="0.5"/>
-      <line x1="210" y1="136" x2="210" y2="146" stroke="#ef5350" stroke-width="0.5" opacity="0.5"/>
-      <!-- Shield emitters -->
-      <path d="M100 55 Q 55 90 100 125" stroke="#66bb6a" stroke-width="0.4" fill="none" opacity="0.4" stroke-dasharray="3,2"/>
-      <path d="M270 54 Q 320 90 270 126" stroke="#66bb6a" stroke-width="0.4" fill="none" opacity="0.4" stroke-dasharray="3,2"/>
-      <!-- Dual engines -->
-      <path d="M55 72 L38 70 L32 76 L30 82 L32 86 L38 88 L55 86" stroke="#5a7a9a" stroke-width="0.7" fill="none"/>
-      <path d="M55 94 L38 92 L32 98 L30 104 L32 108 L38 110 L55 108" stroke="#5a7a9a" stroke-width="0.7" fill="none"/>
-      <line x1="30" y1="79" x2="16" y2="79" stroke="#ef5350" stroke-width="0.7" opacity="0.5"/>
-      <line x1="30" y1="101" x2="16" y2="101" stroke="#ef5350" stroke-width="0.7" opacity="0.5"/>
-      <text x="390" y="15" text-anchor="end" font-size="6" fill="#3a5a7a" font-family="Orbitron" letter-spacing="0.5">WARDEN FRIGATE</text>
-      <text x="390" y="23" text-anchor="end" font-size="4" fill="#2a4a6a" font-family="JetBrains Mono">HEAVY ENFORCEMENT</text>
-    </svg>
-  </div>
-</div>
-
-</div>
+init();
+</script>
 </body>
 </html>
