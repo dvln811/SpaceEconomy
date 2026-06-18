@@ -108,6 +108,11 @@ def ships_page():
     return send_from_directory(BASE_DIR, "ships.html")
 
 
+@app.route("/sandbox")
+def sandbox_page():
+    return send_from_directory(BASE_DIR, "_sandbox2.html")
+
+
 @app.route("/economy")
 def economy_page():
     return send_from_directory(BASE_DIR, "economy.html")
