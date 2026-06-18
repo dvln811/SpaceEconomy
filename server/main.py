@@ -73,6 +73,11 @@ def universe_page():
     return send_from_directory(BASE_DIR, "universe.html")
 
 
+@app.route("/ships")
+def ships_page():
+    return send_from_directory(BASE_DIR, "ships.html")
+
+
 @app.route("/economy")
 def economy_page():
     return send_from_directory(BASE_DIR, "economy.html")
