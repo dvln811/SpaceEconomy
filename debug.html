@@ -208,9 +208,9 @@ function draw(){
   if(!win.classList.contains('open')){requestAnimationFrame(draw);return;}
   const w=body.clientWidth,h=body.clientHeight;ctx.clearRect(0,0,w,h);
   if(!sysData){requestAnimationFrame(draw);return;}
-  // Predict ships
-  const now=performance.now();
-  for(const id in shipPos){const s=shipPos[id];s.x+=s.vx/60;s.y+=s.vy/60;}
+  // Advance ship progress
+  const now=performance.now();const dt=(now-lastFrame)/1000;lastFrame=now;
+  for(const id in shipPos){const s=shipPos[id];if(s.rate>0)s.p=Math.min(s.p+s.rate*dt,1.0);}
   const center=w2s(0,0);
   // Orbital lines
   for(const o of sysData.objects){
@@ -226,15 +226,18 @@ function draw(){
     else{ctx.beginPath();ctx.arc(pos.x,pos.y,sz,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();}
     if(cam.zoom>0.6&&o.type!=='moon'&&o.type!=='planet'){ctx.fillStyle='rgba(200,212,224,0.5)';ctx.font=`600 ${Math.max(7,8*Math.min(cam.zoom,1.3))}px Orbitron,sans-serif`;ctx.textAlign='center';ctx.fillText(o.name,pos.x,pos.y+sz+9);}
   }
-  // Ships (only in-transit or mining)
+  // Ships
   for(const id in shipPos){
-    const s=shipPos[id];if(!s.visible)continue;
-    const pos=w2s(s.x,s.y);
+    const s=shipPos[id];if(!s.vis)continue;
+    const sx=s.fx+(s.tx-s.fx)*s.p, sy=s.fy+(s.ty-s.fy)*s.p;
+    const pos=w2s(sx,sy);
     ctx.beginPath();ctx.arc(pos.x,pos.y,2.5,0,Math.PI*2);ctx.fillStyle=s.role==='miner'?'#ffd54f':'#ef5350';ctx.fill();
+    if(s.rate>0){const tp=w2s(s.tx,s.ty);ctx.beginPath();ctx.moveTo(pos.x,pos.y);ctx.lineTo(tp.x,tp.y);ctx.strokeStyle='rgba(239,83,80,0.2)';ctx.lineWidth=0.6;ctx.setLineDash([2,3]);ctx.stroke();ctx.setLineDash([]);}
     ctx.fillStyle='rgba(220,230,240,0.8)';ctx.font='bold 10px JetBrains Mono';ctx.textAlign='left';ctx.fillText(id,pos.x+6,pos.y+4);
   }
   requestAnimationFrame(draw);
 }
+let lastFrame=performance.now();
 draw();
 
 async function fetchSys(){
@@ -243,18 +246,17 @@ async function fetchSys(){
     const r=await fetch('/api/system/'+sysId);if(!r.ok)return;
     const d=await r.json();sysData=d;
     document.getElementById('dbgSysTitle').textContent=d.name+' ('+d.ships.length+' ships)';
-    const now=performance.now();
     for(const ship of d.ships){
-      let tp=null;
-      if(ship.intra_position&&ship.intra_destination&&ship.intra_progress>0){
-        const f=d.objects.find(o=>o.id===ship.intra_position),t=d.objects.find(o=>o.id===ship.intra_destination);
-        if(f&&t){const p1=p2w(f.distance,f.angle),p2=p2w(t.distance,t.angle);tp={x:p1.x+(p2.x-p1.x)*ship.intra_progress,y:p1.y+(p2.y-p1.y)*ship.intra_progress};}
-      }else if(ship.intra_position){const at=d.objects.find(o=>o.id===ship.intra_position);if(at){tp=p2w(at.distance,at.angle);tp.x+=5;tp.y-=5;}}
-      if(tp){
-        const id=ship.name;
-        const vis=ship.state==='intra_traveling'||ship.state==='mining';
-        if(!shipPos[id])shipPos[id]={x:tp.x,y:tp.y,vx:0,vy:0,role:ship.role,visible:vis};
-        else{const s=shipPos[id];const dt=1;s.vx=(tp.x-s.x)/dt;s.vy=(tp.y-s.y)/dt;s.x=tp.x;s.y=tp.y;s.role=ship.role;s.visible=vis;}
+      const id=ship.name;
+      if(ship.state==='intra_traveling'&&ship.intra_from&&ship.intra_to){
+        const f=p2w(ship.intra_from.d,ship.intra_from.a),t=p2w(ship.intra_to.d,ship.intra_to.a);
+        const rate=ship.intra_speed/Math.max(ship.intra_dist,0.5);
+        shipPos[id]={fx:f.x,fy:f.y,tx:t.x,ty:t.y,p:ship.intra_progress,rate:rate,role:ship.role,vis:true};
+      }else if(ship.state==='mining'&&ship.intra_position){
+        const at=d.objects.find(o=>o.id===ship.intra_position);
+        if(at){const pos=p2w(at.distance,at.angle);shipPos[id]={fx:pos.x+5,fy:pos.y-5,tx:pos.x+5,ty:pos.y-5,p:0,rate:0,role:ship.role,vis:true};}
+      }else{
+        if(shipPos[id])shipPos[id].vis=false;
       }
     }
   }catch(e){}

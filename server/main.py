@@ -123,13 +123,24 @@ def api_ships():
     """Ship positions and state for the game map."""
     ships = []
     for s in sim.ships:
-        ships.append({
+        ship_data = {
             "name": s.name, "role": s.role, "ship_class": s.ship_class,
             "state": s.state, "location": s.location, "destination": s.destination,
-            "progress": round(s.progress, 2), "speed": round(s.speed, 2), "cargo": s.cargo,
+            "progress": round(s.progress, 4), "speed": s.speed, "cargo": s.cargo,
             "intra_position": s.intra_position, "intra_destination": s.intra_destination,
-            "intra_progress": round(s.intra_progress, 3),
-        })
+            "intra_progress": round(s.intra_progress, 4), "intra_speed": s.intra_speed,
+        }
+        # Include origin/dest coordinates for client-side interpolation
+        if s.state == "intra_traveling" and s.intra_position and s.intra_destination:
+            from_obj = next((o for o in sim.universe[s.location].objects if o.id == s.intra_position), None)
+            to_obj = next((o for o in sim.universe[s.location].objects if o.id == s.intra_destination), None)
+            if from_obj and to_obj:
+                import math
+                dist = sim._intra_distance(s.location, s.intra_position, s.intra_destination)
+                ship_data["intra_from"] = {"d": from_obj.distance, "a": round(from_obj.angle, 4)}
+                ship_data["intra_to"] = {"d": to_obj.distance, "a": round(to_obj.angle, 4)}
+                ship_data["intra_dist"] = round(dist, 3)
+        ships.append(ship_data)
     return jsonify({"tick": sim.tick_count, "ships": ships})
 
 
@@ -173,11 +184,20 @@ def api_system(system_id):
     ships_here = []
     for s in sim.ships:
         if s.location == system_id:
-            ships_here.append({
+            ship_data = {
                 "name": s.name, "role": s.role, "state": s.state,
                 "intra_position": s.intra_position, "intra_destination": s.intra_destination,
-                "intra_progress": round(s.intra_progress, 3),
-            })
+                "intra_progress": round(s.intra_progress, 4), "intra_speed": s.intra_speed,
+            }
+            if s.state == "intra_traveling" and s.intra_position and s.intra_destination:
+                from_obj = next((o for o in sys_obj.objects if o.id == s.intra_position), None)
+                to_obj = next((o for o in sys_obj.objects if o.id == s.intra_destination), None)
+                if from_obj and to_obj:
+                    dist = sim._intra_distance(system_id, s.intra_position, s.intra_destination)
+                    ship_data["intra_from"] = {"d": from_obj.distance, "a": round(from_obj.angle, 4)}
+                    ship_data["intra_to"] = {"d": to_obj.distance, "a": round(to_obj.angle, 4)}
+                    ship_data["intra_dist"] = round(dist, 3)
+            ships_here.append(ship_data)
     return jsonify({
         "id": system_id, "name": sys_obj.name, "type": sys_obj.system_type,
         "security": sys_obj.security, "objects": objects, "ships": ships_here,

@@ -633,7 +633,7 @@ function animate(){
     const destIdx=systemIdToIndex[ship?.destination];
     // Predict forward for traveling ships (server does 0.01*speed per second, we do per frame at 60fps)
     if(ship&&ship.state==='traveling'&&locIdx!==undefined&&destIdx!==undefined){
-      const serverRate=0.01*(ship.speed||1.0);
+      const serverRate=0.02*(ship.speed||1.0);
       mesh.userData.clientProgress=(mesh.userData.clientProgress||ship.progress)+(serverRate/60);
       if(mesh.userData.clientProgress>1) mesh.userData.clientProgress=1;
       const a=systems[locIdx],b=systems[destIdx];
@@ -1108,44 +1108,28 @@ function svHandleHover(mx,my){
 
 function svUpdateTargets(){
   if(!svData||!svData.ships)return;
-  const now=performance.now();
   for(const ship of svData.ships){
-    const id=ship.name;let tp=null;
-    if(ship.intra_position&&ship.intra_destination&&ship.intra_progress>0){
-      const f=svData.objects.find(o=>o.id===ship.intra_position),t=svData.objects.find(o=>o.id===ship.intra_destination);
-      if(f&&t){const p1=svPolar(f.distance,f.angle),p2=svPolar(t.distance,t.angle);tp={x:p1.x+(p2.x-p1.x)*ship.intra_progress,y:p1.y+(p2.y-p1.y)*ship.intra_progress};}
-    }else if(ship.intra_position){
+    const id=ship.name;
+    if(ship.state==='intra_traveling'&&ship.intra_from&&ship.intra_to){
+      const f=svPolar(ship.intra_from.d,ship.intra_from.a);
+      const t=svPolar(ship.intra_to.d,ship.intra_to.a);
+      const rate=ship.intra_speed/Math.max(ship.intra_dist,0.5);
+      svShipPos[id]={fx:f.x,fy:f.y,tx:t.x,ty:t.y,p:ship.intra_progress,rate:rate,role:ship.role,vis:true};
+    }else if(ship.state==='mining'&&ship.intra_position){
       const at=svData.objects.find(o=>o.id===ship.intra_position);
-      if(at){tp=svPolar(at.distance,at.angle);tp.x+=5;tp.y-=5;}
-    }
-    if(tp){
-      if(!svShipPos[id]){svShipPos[id]={x:tp.x,y:tp.y,px:tp.x,py:tp.y,vx:0,vy:0,t:now};}
-      else{
-        const s=svShipPos[id];
-        // Calculate velocity from last known position to new target
-        const dt=Math.max(now-s.t,100)/1000; // seconds since last update
-        s.vx=(tp.x-s.px)/dt;
-        s.vy=(tp.y-s.py)/dt;
-        s.px=tp.x;s.py=tp.y;
-        s.t=now;
-        // Snap current position to new data point (no lerp, use velocity for prediction)
-        s.x=tp.x;s.y=tp.y;
-      }
+      if(at){const pos=svPolar(at.distance,at.angle);svShipPos[id]={fx:pos.x+5,fy:pos.y-5,tx:pos.x+5,ty:pos.y-5,p:0,rate:0,role:ship.role,vis:true};}
+    }else{
+      if(svShipPos[id])svShipPos[id].vis=false;
     }
   }
 }
 
 let svLastFrame=performance.now();
-function svLerpShips(){
+function svAdvanceShips(){
   const now=performance.now();
   const dt=(now-svLastFrame)/1000;
   svLastFrame=now;
-  for(const id in svShipPos){
-    const s=svShipPos[id];
-    // Predict forward based on velocity
-    s.x+=s.vx*dt;
-    s.y+=s.vy*dt;
-  }
+  for(const id in svShipPos){const s=svShipPos[id];if(s.rate>0)s.p=Math.min(s.p+s.rate*dt,1.0);}
 }
 
 function svDraw(){
@@ -1155,7 +1139,7 @@ function svDraw(){
   if(!svData){requestAnimationFrame(svDraw);return;}
 
   // Lerp ships
-  svLerpShips();
+  svAdvanceShips();
 
   const center=svW2S(0,0);
 
@@ -1202,13 +1186,12 @@ function svDraw(){
 
   // Ships (only show in-transit or mining, not docked)
   if(svData.ships){for(const ship of svData.ships){
-    if(ship.state!=='intra_traveling'&&ship.state!=='mining') continue;
-    const sp=svShipPos[ship.name];if(!sp)continue;
-    const pos=svW2S(sp.x,sp.y);const sc=ship.role==='miner'?'#ffd54f':'#ef5350';
+    const sp=svShipPos[ship.name];if(!sp||!sp.vis)continue;
+    const sx=sp.fx+(sp.tx-sp.fx)*sp.p, sy=sp.fy+(sp.ty-sp.fy)*sp.p;
+    const pos=svW2S(sx,sy);const sc=sp.role==='miner'?'#ffd54f':'#ef5350';
     svCtx.beginPath();svCtx.arc(pos.x,pos.y,2.5*Math.min(svCam.zoom,2),0,Math.PI*2);svCtx.fillStyle=sc;svCtx.fill();
-    if(ship.intra_destination){
-      const to=svData.objects.find(o=>o.id===ship.intra_destination);
-      if(to){const tp=svW2S(...Object.values(svPolar(to.distance,to.angle)));svCtx.beginPath();svCtx.moveTo(pos.x,pos.y);svCtx.lineTo(tp.x,tp.y);svCtx.strokeStyle=sc+'33';svCtx.lineWidth=0.6;svCtx.setLineDash([2,3]);svCtx.stroke();svCtx.setLineDash([]);}
+    if(sp.rate>0){
+      const tp=svW2S(sp.tx,sp.ty);svCtx.beginPath();svCtx.moveTo(pos.x,pos.y);svCtx.lineTo(tp.x,tp.y);svCtx.strokeStyle=sc+'33';svCtx.lineWidth=0.6;svCtx.setLineDash([2,3]);svCtx.stroke();svCtx.setLineDash([]);
     }
     if(svCam.zoom>0.8){svCtx.fillStyle='rgba(220,230,240,0.75)';svCtx.font='bold 10px JetBrains Mono,monospace';svCtx.textAlign='left';svCtx.fillText(ship.name,pos.x+6,pos.y+4);}
   }}

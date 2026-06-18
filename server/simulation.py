@@ -44,8 +44,9 @@ class Simulation:
             ship = NPCShip(
                 id=f"trader_{i}", name=NPC_TRADER_NAMES[i % len(NPC_TRADER_NAMES)],
                 cargo_capacity=150 + random.randint(0, 200), fuel=100.0,
-                location=loc, speed=0.8 + random.random() * 0.6, state="idle", role="trader",
+                location=loc, speed=1.0, state="idle", role="trader",
                 ship_class=trader_classes[i % len(trader_classes)],
+                intra_speed=0.2,
             )
             # Place at a station in the system
             station_objs = [o for o in self.universe[loc].objects if o.obj_type == "station"]
@@ -61,7 +62,7 @@ class Simulation:
             ship = NPCShip(
                 id=f"miner_{i}", name=NPC_MINER_NAMES[i % len(NPC_MINER_NAMES)],
                 cargo_capacity=100 + random.randint(0, 100), fuel=100.0,
-                location=loc, speed=0.6 + random.random() * 0.4, state="idle", role="miner",
+                location=loc, speed=1.0, state="idle", role="miner",
                 ship_class=miner_classes[i % len(miner_classes)],
             )
             # Place at a random station in the system
