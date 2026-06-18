@@ -413,6 +413,8 @@ SHIP_GEOMETRIES["prospect_skiff"] = {
 }
 
 # ── ROCK HOPPER (T1 Miner) ────────────────────────────────────────────────────
+SHIP_GEOMETRIES["rock_hopper"] = {**SHIP_GEOMETRIES["prospect_skiff"], "name": "Rock Hopper"}
+
 # ── STRIP MINER (T2 Miner) ────────────────────────────────────────────────────
 SHIP_GEOMETRIES["strip_miner"] = {
     "name": "Strip Miner", "role": "miner", "tier": 2,

@@ -63,7 +63,7 @@ class Simulation:
                 cargo_capacity=st.cargo_capacity + random.randint(-20, 20),
                 fuel=float(st.fuel_capacity), location=loc,
                 speed=st.speed, state="idle",
-                role="hauler", ship_class=st.name, intra_speed=st.intra_speed,
+                role="hauler", ship_class=st.id, intra_speed=st.intra_speed,
                 risk_tolerance=risk_by_tier.get(st.tier, 0.5), faction=faction,
             )
             station_objs = [o for o in self.universe[loc].objects if o.obj_type == "station"]
@@ -87,7 +87,7 @@ class Simulation:
                 cargo_capacity=st.cargo_capacity + random.randint(-10, 10),
                 fuel=float(st.fuel_capacity), location=loc,
                 speed=st.speed, state="idle",
-                role="miner", ship_class=st.name, intra_speed=st.intra_speed,
+                role="miner", ship_class=st.id, intra_speed=st.intra_speed,
                 risk_tolerance=risk_by_tier.get(st.tier, 0.5), faction=faction,
             )
             station_objs = [o for o in self.universe[loc].objects if o.obj_type == "station"]
