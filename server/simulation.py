@@ -57,15 +57,18 @@ class Simulation:
             ("Ox Hauler", 350, 0.7),         # large, takes some risk
             ("Clydesdale", 500, 0.9),        # huge, goes almost anywhere
         ]
+        trader_factions = ["Trade Guild", "Free Traders", "Industrial Corp", "Agrarian League", "Frontier Logistics"]
         for i in range(count):
             cls_name, capacity, risk = trader_classes[i % len(trader_classes)]
+            faction = trader_factions[i % len(trader_factions)]
+            registry = f"TRD-{random.randint(1000,9999)}"
             loc = random.choice(system_ids)
             ship = NPCShip(
-                id=f"trader_{i}", name=NPC_TRADER_NAMES[i % len(NPC_TRADER_NAMES)],
+                id=f"trader_{i}", name=f"{cls_name} {registry}",
                 cargo_capacity=capacity + random.randint(-20, 20),
                 fuel=100.0, location=loc, speed=1.0, state="idle",
                 role="trader", ship_class=cls_name, intra_speed=0.2,
-                risk_tolerance=risk,
+                risk_tolerance=risk, faction=faction,
             )
             station_objs = [o for o in self.universe[loc].objects if o.obj_type == "station"]
             if station_objs:
@@ -79,15 +82,18 @@ class Simulation:
             ("Strip Miner", 150, 0.5),       # medium, moderate risk
             ("Deep Core Borer", 250, 0.8),   # large, goes to dangerous fields
         ]
+        miner_factions = ["Miners Union", "Deep Rock Corp", "Frontier Logistics"]
         for i in range(count):
             cls_name, capacity, risk = miner_classes[i % len(miner_classes)]
+            faction = miner_factions[i % len(miner_factions)]
+            registry = f"MNR-{random.randint(1000,9999)}"
             loc = random.choice(mining_systems)
             ship = NPCShip(
-                id=f"miner_{i}", name=NPC_MINER_NAMES[i % len(NPC_MINER_NAMES)],
+                id=f"miner_{i}", name=f"{cls_name} {registry}",
                 cargo_capacity=capacity + random.randint(-10, 10),
                 fuel=100.0, location=loc, speed=1.0, state="idle",
                 role="miner", ship_class=cls_name, intra_speed=0.2,
-                risk_tolerance=risk,
+                risk_tolerance=risk, faction=faction,
             )
             station_objs = [o for o in self.universe[loc].objects if o.obj_type == "station"]
             if station_objs:

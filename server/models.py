@@ -83,6 +83,7 @@ class NPCShip:
     intra_speed: float = 0.2
     # Safety tolerance (0.0 = avoids all danger, 1.0 = will go anywhere)
     risk_tolerance: float = 0.5
+    faction: str = ""        # owning corporation/faction
 
 
 # ── Tier 1: Raw Materials (mined from asteroid fields) ───────────────────────

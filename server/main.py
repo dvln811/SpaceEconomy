@@ -26,9 +26,21 @@ TICK_RATE = float(os.getenv("TICK_RATE", "1.0"))
 SAVE_INTERVAL = 10  # save every N ticks
 
 # Backfill risk_tolerance for ships loaded from old saves
-for _s in sim.ships:
+_trader_factions = ["Trade Guild", "Free Traders", "Industrial Corp", "Agrarian League", "Frontier Logistics"]
+_miner_factions = ["Miners Union", "Deep Rock Corp", "Frontier Logistics"]
+for _i, _s in enumerate(sim.ships):
     if not hasattr(_s, 'risk_tolerance') or _s.risk_tolerance == 0:
         _s.risk_tolerance = 0.5
+    if not _s.faction:
+        if _s.role == "miner":
+            _s.faction = _miner_factions[_i % len(_miner_factions)]
+        else:
+            _s.faction = _trader_factions[_i % len(_trader_factions)]
+    # Backfill registry-style name if ship has old-style name
+    if _s.name and not any(c.isdigit() for c in _s.name):
+        import random as _rnd
+        prefix = "TRD" if _s.role == "trader" else "MNR"
+        _s.name = f"{_s.ship_class} {prefix}-{_rnd.randint(1000,9999)}"
 
 
 def economy_loop():
@@ -120,7 +132,7 @@ def api_ships():
     ships = []
     for s in sim.ships:
         ship_data = {
-            "name": s.name, "role": s.role, "ship_class": s.ship_class,
+            "name": s.name, "role": s.role, "ship_class": s.ship_class, "faction": s.faction,
             "state": s.state, "location": s.location, "destination": s.destination,
             "progress": round(s.progress, 4), "speed": s.speed, "cargo": s.cargo,
             "intra_position": s.intra_position, "intra_destination": s.intra_destination,
@@ -200,7 +212,7 @@ def api_debug():
         dest_name = sim.universe[s.destination].name if s.destination in sim.universe else s.destination or "-"
         ships.append({
             "id": s.id, "name": s.name, "state": s.state, "role": s.role,
-            "ship_class": s.ship_class, "timer": s.state_timer,
+            "ship_class": s.ship_class, "faction": s.faction, "timer": s.state_timer,
             "location": loc_name, "location_id": s.location,
             "destination": dest_name, "destination_id": s.destination,
             "cargo": s.cargo, "cargo_capacity": s.cargo_capacity,

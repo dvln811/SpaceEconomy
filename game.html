@@ -518,26 +518,33 @@ starGeo.setAttribute('position',new THREE.BufferAttribute(starVerts,3));
 const starMat = new THREE.PointsMaterial({color:0xb4c8dc,size:1.5,sizeAttenuation:true,transparent:true,opacity:0.5});
 scene.add(new THREE.Points(starGeo,starMat));
 
-// System nodes
+// System nodes - star-like billboards
 const systemMeshes = [];
+function makeStarTexture(color){
+  const c=document.createElement('canvas');c.width=128;c.height=128;
+  const ctx=c.getContext('2d');
+  // Convert THREE color to CSS
+  const tc=new THREE.Color(color);
+  const r=Math.round(tc.r*255),g=Math.round(tc.g*255),b=Math.round(tc.b*255);
+  const grad=ctx.createRadialGradient(64,64,0,64,64,64);
+  grad.addColorStop(0,`rgba(255,255,255,1)`);
+  grad.addColorStop(0.08,`rgba(255,255,255,0.9)`);
+  grad.addColorStop(0.15,`rgba(${r},${g},${b},0.8)`);
+  grad.addColorStop(0.4,`rgba(${r},${g},${b},0.3)`);
+  grad.addColorStop(0.7,`rgba(${r},${g},${b},0.08)`);
+  grad.addColorStop(1,`rgba(${r},${g},${b},0)`);
+  ctx.fillStyle=grad;
+  ctx.fillRect(0,0,128,128);
+  return new THREE.CanvasTexture(c);
+}
 systems.forEach(s=>{
-  // Glow sprite
-  const spriteMat = new THREE.SpriteMaterial({
-    color:s.color,transparent:true,opacity:0.3,
-    map:generateGlowTexture()
-  });
-  const sprite = new THREE.Sprite(spriteMat);
-  sprite.scale.set(s.size*6,s.size*6,1);
+  const tex=makeStarTexture(s.color);
+  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false});
+  const sprite=new THREE.Sprite(mat);
+  sprite.scale.set(s.size*3,s.size*3,1);
   sprite.position.set(s.x,s.y,s.z);
   scene.add(sprite);
-
-  // Core sphere
-  const geo = new THREE.SphereGeometry(s.size*0.8,16,16);
-  const mat = new THREE.MeshBasicMaterial({color:s.color});
-  const mesh = new THREE.Mesh(geo,mat);
-  mesh.position.set(s.x,s.y,s.z);
-  scene.add(mesh);
-  systemMeshes.push(mesh);
+  systemMeshes.push(sprite);
 });
 
 // Route lines drawn by drawRouteLines() from API
@@ -602,20 +609,6 @@ systems.forEach((s,i)=>{
   label.position.set(s.x, s.y+s.size*2+6, s.z);
   scene.add(label);
 });
-
-function generateGlowTexture(){
-  const c=document.createElement('canvas');
-  c.width=64;c.height=64;
-  const ctx=c.getContext('2d');
-  const g=ctx.createRadialGradient(32,32,0,32,32,32);
-  g.addColorStop(0,'rgba(255,255,255,1)');
-  g.addColorStop(0.3,'rgba(255,255,255,0.4)');
-  g.addColorStop(1,'rgba(255,255,255,0)');
-  ctx.fillStyle=g;
-  ctx.fillRect(0,0,64,64);
-  const tex=new THREE.CanvasTexture(c);
-  return tex;
-}
 
 // Animate
 function animate(){
