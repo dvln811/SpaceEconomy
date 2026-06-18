@@ -94,9 +94,9 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     <div class="filter-bar">
       <input class="filter-input" id="stFilter" placeholder="Filter stations...">
       <select class="filter-select" id="stStatusFilter"><option value="">All</option><option value="active">Active</option><option value="halted">Halted</option></select>
-      <select class="filter-select" id="stSortBy"><option value="system">Sort: System</option><option value="output">Sort: Output</option><option value="status">Sort: Status</option><option value="stock">Sort: Stock</option></select>
+      <select class="filter-select" id="stSortBy"><option value="system">Sort: System</option><option value="station">Sort: Station</option><option value="status">Sort: Status</option></select>
     </div>
-    <div class="tbl-wrap"><table class="tbl"><thead id="stHead"><tr><th>System</th><th>Station</th><th>Sec</th><th>Output</th><th>Status</th><th>Stock</th><th>Inputs</th><th>Buy Orders</th></tr></thead><tbody id="stBody"></tbody></table></div>
+    <div class="tbl-wrap"><table class="tbl"><thead id="stHead"><tr><th>System</th><th>Station</th><th>Sec</th><th>Production Lines</th><th>Buy Orders</th></tr></thead><tbody id="stBody"></tbody></table></div>
   </div>
   <!-- Ships: static filter bar -->
   <div class="view" id="view-ships">
@@ -252,32 +252,31 @@ function renderStations() {
   for (const [sid, sys] of Object.entries(D.systems || {})) {
     for (const st of sys.stations) {
       if (!st.production.length) continue;
-      for (const p of st.production) {
-        allRows.push({sys: sys.name, station: st.name, security: sys.security, prod: p, buyOrders: st.buy_orders || []});
-      }
+      allRows.push({sys: sys.name, station: st.name, security: sys.security, production: st.production, buyOrders: st.buy_orders || []});
     }
   }
   // Filter
-  if (stFilter) allRows = allRows.filter(r => r.sys.toLowerCase().includes(stFilter) || r.station.toLowerCase().includes(stFilter) || r.prod.name.toLowerCase().includes(stFilter));
-  if (stStatus === 'active') allRows = allRows.filter(r => !r.prod.halted);
-  if (stStatus === 'halted') allRows = allRows.filter(r => r.prod.halted);
+  if (stFilter) allRows = allRows.filter(r => r.sys.toLowerCase().includes(stFilter) || r.station.toLowerCase().includes(stFilter) || r.production.some(p=>p.name.toLowerCase().includes(stFilter)));
+  if (stStatus === 'active') allRows = allRows.filter(r => r.production.some(p=>!p.halted));
+  if (stStatus === 'halted') allRows = allRows.filter(r => r.production.every(p=>p.halted));
   // Sort
-  if (stSort === 'output') allRows.sort((a,b) => a.prod.name.localeCompare(b.prod.name));
-  else if (stSort === 'status') allRows.sort((a,b) => (b.prod.halted?1:0) - (a.prod.halted?1:0));
-  else if (stSort === 'stock') allRows.sort((a,b) => b.prod.stock - a.prod.stock);
+  if (stSort === 'station') allRows.sort((a,b) => a.station.localeCompare(b.station));
+  else if (stSort === 'status') allRows.sort((a,b) => {const aH=a.production.filter(p=>p.halted).length; const bH=b.production.filter(p=>p.halted).length; return bH-aH;});
   else allRows.sort((a,b) => a.sys.localeCompare(b.sys));
 
   let rows = '';
   for (const r of allRows) {
-    const p = r.prod;
-    const status = p.halted ? '<span class="badge badge-halt">HALTED</span>' : `<span class="badge badge-ok">${p.actual.toFixed(1)}/t</span>`;
-    const inputs = p.inputs.map(i => {
-      const pct = Math.min(100, (i.have / Math.max(i.need, 0.1)) * 100);
-      const col = pct > 50 ? '#66bb6a' : pct > 10 ? '#ffd54f' : '#ef5350';
-      return `<span style="color:${col}" title="${i.name}: ${i.have}/${i.need}">${i.name.split(' ')[0]}:${Math.round(i.have)}</span>`;
-    }).join(' | ');
-    const buys = r.buyOrders.slice(0,3).map(b => `<span style="color:#ffd54f">${b.commodity.split('_')[0]}:${Math.round(b.qty)}</span>`).join(' ');
-    rows += `<tr><td>${r.sys}</td><td>${r.station}</td><td><span class="badge badge-${r.security}">${r.security}</span></td><td style="color:#ffd54f">${p.name}</td><td>${status}</td><td style="color:#4fc3f7">${p.stock}</td><td style="font-size:9px">${inputs}</td><td style="font-size:9px">${buys||'-'}</td></tr>`;
+    const prodLines = r.production.map(p => {
+      const status = p.halted ? '<span class="badge badge-halt">HALT</span>' : `<span class="badge badge-ok">${p.actual.toFixed(1)}/t</span>`;
+      const inputs = p.inputs.map(i => {
+        const pct = Math.min(100, (i.have / Math.max(i.need, 0.1)) * 100);
+        const col = pct > 50 ? '#66bb6a' : pct > 10 ? '#ffd54f' : '#ef5350';
+        return `<span style="color:${col}" title="${i.name}: ${i.have}/${i.need}">${i.name.split(' ')[0]}:${Math.round(i.have)}</span>`;
+      }).join(' ');
+      return `<div style="padding:2px 0;border-bottom:1px solid #0a1420"><span style="color:#ffd54f">${p.name}</span> ${status} <span style="color:#4fc3f7;margin:0 6px">stk:${Math.round(p.stock)}</span><span style="font-size:9px">${inputs}</span></div>`;
+    }).join('');
+    const buys = r.buyOrders.slice(0,4).map(b => `<div style="font-size:9px;padding:1px 0"><span style="color:#ef5350">${b.commodity}</span> ${Math.round(b.qty)} @${b.price.toFixed(0)}</div>`).join('');
+    rows += `<tr><td>${r.sys}</td><td>${r.station}</td><td><span class="badge badge-${r.security}">${r.security}</span></td><td style="vertical-align:top">${prodLines}</td><td style="vertical-align:top">${buys||'-'}</td></tr>`;
   }
   document.getElementById('stBody').innerHTML = rows;
 }
