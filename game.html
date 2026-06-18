@@ -359,74 +359,62 @@ controls.minDistance = 150;
 controls.maxDistance = 2000;
 controls.maxPolarAngle = Math.PI * 0.85;
 
-// Systems data (adding z coordinate for 3D depth)
-const systems = [
-  {name:'Cygnus Station', x:0, y:0, z:0, size:8, color:0x4fc3f7, type:'industrial'},
-  {name:'Vega Outpost', x:320, y:60, z:-180, size:5, color:0xffd54f, type:'mining'},
-  {name:'Kepler Freeport', x:-200, y:-40, z:150, size:9, color:0x4fc3f7, type:'trade'},
-  {name:'Arcturus Refinery', x:250, y:80, z:200, size:6, color:0xff8a65, type:'processing'},
-  {name:'Tau Ceti Prime', x:-300, y:-70, z:-120, size:7, color:0x66bb6a, type:'agricultural'},
-  {name:'Wolf 359 Depot', x:480, y:120, z:350, size:4, color:0xef5350, type:'frontier'},
-  {name:'Procyon Gate', x:60, y:-90, z:280, size:6, color:0xab47bc, type:'nexus'},
-  {name:'Sirius Dockyard', x:-380, y:50, z:200, size:6, color:0x78909c, type:'shipyard'},
-  {name:"Barnard's Reach", x:-150, y:100, z:-320, size:5, color:0xffd54f, type:'mining'},
-  {name:'Altair Junction', x:150, y:-110, z:-300, size:7, color:0x4fc3f7, type:'trade'},
-  {name:'Deneb Anchorage', x:-480, y:30, z:-50, size:5, color:0x78909c, type:'military'},
-  {name:'Rigel Depot', x:500, y:-60, z:-100, size:4, color:0xef5350, type:'frontier'},
-  {name:'Polaris Haven', x:-100, y:-80, z:420, size:6, color:0x66bb6a, type:'agricultural'},
-  {name:'Antares Forge', x:380, y:40, z:80, size:6, color:0xff8a65, type:'processing'},
-  {name:'Capella Market', x:-350, y:90, z:380, size:7, color:0x4fc3f7, type:'trade'},
-  {name:'Betelgeuse Yard', x:200, y:-50, z:450, size:5, color:0x78909c, type:'shipyard'},
-  {name:'Aldebaran Mine', x:-500, y:70, z:-280, size:4, color:0xffd54f, type:'mining'},
-  {name:'Spica Terminal', x:600, y:-30, z:200, size:5, color:0xab47bc, type:'nexus'},
-  {name:'Fomalhaut Colony', x:-200, y:110, z:-480, size:4, color:0x66bb6a, type:'agricultural'},
-  {name:'Canopus Station', x:100, y:-100, z:600, size:6, color:0x4fc3f7, type:'industrial'},
-  {name:'Regulus Port', x:-600, y:40, z:150, size:5, color:0xffd54f, type:'mining'},
-  {name:'Castor Relay', x:450, y:80, z:-280, size:4, color:0xab47bc, type:'nexus'},
-  {name:'Pollux Outpost', x:-400, y:-60, z:-400, size:4, color:0xef5350, type:'frontier'},
-  {name:'Achernar Base', x:300, y:90, z:-450, size:5, color:0x78909c, type:'military'},
-];
-
-// System ID mapping (matches server universe.py order -> systems array index)
+// Systems data loaded from API
+const TYPE_COLORS={industrial:0x4fc3f7,mining:0xffd54f,trade:0x4fc3f7,agricultural:0x66bb6a,processing:0xff8a65,frontier:0xef5350,nexus:0xab47bc,shipyard:0x78909c,military:0x78909c};
+const TYPE_SIZES={industrial:7,mining:5,trade:8,agricultural:6,processing:6,frontier:4,nexus:6,shipyard:6,military:5};
+let systems = [];
+let systemIdList = [];
+let sysPositions = {};
 const systemIdToIndex={};
-const systemIdList=['cygnus','vega','kepler','arcturus','tau_ceti','wolf359','procyon','sirius','barnards','altair','deneb','rigel','polaris','antares','capella','betelgeuse','aldebaran','spica','fomalhaut','canopus','regulus','castor','pollux','achernar'];
-systemIdList.forEach((id,i)=>{systemIdToIndex[id]=i;});
-
-// Generate routes (placeholder until live connections load)
+const systemMeshes = [];
 const routes = [];
 const routeLines = [];
 
-// Route lines will be drawn from live API connections
-async function drawRouteLines(){
-  try{
-    const r=await fetch('/api/state');
-    const d=await r.json();
-    // Remove old lines
-    routeLines.forEach(l=>scene.remove(l));
-    routeLines.length=0;
-    routes.length=0;
-    const drawn=new Set();
-    for(const [sid,sys] of Object.entries(d.systems)){
-      const fromIdx=systemIdToIndex[sid];
-      if(fromIdx===undefined) continue;
-      for(const connId of sys.connections){
-        const toIdx=systemIdToIndex[connId];
-        if(toIdx===undefined) continue;
-        const key=Math.min(fromIdx,toIdx)+'-'+Math.max(fromIdx,toIdx);
-        if(drawn.has(key)) continue;
-        drawn.add(key);
-        routes.push([fromIdx,toIdx]);
-        const pts=[new THREE.Vector3(systems[fromIdx].x,systems[fromIdx].y,systems[fromIdx].z),new THREE.Vector3(systems[toIdx].x,systems[toIdx].y,systems[toIdx].z)];
-        const geo=new THREE.BufferGeometry().setFromPoints(pts);
-        const mat=new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.3});
-        const line=new THREE.Line(geo,mat);
-        scene.add(line);
-        routeLines.push(line);
-      }
+async function initSystems(){
+  const r=await fetch('/api/positions');
+  const data=await r.json();
+  for(const [sid,sys] of Object.entries(data.systems)){
+    const idx=systems.length;
+    systems.push({id:sid, name:sys.name, x:sys.x, y:sys.y, z:sys.z, size:TYPE_SIZES[sys.type]||5, color:TYPE_COLORS[sys.type]||0x5a7a9a, type:sys.type, cluster:sys.cluster, security:sys.security, connections:sys.connections, station_count:sys.station_count, has_asteroids:sys.has_asteroids});
+    systemIdList.push(sid);
+    systemIdToIndex[sid]=idx;
+    sysPositions[sid]={x:sys.x, y:sys.y, z:sys.z};
+  }
+  // Build system sprites
+  systems.forEach(s=>{
+    const tex=makeStarTexture(s.color);
+    const mat=new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false});
+    const sprite=new THREE.Sprite(mat);
+    sprite.scale.set(s.size*3,s.size*3,1);
+    sprite.position.set(s.x,s.y,s.z);
+    scene.add(sprite);
+    systemMeshes.push(sprite);
+  });
+  // Route lines from connections
+  const drawn=new Set();
+  systems.forEach((s,i)=>{
+    for(const connId of s.connections||[]){
+      const j=systemIdToIndex[connId];if(j===undefined)continue;
+      const key=Math.min(i,j)+'-'+Math.max(i,j);
+      if(drawn.has(key))continue;drawn.add(key);
+      routes.push([i,j]);
+      const pts=[new THREE.Vector3(s.x,s.y,s.z),new THREE.Vector3(systems[j].x,systems[j].y,systems[j].z)];
+      const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.15}));
+      scene.add(line);routeLines.push(line);
     }
-  }catch(e){}
+  });
+  // CSS2D labels
+  systems.forEach(s=>{
+    const div=document.createElement('div');div.className='system-label';div.textContent=s.name;
+    const label=new CSS2DObject(div);
+    label.position.set(s.x,s.y+s.size*2+6,s.z);
+    scene.add(label);
+  });
+  // Build system list cards
+  buildSystemCards();
 }
-drawRouteLines();
+
+initSystems();
 
 // Background stars
 const starGeo = new THREE.BufferGeometry();
@@ -440,12 +428,10 @@ starGeo.setAttribute('position',new THREE.BufferAttribute(starVerts,3));
 const starMat = new THREE.PointsMaterial({color:0xb4c8dc,size:1.5,sizeAttenuation:true,transparent:true,opacity:0.5});
 scene.add(new THREE.Points(starGeo,starMat));
 
-// System nodes - star-like billboards
-const systemMeshes = [];
+// Star texture generator for system nodes
 function makeStarTexture(color){
   const c=document.createElement('canvas');c.width=128;c.height=128;
   const ctx=c.getContext('2d');
-  // Convert THREE color to CSS
   const tc=new THREE.Color(color);
   const r=Math.round(tc.r*255),g=Math.round(tc.g*255),b=Math.round(tc.b*255);
   const grad=ctx.createRadialGradient(64,64,0,64,64,64);
@@ -459,15 +445,6 @@ function makeStarTexture(color){
   ctx.fillRect(0,0,128,128);
   return new THREE.CanvasTexture(c);
 }
-systems.forEach(s=>{
-  const tex=makeStarTexture(s.color);
-  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false});
-  const sprite=new THREE.Sprite(mat);
-  sprite.scale.set(s.size*3,s.size*3,1);
-  sprite.position.set(s.x,s.y,s.z);
-  scene.add(sprite);
-  systemMeshes.push(sprite);
-});
 
 // Route lines drawn by drawRouteLines() from API
 
@@ -541,15 +518,7 @@ scene.add(shipLabel);
 let selectedSystem=-1;
 let selectedShip=-1;
 
-// System labels (CSS2D)
-systems.forEach((s,i)=>{
-  const div=document.createElement('div');
-  div.className='system-label';
-  div.textContent=s.name;
-  const label=new CSS2DObject(div);
-  label.position.set(s.x, s.y+s.size*2+6, s.z);
-  scene.add(label);
-});
+// System labels built in initSystems()
 
 // Animate
 function animate(){
@@ -664,7 +633,7 @@ function focusSystem(index){
   if(item){item.classList.add('active');item.scrollIntoView({block:'nearest'});}
   updateSystemDetail(index);
   updateLiveShipList();
-  updateLiveMarket();
+  fetchMarket();
 }
 
 function focusShip(index){
@@ -698,46 +667,21 @@ function focusShip(index){
   updateLiveShipList();
 }
 
-// ── Rich system data ──────────────────────────────────────────────────────────
-const systemDetails = [
-  {planets:['Cygnus IV (Terran)','Cygnus V (Barren)'],stations:['Orbital Foundry','Commerce Hub'],resources:['Iron','Titanium','Water'],pop:'2.4M',security:'High',faction:'Trade Guild'},
-  {planets:['Vega II (Rocky)'],stations:['Mining Platform Alpha'],resources:['Rare Ores','Helium-3'],pop:'180K',security:'Medium',faction:'Miners Union'},
-  {planets:['Kepler Prime (Ocean)','Kepler III (Gas Giant)'],stations:['Grand Exchange','Freeport Bazaar','Fuel Depot'],resources:['Organics','Exotic Goods'],pop:'5.1M',security:'High',faction:'Free Traders'},
-  {planets:['Arcturus B (Volcanic)'],stations:['Refinery Omega'],resources:['Fuel','Polymers','Chemicals'],pop:'420K',security:'Medium',faction:'Industrial Corp'},
-  {planets:['Tau Ceti e (Garden)','Tau Ceti f (Arid)'],stations:['Agri-Orbital','Seed Vault'],resources:['Food','Biotech','Livestock'],pop:'8.2M',security:'High',faction:'Agrarian League'},
-  {planets:['Wolf 359b (Frozen)'],stations:['Frontier Post'],resources:['Salvage','Unknown Artifacts'],pop:'12K',security:'Low',faction:'None'},
-  {planets:['None'],stations:['Jump Gate Alpha','Nav Beacon'],resources:['Energy'],pop:'1.1M',security:'High',faction:'Gateway Authority'},
-  {planets:['Sirius III (Metallic)'],stations:['Dockyard Prime','Dry Dock Beta'],resources:['Alloys','Components','Composites'],pop:'900K',security:'High',faction:'Shipwrights Guild'},
-];
-
 function updateSystemDetail(index){
-  const detail=systemDetails[index];
   const infoPanel=document.getElementById('system-info-content');
-  if(!detail){
-    infoPanel.innerHTML=`<div class="panel-title">${systems[index].name}</div><div style="color:#5a7a9a;font-size:10px;margin-top:8px">No detailed data available</div>`;
-    return;
-  }
   const s=systems[index];
+  if(!s){infoPanel.innerHTML='';return;}
+  const secColor=s.security==='high'?'#66bb6a':s.security==='medium'?'#ffd54f':s.security==='low'?'#ff8a65':'#ef5350';
   infoPanel.innerHTML=`
     <div class="panel-title">${s.name}</div>
     <div class="system-detail">
-      <div class="detail-row"><span>Type</span><span class="val">${s.type}</span></div>
-      <div class="detail-row"><span>Population</span><span class="val">${detail.pop}</span></div>
-      <div class="detail-row"><span>Security</span><span class="val">${detail.security}</span></div>
-      <div class="detail-row"><span>Faction</span><span class="val">${detail.faction}</span></div>
-      <div class="detail-section">
-        <div class="detail-section-title">Planets</div>
-        ${detail.planets.map(p=>`<div class="planet-item">◦ ${p}</div>`).join('')}
-      </div>
-      <div class="detail-section">
-        <div class="detail-section-title">Stations</div>
-        ${detail.stations.map(st=>`<div class="station-item">▪ ${st}</div>`).join('')}
-      </div>
-      <div class="detail-section">
-        <div class="detail-section-title">Resources</div>
-        <div style="color:#8aa0b8">${detail.resources.join(' · ')}</div>
-      </div>
-      <button class="sv-open-btn" onclick="openSystemView('${systemIdList[index]}')">View System Map</button>
+      <div class="detail-row"><span>Type</span><span class="val">${typeLabels[s.type]||s.type}</span></div>
+      <div class="detail-row"><span>Cluster</span><span class="val">${s.cluster}</span></div>
+      <div class="detail-row"><span>Security</span><span class="val" style="color:${secColor}">${s.security}</span></div>
+      <div class="detail-row"><span>Stations</span><span class="val">${s.station_count}</span></div>
+      <div class="detail-row"><span>Asteroids</span><span class="val">${s.has_asteroids?'Yes':'None'}</span></div>
+      <div class="detail-row"><span>Connections</span><span class="val">${(s.connections||[]).length}</span></div>
+      <button class="sv-open-btn" onclick="openSystemView('${s.id}')">View System Map</button>
     </div>`;
 }
 
@@ -764,17 +708,21 @@ renderer.domElement.addEventListener('click',(e)=>{
 });
 
 // ── Click Goto in left panel ──────────────────────────────────────────────────
-// Generate system cards dynamically
 const systemList=document.getElementById('system-list');
 const typeLabels={industrial:'Industrial Hub',mining:'Mining Colony',trade:'Trade Hub',agricultural:'Agricultural',processing:'Processing',frontier:'Frontier',nexus:'Jump Nexus',shipyard:'Shipyard',military:'Military Base'};
-systems.forEach((s,i)=>{
-  const div=document.createElement('div');
-  div.className='system-item'+(i===0?' active':'');
-  div.dataset.index=i;
-  div.innerHTML=`<div class="system-name">⬡ ${s.name}</div><div class="system-type">${typeLabels[s.type]||s.type}</div>`;
-  div.addEventListener('click',()=>focusSystem(i));
-  systemList.appendChild(div);
-});
+
+function buildSystemCards(){
+  systemList.innerHTML='';
+  systems.forEach((s,i)=>{
+    const div=document.createElement('div');
+    div.className='system-item'+(i===0?' active':'');
+    div.dataset.index=i;
+    const secColor=s.security==='high'?'#66bb6a':s.security==='medium'?'#ffd54f':s.security==='low'?'#ff8a65':'#ef5350';
+    div.innerHTML=`<div class="system-name">⬡ ${s.name}</div><div class="system-type">${typeLabels[s.type]||s.type} <span style="color:${secColor};font-size:8px">● ${s.security||''}</span></div>`;
+    div.addEventListener('click',()=>focusSystem(i));
+    systemList.appendChild(div);
+  });
+}
 
 // ── Tab switching ─────────────────────────────────────────────────────────────
 document.querySelectorAll('.panel-tab').forEach(tab=>{
@@ -793,9 +741,7 @@ const playerShip={name:'Rusty Venture',class:'Bison Mk.III',cargo:'340/500',fuel
 
 // Map system IDs to our 3D positions (defined above)
 
-let liveState=null;
 let prevPrices={};
-let sysPositions={}; // system_id -> {x, y, z} from live data
 
 async function fetchShips(){
   try{
@@ -803,34 +749,31 @@ async function fetchShips(){
     const d=await r.json();
     liveShips=d.ships;
     updateMapShips();
-  }catch(e){}
-}
-
-async function fetchState(){
-  try{
-    const r=await fetch('/api/state');
-    liveState=await r.json();
-    for(const [sid, sys] of Object.entries(liveState.systems)){
-      sysPositions[sid]={x:sys.x, y:sys.y, z:sys.z};
-    }
-    updateLiveMarket();
-    updateSystemCards();
     updateLiveShipList();
   }catch(e){}
 }
 
-async function fetchLiveData(){
-  await Promise.all([fetchState(), fetchShips()]);
+async function fetchMarket(){
+  if(selectedSystem<0) return;
+  const sysId=systemIdList[selectedSystem];
+  if(!sysId) return;
+  try{
+    const r=await fetch('/api/market/'+sysId);
+    const d=await r.json();
+    updateLiveMarket(d);
+  }catch(e){}
 }
 
-function updateLiveMarket(){
-  if(!liveState||selectedSystem<0) return;
-  const sysId=systemIdList[selectedSystem];
-  const sysData=liveState.systems[sysId];
-  if(!sysData) return;
+async function fetchLiveData(){
+  await fetchShips();
+  await fetchMarket();
+}
+
+function updateLiveMarket(marketData){
+  if(!marketData) return;
   const market=document.getElementById('live-market');
-  let html=`<div style="font-size:10px;color:#8aa0b8;margin-bottom:6px">${sysData.name}</div>`;
-  for(const station of sysData.stations){
+  let html=`<div style="font-size:10px;color:#8aa0b8;margin-bottom:6px">${marketData.name}</div>`;
+  for(const station of marketData.stations){
     html+=`<div style="font-size:9px;color:#4fc3f7;margin:8px 0 4px;letter-spacing:1px;text-transform:uppercase;font-family:Orbitron,sans-serif">${station.name}</div>`;
     // Sell orders (asks)
     if(station.sell_orders&&station.sell_orders.length){
@@ -854,29 +797,7 @@ function updateLiveMarket(){
   market.innerHTML=html;
 }
 
-function updateSystemCards(){
-  if(!liveState) return;
-  document.querySelectorAll('.system-item').forEach(el=>{
-    const idx=parseInt(el.dataset.index);
-    const sysId=systemIdList[idx];
-    const sysData=liveState.systems[sysId];
-    if(!sysData) return;
-    // Find top price movement
-    let topUp='',topDown='';
-    for(const station of sysData.stations){
-      for(const [commodity,price] of Object.entries(station.prices)){
-        const prevKey=sysId+'_'+commodity;
-        const prev=prevPrices[prevKey]||price;
-        const pct=prev>0?(price-prev)/prev*100:0;
-        if(pct>2&&!topUp) topUp=`<span class="price-up">▲ ${commodity} +${pct.toFixed(0)}%</span>`;
-        if(pct<-2&&!topDown) topDown=`<span class="price-down">▼ ${commodity} ${pct.toFixed(0)}%</span>`;
-      }
-    }
-    let pricesDiv=el.querySelector('.system-prices');
-    if(!pricesDiv){pricesDiv=document.createElement('div');pricesDiv.className='system-prices';el.appendChild(pricesDiv);}
-    pricesDiv.innerHTML=topUp+topDown||(topUp||topDown||'<span class="price-neutral">-- stable</span>');
-  });
-}
+function updateSystemCards(){}
 
 function updateLiveShipList(){
   shipList.innerHTML='';
@@ -924,7 +845,7 @@ function updateMapShips(){
 
 fetchLiveData();
 setInterval(fetchShips, 3000);
-setInterval(fetchState, 10000);
+setInterval(fetchMarket, 5000);
 
 // Snap to current state when tab becomes visible again
 document.addEventListener('visibilitychange', () => {

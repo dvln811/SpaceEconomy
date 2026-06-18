@@ -144,6 +144,38 @@ def health():
 
 
 # ── API ────────────────────────────────────────────────────────────────────────
+@app.route("/api/positions")
+def api_positions():
+    """Static system data: positions, connections, metadata. Fetched once by client."""
+    systems = {}
+    for sid, sys in sim.universe.items():
+        systems[sid] = {
+            "name": sys.name, "type": sys.system_type, "cluster": sys.cluster,
+            "security": sys.security, "faction": sys.faction,
+            "x": sys.x, "y": sys.y, "z": sys.z,
+            "connections": sys.connections,
+            "station_count": len(sys.stations),
+            "has_asteroids": len(sys.asteroid_fields) > 0,
+        }
+    return jsonify({"systems": systems})
+
+
+@app.route("/api/market/<system_id>")
+def api_market(system_id):
+    """Market data for a single system. Polled for the selected system only."""
+    if system_id not in sim.universe:
+        return jsonify({"error": "unknown system"}), 404
+    sys_obj = sim.universe[system_id]
+    stations = []
+    for st in sys_obj.stations:
+        sell_orders, buy_orders = _build_order_book(st)
+        stations.append({
+            "name": st.name, "station_type": st.station_type,
+            "sell_orders": sell_orders, "buy_orders": buy_orders,
+        })
+    return jsonify({"id": system_id, "name": sys_obj.name, "stations": stations, "tick": sim.tick_count})
+
+
 @app.route("/api/state")
 def api_state():
     """Full universe state for frontend."""
