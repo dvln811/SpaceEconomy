@@ -359,6 +359,12 @@ def api_nuke():
     return jsonify({"status": "reset", "tick": sim.tick_count})
 
 
+@app.route("/api/events")
+def api_events():
+    """Lightweight recent events endpoint."""
+    return jsonify({"tick": sim.tick_count, "events": sim.events[-20:]})
+
+
 @app.route("/api/speed", methods=["GET", "POST"])
 def api_speed():
     """Get or set simulation speed multiplier. 1=realtime, 120=2hrs/min."""

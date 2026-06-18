@@ -511,7 +511,7 @@ function getOrCreate3DShip(ship,idx){
   const tmpS=new THREE.Scene();
   const inner=buildShipFromData(tmpS,geo,{showHardpoints:false});
   tmpS.remove(inner);
-  inner.rotation.y=Math.PI/2; // align X-forward to -Z for lookAt
+  inner.rotation.y=-Math.PI/2; // align X-forward to +Z, lookAt flips to face dest
   const grp=new THREE.Group();
   grp.add(inner);
   grp.scale.set(3,3,3);
@@ -797,21 +797,30 @@ let liveState=null;
 let prevPrices={};
 let sysPositions={}; // system_id -> {x, y, z} from live data
 
-async function fetchLiveData(){
+async function fetchShips(){
   try{
-    const [stateRes, shipsRes]=await Promise.all([fetch('/api/state'),fetch('/api/ships')]);
-    liveState=await stateRes.json();
-    // Build position lookup from live system coords
+    const r=await fetch('/api/ships');
+    const d=await r.json();
+    liveShips=d.ships;
+    updateMapShips();
+  }catch(e){}
+}
+
+async function fetchState(){
+  try{
+    const r=await fetch('/api/state');
+    liveState=await r.json();
     for(const [sid, sys] of Object.entries(liveState.systems)){
       sysPositions[sid]={x:sys.x, y:sys.y, z:sys.z};
     }
-    const shipsData=await shipsRes.json();
-    liveShips=shipsData.ships;
     updateLiveMarket();
     updateSystemCards();
     updateLiveShipList();
-    updateMapShips();
-  }catch(e){console.error('Live fetch error:',e);}
+  }catch(e){}
+}
+
+async function fetchLiveData(){
+  await Promise.all([fetchState(), fetchShips()]);
 }
 
 function updateLiveMarket(){
@@ -914,7 +923,8 @@ function updateMapShips(){
 }
 
 fetchLiveData();
-setInterval(fetchLiveData, 3000);
+setInterval(fetchShips, 3000);
+setInterval(fetchState, 10000);
 
 // Snap to current state when tab becomes visible again
 document.addEventListener('visibilitychange', () => {
@@ -1018,9 +1028,9 @@ const activityFeed=document.getElementById('activity-feed');
 let lastEventTick=0;
 async function fetchActivity(){
   try{
-    const r=await fetch('/api/debug');
+    const r=await fetch('/api/events');
     const d=await r.json();
-    const newEvents=d.recent_events.filter(e=>e.tick>lastEventTick);
+    const newEvents=d.events.filter(e=>e.tick>lastEventTick);
     for(const e of newEvents){
       const div=document.createElement('div');
       div.className='activity-item';
@@ -1032,7 +1042,7 @@ async function fetchActivity(){
   }catch(e){}
 }
 fetchActivity();
-setInterval(fetchActivity, 4000);
+setInterval(fetchActivity, 8000);
 
 // ══════════════════════════════════════════════════════════════════════════════
 // INLINE SYSTEM VIEW WINDOW (Three.js)
@@ -1293,12 +1303,14 @@ function svUpdateShipMeshes(){
       const geo=mapShipGeos?mapShipGeos[cid]:null;
       if(geo){
         const tmpScene=new THREE.Scene();
-        const grp=buildShipFromData(tmpScene,geo,{showHardpoints:false});
-        tmpScene.remove(grp);
-        grp.scale.set(4,4,4);
-        grp.rotation.x=-Math.PI/2; // face camera (top-down)
-        svShipsGroup.add(grp);
-        cached={group:grp,trail:null};
+        const inner=buildShipFromData(tmpScene,geo,{showHardpoints:false});
+        tmpScene.remove(inner);
+        inner.scale.set(4,4,4);
+        inner.rotation.x=-Math.PI/2; // lay flat (top-down)
+        const wrapper=new THREE.Group();
+        wrapper.add(inner);
+        svShipsGroup.add(wrapper);
+        cached={group:wrapper,trail:null};
         svShipCache[ship.name]=cached;
       }else{
         // Fallback: dot sprite
@@ -1313,6 +1325,11 @@ function svUpdateShipMeshes(){
     }
     cached.group.visible=true;
     cached.group.position.set(sx,sy,3);
+    // Face travel direction in XY plane
+    if(sp.rate>0){
+      const angle=Math.atan2(sp.ty-sp.fy,sp.tx-sp.fx);
+      cached.group.rotation.z=angle;
+    }
 
     // Trail line - reuse existing or create once
     if(sp.rate>0){
@@ -1351,7 +1368,7 @@ async function svFetch(){
     if(svBuiltForId!==svCurrentId){svBuildScene();svBuiltForId=svCurrentId;}
   }}catch(e){}
 }
-setInterval(svFetch,1000);
+setInterval(svFetch,3000);
 
 // Open system view
 window.openSystemView=function(sysId){
