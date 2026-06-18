@@ -1108,6 +1108,7 @@ function svHandleHover(mx,my){
 
 function svUpdateTargets(){
   if(!svData||!svData.ships)return;
+  const now=performance.now();
   for(const ship of svData.ships){
     const id=ship.name;let tp=null;
     if(ship.intra_position&&ship.intra_destination&&ship.intra_progress>0){
@@ -1117,7 +1118,33 @@ function svUpdateTargets(){
       const at=svData.objects.find(o=>o.id===ship.intra_position);
       if(at){tp=svPolar(at.distance,at.angle);tp.x+=5;tp.y-=5;}
     }
-    if(tp){if(!svShipPos[id])svShipPos[id]={x:tp.x,y:tp.y,tx:tp.x,ty:tp.y};else{svShipPos[id].tx=tp.x;svShipPos[id].ty=tp.y;}}
+    if(tp){
+      if(!svShipPos[id]){svShipPos[id]={x:tp.x,y:tp.y,px:tp.x,py:tp.y,vx:0,vy:0,t:now};}
+      else{
+        const s=svShipPos[id];
+        // Calculate velocity from last known position to new target
+        const dt=Math.max(now-s.t,100)/1000; // seconds since last update
+        s.vx=(tp.x-s.px)/dt;
+        s.vy=(tp.y-s.py)/dt;
+        s.px=tp.x;s.py=tp.y;
+        s.t=now;
+        // Snap current position to new data point (no lerp, use velocity for prediction)
+        s.x=tp.x;s.y=tp.y;
+      }
+    }
+  }
+}
+
+let svLastFrame=performance.now();
+function svLerpShips(){
+  const now=performance.now();
+  const dt=(now-svLastFrame)/1000;
+  svLastFrame=now;
+  for(const id in svShipPos){
+    const s=svShipPos[id];
+    // Predict forward based on velocity
+    s.x+=s.vx*dt;
+    s.y+=s.vy*dt;
   }
 }
 
@@ -1128,7 +1155,7 @@ function svDraw(){
   if(!svData){requestAnimationFrame(svDraw);return;}
 
   // Lerp ships
-  for(const id in svShipPos){const s=svShipPos[id];s.x+=(s.tx-s.x)*0.08;s.y+=(s.ty-s.y)*0.08;}
+  svLerpShips();
 
   const center=svW2S(0,0);
 

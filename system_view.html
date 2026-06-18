@@ -186,6 +186,7 @@ function handleHover(mx, my) {
 // ── Ship lerp ───────────────────────────────────────────────────────────────
 function updateShipTargets() {
   if (!systemData || !systemData.ships) return;
+  const now = performance.now();
   for (const ship of systemData.ships) {
     const id = ship.name;
     let targetPos = null;
@@ -202,17 +203,30 @@ function updateShipTargets() {
       if (at) { targetPos = polarToWorld(at.distance, at.angle); targetPos.x += 6; targetPos.y -= 6; }
     }
     if (targetPos) {
-      if (!shipPositions[id]) shipPositions[id] = {x: targetPos.x, y: targetPos.y, tx: targetPos.x, ty: targetPos.y};
-      else { shipPositions[id].tx = targetPos.x; shipPositions[id].ty = targetPos.y; }
+      if (!shipPositions[id]) {
+        shipPositions[id] = {x: targetPos.x, y: targetPos.y, px: targetPos.x, py: targetPos.y, vx: 0, vy: 0, t: now};
+      } else {
+        const s = shipPositions[id];
+        const dt = Math.max(now - s.t, 100) / 1000;
+        s.vx = (targetPos.x - s.px) / dt;
+        s.vy = (targetPos.y - s.py) / dt;
+        s.px = targetPos.x; s.py = targetPos.y;
+        s.t = now;
+        s.x = targetPos.x; s.y = targetPos.y;
+      }
     }
   }
 }
 
+let lastFrame = performance.now();
 function lerpShips() {
+  const now = performance.now();
+  const dt = (now - lastFrame) / 1000;
+  lastFrame = now;
   for (const id in shipPositions) {
     const s = shipPositions[id];
-    s.x += (s.tx - s.x) * 0.08;
-    s.y += (s.ty - s.y) * 0.08;
+    s.x += s.vx * dt;
+    s.y += s.vy * dt;
   }
 }
 

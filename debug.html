@@ -150,9 +150,9 @@ async function refresh(){
 refresh();
 setInterval(refresh,2000);
 
-// System map dropdown
+// System map dropdown - open inline system view
 document.getElementById('system-map-select').addEventListener('change',(e)=>{
-  if(e.target.value) window.open('/system_view?id='+e.target.value+'&debug=1&from=debug','_blank');
+  if(e.target.value) window.location.href='/system_view?id='+e.target.value+'&debug=1';
   e.target.value='';
 });
 (async()=>{
