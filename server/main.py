@@ -113,7 +113,7 @@ def api_state():
             "stations": stations,
             "asteroid_fields": [{"name": a.name, "type": a.field_type, "yields": a.yields, "density": a.density} for a in sys.asteroid_fields],
             "connections": sys.connections,
-            "objects": [{"id": o.id, "name": o.name, "type": o.obj_type, "distance": o.distance, "angle": round(o.angle, 4), "connects_to": o.connects_to} for o in sys.objects],
+            "objects": [{"id": o.id, "name": o.name, "type": o.obj_type, "distance": o.distance, "angle": round(o.angle, 4), "connects_to": o.connects_to, "parent": o.parent} for o in sys.objects],
         }
     return jsonify({"tick": sim.tick_count, "systems": systems})
 
@@ -168,7 +168,7 @@ def api_system(system_id):
     if system_id not in sim.universe:
         return jsonify({"error": "unknown system"}), 404
     sys_obj = sim.universe[system_id]
-    objects = [{"id": o.id, "name": o.name, "type": o.obj_type, "distance": o.distance, "angle": round(o.angle, 4), "connects_to": o.connects_to} for o in sys_obj.objects]
+    objects = [{"id": o.id, "name": o.name, "type": o.obj_type, "distance": o.distance, "angle": round(o.angle, 4), "connects_to": o.connects_to, "parent": o.parent} for o in sys_obj.objects]
     # Ships in this system
     ships_here = []
     for s in sim.ships:

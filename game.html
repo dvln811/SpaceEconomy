@@ -128,6 +128,28 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .route-dot.danger{background:#ef5350;box-shadow:0 0 4px #ef5350}
 .route-info{font-size:10px;color:#8aa0b8}
 .route-profit{margin-left:auto;font-size:11px;color:#66bb6a}
+
+/* Inline System View Window */
+.sysview-window{position:fixed;top:80px;left:320px;width:600px;height:450px;background:#0a0e18;border:1px solid #1a2844;border-radius:6px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.7);z-index:200;resize:both;min-width:350px;min-height:250px}
+.sysview-window.open{display:flex}
+.sysview-titlebar{display:flex;align-items:center;padding:0 12px;height:30px;background:#0a0f1a;border-bottom:1px solid #1a2844;cursor:move;flex-shrink:0;user-select:none}
+.sysview-titlebar h2{font-family:'Orbitron',sans-serif;font-size:9px;font-weight:600;color:#4fc3f7;letter-spacing:2px;text-transform:uppercase}
+.sysview-titlebar .sv-meta{margin-left:10px;font-size:9px;color:#5a7a9a}
+.sysview-titlebar .sv-close{margin-left:auto;width:18px;height:18px;border:none;background:none;color:#5a7a9a;cursor:pointer;font-size:13px;border-radius:3px}
+.sysview-titlebar .sv-close:hover{background:#1a0a0a;color:#ef5350}
+.sysview-body{flex:1;position:relative;overflow:hidden}
+.sysview-body canvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab}
+.sysview-body canvas:active{cursor:grabbing}
+.sysview-tooltip{position:absolute;pointer-events:none;background:#0a0f1a;border:1px solid #1a2844;border-radius:4px;padding:6px 10px;font-size:10px;max-width:180px;box-shadow:0 4px 12px rgba(0,0,0,0.5);opacity:0;transition:opacity .12s;z-index:10}
+.sysview-tooltip.visible{opacity:1}
+.sysview-tooltip .tt-name{color:#e0e8f0;font-weight:500;margin-bottom:2px}
+.sysview-tooltip .tt-type{color:#4fc3f7;font-size:9px;text-transform:uppercase;letter-spacing:1px}
+.sysview-tooltip .tt-detail{color:#6a8aa0;margin-top:3px}
+.sysview-zoom{position:absolute;bottom:6px;right:6px;display:flex;flex-direction:column;gap:2px}
+.sysview-zoom button{width:22px;height:22px;background:#0a1020;border:1px solid #1a3050;color:#4fc3f7;border-radius:3px;cursor:pointer;font-size:11px}
+.sysview-zoom button:hover{background:#1a2844}
+.sv-open-btn{margin-top:8px;width:100%;padding:5px;background:#0a1020;border:1px solid #1a3050;color:#4fc3f7;border-radius:3px;cursor:pointer;font-size:9px;font-family:'Orbitron',sans-serif;letter-spacing:1px;text-transform:uppercase;transition:all .15s}
+.sv-open-btn:hover{background:#1a2844;border-color:#4fc3f7}
 </style>
 </head>
 <body>
@@ -301,6 +323,27 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
       <div class="route-item"><span class="route-dot warning"></span><div class="route-info">Kepler → Wolf 359<br><span style="color:#5a7a9a">Everything · 6.1 hr · ⚠ Risky</span></div><div class="route-profit">+₡ 89,000</div></div>
       <div class="route-item"><span class="route-dot danger"></span><div class="route-info">Anywhere → Frontier<br><span style="color:#5a7a9a">Narcotics · Illegal · 8+ hr</span></div><div class="route-profit">+₡ 200,000+</div></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Inline System View Window -->
+<div class="sysview-window" id="sysviewWin">
+  <div class="sysview-titlebar" id="sysviewTitlebar">
+    <h2 id="svTitle">System Map</h2>
+    <span class="sv-meta" id="svMeta"></span>
+    <button class="sv-close" id="svClose">&times;</button>
+  </div>
+  <div class="sysview-body" id="sysviewBody">
+    <canvas id="svCanvas"></canvas>
+    <div class="sysview-tooltip" id="svTooltip">
+      <div class="tt-name"></div>
+      <div class="tt-type"></div>
+      <div class="tt-detail"></div>
+    </div>
+    <div class="sysview-zoom">
+      <button id="svZoomIn">+</button>
+      <button id="svZoomOut">&minus;</button>
     </div>
   </div>
 </div>
@@ -749,6 +792,7 @@ function updateSystemDetail(index){
         <div class="detail-section-title">Resources</div>
         <div style="color:#8aa0b8">${detail.resources.join(' · ')}</div>
       </div>
+      <button class="sv-open-btn" onclick="openSystemView('${systemIdList[index]}')">View System Map</button>
     </div>`;
 }
 
@@ -993,6 +1037,177 @@ async function fetchActivity(){
 }
 fetchActivity();
 setInterval(fetchActivity, 4000);
+
+// ══════════════════════════════════════════════════════════════════════════════
+// INLINE SYSTEM VIEW WINDOW
+// ══════════════════════════════════════════════════════════════════════════════
+(function(){
+const svWin=document.getElementById('sysviewWin');
+const svTitlebar=document.getElementById('sysviewTitlebar');
+const svCanvas=document.getElementById('svCanvas');
+const svBody=document.getElementById('sysviewBody');
+const svTooltip=document.getElementById('svTooltip');
+const svCtx=svCanvas.getContext('2d');
+
+let svCam={x:0,y:0,zoom:1}, svPanning=false, svPanStart={x:0,y:0}, svCamStart={x:0,y:0};
+let svData=null, svShipPos={}, svCurrentId='', svHovered=null;
+let svDragging=false, svDragOff={x:0,y:0};
+
+const SV_COLORS={star:'#ffd54f',gate:'#ab47bc',station:'#4fc3f7',asteroid_belt:'#ff8a65',planet:'#66bb6a',moon:'#8aa0b8'};
+
+// Draggable
+svTitlebar.addEventListener('mousedown',e=>{svDragging=true;svDragOff={x:e.clientX-svWin.offsetLeft,y:e.clientY-svWin.offsetTop};document.body.style.userSelect='none';});
+document.addEventListener('mousemove',e=>{if(svDragging){svWin.style.left=(e.clientX-svDragOff.x)+'px';svWin.style.top=(e.clientY-svDragOff.y)+'px';}});
+document.addEventListener('mouseup',()=>{svDragging=false;document.body.style.userSelect='';});
+document.getElementById('svClose').addEventListener('click',()=>{svWin.classList.remove('open');});
+
+// Zoom
+document.getElementById('svZoomIn').addEventListener('click',()=>{svCam.zoom=Math.min(8,svCam.zoom*1.3);});
+document.getElementById('svZoomOut').addEventListener('click',()=>{svCam.zoom=Math.max(0.3,svCam.zoom*0.7);});
+
+// Pan/Zoom on canvas
+svCanvas.addEventListener('mousedown',e=>{if(e.button===0){svPanning=true;svPanStart={x:e.offsetX,y:e.offsetY};svCamStart={x:svCam.x,y:svCam.y};}});
+svCanvas.addEventListener('mousemove',e=>{
+  if(svPanning){svCam.x=svCamStart.x-(e.offsetX-svPanStart.x)/svCam.zoom;svCam.y=svCamStart.y-(e.offsetY-svPanStart.y)/svCam.zoom;}
+  svHandleHover(e.offsetX,e.offsetY);
+});
+svCanvas.addEventListener('mouseup',()=>{svPanning=false;});
+svCanvas.addEventListener('mouseleave',()=>{svPanning=false;svTooltip.classList.remove('visible');});
+svCanvas.addEventListener('wheel',e=>{e.preventDefault();svCam.zoom=Math.max(0.3,Math.min(8,svCam.zoom*(e.deltaY>0?0.85:1.18)));},{passive:false});
+
+function svResize(){
+  svCanvas.width=svBody.clientWidth*devicePixelRatio;
+  svCanvas.height=svBody.clientHeight*devicePixelRatio;
+  svCtx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+}
+new ResizeObserver(svResize).observe(svBody);
+
+function svPolar(d,a){return{x:d*40*Math.cos(a),y:d*40*Math.sin(a)};}
+function svW2S(wx,wy){const w=svBody.clientWidth,h=svBody.clientHeight;return{x:w/2+(wx-svCam.x)*svCam.zoom,y:h/2+(wy-svCam.y)*svCam.zoom};}
+function svS2W(sx,sy){const w=svBody.clientWidth,h=svBody.clientHeight;return{x:(sx-w/2)/svCam.zoom+svCam.x,y:(sy-h/2)/svCam.zoom+svCam.y};}
+
+function svHandleHover(mx,my){
+  if(!svData||svPanning){svTooltip.classList.remove('visible');return;}
+  const wm=svS2W(mx,my);
+  let closest=null,closestD=20/svCam.zoom;
+  for(const o of svData.objects){const p=svPolar(o.distance,o.angle);const d=Math.hypot(p.x-wm.x,p.y-wm.y);if(d<closestD){closest=o;closestD=d;}}
+  if(closest){
+    svHovered=closest;
+    svTooltip.querySelector('.tt-name').textContent=closest.name;
+    svTooltip.querySelector('.tt-type').textContent=closest.type.replace('_',' ');
+    let det='';
+    if(closest.type==='gate'&&closest.connects_to)det='Jump to: '+closest.connects_to;
+    else if(closest.type==='planet'||closest.type==='station')det=`Orbit: ${closest.distance.toFixed(1)} AU`;
+    else if(closest.type==='asteroid_belt')det='Mineable field';
+    else if(closest.type==='moon')det='Moon';
+    svTooltip.querySelector('.tt-detail').textContent=det;
+    svTooltip.style.left=(mx+14)+'px';svTooltip.style.top=(my-8)+'px';
+    svTooltip.classList.add('visible');
+  }else{svHovered=null;svTooltip.classList.remove('visible');}
+}
+
+function svUpdateTargets(){
+  if(!svData||!svData.ships)return;
+  for(const ship of svData.ships){
+    const id=ship.name;let tp=null;
+    if(ship.intra_position&&ship.intra_destination&&ship.intra_progress>0){
+      const f=svData.objects.find(o=>o.id===ship.intra_position),t=svData.objects.find(o=>o.id===ship.intra_destination);
+      if(f&&t){const p1=svPolar(f.distance,f.angle),p2=svPolar(t.distance,t.angle);tp={x:p1.x+(p2.x-p1.x)*ship.intra_progress,y:p1.y+(p2.y-p1.y)*ship.intra_progress};}
+    }else if(ship.intra_position){
+      const at=svData.objects.find(o=>o.id===ship.intra_position);
+      if(at){tp=svPolar(at.distance,at.angle);tp.x+=5;tp.y-=5;}
+    }
+    if(tp){if(!svShipPos[id])svShipPos[id]={x:tp.x,y:tp.y,tx:tp.x,ty:tp.y};else{svShipPos[id].tx=tp.x;svShipPos[id].ty=tp.y;}}
+  }
+}
+
+function svDraw(){
+  if(!svWin.classList.contains('open')){requestAnimationFrame(svDraw);return;}
+  const w=svBody.clientWidth,h=svBody.clientHeight;
+  svCtx.clearRect(0,0,w,h);
+  if(!svData){requestAnimationFrame(svDraw);return;}
+
+  // Lerp ships
+  for(const id in svShipPos){const s=svShipPos[id];s.x+=(s.tx-s.x)*0.08;s.y+=(s.ty-s.y)*0.08;}
+
+  const center=svW2S(0,0);
+
+  // Orbital lines for planets
+  for(const o of svData.objects){
+    if(o.type==='planet'){
+      const r=o.distance*40*svCam.zoom;
+      svCtx.beginPath();svCtx.arc(center.x,center.y,r,0,Math.PI*2);
+      svCtx.strokeStyle='rgba(102,187,106,0.1)';svCtx.lineWidth=0.6;svCtx.stroke();
+    }else if(o.type==='moon'&&o.parent){
+      const par=svData.objects.find(p=>p.id===o.parent);
+      if(par){const pp=svW2S(...Object.values(svPolar(par.distance,par.angle)));const mr=(o.distance-par.distance)*40*svCam.zoom;
+        svCtx.beginPath();svCtx.arc(pp.x,pp.y,Math.max(mr,3),0,Math.PI*2);svCtx.strokeStyle='rgba(138,160,184,0.12)';svCtx.lineWidth=0.4;svCtx.stroke();}
+    }
+  }
+
+  // Radar lines
+  svCtx.strokeStyle='rgba(26,40,68,0.2)';svCtx.lineWidth=0.4;
+  for(let i=0;i<8;i++){const a=Math.PI*2*i/8;svCtx.beginPath();svCtx.moveTo(center.x,center.y);svCtx.lineTo(center.x+Math.cos(a)*500*svCam.zoom,center.y+Math.sin(a)*500*svCam.zoom);svCtx.stroke();}
+
+  // Objects
+  for(const obj of svData.objects){
+    const wp=svPolar(obj.distance,obj.angle),pos=svW2S(wp.x,wp.y);
+    const col=SV_COLORS[obj.type]||'#5a7a9a';
+    const hov=svHovered&&svHovered.id===obj.id;
+    const sz=({star:6,planet:4,moon:2,station:3,gate:4.5,asteroid_belt:2.5}[obj.type]||3)*Math.min(svCam.zoom,2);
+
+    // Glow
+    const gr=svCtx.createRadialGradient(pos.x,pos.y,0,pos.x,pos.y,(obj.type==='star'?18:9)*svCam.zoom);
+    gr.addColorStop(0,col+(hov?'55':'28'));gr.addColorStop(1,'rgba(0,0,0,0)');
+    svCtx.fillStyle=gr;svCtx.beginPath();svCtx.arc(pos.x,pos.y,(obj.type==='star'?18:9)*svCam.zoom,0,Math.PI*2);svCtx.fill();
+
+    if(obj.type==='gate'){svCtx.beginPath();svCtx.moveTo(pos.x,pos.y-sz);svCtx.lineTo(pos.x+sz,pos.y);svCtx.lineTo(pos.x,pos.y+sz);svCtx.lineTo(pos.x-sz,pos.y);svCtx.closePath();svCtx.fillStyle=col;svCtx.fill();}
+    else if(obj.type==='asteroid_belt'){
+      svCtx.setLineDash([3,4]);const br=obj.distance*40*svCam.zoom;
+      svCtx.beginPath();svCtx.arc(center.x,center.y,br,obj.angle-0.25,obj.angle+0.25);svCtx.strokeStyle=col;svCtx.lineWidth=2*Math.min(svCam.zoom,1.5);svCtx.stroke();svCtx.setLineDash([]);
+      svCtx.beginPath();svCtx.arc(pos.x,pos.y,2,0,Math.PI*2);svCtx.fillStyle=col;svCtx.fill();
+    }else{svCtx.beginPath();svCtx.arc(pos.x,pos.y,sz,0,Math.PI*2);svCtx.fillStyle=col;svCtx.fill();}
+
+    if(hov){svCtx.beginPath();svCtx.arc(pos.x,pos.y,sz+4,0,Math.PI*2);svCtx.strokeStyle=col;svCtx.lineWidth=1.2;svCtx.setLineDash([2,3]);svCtx.stroke();svCtx.setLineDash([]);}
+
+    if(svCam.zoom>0.6&&obj.type!=='moon'){svCtx.fillStyle='rgba(200,212,224,'+(hov?'0.9':'0.5')+')';svCtx.font=`600 ${Math.max(7,8*Math.min(svCam.zoom,1.4))}px Orbitron,sans-serif`;svCtx.textAlign='center';svCtx.fillText(obj.name,pos.x,pos.y+sz+9*Math.min(svCam.zoom,1.4));}
+  }
+
+  // Ships
+  if(svData.ships){for(const ship of svData.ships){
+    const sp=svShipPos[ship.name];if(!sp)continue;
+    const pos=svW2S(sp.x,sp.y);const sc=ship.role==='miner'?'#ffd54f':'#ef5350';
+    svCtx.beginPath();svCtx.arc(pos.x,pos.y,2.5*Math.min(svCam.zoom,2),0,Math.PI*2);svCtx.fillStyle=sc;svCtx.fill();
+    if(ship.intra_destination){
+      const to=svData.objects.find(o=>o.id===ship.intra_destination);
+      if(to){const tp=svW2S(...Object.values(svPolar(to.distance,to.angle)));svCtx.beginPath();svCtx.moveTo(pos.x,pos.y);svCtx.lineTo(tp.x,tp.y);svCtx.strokeStyle=sc+'33';svCtx.lineWidth=0.6;svCtx.setLineDash([2,3]);svCtx.stroke();svCtx.setLineDash([]);}
+    }
+    if(svCam.zoom>1.2){svCtx.fillStyle='rgba(200,212,224,0.35)';svCtx.font='7px JetBrains Mono,monospace';svCtx.textAlign='left';svCtx.fillText(ship.name,pos.x+5,pos.y+2);}
+  }}
+
+  requestAnimationFrame(svDraw);
+}
+svDraw();
+
+// Fetch system data
+async function svFetch(){
+  if(!svCurrentId||!svWin.classList.contains('open'))return;
+  try{const r=await fetch('/api/system/'+svCurrentId);if(r.ok){svData=await r.json();svUpdateTargets();}}catch(e){}
+}
+setInterval(svFetch,1000);
+
+// Open system view
+window.openSystemView=function(sysId){
+  svCurrentId=sysId;svData=null;svShipPos={};svCam={x:0,y:0,zoom:1};
+  svWin.classList.add('open');
+  svResize();
+  document.getElementById('svTitle').textContent='System Map';
+  document.getElementById('svMeta').textContent='Loading...';
+  svFetch().then(()=>{
+    if(svData){document.getElementById('svTitle').textContent=svData.name;document.getElementById('svMeta').textContent=svData.type+' | '+svData.security+'-sec';}
+  });
+};
+})();
 </script>
 </body>
 </html>

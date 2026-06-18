@@ -78,7 +78,7 @@ class NPCShip:
     intra_position: str = ""       # object_id the ship is currently at (or "" if in transit)
     intra_destination: str = ""    # object_id the ship is traveling to within system
     intra_progress: float = 0.0   # 0-1 progress toward intra_destination
-    intra_speed: float = 1.5        # AU per tick equivalent (intra-system speed)
+    intra_speed: float = 0.8        # AU per tick equivalent (intra-system speed)
 
 
 # All commodities in the game

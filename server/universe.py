@@ -44,10 +44,20 @@ def _generate_system_objects(system: System) -> list[SystemObject]:
     planet_count = 2 + (hash(system.id) % 3)  # 2-4 planets per system
     for i in range(planet_count):
         angle = (2 * math.pi * i) / planet_count + 0.8
+        planet_id = f"{system.id}_planet_{i}"
         objects.append(SystemObject(
-            id=f"{system.id}_planet_{i}", name=f"{system.name} {['I','II','III','IV'][i]}",
+            id=planet_id, name=f"{system.name} {['I','II','III','IV'][i]}",
             obj_type="planet", distance=1.5 + i * 1.2, angle=angle
         ))
+        # Some planets get moons (deterministic from hash)
+        moon_count = (hash(planet_id) % 3)  # 0-2 moons
+        for m in range(moon_count):
+            moon_angle = angle + 0.05 + m * 0.08
+            objects.append(SystemObject(
+                id=f"{planet_id}_moon_{m}", name=f"{['I','II','III','IV'][i]}-{'ab'[m]}",
+                obj_type="moon", distance=1.5 + i * 1.2 + 0.3 + m * 0.2,
+                angle=moon_angle, parent=planet_id
+            ))
 
     return objects
 
