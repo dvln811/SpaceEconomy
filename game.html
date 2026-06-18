@@ -1209,7 +1209,7 @@ function svDraw(){
       const to=svData.objects.find(o=>o.id===ship.intra_destination);
       if(to){const tp=svW2S(...Object.values(svPolar(to.distance,to.angle)));svCtx.beginPath();svCtx.moveTo(pos.x,pos.y);svCtx.lineTo(tp.x,tp.y);svCtx.strokeStyle=sc+'33';svCtx.lineWidth=0.6;svCtx.setLineDash([2,3]);svCtx.stroke();svCtx.setLineDash([]);}
     }
-    if(svCam.zoom>1.2){svCtx.fillStyle='rgba(200,212,224,0.35)';svCtx.font='7px JetBrains Mono,monospace';svCtx.textAlign='left';svCtx.fillText(ship.name,pos.x+5,pos.y+2);}
+    if(svCam.zoom>0.8){svCtx.fillStyle='rgba(220,230,240,0.75)';svCtx.font='bold 10px JetBrains Mono,monospace';svCtx.textAlign='left';svCtx.fillText(ship.name,pos.x+6,pos.y+4);}
   }}
 
   requestAnimationFrame(svDraw);

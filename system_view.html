@@ -352,11 +352,11 @@ function draw() {
         }
       }
       // Label at zoom
-      if (cam.zoom > 1.2) {
-        ctx.fillStyle = 'rgba(200,212,224,0.4)';
-        ctx.font = '7px JetBrains Mono, monospace';
+      if (cam.zoom > 0.8) {
+        ctx.fillStyle = 'rgba(220,230,240,0.75)';
+        ctx.font = 'bold 10px JetBrains Mono, monospace';
         ctx.textAlign = 'left';
-        ctx.fillText(ship.name, pos.x + 5, pos.y + 2);
+        ctx.fillText(ship.name, pos.x + 6, pos.y + 4);
       }
     }
   }

@@ -230,7 +230,7 @@ function draw(){
   for(const id in shipPos){
     const s=shipPos[id],pos=w2s(s.x,s.y);
     ctx.beginPath();ctx.arc(pos.x,pos.y,2.5,0,Math.PI*2);ctx.fillStyle=s.role==='miner'?'#ffd54f':'#ef5350';ctx.fill();
-    if(cam.zoom>1){ctx.fillStyle='rgba(200,212,224,0.4)';ctx.font='7px JetBrains Mono';ctx.textAlign='left';ctx.fillText(id,pos.x+5,pos.y+2);}
+    ctx.fillStyle='rgba(220,230,240,0.8)';ctx.font='bold 10px JetBrains Mono';ctx.textAlign='left';ctx.fillText(id,pos.x+6,pos.y+4);
   }
   requestAnimationFrame(draw);
 }
