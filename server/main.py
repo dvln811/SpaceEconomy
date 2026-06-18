@@ -192,6 +192,18 @@ def api_ships():
     return jsonify({"tick": sim.tick_count, "ships": ships})
 
 
+@app.route("/api/ship_model/<class_id>")
+def api_ship_model(class_id):
+    """Return 3D geometry data for a ship class."""
+    from server.ship_geometry import get_ship_geometry, get_all_ship_geometries
+    if class_id == "all":
+        return jsonify(get_all_ship_geometries())
+    geo = get_ship_geometry(class_id)
+    if not geo:
+        return jsonify({"error": "unknown ship class"}), 404
+    return jsonify(geo)
+
+
 @app.route("/api/debug")
 def api_debug():
     """Debug summary for the monitor page."""
