@@ -58,6 +58,36 @@ log.info(f"Economy loop started ({sim_speed['rate']}s/tick, {len(sim.ships)} NPC
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
+def _build_order_book(st):
+    """Generate buy/sell orders for a station."""
+    from server.models import COMMODITIES as COMS, STATION_CONSUMPTION
+    sell_orders = []
+    buy_orders = []
+    for commodity_id, qty in st.inventory.items():
+        if qty > 1:
+            price = st.price_cache.get(commodity_id, 0)
+            if price > 0:
+                sell_orders.append({"commodity": commodity_id, "qty": round(qty, 1), "price": round(price, 1)})
+    for prod_id in st.produces:
+        com = COMS.get(prod_id)
+        if not com or not com.recipe:
+            continue
+        for inp_id, qty_needed in com.recipe.items():
+            want = qty_needed * st.production_rate * 50
+            have = st.inventory.get(inp_id, 0)
+            deficit = want - have
+            if deficit > 0:
+                buy_price = st.price_cache.get(inp_id, 0) * 1.1
+                buy_orders.append({"commodity": inp_id, "qty": round(deficit, 1), "price": round(buy_price, 1)})
+    for commodity_id in STATION_CONSUMPTION.get(st.station_type, []):
+        have = st.inventory.get(commodity_id, 0)
+        if have < 50:
+            buy_price = st.price_cache.get(commodity_id, 0) * 1.15
+            buy_orders.append({"commodity": commodity_id, "qty": round(50 - have, 1), "price": round(buy_price, 1)})
+    return sorted(sell_orders, key=lambda x: -x["qty"])[:20], sorted(buy_orders, key=lambda x: -x["qty"])[:20]
+
+
+
 @app.route("/")
 def index():
     return send_from_directory(BASE_DIR, "game.html")
@@ -107,38 +137,11 @@ def health():
 @app.route("/api/state")
 def api_state():
     """Full universe state for frontend."""
-    from server.models import COMMODITIES as COMS, STATION_CONSUMPTION
     systems = {}
     for sid, sys in sim.universe.items():
         stations = []
         for st in sys.stations:
-            # Generate order book
-            sell_orders = []  # what the station is selling (has in stock)
-            buy_orders = []   # what the station wants to buy (consumption demand)
-            for commodity_id, qty in st.inventory.items():
-                if qty > 1:
-                    price = st.price_cache.get(commodity_id, 0)
-                    if price > 0:
-                        sell_orders.append({"commodity": commodity_id, "qty": round(qty, 1), "price": round(price, 1)})
-            # Buy orders from production inputs needed
-            for prod_id in st.produces:
-                com = COMS.get(prod_id)
-                if not com or not com.recipe:
-                    continue
-                for inp_id, qty_needed in com.recipe.items():
-                    want = qty_needed * st.production_rate * 50  # want 50 ticks worth
-                    have = st.inventory.get(inp_id, 0)
-                    deficit = want - have
-                    if deficit > 0:
-                        buy_price = st.price_cache.get(inp_id, 0) * 1.1  # willing to pay 10% above market
-                        buy_orders.append({"commodity": inp_id, "qty": round(deficit, 1), "price": round(buy_price, 1)})
-            # Buy orders from end-use consumption
-            for commodity_id in STATION_CONSUMPTION.get(st.station_type, []):
-                have = st.inventory.get(commodity_id, 0)
-                if have < 50:
-                    buy_price = st.price_cache.get(commodity_id, 0) * 1.15
-                    buy_orders.append({"commodity": commodity_id, "qty": round(50 - have, 1), "price": round(buy_price, 1)})
-
+            sell_orders, buy_orders = _build_order_book(st)
             stations.append({
                 "name": st.name,
                 "station_type": st.station_type,
@@ -146,8 +149,8 @@ def api_state():
                 "production_rate": st.production_rate,
                 "inventory": st.inventory,
                 "prices": st.price_cache,
-                "sell_orders": sorted(sell_orders, key=lambda x: -x["qty"])[:20],
-                "buy_orders": sorted(buy_orders, key=lambda x: -x["qty"])[:20],
+                "sell_orders": sell_orders,
+                "buy_orders": buy_orders,
             })
         systems[sid] = {
             "name": sys.name,
@@ -223,6 +226,8 @@ def api_debug():
                 "name": st.name, "type": st.station_type,
                 "production": prod_status,
                 "inventory": {k: round(v, 1) for k, v in st.inventory.items() if v > 0.1},
+                "sell_orders": _build_order_book(st)[0][:10],
+                "buy_orders": _build_order_book(st)[1][:10],
             })
         ships_in_sys = sum(1 for s in sim.ships if s.location == sid)
         systems_detail[sid] = {
