@@ -952,6 +952,11 @@ function updateMapShips(){
 fetchLiveData();
 setInterval(fetchLiveData, 3000);
 
+// Snap to current state when tab becomes visible again
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) fetchLiveData();
+});
+
 // ── Hover tooltip ─────────────────────────────────────────────────────────────
 const tooltip=document.getElementById('map-tooltip');
 const ttRaycaster=new THREE.Raycaster();

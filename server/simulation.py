@@ -48,27 +48,24 @@ class Simulation:
         self._update_all_prices()
 
     def _spawn_traders(self, count: int):
+        from server.ship_types import TRADER_SHIPS
         system_ids = list(self.universe.keys())
-        # Ship classes with risk tolerance: higher = braver
-        trader_classes = [
-            ("Pinto Runner", 120, 0.2),      # small, safe-only
-            ("Mule Freighter", 180, 0.3),    # medium, mostly safe
-            ("Bison Mk.III", 250, 0.5),      # medium, moderate risk
-            ("Ox Hauler", 350, 0.7),         # large, takes some risk
-            ("Clydesdale", 500, 0.9),        # huge, goes almost anywhere
-        ]
+        trader_types = list(TRADER_SHIPS.values())
         trader_factions = ["Trade Guild", "Free Traders", "Industrial Corp", "Agrarian League", "Frontier Logistics"]
+        # Risk tolerance roughly maps to tier
+        risk_by_tier = {1: 0.2, 2: 0.5, 3: 0.7, 4: 0.9}
         for i in range(count):
-            cls_name, capacity, risk = trader_classes[i % len(trader_classes)]
+            st = trader_types[i % len(trader_types)]
             faction = trader_factions[i % len(trader_factions)]
             registry = f"TRD-{random.randint(1000,9999)}"
             loc = random.choice(system_ids)
             ship = NPCShip(
-                id=f"trader_{i}", name=f"{cls_name} {registry}",
-                cargo_capacity=capacity + random.randint(-20, 20),
-                fuel=100.0, location=loc, speed=1.0, state="idle",
-                role="trader", ship_class=cls_name, intra_speed=0.2,
-                risk_tolerance=risk, faction=faction,
+                id=f"trader_{i}", name=f"{st.name} {registry}",
+                cargo_capacity=st.cargo_capacity + random.randint(-20, 20),
+                fuel=float(st.fuel_capacity), location=loc,
+                speed=st.speed, state="idle",
+                role="trader", ship_class=st.name, intra_speed=st.intra_speed,
+                risk_tolerance=risk_by_tier.get(st.tier, 0.5), faction=faction,
             )
             station_objs = [o for o in self.universe[loc].objects if o.obj_type == "station"]
             if station_objs:
@@ -77,23 +74,22 @@ class Simulation:
 
     def _spawn_miners(self, count: int):
         mining_systems = [sid for sid, sys in self.universe.items() if sys.asteroid_fields]
-        miner_classes = [
-            ("Prospect Skiff", 80, 0.2),     # small, safe belts only
-            ("Strip Miner", 150, 0.5),       # medium, moderate risk
-            ("Deep Core Borer", 250, 0.8),   # large, goes to dangerous fields
-        ]
+        from server.ship_types import MINER_SHIPS
+        miner_types = list(MINER_SHIPS.values())
         miner_factions = ["Miners Union", "Deep Rock Corp", "Frontier Logistics"]
+        risk_by_tier = {1: 0.2, 2: 0.5, 3: 0.8}
         for i in range(count):
-            cls_name, capacity, risk = miner_classes[i % len(miner_classes)]
+            st = miner_types[i % len(miner_types)]
             faction = miner_factions[i % len(miner_factions)]
             registry = f"MNR-{random.randint(1000,9999)}"
             loc = random.choice(mining_systems)
             ship = NPCShip(
-                id=f"miner_{i}", name=f"{cls_name} {registry}",
-                cargo_capacity=capacity + random.randint(-10, 10),
-                fuel=100.0, location=loc, speed=1.0, state="idle",
-                role="miner", ship_class=cls_name, intra_speed=0.2,
-                risk_tolerance=risk, faction=faction,
+                id=f"miner_{i}", name=f"{st.name} {registry}",
+                cargo_capacity=st.cargo_capacity + random.randint(-10, 10),
+                fuel=float(st.fuel_capacity), location=loc,
+                speed=st.speed, state="idle",
+                role="miner", ship_class=st.name, intra_speed=st.intra_speed,
+                risk_tolerance=risk_by_tier.get(st.tier, 0.5), faction=faction,
             )
             station_objs = [o for o in self.universe[loc].objects if o.obj_type == "station"]
             if station_objs:

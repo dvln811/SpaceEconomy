@@ -22,8 +22,8 @@ if load_simulation(sim):
 else:
     log.info("No saved state found, starting fresh")
 
-TICK_RATE = float(os.getenv("TICK_RATE", "1.0"))
 SAVE_INTERVAL = 10  # save every N ticks
+sim_speed = {"rate": float(os.getenv("TICK_RATE", "1.0")), "multiplier": 1}
 
 # Backfill risk_tolerance for ships loaded from old saves
 _trader_factions = ["Trade Guild", "Free Traders", "Industrial Corp", "Agrarian League", "Frontier Logistics"]
@@ -45,10 +45,12 @@ for _i, _s in enumerate(sim.ships):
 
 def economy_loop():
     while True:
-        sim.tick()
+        mult = sim_speed["multiplier"]
+        for _ in range(mult):
+            sim.tick()
         if sim.tick_count % SAVE_INTERVAL == 0:
             save_simulation(sim)
-        time.sleep(TICK_RATE)
+        time.sleep(sim_speed["rate"])
 
 
 threading.Thread(target=economy_loop, daemon=True).start()
@@ -224,6 +226,30 @@ def api_debug():
             "intra_progress": round(s.intra_progress, 3),
         })
     summary["ships"] = ships
+
+    # Demand data: what the economy needs vs what it has
+    demand_data = {}
+    for sid, sys_obj in sim.universe.items():
+        for st in sys_obj.stations:
+            for prod_id in st.produces:
+                com = COMS.get(prod_id)
+                if not com or not com.recipe:
+                    continue
+                for inp_id, qty_needed in com.recipe.items():
+                    demand_data.setdefault(inp_id, {"demand_per_tick": 0, "total_supply": 0, "name": COMS[inp_id].name})
+                    demand_data[inp_id]["demand_per_tick"] += qty_needed * st.production_rate
+    # Add supply totals
+    for sid, sys_obj in sim.universe.items():
+        for st in sys_obj.stations:
+            for commodity, qty in st.inventory.items():
+                if commodity in demand_data:
+                    demand_data[commodity]["total_supply"] += qty
+    # Calculate deficit (how many ticks of supply remain)
+    for k, v in demand_data.items():
+        v["ticks_remaining"] = round(v["total_supply"] / v["demand_per_tick"], 1) if v["demand_per_tick"] > 0 else 9999
+        v["deficit"] = round(v["demand_per_tick"] * 100 - v["total_supply"], 1)  # shortfall for 100 ticks
+    summary["demand"] = demand_data
+
     return jsonify(summary)
 
 
@@ -267,6 +293,22 @@ def api_nuke():
     sim = Simulation()
     log.info("NUKE: Simulation reset to initial state")
     return jsonify({"status": "reset", "tick": sim.tick_count})
+
+
+@app.route("/api/speed", methods=["POST"])
+def api_speed():
+    """Change simulation speed multiplier. 1=realtime, 120=2hrs/min."""
+    from flask import request
+    data = request.get_json(force=True)
+    mult = max(1, min(120, int(data.get("multiplier", 1))))
+    sim_speed["multiplier"] = mult
+    log.info(f"Sim speed set to {mult}x")
+    return jsonify({"multiplier": mult})
+
+
+@app.route("/api/speed", methods=["GET"])
+def api_speed_get():
+    return jsonify({"multiplier": sim_speed["multiplier"]})
 
 
 if __name__ == "__main__":
