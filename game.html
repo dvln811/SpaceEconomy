@@ -1035,7 +1035,11 @@ function makeGlowTexture(color, size){
   const c=document.createElement('canvas'); c.width=size; c.height=size;
   const cx=c.getContext('2d'), r=size/2;
   const g=cx.createRadialGradient(r,r,0,r,r,r);
-  g.addColorStop(0,color+'aa'); g.addColorStop(0.3,color+'44'); g.addColorStop(1,'rgba(0,0,0,0)');
+  g.addColorStop(0,'rgba(255,255,255,0.9)');
+  g.addColorStop(0.1,color+'cc');
+  g.addColorStop(0.35,color+'44');
+  g.addColorStop(0.7,color+'11');
+  g.addColorStop(1,'rgba(0,0,0,0)');
   cx.fillStyle=g; cx.fillRect(0,0,size,size);
   const t=new THREE.CanvasTexture(c); return t;
 }
