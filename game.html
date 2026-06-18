@@ -1030,6 +1030,11 @@ const svObjectsGroup=new THREE.Group(); svScene.add(svObjectsGroup);
 const svLabelsGroup=new THREE.Group(); svScene.add(svLabelsGroup);
 const svShipsGroup=new THREE.Group(); svScene.add(svShipsGroup);
 
+// Lighting for 3D ship models
+svScene.add(new THREE.AmbientLight(0x4fc3f7, 0.4));
+const svDirLight=new THREE.DirectionalLight(0xffffff, 0.6);
+svDirLight.position.set(0,0,50); svScene.add(svDirLight);
+
 // Sprite texture generators
 function makeGlowTexture(color, size){
   const c=document.createElement('canvas'); c.width=size; c.height=size;
@@ -1223,18 +1228,59 @@ function svBuildScene(){
   }
 }
 
-// Ship meshes (rebuilt each frame for simplicity)
+// Ship 3D models - load once, reuse
+let svShipGeos={}; // class_id -> geometry data
+let svShipCache={}; // ship name -> {group, classId}
+(async function(){
+  try{const r=await fetch('/api/ship_model/all');if(r.ok)svShipGeos=await r.json();}catch(e){}
+})();
+
+function classIdFromName(name){
+  return name.toLowerCase().replace(/\./g,'').replace(/\s+/g,'_');
+}
+
 let svShipMeshes=[];
 function svUpdateShipMeshes(){
-  svShipsGroup.clear(); svShipMeshes=[];
+  // Hide all cached ships first
+  for(const id in svShipCache)svShipCache[id].group.visible=false;
+  // Clear trail lines
+  svShipsGroup.children.filter(c=>c.isLine).forEach(c=>svShipsGroup.remove(c));
+  const toRemove=svShipsGroup.children.filter(c=>c.isLine);
+  for(const c of toRemove)svShipsGroup.remove(c);
+
   if(!svData||!svData.ships)return;
   for(const ship of svData.ships){
     const sp=svShipPos[ship.name];if(!sp||!sp.vis)continue;
     const sx=sp.fx+(sp.tx-sp.fx)*sp.p, sy=sp.fy+(sp.ty-sp.fy)*sp.p;
-    const col=sp.role==='miner'?'#ffd54f':'#ef5350';
-    const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDotTexture(col,32),transparent:true}));
-    spr.position.set(sx,sy,3);spr.scale.set(5,5,1);
-    svShipsGroup.add(spr);
+
+    // Get or create ship model
+    let cached=svShipCache[ship.name];
+    if(!cached){
+      const cid=classIdFromName(ship.ship_class||'');
+      const geo=svShipGeos[cid];
+      if(geo){
+        const tmpScene=new THREE.Scene();
+        const grp=buildShipFromData(tmpScene,geo,{showHardpoints:false});
+        tmpScene.remove(grp);
+        grp.scale.set(4,4,4);
+        grp.rotation.x=-Math.PI/2; // face camera (top-down)
+        svShipsGroup.add(grp);
+        cached={group:grp,classId:cid};
+        svShipCache[ship.name]=cached;
+      }else{
+        // Fallback: dot sprite
+        const col=sp.role==='miner'?'#ffd54f':'#ef5350';
+        const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDotTexture(col,32),transparent:true}));
+        spr.scale.set(5,5,1);
+        const wrapper=new THREE.Group();wrapper.add(spr);
+        svShipsGroup.add(wrapper);
+        cached={group:wrapper,classId:null};
+        svShipCache[ship.name]=cached;
+      }
+    }
+    cached.group.visible=true;
+    cached.group.position.set(sx,sy,3);
+
     // Trail line
     if(sp.rate>0){
       const pts=[new THREE.Vector3(sx,sy,2),new THREE.Vector3(sp.tx,sp.ty,2)];
@@ -1265,6 +1311,7 @@ setInterval(svFetch,1000);
 // Open system view
 window.openSystemView=function(sysId){
   svCurrentId=sysId;svData=null;svShipPos={};
+  svShipCache={};svShipsGroup.clear();
   svZoom=200;
   svCam.position.set(0,0,100);
   svWin.classList.add('open');

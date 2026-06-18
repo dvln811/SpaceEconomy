@@ -328,6 +328,7 @@ def api_system(system_id):
         if s.location == system_id:
             ship_data = {
                 "name": s.name, "role": s.role, "state": s.state,
+                "ship_class": s.ship_class,
                 "intra_position": s.intra_position, "intra_destination": s.intra_destination,
                 "intra_progress": round(s.intra_progress, 4), "intra_speed": s.intra_speed,
             }
