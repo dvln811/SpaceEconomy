@@ -2,9 +2,8 @@
 import json
 import os
 import sqlite3
-from server.models import System, Station, AsteroidField, NPCShip
+from server.models import NPCShip
 
-# On fly.io, data dir is a mounted volume. Locally, use project root.
 DATA_DIR = os.environ.get("DATA_DIR", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data"))
 os.makedirs(DATA_DIR, exist_ok=True)
 DB_PATH = os.path.join(DATA_DIR, "game.db")
@@ -29,21 +28,18 @@ def init_db():
 
 def save_simulation(sim):
     """Serialize and save the full simulation state to SQLite."""
-    # Serialize systems
     systems_data = {}
     for sid, sys in sim.universe.items():
         stations = []
         for st in sys.stations:
             stations.append({
                 "name": st.name, "system_id": st.system_id,
-                "production": st.production, "consumption": st.consumption,
+                "station_type": st.station_type, "produces": st.produces,
                 "inventory": st.inventory, "price_cache": st.price_cache,
+                "production_rate": st.production_rate,
             })
-        systems_data[sid] = {
-            "stations": stations,
-        }
+        systems_data[sid] = {"stations": stations}
 
-    # Serialize ships
     ships_data = []
     for s in sim.ships:
         ships_data.append({
@@ -55,6 +51,7 @@ def save_simulation(sim):
             "ship_class": s.ship_class, "route_path": s.route_path,
             "intra_position": s.intra_position, "intra_destination": s.intra_destination,
             "intra_progress": s.intra_progress, "intra_speed": s.intra_speed,
+            "risk_tolerance": s.risk_tolerance,
         })
 
     conn = _get_conn()
@@ -83,7 +80,7 @@ def load_simulation(sim) -> bool:
 
     sim.tick_count = int(row[0])
 
-    # Load systems (only mutable state: station inventories and prices)
+    # Load systems (only mutable state: inventories and prices)
     row = conn.execute("SELECT value FROM state WHERE key = ?", ("systems",)).fetchone()
     if row:
         systems_data = json.loads(row[0])
@@ -92,8 +89,8 @@ def load_simulation(sim) -> bool:
                 continue
             for i, st_data in enumerate(data["stations"]):
                 if i < len(sim.universe[sid].stations):
-                    sim.universe[sid].stations[i].inventory = st_data["inventory"]
-                    sim.universe[sid].stations[i].price_cache = st_data["price_cache"]
+                    sim.universe[sid].stations[i].inventory = st_data.get("inventory", {})
+                    sim.universe[sid].stations[i].price_cache = st_data.get("price_cache", {})
 
     # Load ships
     row = conn.execute("SELECT value FROM state WHERE key = ?", ("ships",)).fetchone()
@@ -112,7 +109,8 @@ def load_simulation(sim) -> bool:
                 intra_position=sd.get("intra_position", ""),
                 intra_destination=sd.get("intra_destination", ""),
                 intra_progress=sd.get("intra_progress", 0.0),
-                intra_speed=sd.get("intra_speed", 1.5),
+                intra_speed=sd.get("intra_speed", 0.2),
+                risk_tolerance=sd.get("risk_tolerance", 0.5),
             ))
 
     conn.close()

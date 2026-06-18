@@ -25,15 +25,10 @@ else:
 TICK_RATE = float(os.getenv("TICK_RATE", "1.0"))
 SAVE_INTERVAL = 10  # save every N ticks
 
-# Backfill ship_class for ships loaded from old saves
-_trader_classes = ["Bison Mk.III", "Ox Hauler", "Mule Freighter", "Clydesdale", "Pinto Runner"]
-_miner_classes = ["Burro Driller", "Pickaxe Mk.II", "Anvil Corer"]
-for _i, _s in enumerate(sim.ships):
-    if not _s.ship_class:
-        if _s.role == "miner":
-            _s.ship_class = _miner_classes[_i % len(_miner_classes)]
-        else:
-            _s.ship_class = _trader_classes[_i % len(_trader_classes)]
+# Backfill risk_tolerance for ships loaded from old saves
+for _s in sim.ships:
+    if not hasattr(_s, 'risk_tolerance') or _s.risk_tolerance == 0:
+        _s.risk_tolerance = 0.5
 
 
 def economy_loop():
@@ -99,10 +94,11 @@ def api_state():
         for st in sys.stations:
             stations.append({
                 "name": st.name,
+                "station_type": st.station_type,
+                "produces": st.produces,
+                "production_rate": st.production_rate,
                 "inventory": st.inventory,
                 "prices": st.price_cache,
-                "production": st.production,
-                "consumption": st.consumption,
             })
         systems[sid] = {
             "name": sys.name,
