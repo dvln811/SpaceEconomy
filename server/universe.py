@@ -72,7 +72,7 @@ def _core_systems() -> dict[str, System]:
                     inventory={"iron_ore": 200, "copper_ore": 150, "refined_iron": 80, "refined_copper": 60},
                     production_rate=2.0),
             Station("Cygnus Trade Hub", "cygnus", station_type="trade_hub",
-                    inventory={"processed_food": 100, "hydrogen_fuel": 80, "water": 60}),
+                    inventory={"processed_food": 100, "hydrogen_fuel": 80, "water": 60, "luxury_goods": 40, "consumer_electronics": 50, "gourmet_food": 30, "fine_spirits": 25}),
         ],
         asteroid_fields=[AsteroidField("Cygnus Iron Belt", "iron_belt", ["iron_ore", "copper_ore"], density=1.0)],
         connections=["kepler", "procyon", "tau_ceti", "sirius"],
@@ -84,7 +84,7 @@ def _core_systems() -> dict[str, System]:
         cluster="core", security="high", x=-200, y=-40, z=150,
         stations=[
             Station("Grand Exchange", "kepler", station_type="trade_hub",
-                    inventory={"refined_iron": 100, "steel_alloy": 60, "electronics": 40, "processed_food": 200, "hydrogen_fuel": 150}),
+                    inventory={"refined_iron": 100, "steel_alloy": 60, "electronics": 40, "processed_food": 200, "hydrogen_fuel": 150, "luxury_goods": 60, "exotic_textiles": 40, "entertainment_media": 50, "consumer_electronics": 45, "gourmet_food": 35, "fine_spirits": 30}),
             Station("Kepler Fuel Depot", "kepler", station_type="refinery",
                     produces=["hydrogen_fuel", "water"],
                     inventory={"ice": 100, "helium3": 80, "hydrogen_fuel": 200, "water": 100},
@@ -195,7 +195,7 @@ def _core_systems() -> dict[str, System]:
                     inventory={"polymers": 40, "refined_titanium": 30, "refined_copper": 50, "rare_earths": 15, "crystals": 10, "chemicals": 40, "composites": 25, "superconductors": 20, "glass": 15},
                     production_rate=1.0),
             Station("Mars Trade Port", "sol", station_type="trade_hub",
-                    inventory={"processed_food": 150, "hydrogen_fuel": 120, "water": 80}),
+                    inventory={"processed_food": 150, "hydrogen_fuel": 120, "water": 80, "luxury_goods": 50, "consumer_electronics": 60, "entertainment_media": 40, "exotic_textiles": 30}),
         ],
         connections=["procyon", "deneb", "haven", "arcturus"],
     )
@@ -290,7 +290,7 @@ def _rim_systems() -> dict[str, System]:
         cluster="rim", security="medium", x=150, y=-110, z=-300,
         stations=[
             Station("Altair Junction Market", "altair", station_type="trade_hub",
-                    inventory={"refined_iron": 80, "steel_alloy": 40, "electronics": 30, "processed_food": 100, "hydrogen_fuel": 80}),
+                    inventory={"refined_iron": 80, "steel_alloy": 40, "electronics": 30, "processed_food": 100, "hydrogen_fuel": 80, "luxury_goods": 25, "exotic_textiles": 20, "gourmet_food": 20}),
         ],
         connections=["kepler", "vega", "barnards", "castor", "draconis"],
     )
@@ -328,7 +328,7 @@ def _rim_systems() -> dict[str, System]:
         cluster="rim", security="medium", x=-350, y=90, z=380,
         stations=[
             Station("Capella Free Market", "capella", station_type="trade_hub",
-                    inventory={"steel_alloy": 40, "polymers": 30, "electronics": 25, "processed_food": 80, "hydrogen_fuel": 60, "pharmaceuticals": 20}),
+                    inventory={"steel_alloy": 40, "polymers": 30, "electronics": 25, "processed_food": 80, "hydrogen_fuel": 60, "pharmaceuticals": 20, "luxury_goods": 35, "fine_spirits": 30, "entertainment_media": 25}),
         ],
         connections=["polaris", "haven", "betelgeuse", "castor", "lyra", "helios"],
     )

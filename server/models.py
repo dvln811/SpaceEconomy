@@ -175,25 +175,39 @@ COMMODITIES = {
                                   recipe={"pharmaceuticals": 2, "electronics": 1, "life_support": 1}),
     "jump_drives":      Commodity("Jump Drives", 12000, tier=5, elasticity=1.5,
                                   recipe={"reactor_cores": 2, "nav_arrays": 2, "superconductors": 2}),
+
+    # ── Trade Goods (end-use consumption, no recipe, produced at trade hubs/factories) ──
+    "luxury_goods":         Commodity("Luxury Goods", 700, tier=0, elasticity=1.6),
+    "consumer_electronics": Commodity("Consumer Electronics", 400, tier=0, elasticity=1.2),
+    "gourmet_food":         Commodity("Gourmet Food", 250, tier=0, elasticity=1.0),
+    "exotic_textiles":      Commodity("Exotic Textiles", 500, tier=0, elasticity=1.4),
+    "entertainment_media":  Commodity("Entertainment Media", 300, tier=0, elasticity=1.1),
+    "fine_spirits":         Commodity("Fine Spirits", 350, tier=0, elasticity=1.3),
 }
 
 # Station type -> what tier it produces
 STATION_PRODUCES_TIER = {
-    "mining_colony": 1,      # Buys T1 from miners, sells to haulers
+    "mining_colony": 1,
     "refinery": 2,
     "industrial_hub": 3,
     "component_factory": 4,
     "shipyard": 5,
-    "trade_hub": 0,          # Produces nothing, buys/sells everything
-    "frontier_outpost": 0,   # Consumes essentials (food, fuel, meds)
-    "military_base": 0,      # Consumes weapons, ship modules, combat drones
+    "trade_hub": 0,
+    "frontier_outpost": 0,
+    "military_base": 0,
 }
 
 # What each station type consumes (as end-use, not for production)
+# These create demand that drives trade routes for non-production goods
 STATION_CONSUMPTION = {
-    "frontier_outpost": ["processed_food", "hydrogen_fuel", "pharmaceuticals", "water"],
-    "military_base": ["weapon_systems", "combat_drones", "ship_modules", "hydrogen_fuel", "processed_food"],
-    "trade_hub": ["processed_food", "hydrogen_fuel"],
+    "frontier_outpost": ["processed_food", "hydrogen_fuel", "pharmaceuticals", "water", "fine_spirits", "entertainment_media"],
+    "military_base": ["weapon_systems", "combat_drones", "ship_modules", "hydrogen_fuel", "processed_food", "entertainment_media"],
+    "trade_hub": ["processed_food", "hydrogen_fuel", "luxury_goods", "consumer_electronics", "gourmet_food", "exotic_textiles", "entertainment_media", "fine_spirits"],
+    "mining_colony": ["processed_food", "hydrogen_fuel", "water", "fine_spirits", "entertainment_media"],
+    "refinery": ["processed_food", "hydrogen_fuel", "water"],
+    "industrial_hub": ["processed_food", "hydrogen_fuel", "consumer_electronics"],
+    "component_factory": ["processed_food", "hydrogen_fuel", "consumer_electronics"],
+    "shipyard": ["processed_food", "hydrogen_fuel", "luxury_goods"],
 }
 
 # Security level numeric values for pathfinding
