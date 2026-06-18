@@ -337,10 +337,23 @@ function draw() {
       const sp = shipPositions[ship.name];
       if (!sp) continue;
       const pos = worldToScreen(sp.x, sp.y);
-      const shipColor = ship.role === 'miner' ? '#ffd54f' : '#ef5350';
+      const shipColor = ship.role === 'miner' ? '#ab47bc' : ship.role === 'military' ? '#ef5350' : '#4fc3f7';
+      const sz = 4 * Math.min(cam.zoom, 2);
       ctx.beginPath();
-      ctx.arc(pos.x, pos.y, 2.5 * Math.min(cam.zoom, 2), 0, Math.PI * 2);
-      ctx.fillStyle = shipColor; ctx.fill();
+      if (ship.role === 'miner') {
+        // Diamond shape for miners
+        ctx.moveTo(pos.x, pos.y - sz); ctx.lineTo(pos.x + sz, pos.y);
+        ctx.lineTo(pos.x, pos.y + sz); ctx.lineTo(pos.x - sz, pos.y); ctx.closePath();
+      } else if (ship.role === 'military') {
+        // Pentagon for military
+        for (let i = 0; i < 5; i++) { const a = Math.PI*2*i/5 - Math.PI/2; ctx[i===0?'moveTo':'lineTo'](pos.x+Math.cos(a)*sz, pos.y+Math.sin(a)*sz); }
+        ctx.closePath();
+      } else {
+        // Square for haulers
+        ctx.rect(pos.x - sz*0.8, pos.y - sz*0.8, sz*1.6, sz*1.6);
+      }
+      ctx.fillStyle = shipColor + '40'; ctx.fill();
+      ctx.strokeStyle = shipColor; ctx.lineWidth = 1; ctx.stroke();
       // Trail line if traveling
       if (ship.intra_destination) {
         const from = systemData.objects.find(o => o.id === ship.intra_position);
