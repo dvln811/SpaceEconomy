@@ -44,6 +44,16 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .live-dot{width:8px;height:8px;border-radius:50%;background:#66bb6a;animation:pulse 1s infinite;margin-right:8px}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 .view-select{background:#0a1020;border:1px solid #1a3050;color:#8aa0b8;font-size:10px;padding:2px 6px;border-radius:3px;font-family:inherit;margin-left:8px}
+/* Inline System Map */
+.dbg-sysview{position:fixed;top:60px;right:20px;width:500px;height:400px;background:#0a0e18;border:1px solid #1a2844;border-radius:6px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.7);z-index:200;resize:both;min-width:300px;min-height:200px}
+.dbg-sysview.open{display:flex}
+.dbg-sysview-bar{display:flex;align-items:center;padding:0 10px;height:28px;background:#0a0f1a;border-bottom:1px solid #1a2844;cursor:move;flex-shrink:0;user-select:none}
+.dbg-sysview-bar span{font-family:'Orbitron',sans-serif;font-size:9px;color:#4fc3f7;letter-spacing:1px}
+.dbg-sysview-bar .sv-close{margin-left:auto;border:none;background:none;color:#5a7a9a;cursor:pointer;font-size:13px}
+.dbg-sysview-bar .sv-close:hover{color:#ef5350}
+.dbg-sysview-body{flex:1;position:relative;overflow:hidden}
+.dbg-sysview-body canvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab}
+.dbg-sysview-body canvas:active{cursor:grabbing}
 </style>
 </head>
 <body>
@@ -56,6 +66,11 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     <option value="">System Map...</option>
   </select>
   <button id="nuke-btn" style="margin-left:auto;font-size:10px;color:#ef5350;background:#1a0a0a;border:1px solid #ef5350;border-radius:3px;padding:6px 14px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;font-family:Orbitron,sans-serif;transition:all .15s" onmouseover="this.style.background='#ef5350';this.style.color='#fff'" onmouseout="this.style.background='#1a0a0a';this.style.color='#ef5350'">Nuke</button>
+</div>
+<!-- Inline System Map -->
+<div class="dbg-sysview" id="dbgSysview">
+  <div class="dbg-sysview-bar" id="dbgSysBar"><span id="dbgSysTitle">System Map</span><button class="sv-close" id="dbgSysClose">&times;</button></div>
+  <div class="dbg-sysview-body" id="dbgSysBody"><canvas id="dbgSysCanvas"></canvas></div>
 </div>
 <div class="grid">
   <!-- Row 1: State + Events -->
@@ -152,7 +167,7 @@ setInterval(refresh,2000);
 
 // System map dropdown - open inline system view
 document.getElementById('system-map-select').addEventListener('change',(e)=>{
-  if(e.target.value) window.location.href='/system_view?id='+e.target.value+'&debug=1';
+  if(e.target.value) openDbgSysView(e.target.value);
   e.target.value='';
 });
 (async()=>{
@@ -161,6 +176,93 @@ document.getElementById('system-map-select').addEventListener('change',(e)=>{
   Object.entries(d.systems).sort((a,b)=>a[1].name.localeCompare(b[1].name)).forEach(([id,sys])=>{
     const opt=document.createElement('option');opt.value=id;opt.textContent=sys.name;sel.appendChild(opt);
   });
+})();
+
+// ── Inline System Map ─────────────────────────────────────────────────────────
+(function(){
+const win=document.getElementById('dbgSysview'),bar=document.getElementById('dbgSysBar');
+const body=document.getElementById('dbgSysBody'),canvas=document.getElementById('dbgSysCanvas');
+const ctx=canvas.getContext('2d');
+let sysData=null,sysId='',shipPos={},cam={x:0,y:0,zoom:1};
+let panning=false,panS={x:0,y:0},camS={x:0,y:0},winDrag=false,winOff={x:0,y:0};
+const COL={star:'#ffd54f',gate:'#ab47bc',station:'#4fc3f7',asteroid_belt:'#ff8a65',planet:'#66bb6a',moon:'#8aa0b8'};
+
+bar.addEventListener('mousedown',e=>{winDrag=true;winOff={x:e.clientX-win.offsetLeft,y:e.clientY-win.offsetTop};});
+document.addEventListener('mousemove',e=>{if(winDrag){win.style.left=(e.clientX-winOff.x)+'px';win.style.top=(e.clientY-winOff.y)+'px';}});
+document.addEventListener('mouseup',()=>{winDrag=false;});
+document.getElementById('dbgSysClose').addEventListener('click',()=>{win.classList.remove('open');});
+
+canvas.addEventListener('mousedown',e=>{panning=true;panS={x:e.offsetX,y:e.offsetY};camS={x:cam.x,y:cam.y};});
+canvas.addEventListener('mousemove',e=>{if(panning){cam.x=camS.x-(e.offsetX-panS.x)/cam.zoom;cam.y=camS.y-(e.offsetY-panS.y)/cam.zoom;}});
+canvas.addEventListener('mouseup',()=>{panning=false;});
+canvas.addEventListener('mouseleave',()=>{panning=false;});
+canvas.addEventListener('wheel',e=>{e.preventDefault();cam.zoom=Math.max(0.3,Math.min(8,cam.zoom*(e.deltaY>0?0.85:1.18)));},{passive:false});
+
+function resize(){canvas.width=body.clientWidth*devicePixelRatio;canvas.height=body.clientHeight*devicePixelRatio;ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);}
+new ResizeObserver(resize).observe(body);
+
+function p2w(d,a){return{x:d*40*Math.cos(a),y:d*40*Math.sin(a)};}
+function w2s(wx,wy){const w=body.clientWidth,h=body.clientHeight;return{x:w/2+(wx-cam.x)*cam.zoom,y:h/2+(wy-cam.y)*cam.zoom};}
+
+function draw(){
+  if(!win.classList.contains('open')){requestAnimationFrame(draw);return;}
+  const w=body.clientWidth,h=body.clientHeight;ctx.clearRect(0,0,w,h);
+  if(!sysData){requestAnimationFrame(draw);return;}
+  // Predict ships
+  const now=performance.now();
+  for(const id in shipPos){const s=shipPos[id];s.x+=s.vx/60;s.y+=s.vy/60;}
+  const center=w2s(0,0);
+  // Orbital lines
+  for(const o of sysData.objects){
+    if(o.type==='planet'){const r=o.distance*40*cam.zoom;ctx.beginPath();ctx.arc(center.x,center.y,r,0,Math.PI*2);ctx.strokeStyle='rgba(102,187,106,0.1)';ctx.lineWidth=0.5;ctx.stroke();}
+  }
+  // Objects
+  for(const o of sysData.objects){
+    const wp=p2w(o.distance,o.angle),pos=w2s(wp.x,wp.y);
+    const col=COL[o.type]||'#5a7a9a';
+    const sz=({star:6,planet:3.5,moon:2,station:3,gate:4,asteroid_belt:2.5}[o.type]||3)*Math.min(cam.zoom,2);
+    if(o.type==='gate'){ctx.beginPath();ctx.moveTo(pos.x,pos.y-sz);ctx.lineTo(pos.x+sz,pos.y);ctx.lineTo(pos.x,pos.y+sz);ctx.lineTo(pos.x-sz,pos.y);ctx.closePath();ctx.fillStyle=col;ctx.fill();}
+    else if(o.type==='asteroid_belt'){ctx.setLineDash([3,4]);const r=o.distance*40*cam.zoom;ctx.beginPath();ctx.arc(center.x,center.y,r,o.angle-0.25,o.angle+0.25);ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke();ctx.setLineDash([]);}
+    else{ctx.beginPath();ctx.arc(pos.x,pos.y,sz,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();}
+    if(cam.zoom>0.6&&o.type!=='moon'&&o.type!=='planet'){ctx.fillStyle='rgba(200,212,224,0.5)';ctx.font=`600 ${Math.max(7,8*Math.min(cam.zoom,1.3))}px Orbitron,sans-serif`;ctx.textAlign='center';ctx.fillText(o.name,pos.x,pos.y+sz+9);}
+  }
+  // Ships
+  for(const id in shipPos){
+    const s=shipPos[id],pos=w2s(s.x,s.y);
+    ctx.beginPath();ctx.arc(pos.x,pos.y,2.5,0,Math.PI*2);ctx.fillStyle=s.role==='miner'?'#ffd54f':'#ef5350';ctx.fill();
+    if(cam.zoom>1){ctx.fillStyle='rgba(200,212,224,0.4)';ctx.font='7px JetBrains Mono';ctx.textAlign='left';ctx.fillText(id,pos.x+5,pos.y+2);}
+  }
+  requestAnimationFrame(draw);
+}
+draw();
+
+async function fetchSys(){
+  if(!sysId||!win.classList.contains('open'))return;
+  try{
+    const r=await fetch('/api/system/'+sysId);if(!r.ok)return;
+    const d=await r.json();sysData=d;
+    document.getElementById('dbgSysTitle').textContent=d.name+' ('+d.ships.length+' ships)';
+    const now=performance.now();
+    for(const ship of d.ships){
+      let tp=null;
+      if(ship.intra_position&&ship.intra_destination&&ship.intra_progress>0){
+        const f=d.objects.find(o=>o.id===ship.intra_position),t=d.objects.find(o=>o.id===ship.intra_destination);
+        if(f&&t){const p1=p2w(f.distance,f.angle),p2=p2w(t.distance,t.angle);tp={x:p1.x+(p2.x-p1.x)*ship.intra_progress,y:p1.y+(p2.y-p1.y)*ship.intra_progress};}
+      }else if(ship.intra_position){const at=d.objects.find(o=>o.id===ship.intra_position);if(at){tp=p2w(at.distance,at.angle);tp.x+=5;tp.y-=5;}}
+      if(tp){
+        const id=ship.name;
+        if(!shipPos[id])shipPos[id]={x:tp.x,y:tp.y,vx:0,vy:0,role:ship.role};
+        else{const s=shipPos[id];const dt=1;s.vx=(tp.x-s.x)/dt;s.vy=(tp.y-s.y)/dt;s.x=tp.x;s.y=tp.y;s.role=ship.role;}
+      }
+    }
+  }catch(e){}
+}
+setInterval(fetchSys,1000);
+
+window.openDbgSysView=function(id){
+  sysId=id;sysData=null;shipPos={};cam={x:0,y:0,zoom:1};
+  win.classList.add('open');resize();fetchSys();
+};
 })();
 
 document.getElementById('nuke-btn').addEventListener('click',async()=>{
