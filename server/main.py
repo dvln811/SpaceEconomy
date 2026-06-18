@@ -39,7 +39,7 @@ for _i, _s in enumerate(sim.ships):
     # Backfill registry-style name if ship has old-style name
     if _s.name and not any(c.isdigit() for c in _s.name):
         import random as _rnd
-        prefix = "TRD" if _s.role == "trader" else "MNR"
+        prefix = "HLR" if _s.role != "miner" else "MNR"
         _s.name = f"{_s.ship_class} {prefix}-{_rnd.randint(1000,9999)}"
 
 
@@ -107,10 +107,38 @@ def health():
 @app.route("/api/state")
 def api_state():
     """Full universe state for frontend."""
+    from server.models import COMMODITIES as COMS, STATION_CONSUMPTION
     systems = {}
     for sid, sys in sim.universe.items():
         stations = []
         for st in sys.stations:
+            # Generate order book
+            sell_orders = []  # what the station is selling (has in stock)
+            buy_orders = []   # what the station wants to buy (consumption demand)
+            for commodity_id, qty in st.inventory.items():
+                if qty > 1:
+                    price = st.price_cache.get(commodity_id, 0)
+                    if price > 0:
+                        sell_orders.append({"commodity": commodity_id, "qty": round(qty, 1), "price": round(price, 1)})
+            # Buy orders from production inputs needed
+            for prod_id in st.produces:
+                com = COMS.get(prod_id)
+                if not com or not com.recipe:
+                    continue
+                for inp_id, qty_needed in com.recipe.items():
+                    want = qty_needed * st.production_rate * 50  # want 50 ticks worth
+                    have = st.inventory.get(inp_id, 0)
+                    deficit = want - have
+                    if deficit > 0:
+                        buy_price = st.price_cache.get(inp_id, 0) * 1.1  # willing to pay 10% above market
+                        buy_orders.append({"commodity": inp_id, "qty": round(deficit, 1), "price": round(buy_price, 1)})
+            # Buy orders from end-use consumption
+            for commodity_id in STATION_CONSUMPTION.get(st.station_type, []):
+                have = st.inventory.get(commodity_id, 0)
+                if have < 50:
+                    buy_price = st.price_cache.get(commodity_id, 0) * 1.15
+                    buy_orders.append({"commodity": commodity_id, "qty": round(50 - have, 1), "price": round(buy_price, 1)})
+
             stations.append({
                 "name": st.name,
                 "station_type": st.station_type,
@@ -118,6 +146,8 @@ def api_state():
                 "production_rate": st.production_rate,
                 "inventory": st.inventory,
                 "prices": st.price_cache,
+                "sell_orders": sorted(sell_orders, key=lambda x: -x["qty"])[:20],
+                "buy_orders": sorted(buy_orders, key=lambda x: -x["qty"])[:20],
             })
         systems[sid] = {
             "name": sys.name,

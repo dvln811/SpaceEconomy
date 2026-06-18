@@ -48,23 +48,22 @@ class Simulation:
         self._update_all_prices()
 
     def _spawn_traders(self, count: int):
-        from server.ship_types import TRADER_SHIPS
+        from server.ship_types import HAULER_SHIPS
         system_ids = list(self.universe.keys())
-        trader_types = list(TRADER_SHIPS.values())
-        trader_factions = ["Trade Guild", "Free Traders", "Industrial Corp", "Agrarian League", "Frontier Logistics"]
-        # Risk tolerance roughly maps to tier
+        hauler_types = list(HAULER_SHIPS.values())
+        hauler_factions = ["Trade Guild", "Free Traders", "Industrial Corp", "Agrarian League", "Frontier Logistics"]
         risk_by_tier = {1: 0.2, 2: 0.5, 3: 0.7, 4: 0.9}
         for i in range(count):
-            st = trader_types[i % len(trader_types)]
-            faction = trader_factions[i % len(trader_factions)]
-            registry = f"TRD-{random.randint(1000,9999)}"
+            st = hauler_types[i % len(hauler_types)]
+            faction = hauler_factions[i % len(hauler_factions)]
+            registry = f"HLR-{random.randint(1000,9999)}"
             loc = random.choice(system_ids)
             ship = NPCShip(
-                id=f"trader_{i}", name=f"{st.name} {registry}",
+                id=f"hauler_{i}", name=f"{st.name} {registry}",
                 cargo_capacity=st.cargo_capacity + random.randint(-20, 20),
                 fuel=float(st.fuel_capacity), location=loc,
                 speed=st.speed, state="idle",
-                role="trader", ship_class=st.name, intra_speed=st.intra_speed,
+                role="hauler", ship_class=st.name, intra_speed=st.intra_speed,
                 risk_tolerance=risk_by_tier.get(st.tier, 0.5), faction=faction,
             )
             station_objs = [o for o in self.universe[loc].objects if o.obj_type == "station"]
