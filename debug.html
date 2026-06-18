@@ -226,9 +226,10 @@ function draw(){
     else{ctx.beginPath();ctx.arc(pos.x,pos.y,sz,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();}
     if(cam.zoom>0.6&&o.type!=='moon'&&o.type!=='planet'){ctx.fillStyle='rgba(200,212,224,0.5)';ctx.font=`600 ${Math.max(7,8*Math.min(cam.zoom,1.3))}px Orbitron,sans-serif`;ctx.textAlign='center';ctx.fillText(o.name,pos.x,pos.y+sz+9);}
   }
-  // Ships
+  // Ships (only in-transit or mining)
   for(const id in shipPos){
-    const s=shipPos[id],pos=w2s(s.x,s.y);
+    const s=shipPos[id];if(!s.visible)continue;
+    const pos=w2s(s.x,s.y);
     ctx.beginPath();ctx.arc(pos.x,pos.y,2.5,0,Math.PI*2);ctx.fillStyle=s.role==='miner'?'#ffd54f':'#ef5350';ctx.fill();
     ctx.fillStyle='rgba(220,230,240,0.8)';ctx.font='bold 10px JetBrains Mono';ctx.textAlign='left';ctx.fillText(id,pos.x+6,pos.y+4);
   }
@@ -251,8 +252,9 @@ async function fetchSys(){
       }else if(ship.intra_position){const at=d.objects.find(o=>o.id===ship.intra_position);if(at){tp=p2w(at.distance,at.angle);tp.x+=5;tp.y-=5;}}
       if(tp){
         const id=ship.name;
-        if(!shipPos[id])shipPos[id]={x:tp.x,y:tp.y,vx:0,vy:0,role:ship.role};
-        else{const s=shipPos[id];const dt=1;s.vx=(tp.x-s.x)/dt;s.vy=(tp.y-s.y)/dt;s.x=tp.x;s.y=tp.y;s.role=ship.role;}
+        const vis=ship.state==='intra_traveling'||ship.state==='mining';
+        if(!shipPos[id])shipPos[id]={x:tp.x,y:tp.y,vx:0,vy:0,role:ship.role,visible:vis};
+        else{const s=shipPos[id];const dt=1;s.vx=(tp.x-s.x)/dt;s.vy=(tp.y-s.y)/dt;s.x=tp.x;s.y=tp.y;s.role=ship.role;s.visible=vis;}
       }
     }
   }catch(e){}

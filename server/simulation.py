@@ -227,50 +227,45 @@ class Simulation:
         return True
 
     def _move_ships(self):
-        """Handle inter-system travel. Jumps through gates are instant."""
+        """Handle inter-system travel between gates. Ships progress between systems."""
         for ship in self.ships:
             if ship.state != "traveling" or not ship.destination:
                 continue
-            # Inter-system jump is instant - arrive at the gate on the other side
-            arrival_system = ship.destination
-            ship.location = arrival_system
-            ship.progress = 0.0
+            ship.progress += 0.02 * ship.speed
+            if ship.progress >= 1.0:
+                # Arrived at destination system
+                ship.progress = 0.0
+                ship.location = ship.destination
+                # Place at the arrival gate
+                arrival_gate = ""
+                for o in self.universe[ship.location].objects:
+                    if o.obj_type == "gate":
+                        arrival_gate = o.id
+                        break
+                ship.intra_position = arrival_gate if arrival_gate else ""
 
-            # Find the gate we arrived through (gate in new system pointing back)
-            prev_system = ship.route_path[0] if ship.route_path and ship.route_path[0] == arrival_system else ""
-            # Actually find gate pointing back to where we came from
-            # We need to figure out which system we came from
-            arrival_gate = ""
-            for o in self.universe[arrival_system].objects:
-                if o.obj_type == "gate":
-                    # Check if this gate connects back toward our origin
-                    # Since we just arrived, the gate we came through connects_to our previous location
-                    # We don't easily have "previous location" so just pick the first gate
-                    arrival_gate = o.id
-                    break
-            ship.intra_position = arrival_gate if arrival_gate else ""
+                # Advance route path
+                if ship.route_path and ship.location == ship.route_path[0]:
+                    ship.route_path.pop(0)
 
-            # Advance route path
-            if ship.route_path and ship.location == ship.route_path[0]:
-                ship.route_path.pop(0)
-
-            if ship.route_path:
-                # More hops: need to travel to the next gate within this system
-                next_dest = ship.route_path[0]
-                gate_id = self._get_gate_for(ship.location, next_dest)
-                if gate_id and gate_id != ship.intra_position:
-                    ship.destination = next_dest
-                    self._start_intra_travel(ship, gate_id)
-                    self._log(f"{ship.name} transiting {self.universe[ship.location].name} toward gate")
+                if ship.route_path:
+                    # More hops: travel to the next gate within this system
+                    next_dest = ship.route_path[0]
+                    gate_id = self._get_gate_for(ship.location, next_dest)
+                    if gate_id and gate_id != ship.intra_position:
+                        ship.destination = next_dest
+                        self._start_intra_travel(ship, gate_id)
+                    else:
+                        # Already at the right gate, jump again
+                        ship.destination = next_dest
+                        ship.state = "traveling"
+                        ship.progress = 0.0
+                    self._log(f"{ship.name} transiting {self.universe[ship.location].name}")
                 else:
-                    # Already at the right gate or no gate found, jump immediately
-                    ship.destination = next_dest
-                    ship.state = "traveling"
-            else:
-                # Final destination system reached
-                ship.destination = ""
-                ship.state = "idle"
-                self._log(f"{ship.name} arrived at {self.universe[ship.location].name}")
+                    # Final destination reached, go to station
+                    ship.destination = ""
+                    ship.state = "idle"
+                    self._log(f"{ship.name} arrived at {self.universe[ship.location].name}")
 
     def _move_ships_intra(self):
         """Handle intra-system movement between objects."""
@@ -287,8 +282,10 @@ class Simulation:
                 # Check if we arrived at a gate and need to jump
                 obj = self._get_object(ship.location, ship.intra_position)
                 if obj and obj.obj_type == "gate" and ship.destination and obj.connects_to == ship.destination:
-                    # Jump through gate instantly
+                    # Start inter-system travel
                     ship.state = "traveling"
+                    ship.progress = 0.0
+                    self._log(f"{ship.name} jumping to {self.universe[ship.destination].name}")
                 else:
                     ship.state = "idle"
                     self._log(f"{ship.name} reached {obj.name if obj else 'destination'} in {self.universe[ship.location].name}")

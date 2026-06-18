@@ -1200,8 +1200,9 @@ function svDraw(){
     if(svCam.zoom>0.6&&obj.type!=='moon'){svCtx.fillStyle='rgba(200,212,224,'+(hov?'0.9':'0.5')+')';svCtx.font=`600 ${Math.max(7,8*Math.min(svCam.zoom,1.4))}px Orbitron,sans-serif`;svCtx.textAlign='center';svCtx.fillText(obj.name,pos.x,pos.y+sz+9*Math.min(svCam.zoom,1.4));}
   }
 
-  // Ships
+  // Ships (only show in-transit or mining, not docked)
   if(svData.ships){for(const ship of svData.ships){
+    if(ship.state!=='intra_traveling'&&ship.state!=='mining') continue;
     const sp=svShipPos[ship.name];if(!sp)continue;
     const pos=svW2S(sp.x,sp.y);const sc=ship.role==='miner'?'#ffd54f':'#ef5350';
     svCtx.beginPath();svCtx.arc(pos.x,pos.y,2.5*Math.min(svCam.zoom,2),0,Math.PI*2);svCtx.fillStyle=sc;svCtx.fill();
