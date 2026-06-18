@@ -14,7 +14,8 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .nav h1{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:#4fc3f7;letter-spacing:3px;text-transform:uppercase}
 .nav a{font-size:11px;color:#5a7a9a;text-decoration:none;padding:6px 14px;border:1px solid #1a2844;border-radius:3px;transition:all .15s;letter-spacing:1px;text-transform:uppercase;font-family:'Orbitron',sans-serif}
 .nav a:hover{color:#4fc3f7;border-color:#4fc3f7;background:#0d1a2f}
-.content{max-width:900px;margin:0 auto;padding:48px 24px 96px}
+.nav a.active{color:#4fc3f7;border-color:#4fc3f7}
+.content{max-width:960px;margin:0 auto;padding:48px 24px 96px}
 .content h2{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:700;color:#4fc3f7;letter-spacing:2px;text-transform:uppercase;margin:48px 0 16px;padding-bottom:8px;border-bottom:1px solid #1a2844}
 .content h2:first-child{margin-top:0}
 .content h3{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:600;color:#ffd54f;letter-spacing:1px;text-transform:uppercase;margin:32px 0 12px}
@@ -23,18 +24,16 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .content li{margin-bottom:8px}
 .content strong{color:#e0e8f0}
 .content em{color:#4fc3f7;font-style:normal}
-.content code{color:#ffd54f;background:#0a1020;padding:2px 6px;border-radius:3px;font-size:12px}
 .card{background:#0a0e18;border:1px solid #1a2844;border-radius:6px;padding:20px;margin:16px 0}
 .card-title{font-family:'Orbitron',sans-serif;font-size:11px;color:#4a6a8a;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
 table{width:100%;border-collapse:collapse;margin:16px 0}
-th{font-family:'Orbitron',sans-serif;font-size:10px;color:#4a6a8a;letter-spacing:1px;text-transform:uppercase;text-align:left;padding:8px;border-bottom:1px solid #1a2844}
-td{padding:8px;border-bottom:1px solid #0f1a28;font-size:12px;color:#a0b4c8}
-.tag{display:inline-block;font-size:10px;padding:3px 8px;border-radius:3px;margin:2px 4px 2px 0;letter-spacing:1px;text-transform:uppercase}
-.tag-green{background:#66bb6a22;color:#66bb6a;border:1px solid #66bb6a44}
-.tag-cyan{background:#4fc3f722;color:#4fc3f7;border:1px solid #4fc3f744}
-.tag-gold{background:#ffd54f22;color:#ffd54f;border:1px solid #ffd54f44}
-.tag-red{background:#ef535022;color:#ef5350;border:1px solid #ef535044}
-.tag-purple{background:#ab47bc22;color:#ab47bc;border:1px solid #ab47bc44}
+th{font-family:'Orbitron',sans-serif;font-size:10px;color:#4a6a8a;letter-spacing:1px;text-transform:uppercase;text-align:left;padding:6px 8px;border-bottom:1px solid #1a2844}
+td{padding:6px 8px;border-bottom:1px solid #0f1a28;font-size:11px;color:#a0b4c8}
+.tag{display:inline-block;font-size:9px;padding:2px 6px;border-radius:3px;margin:1px 2px;letter-spacing:0.5px;text-transform:uppercase}
+.tag-high{background:#66bb6a22;color:#66bb6a;border:1px solid #66bb6a44}
+.tag-medium{background:#4fc3f722;color:#4fc3f7;border:1px solid #4fc3f744}
+.tag-low{background:#ffd54f22;color:#ffd54f;border:1px solid #ffd54f44}
+.tag-none{background:#ef535022;color:#ef5350;border:1px solid #ef535044}
 blockquote{border-left:3px solid #4fc3f7;padding:12px 16px;margin:16px 0;background:#0a0f1a;color:#8aa0b8;font-style:italic}
 </style>
 </head>
@@ -42,126 +41,153 @@ blockquote{border-left:3px solid #4fc3f7;padding:12px 16px;margin:16px 0;backgro
 <div class="nav">
   <h1>Hauler's Almanac</h1>
   <a href="/">Game</a>
-  <a href="/design">Design Doc</a>
-  <a href="/universe" style="color:#4fc3f7;border-color:#4fc3f7">Universe</a>
+  <a href="/docs">Docs</a>
+  <a href="/universe" class="active">Universe</a>
 </div>
 
 <div class="content">
 <h2>Universe Structure</h2>
 
-<p>The accessible sector contains <strong>24 star systems</strong> organized into 3 clusters connected by jump nexus chokepoints. Each cluster has a distinct security profile and economic character.</p>
+<p>The accessible sector contains <strong>48 star systems</strong> organized into 3 clusters connected by jump nexus chokepoints. Each cluster has a distinct security profile and economic character. The universe is generated once and persists permanently, evolving slowly through economic activity.</p>
 
-<h3>Cluster Layout</h3>
+<blockquote>The universe is not procedurally regenerated. It is a fixed world that grows and changes through player and NPC activity. Think of it as a living place, not a random seed.</blockquote>
 
-<div class="card">
-<div class="card-title">Core Cluster (High-Sec)</div>
-<p>Safe, patrolled, competitive. Low margins but reliable income. Where new players start.</p>
+<h3>Cluster Summary</h3>
 <table>
-<tr><th>System</th><th>Type</th><th>Stations</th><th>Asteroid Fields</th></tr>
-<tr><td>Cygnus Station</td><td>Industrial Hub</td><td>Orbital Foundry, Commerce Hub</td><td>Iron Belt (medium density)</td></tr>
-<tr><td>Kepler Freeport</td><td>Trade Hub</td><td>Grand Exchange, Freeport Bazaar, Fuel Depot</td><td>None</td></tr>
-<tr><td>Tau Ceti Prime</td><td>Agricultural</td><td>Agri-Orbital, Seed Vault</td><td>Ice Field (water/organics)</td></tr>
-<tr><td>Procyon Gate</td><td>Jump Nexus</td><td>Jump Gate Alpha, Nav Beacon</td><td>Debris Field (salvage)</td></tr>
-<tr><td>Sirius Dockyard</td><td>Shipyard</td><td>Dockyard Prime, Dry Dock Beta</td><td>None</td></tr>
-<tr><td>Deneb Anchorage</td><td>Military</td><td>Fleet Command, Patrol Base</td><td>None</td></tr>
-<tr><td>Polaris Haven</td><td>Agricultural</td><td>Greenhouse Station, Bio-Lab</td><td>Ice Field (water)</td></tr>
-<tr><td>Fomalhaut Colony</td><td>Agricultural</td><td>Colony Hub, Livestock Ring</td><td>Organic Cluster (rare bio)</td></tr>
+<tr><th>Cluster</th><th>Security</th><th>Systems</th><th>Character</th></tr>
+<tr><td>Core</td><td><span class="tag tag-high">High</span></td><td>12</td><td>Safe, competitive, low margins. Refineries, factories, shipyards. Where new players start.</td></tr>
+<tr><td>Rim</td><td><span class="tag tag-medium">Medium</span> / <span class="tag tag-low">Low</span></td><td>23</td><td>Mixed. Mining colonies, industrial hubs, trade junctions. Moderate ores. The working frontier.</td></tr>
+<tr><td>Frontier</td><td><span class="tag tag-low">Low</span> / <span class="tag tag-none">None</span></td><td>13</td><td>Lawless, dangerous, hugely profitable. Rare ores, sparse infrastructure.</td></tr>
 </table>
-</div>
 
-<div class="card">
-<div class="card-title">Rim Cluster (Low-Sec)</div>
-<p>Less patrol, pirate activity, faction disputes. Better margins, real risk. The working frontier.</p>
-<table>
-<tr><th>System</th><th>Type</th><th>Stations</th><th>Asteroid Fields</th></tr>
-<tr><td>Vega Outpost</td><td>Mining Colony</td><td>Mining Platform Alpha</td><td>Rich Ore Belt (high density, iron/titanium)</td></tr>
-<tr><td>Arcturus Refinery</td><td>Processing</td><td>Refinery Omega</td><td>Gas Pocket (helium-3)</td></tr>
-<tr><td>Barnard's Reach</td><td>Mining Colony</td><td>Deep Core Station</td><td>Rare Earth Belt (platinum, palladium)</td></tr>
-<tr><td>Altair Junction</td><td>Trade Hub</td><td>Junction Market, Black Market</td><td>Debris Field (salvage)</td></tr>
-<tr><td>Antares Forge</td><td>Processing</td><td>Smelter One, Chemical Works</td><td>Sulfur Clouds (chemicals)</td></tr>
-<tr><td>Capella Market</td><td>Trade Hub</td><td>Free Exchange, Smuggler's Dock</td><td>None</td></tr>
-<tr><td>Betelgeuse Yard</td><td>Shipyard</td><td>Frontier Drydock</td><td>Metallic Belt (alloy-grade)</td></tr>
-<tr><td>Castor Relay</td><td>Jump Nexus</td><td>Relay Station, Toll Gate</td><td>None</td></tr>
-<tr><td>Achernar Base</td><td>Military</td><td>Forward Operating Base</td><td>None</td></tr>
-<tr><td>Aldebaran Mine</td><td>Mining Colony</td><td>Strip Mine Alpha, Ore Processor</td><td>Dense Ore Field (iron, copper, tin)</td></tr>
-<tr><td>Regulus Port</td><td>Mining Colony</td><td>Regulus Extraction Hub</td><td>Crystal Formation (rare crystals)</td></tr>
-</table>
-</div>
-
-<div class="card">
-<div class="card-title">Frontier Cluster (Null-Sec)</div>
-<p>Lawless, dangerous, hugely profitable. Rare finds, anomalies, no law enforcement. Late-game territory.</p>
-<table>
-<tr><th>System</th><th>Type</th><th>Stations</th><th>Asteroid Fields</th></tr>
-<tr><td>Wolf 359 Depot</td><td>Frontier</td><td>Frontier Post</td><td>Unknown Composition (anomalous)</td></tr>
-<tr><td>Rigel Depot</td><td>Frontier</td><td>Salvage Yard</td><td>Wreckage Field (rare salvage)</td></tr>
-<tr><td>Pollux Outpost</td><td>Frontier</td><td>Outlaw Station</td><td>Dark Matter Pocket (exotic)</td></tr>
-<tr><td>Canopus Station</td><td>Industrial Hub</td><td>Rogue Foundry</td><td>Titanium Reef (high-grade)</td></tr>
-<tr><td>Spica Terminal</td><td>Jump Nexus</td><td>Ghost Gate</td><td>Debris Storm (dangerous, high yield)</td></tr>
-</table>
-</div>
-
-<h2>Mining Mechanic</h2>
-
-<blockquote>Mining is the safety net. You can always mine. It's slow money but guaranteed money. No one goes broke if they're willing to work a rock.</blockquote>
-
-<h3>How Mining Works</h3>
-
-<p>Asteroid fields exist in most systems. You fly to the field, target rocks, and extract ore over time. Mining is a <strong>real-time activity</strong> that produces commodities directly into your cargo hold.</p>
-
-<div class="card">
-<div class="card-title">Mining Loop</div>
-<ol style="margin-left:20px;color:#a0b4c8">
-<li style="margin-bottom:8px"><strong>Travel to asteroid field</strong> - costs time and fuel, like any destination</li>
-<li style="margin-bottom:8px"><strong>Scan rocks</strong> - scanner hardpoint reveals composition and yield</li>
-<li style="margin-bottom:8px"><strong>Mine</strong> - mining laser extracts ore over time into cargo hold</li>
-<li style="margin-bottom:8px"><strong>Haul back to station</strong> - sell raw ore, or haul to a refinery for better prices</li>
-</ol>
-</div>
-
-<h3>Mining Properties</h3>
+<h3>Chokepoints</h3>
 <ul>
-<li><strong>Always available</strong> - asteroid fields don't deplete (they regenerate slowly). You can always make money mining.</li>
-<li><strong>Scales with gear</strong> - better mining laser = faster extraction. Better scanner = find richer rocks. Bigger hold = fewer trips.</li>
-<li><strong>Risk/reward by location</strong> - high-sec belts have common ore (low value). Null-sec belts have rare/exotic materials (high value, danger).</li>
-<li><strong>Affected by economy</strong> - ore prices fluctuate with demand. A shipyard boom means alloy-grade ore prices spike.</li>
-<li><strong>NPC miners compete</strong> - NPC mining ships also work the belts, contributing to supply.</li>
-<li><strong>Not passive</strong> - you choose which rocks, manage cargo space, decide when to haul back vs keep mining.</li>
+<li><strong>Procyon</strong> (Core): Nexus connecting core to rim via Castor/Arcturus. Component factory here.</li>
+<li><strong>Castor</strong> (Rim): Major junction between rim and frontier. Gateway to Wolf 359, Rigel.</li>
+<li><strong>Spica</strong> (Frontier): Deep frontier nexus connecting Terminus, Obsidian, The Abyss.</li>
 </ul>
 
-<h3>Asteroid Field Types</h3>
+<h2>Core Cluster (High-Sec, 12 Systems)</h2>
+
+<div class="card">
+<div class="card-title">Core Systems</div>
 <table>
-<tr><th>Field Type</th><th>Yields</th><th>Where Found</th><th>Value</th></tr>
-<tr><td>Iron Belt</td><td>Iron Ore, Nickel</td><td>Common (Core, Rim)</td><td><span class="tag tag-green">Low</span></td></tr>
-<tr><td>Dense Ore Field</td><td>Iron, Copper, Tin</td><td>Rim mining systems</td><td><span class="tag tag-green">Low-Med</span></td></tr>
-<tr><td>Ice Field</td><td>Water, Organics</td><td>Agricultural systems</td><td><span class="tag tag-green">Low</span></td></tr>
-<tr><td>Gas Pocket</td><td>Helium-3, Hydrogen</td><td>Near refineries</td><td><span class="tag tag-cyan">Medium</span></td></tr>
-<tr><td>Rare Earth Belt</td><td>Platinum, Palladium</td><td>Rim (guarded)</td><td><span class="tag tag-gold">High</span></td></tr>
-<tr><td>Metallic Belt</td><td>Alloy-grade metals</td><td>Near shipyards</td><td><span class="tag tag-cyan">Medium</span></td></tr>
-<tr><td>Crystal Formation</td><td>Rare crystals</td><td>Rim (specific systems)</td><td><span class="tag tag-gold">High</span></td></tr>
-<tr><td>Sulfur Clouds</td><td>Chemicals, Compounds</td><td>Processing systems</td><td><span class="tag tag-cyan">Medium</span></td></tr>
-<tr><td>Debris Field</td><td>Salvage, Components</td><td>Nexus/Frontier</td><td><span class="tag tag-cyan">Medium</span></td></tr>
-<tr><td>Titanium Reef</td><td>High-grade Titanium</td><td>Frontier</td><td><span class="tag tag-gold">High</span></td></tr>
-<tr><td>Dark Matter Pocket</td><td>Exotic matter</td><td>Frontier only</td><td><span class="tag tag-red">Very High</span></td></tr>
-<tr><td>Unknown Composition</td><td>Random/anomalous</td><td>Frontier only</td><td><span class="tag tag-purple">Variable</span></td></tr>
+<tr><th>System</th><th>Type</th><th>Stations</th><th>Resources</th></tr>
+<tr><td>Cygnus</td><td>Industrial</td><td>Cygnus Refinery, Cygnus Trade Hub</td><td>Iron Belt (iron, copper)</td></tr>
+<tr><td>Kepler</td><td>Trade</td><td>Grand Exchange, Kepler Fuel Depot</td><td>Ice Ring</td></tr>
+<tr><td>Tau Ceti</td><td>Agricultural</td><td>Tau Ceti Agri-Hub</td><td>Bio-Rich Field (organics), Ice Band</td></tr>
+<tr><td>Procyon</td><td>Nexus</td><td>Procyon Component Works, Gateway Station</td><td>None</td></tr>
+<tr><td>Sirius</td><td>Shipyard</td><td>Sirius Dockyard, Supply Depot</td><td>None</td></tr>
+<tr><td>Deneb</td><td>Military</td><td>Fleet Command, Deneb Arms Factory</td><td>None</td></tr>
+<tr><td>Polaris</td><td>Industrial</td><td>Polaris Industrial Complex, Polaris Market</td><td>None</td></tr>
+<tr><td>Fomalhaut</td><td>Processing</td><td>Fomalhaut Refinery</td><td>Ore Belt (iron)</td></tr>
+<tr><td>Sol</td><td>Industrial</td><td>Earth Orbital Factory, Mars Trade Port</td><td>None</td></tr>
+<tr><td>Haven</td><td>Industrial</td><td>Haven Bioworks, Haven Life Systems</td><td>None</td></tr>
+<tr><td>Vega Prime</td><td>Mining</td><td>Vega Prime Mining Co., Vega Prime Smelter</td><td>Iron Belt (iron, copper)</td></tr>
+<tr><td>Meridian</td><td>Processing</td><td>Meridian Refinery</td><td>None</td></tr>
+</table>
+</div>
+
+<h2>Rim Cluster (Mixed-Sec, 23 Systems)</h2>
+
+<div class="card">
+<div class="card-title">Rim Systems</div>
+<table>
+<tr><th>System</th><th>Sec</th><th>Type</th><th>Stations</th><th>Resources</th></tr>
+<tr><td>Arcturus</td><td><span class="tag tag-medium">Med</span></td><td>Processing</td><td>Gas Refinery</td><td>Gas Cloud (helium-3)</td></tr>
+<tr><td>Vega</td><td><span class="tag tag-medium">Med</span></td><td>Mining</td><td>Mining Colony</td><td>Rich Belt (iron, copper), Titanium Vein</td></tr>
+<tr><td>Altair</td><td><span class="tag tag-medium">Med</span></td><td>Trade</td><td>Junction Market</td><td>None</td></tr>
+<tr><td>Barnard's Star</td><td><span class="tag tag-medium">Med</span></td><td>Mining</td><td>Mining Outpost</td><td>Titanium Field</td></tr>
+<tr><td>Antares</td><td><span class="tag tag-medium">Med</span></td><td>Industrial</td><td>Antares Forge</td><td>None</td></tr>
+<tr><td>Capella</td><td><span class="tag tag-medium">Med</span></td><td>Trade</td><td>Free Market</td><td>None</td></tr>
+<tr><td>Betelgeuse</td><td><span class="tag tag-medium">Med</span></td><td>Shipyard</td><td>Drydock</td><td>Metallic Belt (iron, titanium)</td></tr>
+<tr><td>Castor</td><td><span class="tag tag-medium">Med</span></td><td>Nexus</td><td>Castor Relay</td><td>None</td></tr>
+<tr><td>Achernar</td><td><span class="tag tag-medium">Med</span></td><td>Military</td><td>Forward Base</td><td>None</td></tr>
+<tr><td>Aldebaran</td><td><span class="tag tag-medium">Med</span></td><td>Mining</td><td>Mining Hub</td><td>Dense Belt (iron, copper)</td></tr>
+<tr><td>Regulus</td><td><span class="tag tag-low">Low</span></td><td>Mining</td><td>Crystal Mine</td><td>Crystal Caverns (crystals)</td></tr>
+<tr><td>Mira</td><td><span class="tag tag-medium">Med</span></td><td>Industrial</td><td>Polymer Works</td><td>None</td></tr>
+<tr><td>Draconis</td><td><span class="tag tag-medium">Med</span></td><td>Industrial</td><td>Engine Works</td><td>None</td></tr>
+<tr><td>Lyra</td><td><span class="tag tag-medium">Med</span></td><td>Trade</td><td>Medical Station, Bazaar</td><td>None</td></tr>
+<tr><td>Novus</td><td><span class="tag tag-low">Low</span></td><td>Industrial</td><td>Alloy Works</td><td>None</td></tr>
+<tr><td>Serpentis</td><td><span class="tag tag-low">Low</span></td><td>Trade</td><td>Black Market</td><td>None</td></tr>
+<tr><td>Haven's Edge</td><td><span class="tag tag-low">Low</span></td><td>Frontier</td><td>Outpost</td><td>Ice Field</td></tr>
+<tr><td>Helios</td><td><span class="tag tag-medium">Med</span></td><td>Mining</td><td>Gas Platform</td><td>Gas Rings (helium-3), Ice Halo</td></tr>
+<tr><td>Osiris</td><td><span class="tag tag-medium">Med</span></td><td>Agricultural</td><td>Bio-Farm</td><td>Organic Cloud</td></tr>
+<tr><td>Corvus</td><td><span class="tag tag-medium">Med</span></td><td>Industrial</td><td>Assembly Plant</td><td>None</td></tr>
+<tr><td>Fornax</td><td><span class="tag tag-medium">Med</span></td><td>Processing</td><td>Titanium Refinery</td><td>None</td></tr>
+<tr><td>Hydra</td><td><span class="tag tag-medium">Med</span></td><td>Mining</td><td>Ice Works</td><td>Ice Shelf, Gas Pocket</td></tr>
+<tr><td>Aquila</td><td><span class="tag tag-low">Low</span></td><td>Industrial</td><td>Conductor Labs</td><td>None</td></tr>
+</table>
+</div>
+
+<h2>Frontier Cluster (Null-Sec, 13 Systems)</h2>
+
+<div class="card">
+<div class="card-title">Frontier Systems</div>
+<table>
+<tr><th>System</th><th>Sec</th><th>Type</th><th>Stations</th><th>Resources (Rare)</th></tr>
+<tr><td>Wolf 359</td><td><span class="tag tag-low">Low</span></td><td>Frontier</td><td>Depot</td><td>Rare Earth Deposit</td></tr>
+<tr><td>Rigel</td><td><span class="tag tag-none">None</span></td><td>Frontier</td><td>Salvage Yard</td><td>Rare Belt (rare earths, titanium)</td></tr>
+<tr><td>Pollux</td><td><span class="tag tag-none">None</span></td><td>Frontier</td><td>Wildcat Mine</td><td>Platinum Vein</td></tr>
+<tr><td>Canopus</td><td><span class="tag tag-low">Low</span></td><td>Industrial</td><td>Rogue Foundry</td><td>Titanium Reef</td></tr>
+<tr><td>Spica</td><td><span class="tag tag-none">None</span></td><td>Nexus</td><td>Ghost Gate</td><td>None</td></tr>
+<tr><td>The Void</td><td><span class="tag tag-none">None</span></td><td>Frontier</td><td>Void Station</td><td>Deep Core (uranium, platinum)</td></tr>
+<tr><td>Terminus</td><td><span class="tag tag-none">None</span></td><td>Frontier</td><td>Outpost</td><td>Crystal Formation</td></tr>
+<tr><td>Obsidian</td><td><span class="tag tag-none">None</span></td><td>Frontier</td><td>Mining Colony</td><td>Rare Earth Deposit, Crystal Cave</td></tr>
+<tr><td>Erebus</td><td><span class="tag tag-none">None</span></td><td>Frontier</td><td>Deep Mine</td><td>Platinum Pocket, Radioactive Belt (uranium)</td></tr>
+<tr><td>Phantom</td><td><span class="tag tag-none">None</span></td><td>Frontier</td><td>Outpost</td><td>Anomaly (uranium, platinum, crystals)</td></tr>
+<tr><td>The Abyss</td><td><span class="tag tag-none">None</span></td><td>Frontier</td><td>Beacon</td><td>Uranium Trench, Crystal Rift</td></tr>
+<tr><td>Pyxis</td><td><span class="tag tag-low">Low</span></td><td>Mining</td><td>Fuel Cache</td><td>Gas Nebula (helium-3), Ice Drift</td></tr>
+<tr><td>Nyx</td><td><span class="tag tag-none">None</span></td><td>Industrial</td><td>Shadow Factory</td><td>None (produces weapons/drones)</td></tr>
+</table>
+</div>
+
+<h2>Ore Distribution Rules</h2>
+
+<blockquote>The rarer the ore, the further you have to go to find it, and the more dangerous the trip to sell it.</blockquote>
+
+<table>
+<tr><th>Ore Category</th><th>Examples</th><th>Found In</th><th>Distance to Buyer</th></tr>
+<tr><td><strong>Common</strong></td><td>Iron Ore, Copper Ore, Ice, Organics</td><td>Core + Rim</td><td>0 jumps (local refineries OK)</td></tr>
+<tr><td><strong>Moderate</strong></td><td>Titanium Ore, Helium-3</td><td>Rim</td><td>1+ jumps to processor</td></tr>
+<tr><td><strong>Rare</strong></td><td>Platinum, Crystals, Rare Earths, Uranium</td><td>Frontier/Null-sec only</td><td>2+ jumps to any buyer</td></tr>
 </table>
 
-<h3>Mining Equipment</h3>
-<table>
-<tr><th>Hardpoint</th><th>Tier 1</th><th>Tier 2</th><th>Tier 3</th></tr>
-<tr><td>Mining Laser</td><td>Basic Drill (1x speed)</td><td>Focused Beam (2x speed)</td><td>Deep Core Extractor (3x, can crack dense rocks)</td></tr>
-<tr><td>Scanner</td><td>Ore Scanner (shows type)</td><td>Deep Scanner (shows yield %)</td><td>Spectrograph (shows all rocks in field)</td></tr>
-<tr><td>Cargo</td><td>Standard Hold</td><td>Ore Compressor (+50% ore capacity)</td><td>Refining Hold (auto-refines in transit)</td></tr>
-</table>
+<p>This creates natural trade routes: miners must haul rare ores through dangerous space to reach processors in safer systems. Larger, braver ships take the direct route. Smaller ships must find longer, safer paths.</p>
 
-<h3>Mining Economy Integration</h3>
+<h2>Navigation Model</h2>
+
+<h3>Two-Layer Travel</h3>
 <ul>
-<li><strong>Raw ore</strong> sells at mining colonies and refineries (base price, always a buyer)</li>
-<li><strong>Refined materials</strong> sell at industrial hubs and shipyards (higher price, requires refinery step)</li>
-<li><strong>Supply chain:</strong> <code>Mine ore</code> > <code>Sell to refinery</code> > <code>Refinery produces alloys</code> > <code>Shipyard buys alloys</code></li>
-<li><strong>Player choice:</strong> Sell raw (quick, low margin) or haul to refinery system (more time, better price)</li>
-<li><strong>Market impact:</strong> Heavy mining in one field increases local supply, drops local price. Miners naturally spread out.</li>
+<li><strong>Inter-system:</strong> Ships travel between star systems via jump gates. ~50 seconds per hop at speed 1.0.</li>
+<li><strong>Intra-system:</strong> Ships travel between objects within a system (stations, belts, gates). ~35-40 seconds per trip at 0.2 AU/tick.</li>
+<li><strong>Jump gates:</strong> One per connection, placed at the outer ring (10-13 AU from star). Must intra-travel to gate before jumping.</li>
 </ul>
+
+<h3>System Objects</h3>
+<p>Each system contains: a central star, 2-4 planets (with moons), stations (mid ring 3-7 AU), asteroid belts (4-9 AU), jump gates (outer ring 10-13 AU). All positioned with polar coordinates (distance from star + angle).</p>
+
+<h2>NPC Fleet</h2>
+
+<p>70 NPC ships operate autonomously, making trade and mining decisions each tick. Ship class determines risk tolerance, which controls what systems the ship is willing to enter.</p>
+
+<h3>Traders (50 ships, 5 classes)</h3>
+<table>
+<tr><th>Class</th><th>Cargo</th><th>Risk Tolerance</th><th>Behavior</th></tr>
+<tr><td>Pinto Runner</td><td>~120</td><td>20% (safe only)</td><td>Short, safe routes in core</td></tr>
+<tr><td>Mule Freighter</td><td>~180</td><td>30%</td><td>Core + safe rim routes</td></tr>
+<tr><td>Bison Mk.III</td><td>~250</td><td>50%</td><td>Core + most rim routes</td></tr>
+<tr><td>Ox Hauler</td><td>~350</td><td>70%</td><td>Will enter low-sec for profit</td></tr>
+<tr><td>Clydesdale</td><td>~500</td><td>90%</td><td>Goes almost anywhere</td></tr>
+</table>
+
+<h3>Miners (20 ships, 3 classes)</h3>
+<table>
+<tr><th>Class</th><th>Cargo</th><th>Risk Tolerance</th><th>Behavior</th></tr>
+<tr><td>Prospect Skiff</td><td>~80</td><td>20%</td><td>Safe belts in core/rim</td></tr>
+<tr><td>Strip Miner</td><td>~150</td><td>50%</td><td>Medium-risk belts</td></tr>
+<tr><td>Deep Core Borer</td><td>~250</td><td>80%</td><td>Ventures into dangerous frontier fields</td></tr>
+</table>
 
 </div>
 </body>

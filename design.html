@@ -146,17 +146,14 @@ blockquote{border-left:3px solid #4fc3f7;padding:12px 16px;margin:16px 0;backgro
 
 <h3>Commodities</h3>
 <table>
-<tr><th>Commodity</th><th>Type</th><th>Notes</th></tr>
-<tr><td>Iron Ore</td><td><span class="tag tag-green">Raw</span></td><td>Bulk, low margin, always in demand</td></tr>
-<tr><td>Processed Food</td><td><span class="tag tag-green">Basic</span></td><td>Every station needs it, low profit</td></tr>
-<tr><td>Medical Supplies</td><td><span class="tag tag-cyan">Essential</span></td><td>High value, spikes during crises</td></tr>
-<tr><td>Fuel Cells</td><td><span class="tag tag-cyan">Essential</span></td><td>You also consume this; strategic good</td></tr>
-<tr><td>Electronics</td><td><span class="tag tag-gold">Advanced</span></td><td>High value, industrial demand</td></tr>
-<tr><td>Luxury Goods</td><td><span class="tag tag-gold">Advanced</span></td><td>High margin, volatile demand</td></tr>
-<tr><td>Polymers</td><td><span class="tag tag-green">Raw</span></td><td>Industrial feedstock</td></tr>
-<tr><td>Alloys</td><td><span class="tag tag-cyan">Processed</span></td><td>Shipyard demand, steady</td></tr>
-<tr><td>Narcotics</td><td><span class="tag tag-red">Illegal</span></td><td>Massive margins, massive risk</td></tr>
+<tr><th>Tier</th><th>Examples</th><th>Notes</th></tr>
+<tr><td><span class="tag tag-green">T1 Raw</span></td><td>Iron Ore, Copper Ore, Ice, Organics, Platinum, Uranium</td><td>Mined from asteroid fields. Foundation of all production.</td></tr>
+<tr><td><span class="tag tag-cyan">T2 Refined</span></td><td>Refined Iron, Hydrogen Fuel, Chemicals, Processed Food</td><td>Produced at refineries from T1. First value-add step.</td></tr>
+<tr><td><span class="tag tag-gold">T3 Industrial</span></td><td>Steel Alloy, Polymers, Superconductors, Glass</td><td>Produced at factories from T2. Building blocks.</td></tr>
+<tr><td><span class="tag tag-red">T4 Components</span></td><td>Electronics, Engine Parts, Reactor Cores, Weapon Systems</td><td>Produced at component factories from T3. Functional pieces.</td></tr>
+<tr><td><span class="tag tag-purple">T5 Complex</span></td><td>Ship Modules, Combat Drones, Jump Drives</td><td>Produced at shipyards from T4. End products.</td></tr>
 </table>
+<p>38 commodities total across 5 tiers. Each non-T1 commodity has a recipe defining its inputs. Production halts when inputs are unavailable, causing scarcity cascades up the chain.</p>
 
 <h2>Conflict and Opposition</h2>
 
@@ -226,26 +223,36 @@ blockquote{border-left:3px solid #4fc3f7;padding:12px 16px;margin:16px 0;backgro
 
 <h2>Build Phases</h2>
 
-<h3>Phase 1: Living Economy (server-side, no player interaction)</h3>
+<h3>Phase 1: Living Economy - COMPLETE</h3>
 <ul>
-<li>Define system/station data model in Python (production, consumption, inventories)</li>
-<li>Commodity inventories per station with production/consumption rates per tick</li>
+<li>48-system universe (3 clusters, chokepoints, ore distribution rules)</li>
+<li>38 commodities across 5 tiers with recipe-driven production</li>
 <li>Price engine: <code style="color:#ffd54f">price = base * (demand/supply)^elasticity</code></li>
-<li>NPC hauler agents that pick routes based on profit, move goods each tick</li>
-<li>SQLite persistence so state survives restarts</li>
-<li>Frontend connects via WebSocket to show live economy state</li>
+<li>70 NPC agents (50 traders, 20 miners) with safety-aware pathfinding</li>
+<li>SQLite persistence, auto-deploy via GitHub Actions</li>
+<li>Two-layer navigation (inter-system + intra-system)</li>
+<li>Comprehensive debug dashboard for monitoring</li>
 </ul>
 
-<h3>Phase 2: Player Can Trade</h3>
+<h3>Phase 2: Player Can Trade (NEXT)</h3>
 <ul>
 <li>Player can buy/sell commodities at current station</li>
 <li>Player can set destination, travel takes real time (ticks)</li>
 <li>Fuel consumption during travel</li>
 <li>Balance and cargo tracking</li>
 <li>Ship upgrades (cargo capacity, fuel efficiency, speed)</li>
+<li>Player mining (mining laser hardpoint on asteroid fields)</li>
 </ul>
 
-<h3>Phase 3: Information and Risk</h3>
+<h3>Phase 3: Blueprints and Fittings</h3>
+<ul>
+<li>Blueprint system (recipes as discoverable/tradeable items)</li>
+<li>Weapons and ship fittings as equippable items</li>
+<li>Ship loadout system (hardpoints, slots)</li>
+<li>Damage/wear creates ongoing demand</li>
+</ul>
+
+<h3>Phase 4: Information and Risk</h3>
 <ul>
 <li>Price data staleness (you only see prices from your last visit)</li>
 <li>Security zones with piracy risk (random cargo loss in low-sec)</li>
@@ -253,21 +260,13 @@ blockquote{border-left:3px solid #4fc3f7;padding:12px 16px;margin:16px 0;backgro
 <li>Contracts and reputation</li>
 </ul>
 
-<h3>Phase 4: Factions and Depth</h3>
+<h3>Phase 5: Factions and Depth</h3>
 <ul>
 <li>Faction territories, diplomacy, and warfare</li>
 <li>Shifting borders that reshape trade routes</li>
 <li>Smuggling mechanics in embargoed systems</li>
 <li>Fleet ownership and infrastructure (late-game)</li>
 <li>Multiplayer (shared persistent world)</li>
-</ul>
-
-<h3>Open Questions</h3>
-<ul>
-<li>Scope for v1: how many systems, commodities, ship types?</li>
-<li>How many NPC agents can the server handle performantly?</li>
-<li>How deep does faction AI go in v1?</li>
-<li>What is the minimum viable "interesting" economy?</li>
 </ul>
 
 </div>
