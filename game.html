@@ -332,7 +332,7 @@ import {CSS2DRenderer, CSS2DObject} from 'three/addons/renderers/CSS2DRenderer.j
 import {buildShipFromData} from '/static/ship_renderer.js';
 
 const container = document.querySelector('.main');
-const renderer = new THREE.WebGLRenderer({antialias:true,alpha:true});
+const renderer = new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(container.clientWidth, container.clientHeight);
 renderer.setClearColor(0x05080f);
@@ -521,8 +521,10 @@ let selectedShip=-1;
 // System labels built in initSystems()
 
 // Animate
+let mainFrame=0;
 function animate(){
   requestAnimationFrame(animate);
+  if(++mainFrame%2!==0)return;
   controls.update();
 
   // Move ships: client-side prediction between API updates
@@ -880,8 +882,8 @@ document.addEventListener('visibilitychange', () => {
       rnd.setSize(nw, nh);
     });
     // Slow auto-rotate
-    let angle = 0;
-    function animShip(){requestAnimationFrame(animShip);angle+=0.003;cam.position.x=Math.cos(angle)*3;cam.position.z=Math.sin(angle)*3;cam.lookAt(0,0,0);rnd.render(sc,cam);}
+    let angle = 0, shipFrame=0;
+    function animShip(){requestAnimationFrame(animShip);if(++shipFrame%3!==0)return;angle+=0.009;cam.position.x=Math.cos(angle)*3;cam.position.z=Math.sin(angle)*3;cam.lookAt(0,0,0);rnd.render(sc,cam);}
     animShip();
   } catch(e) { console.error('Ship viewer:', e); }
 })();
@@ -990,7 +992,7 @@ let svZoom=200; // world units visible in half-height
 const svCam=new THREE.OrthographicCamera(-svZoom*svAspect,svZoom*svAspect,svZoom,-svZoom,0.1,1000);
 svCam.position.set(0,0,100);
 svCam.lookAt(0,0,0);
-const svRenderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+const svRenderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});
 svRenderer.setSize(svW,svH);
 svRenderer.setClearColor(0x0a0e18);
 svRenderer.domElement.style.display='block';
@@ -1270,9 +1272,11 @@ function svUpdateShipMeshes(){
 }
 
 // Render loop
+let svFrameCount=0;
 function svAnimate(){
   requestAnimationFrame(svAnimate);
   if(!svWin.classList.contains('open'))return;
+  if(++svFrameCount%2!==0)return;
   svAdvanceShips();
   svUpdateShipMeshes();
   svRenderer.render(svScene,svCam);
