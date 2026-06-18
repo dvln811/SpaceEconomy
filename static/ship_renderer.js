@@ -1,8 +1,9 @@
 /**
  * Ship Renderer - builds Three.js geometry from ship component data.
- * Usage: import { buildShipFromData, MATERIALS } from './ship_renderer.js';
- * Requires Three.js to be available globally or via importmap.
+ * Usage: import { buildShipFromData, MATERIALS } from '/static/ship_renderer.js';
+ * Requires Three.js to be available via importmap.
  */
+import * as THREE from 'three';
 
 export const MATERIALS = {
   hull: () => new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1428, shininess:0, transparent:true, opacity:0.7}),
