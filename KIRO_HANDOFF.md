@@ -56,10 +56,11 @@ A browser-based space economy simulation game. Currently single-player with plan
 
 - `debug.html` - Comprehensive debug dashboard at /debug
   - **Overview tab:** Sim stats, production health (active vs halted lines), economy inventory, recent events
-  - **Stations tab:** All production lines with input levels, halt status, output stock
-  - **Ships tab:** Filterable ship list with drill-down (cargo, route, risk tolerance, capacity)
-  - **Market tab:** Per-commodity price spread across all stations
+  - **Stations tab:** All production lines with input levels, halt status, output stock (sticky headers)
+  - **Ships tab:** Filterable ship list with drill-down (cargo, route, risk tolerance, capacity). Filters persist across refreshes.
+  - **Market tab:** Tabular format with commodity and system filter dropdowns (Commodity/Tier/System/Station/Price/Stock)
   - **Systems tab:** Select any system to see station production, inventory, ships, asteroid fields
+  - All filter/dropdown state persists across 2-second auto-refresh
   - Nuke button for simulation reset
 
 - `system_view.html` - Standalone system view (accessible via /system_view?id=<id>&debug=1)
@@ -76,12 +77,15 @@ A browser-based space economy simulation game. Currently single-player with plan
 
 ### Production Chain Economy (IMPLEMENTED)
 
-**5-tier commodity chain (38 commodities):**
+**5-tier commodity chain (38 production + 6 trade goods = 44 commodities):**
 - **T1 Raw (10):** Iron Ore, Copper Ore, Titanium Ore, Platinum, Crystals, Ice, Helium-3, Organics, Rare Earths, Uranium
 - **T2 Refined (8):** Refined Iron, Refined Copper, Refined Titanium, Water, Hydrogen Fuel, Processed Food, Chemicals, Enriched Uranium
 - **T3 Industrial (8):** Steel Alloy, Titanium Alloy, Polymers, Composites, Superconductors, Pharmaceuticals, Ceramics, Glass
 - **T4 Components (8):** Electronics, Engine Parts, Hull Plating, Reactor Cores, Life Support Units, Weapon Systems, Mining Lasers, Navigation Arrays
 - **T5 Complex (6):** Ship Modules, Station Modules, Combat Drones, Mining Rigs, Medical Bays, Jump Drives
+- **Trade Goods (6):** Luxury Goods, Consumer Electronics, Gourmet Food, Exotic Textiles, Entertainment Media, Fine Spirits
+
+**Trade goods** are tier-0 (no recipe, no production chain). They exist purely to create end-use demand at stations. All station types consume various trade goods, creating constant demand-driven trade routes independent of the production chain.
 
 **Recipe-driven production:**
 - Each non-T1 commodity has a recipe (dict of input commodity: quantity needed)
