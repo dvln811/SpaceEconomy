@@ -143,16 +143,57 @@ def api_ships():
 @app.route("/api/debug")
 def api_debug():
     """Debug summary for the monitor page."""
+    from server.models import COMMODITIES as COMS
     summary = sim.get_state_summary()
-    # Add per-system price snapshot
+    # Per-system station production details
+    systems_detail = {}
+    for sid, sys_obj in sim.universe.items():
+        stations_info = []
+        for st in sys_obj.stations:
+            # Calculate production health for each output
+            prod_status = []
+            for prod_id in st.produces:
+                com = COMS.get(prod_id)
+                if not com or not com.recipe:
+                    continue
+                # How much can we produce right now?
+                can_produce = st.production_rate
+                inputs_status = []
+                for inp_id, qty_needed in com.recipe.items():
+                    avail = st.inventory.get(inp_id, 0)
+                    possible = avail / qty_needed if qty_needed > 0 else 999
+                    can_produce = min(can_produce, possible)
+                    inputs_status.append({"id": inp_id, "name": COMS[inp_id].name, "need": qty_needed * st.production_rate, "have": round(avail, 1)})
+                prod_status.append({
+                    "output": prod_id, "name": com.name,
+                    "rate": st.production_rate, "actual": round(min(can_produce, st.production_rate), 2),
+                    "halted": can_produce <= 0, "inputs": inputs_status,
+                    "stock": round(st.inventory.get(prod_id, 0), 1),
+                })
+            stations_info.append({
+                "name": st.name, "type": st.station_type,
+                "production": prod_status,
+                "inventory": {k: round(v, 1) for k, v in st.inventory.items() if v > 0.1},
+            })
+        ships_in_sys = sum(1 for s in sim.ships if s.location == sid)
+        systems_detail[sid] = {
+            "name": sys_obj.name, "cluster": sys_obj.cluster, "security": sys_obj.security,
+            "type": sys_obj.system_type, "stations": stations_info, "ships_count": ships_in_sys,
+            "connections": sys_obj.connections,
+            "belts": [{"name": b.name, "yields": b.yields, "density": b.density} for b in sys_obj.asteroid_fields],
+        }
+    summary["systems"] = systems_detail
+
+    # Price data (top entries per commodity)
     prices = {}
     for sid, sys_obj in sim.universe.items():
         for st in sys_obj.stations:
             for commodity, price in st.price_cache.items():
-                if st.inventory.get(commodity, 0) > 0:
-                    prices.setdefault(commodity, []).append({"system": sys_obj.name, "station": st.name, "price": price, "stock": st.inventory.get(commodity, 0)})
+                if st.inventory.get(commodity, 0) > 0.1:
+                    prices.setdefault(commodity, []).append({"system": sys_obj.name, "system_id": sid, "station": st.name, "price": round(price, 1), "stock": round(st.inventory.get(commodity, 0), 1)})
     summary["prices"] = prices
-    # Ship details
+
+    # Ship details with full info
     ships = []
     for s in sim.ships:
         loc_name = sim.universe[s.location].name if s.location in sim.universe else s.location or "-"
@@ -160,8 +201,13 @@ def api_debug():
         ships.append({
             "id": s.id, "name": s.name, "state": s.state, "role": s.role,
             "ship_class": s.ship_class, "timer": s.state_timer,
-            "location": loc_name, "destination": dest_name,
-            "cargo": s.cargo, "progress": round(s.progress, 2),
+            "location": loc_name, "location_id": s.location,
+            "destination": dest_name, "destination_id": s.destination,
+            "cargo": s.cargo, "cargo_capacity": s.cargo_capacity,
+            "cargo_used": round(sum(s.cargo.values()), 1),
+            "progress": round(s.progress, 3),
+            "risk_tolerance": s.risk_tolerance,
+            "route_path": [sim.universe[r].name for r in s.route_path if r in sim.universe],
             "intra_position": s.intra_position, "intra_destination": s.intra_destination,
             "intra_progress": round(s.intra_progress, 3),
         })

@@ -2,277 +2,436 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Space Economy - Debug Monitor</title>
+<title>Space Economy - Debug Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Orbitron:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:11px;padding:0}
-::-webkit-scrollbar{width:6px;height:6px}
+body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:11px;overflow:hidden;height:100vh;display:flex;flex-direction:column}
+::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:#0a0e18}
 ::-webkit-scrollbar-thumb{background:#1a3050;border-radius:3px}
-::-webkit-scrollbar-thumb:hover{background:#2a4060}
-.nav{position:sticky;top:0;z-index:100;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:0 24px;height:48px;gap:20px}
-.nav h1{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:#ef5350;letter-spacing:3px;text-transform:uppercase}
-.nav a{font-size:11px;color:#5a7a9a;text-decoration:none;padding:6px 14px;border:1px solid #1a2844;border-radius:3px;transition:all .15s;letter-spacing:1px;text-transform:uppercase;font-family:'Orbitron',sans-serif}
-.nav a:hover{color:#4fc3f7;border-color:#4fc3f7}
-.grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr;gap:8px;padding:12px;height:calc(100vh - 48px)}
-.panel{background:#0a0e18;border:1px solid #1a2844;border-radius:4px;padding:10px;display:flex;flex-direction:column;overflow:hidden}
-.panel-title{font-family:'Orbitron',sans-serif;font-size:9px;color:#4a6a8a;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #152238;flex-shrink:0}
-.panel-scroll{overflow-y:auto;flex:1}
-.stat{display:flex;justify-content:space-between;padding:2px 0}
-.stat .label{color:#8aa0b8}
-.stat .value{color:#4fc3f7;font-weight:500}
-.event{padding:2px 0;border-bottom:1px solid #0a1420;color:#b0c8e0;font-size:10px}
-.event .tick-num{color:#5a8aaa;margin-right:6px}
-.ship-row{display:grid;grid-template-columns:50px 90px 120px 85px 1fr 1fr;gap:4px;align-items:center;padding:2px 0;border-bottom:1px solid #0f1a28;font-size:10px}
-.ship-row .role{color:#8aa0b8;font-size:9px;text-transform:uppercase}
-.ship-row .name{color:#e0e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ship-row .state{padding:1px 4px;border-radius:2px;text-align:center;font-size:9px}
-.state-idle{background:#66bb6a22;color:#66bb6a}
-.state-traveling{background:#4fc3f722;color:#4fc3f7}
-.state-loading{background:#ffd54f22;color:#ffd54f}
-.state-unloading{background:#ff8a6522;color:#ff8a65}
-.state-mining{background:#ab47bc22;color:#ab47bc}
-.state-intra_traveling{background:#4fc3f722;color:#66bb6a}
-.ship-row .loc{color:#8aa0b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ship-row .cargo{color:#6a8aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.price-row{display:grid;grid-template-columns:1fr 1fr 60px 50px;gap:4px;padding:2px 0;border-bottom:1px solid #0f1a28;font-size:10px}
-.price-row .commodity{color:#ffd54f}
-.price-row .sys{color:#8aa0b8}
-.price-row .val{color:#e0e8f0;text-align:right}
-.price-row .stock{color:#6a8aaa;text-align:right}
-.live-dot{width:8px;height:8px;border-radius:50%;background:#66bb6a;animation:pulse 1s infinite;margin-right:8px}
+.nav{background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:0 16px;height:42px;gap:12px;flex-shrink:0}
+.nav h1{font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;color:#ef5350;letter-spacing:2px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#66bb6a;animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
-.view-select{background:#0a1020;border:1px solid #1a3050;color:#8aa0b8;font-size:10px;padding:2px 6px;border-radius:3px;font-family:inherit;margin-left:8px}
-/* Inline System Map */
-.dbg-sysview{position:fixed;top:60px;right:20px;width:500px;height:400px;background:#0a0e18;border:1px solid #1a2844;border-radius:6px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.7);z-index:200;resize:both;min-width:300px;min-height:200px}
-.dbg-sysview.open{display:flex}
-.dbg-sysview-bar{display:flex;align-items:center;padding:0 10px;height:28px;background:#0a0f1a;border-bottom:1px solid #1a2844;cursor:move;flex-shrink:0;user-select:none}
-.dbg-sysview-bar span{font-family:'Orbitron',sans-serif;font-size:9px;color:#4fc3f7;letter-spacing:1px}
-.dbg-sysview-bar .sv-close{margin-left:auto;border:none;background:none;color:#5a7a9a;cursor:pointer;font-size:13px}
-.dbg-sysview-bar .sv-close:hover{color:#ef5350}
-.dbg-sysview-body{flex:1;position:relative;overflow:hidden}
-.dbg-sysview-body canvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab}
-.dbg-sysview-body canvas:active{cursor:grabbing}
+.nav a,.tab-btn{font-size:10px;color:#5a7a9a;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;font-family:'Orbitron',sans-serif;background:none;transition:all .12s}
+.tab-btn:hover,.nav a:hover{color:#4fc3f7;border-color:#4fc3f7}
+.tab-btn.active{color:#4fc3f7;border-color:#4fc3f7;background:#0d1a2f}
+.nuke-btn{margin-left:auto;color:#ef5350!important;border-color:#ef5350!important;background:#1a0a0a!important}
+.nuke-btn:hover{background:#ef5350!important;color:#fff!important}
+.tick-info{color:#4a6a8a;font-size:10px;margin-left:auto;margin-right:8px}
+
+.main{flex:1;overflow:hidden;position:relative}
+.view{display:none;height:100%;overflow-y:auto;padding:10px}
+.view.active{display:block}
+
+/* Shared panel styles */
+.panel{background:#0a0e18;border:1px solid #1a2844;border-radius:4px;padding:10px;margin-bottom:8px}
+.panel-title{font-family:'Orbitron',sans-serif;font-size:9px;color:#4a6a8a;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #152238}
+.stat-row{display:flex;justify-content:space-between;padding:2px 0}
+.stat-row .label{color:#8aa0b8}
+.stat-row .value{color:#4fc3f7;font-weight:500}
+.badge{display:inline-block;font-size:9px;padding:1px 5px;border-radius:2px;letter-spacing:0.5px}
+.badge-ok{background:#66bb6a22;color:#66bb6a}
+.badge-warn{background:#ffd54f22;color:#ffd54f}
+.badge-halt{background:#ef535022;color:#ef5350}
+.badge-high{background:#66bb6a22;color:#66bb6a}
+.badge-medium{background:#4fc3f722;color:#4fc3f7}
+.badge-low{background:#ffd54f22;color:#ffd54f}
+.badge-none{background:#ef535022;color:#ef5350}
+
+/* Overview grid */
+.overview-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.overview-grid .panel{min-height:0}
+@media(max-width:1200px){.overview-grid{grid-template-columns:1fr 1fr}}
+
+/* Station table */
+.st-table{width:100%;border-collapse:collapse}
+.st-table th{font-family:'Orbitron',sans-serif;font-size:9px;color:#4a6a8a;letter-spacing:1px;text-align:left;padding:4px 6px;border-bottom:1px solid #1a2844;position:sticky;top:0;background:#0a0e18}
+.st-table td{padding:4px 6px;border-bottom:1px solid #0f1a28;font-size:10px;vertical-align:top}
+.st-table tr:hover{background:#0d1525}
+.st-table .halted{color:#ef5350}
+.st-table .producing{color:#66bb6a}
+.input-bar{display:inline-block;height:4px;border-radius:2px;margin-right:2px;min-width:3px}
+
+/* Ship list */
+.ship-card{background:#0a0e18;border:1px solid #1a2844;border-radius:4px;padding:8px 10px;margin-bottom:4px;cursor:pointer;transition:border-color .1s}
+.ship-card:hover{border-color:#4fc3f7}
+.ship-card.selected{border-color:#4fc3f7;background:#0d1525}
+.ship-header{display:flex;align-items:center;gap:8px}
+.ship-name{color:#e0e8f0;font-weight:500}
+.ship-class{color:#5a7a9a;font-size:9px}
+.ship-detail{margin-top:6px;padding-top:6px;border-top:1px solid #152238}
+.ship-detail .row{display:flex;gap:12px;padding:1px 0}
+.ship-detail .row .k{color:#5a7a9a;width:80px}
+.ship-detail .row .v{color:#c8d4e0}
+.cargo-bar{height:6px;background:#152238;border-radius:3px;margin-top:3px;overflow:hidden}
+.cargo-fill{height:100%;background:#4fc3f7;border-radius:3px;transition:width .3s}
+
+/* Market */
+.mkt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px}
+.mkt-card{background:#0a0e18;border:1px solid #1a2844;border-radius:4px;padding:8px}
+.mkt-card-title{color:#ffd54f;font-size:10px;font-weight:500;margin-bottom:4px}
+.mkt-entry{display:flex;justify-content:space-between;padding:1px 0;font-size:10px}
+.mkt-entry .loc{color:#8aa0b8}
+.mkt-entry .price{color:#e0e8f0}
+.mkt-entry .stock{color:#5a7a9a;width:50px;text-align:right}
+
+/* System detail */
+.sys-select{background:#0a1020;border:1px solid #1a3050;color:#c8d4e0;font-size:11px;padding:4px 8px;border-radius:3px;font-family:inherit;margin-bottom:8px;width:250px}
+.sys-panel{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:900px){.sys-panel{grid-template-columns:1fr}}
+
+/* Filter/search */
+.filter-bar{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+.filter-input{background:#0a1020;border:1px solid #1a3050;color:#c8d4e0;font-size:11px;padding:4px 8px;border-radius:3px;font-family:inherit;width:200px}
+.filter-select{background:#0a1020;border:1px solid #1a3050;color:#c8d4e0;font-size:10px;padding:4px 8px;border-radius:3px;font-family:inherit}
 </style>
 </head>
 <body>
 <div class="nav">
   <div class="live-dot"></div>
-  <h1>Debug Monitor</h1>
+  <h1>Dashboard</h1>
+  <button class="tab-btn active" data-tab="overview">Overview</button>
+  <button class="tab-btn" data-tab="stations">Stations</button>
+  <button class="tab-btn" data-tab="ships">Ships</button>
+  <button class="tab-btn" data-tab="market">Market</button>
+  <button class="tab-btn" data-tab="systems">Systems</button>
+  <span class="tick-info" id="tickInfo">T0</span>
   <a href="/">Game</a>
-  <a href="/design">Design</a>
-  <select id="system-map-select" style="font-size:10px;color:#5a7a9a;background:#0a1020;border:1px solid #1a2844;border-radius:3px;padding:5px 8px;font-family:Orbitron,sans-serif;letter-spacing:1px;cursor:pointer">
-    <option value="">System Map...</option>
-  </select>
-  <button id="nuke-btn" style="margin-left:auto;font-size:10px;color:#ef5350;background:#1a0a0a;border:1px solid #ef5350;border-radius:3px;padding:6px 14px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;font-family:Orbitron,sans-serif;transition:all .15s" onmouseover="this.style.background='#ef5350';this.style.color='#fff'" onmouseout="this.style.background='#1a0a0a';this.style.color='#ef5350'">Nuke</button>
+  <button class="tab-btn nuke-btn" id="nukeBtn">Nuke</button>
 </div>
-<!-- Inline System Map -->
-<div class="dbg-sysview" id="dbgSysview">
-  <div class="dbg-sysview-bar" id="dbgSysBar"><span id="dbgSysTitle">System Map</span><button class="sv-close" id="dbgSysClose">&times;</button></div>
-  <div class="dbg-sysview-body" id="dbgSysBody"><canvas id="dbgSysCanvas"></canvas></div>
-</div>
-<div class="grid">
-  <!-- Row 1: State + Events -->
-  <div class="panel">
-    <div class="panel-title">Simulation State</div>
-    <div class="panel-scroll" id="stats"></div>
-  </div>
-  <div class="panel">
-    <div class="panel-title">Recent Events</div>
-    <div class="panel-scroll" id="events"></div>
-  </div>
-  <!-- Row 2: Ships + Prices side by side -->
-  <div class="panel">
-    <div class="panel-title">NPC Ships (40)</div>
-    <div class="panel-scroll" id="ships"></div>
-  </div>
-  <div class="panel">
-    <div class="panel-title">Price Monitor <select id="price-view" class="view-select"><option value="all">All Systems</option></select></div>
-    <div class="panel-scroll" id="prices"></div>
-  </div>
+<div class="main">
+  <div class="view active" id="view-overview"></div>
+  <div class="view" id="view-stations"></div>
+  <div class="view" id="view-ships"></div>
+  <div class="view" id="view-market"></div>
+  <div class="view" id="view-systems"></div>
 </div>
 <script>
-let priceView='all';
-document.getElementById('price-view').addEventListener('change',(e)=>{priceView=e.target.value;});
+// ── State ───────────────────────────────────────────────────────────────────
+let D = null; // latest data
+let selectedShip = null;
+let selectedSystem = '';
 
-async function refresh(){
-  try{
-    const r=await fetch('/api/debug');
-    const d=await r.json();
-    const uptime=d.uptime_seconds;
-    const h=Math.floor(uptime/3600),m=Math.floor((uptime%3600)/60),s=uptime%60;
+// ── Tabs ────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn[data-tab]').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-' + btn.dataset.tab).classList.add('active');
+    render();
+  });
+});
 
-    // Stats
-    const states=d.ships_by_state;
-    const totalInv=d.total_inventory||{};
-    const topInv=Object.entries(totalInv).sort((a,b)=>b[1]-a[1]).slice(0,8);
-    let statsHtml=`
-      <div class="stat"><span class="label">Tick</span><span class="value">${d.tick}</span></div>
-      <div class="stat"><span class="label">Uptime</span><span class="value">${h}h ${m}m ${s}s</span></div>
-      <div class="stat"><span class="label">Systems</span><span class="value">${d.systems}</span></div>
-      <div class="stat"><span class="label">NPC Ships</span><span class="value">${d.npc_ships}</span></div>
-      <div class="stat" style="border-top:1px solid #152238;margin-top:4px;padding-top:4px"><span class="label">Idle</span><span class="value">${states.idle||0}</span></div>
-      <div class="stat"><span class="label">Traveling</span><span class="value">${states.traveling||0}</span></div>
-      <div class="stat"><span class="label">Intra-Travel</span><span class="value">${states.intra_traveling||0}</span></div>
-      <div class="stat"><span class="label">Loading</span><span class="value">${states.loading||0}</span></div>
-      <div class="stat"><span class="label">Unloading</span><span class="value">${states.unloading||0}</span></div>
-      <div class="stat"><span class="label">Mining</span><span class="value">${states.mining||0}</span></div>
-      <div class="stat" style="border-top:1px solid #152238;margin-top:4px;padding-top:4px"><span class="label" style="color:#4a6a8a">Total Inventories</span><span class="value"></span></div>`;
-    for(const [k,v] of topInv){
-      statsHtml+=`<div class="stat"><span class="label">${k}</span><span class="value">${Math.round(v)}</span></div>`;
+// ── Fetch ───────────────────────────────────────────────────────────────────
+async function fetchData() {
+  try {
+    const r = await fetch('/api/debug');
+    D = await r.json();
+    document.getElementById('tickInfo').textContent = `T${D.tick} | ${D.npc_ships} ships | ${D.trade_volume} trades`;
+    render();
+  } catch(e) { console.error(e); }
+}
+fetchData();
+setInterval(fetchData, 2000);
+
+// ── Render dispatcher ───────────────────────────────────────────────────────
+function render() {
+  if (!D) return;
+  const active = document.querySelector('.view.active');
+  if (active.id === 'view-overview') renderOverview();
+  else if (active.id === 'view-stations') renderStations();
+  else if (active.id === 'view-ships') renderShips();
+  else if (active.id === 'view-market') renderMarket();
+  else if (active.id === 'view-systems') renderSystems();
+}
+
+// ── Overview ────────────────────────────────────────────────────────────────
+function renderOverview() {
+  const el = document.getElementById('view-overview');
+  const s = D.ships_by_state || {};
+  const uptime = D.uptime_seconds;
+  const h = Math.floor(uptime/3600), m = Math.floor((uptime%3600)/60), sec = uptime%60;
+
+  // Production health summary
+  let totalProducing = 0, totalHalted = 0;
+  const haltedList = [];
+  for (const [sid, sys] of Object.entries(D.systems || {})) {
+    for (const st of sys.stations) {
+      for (const p of st.production) {
+        if (p.halted) { totalHalted++; haltedList.push({station: st.name, system: sys.name, output: p.name}); }
+        else totalProducing++;
+      }
     }
-    if(d.trade_volume!==undefined) statsHtml+=`<div class="stat" style="border-top:1px solid #152238;margin-top:4px;padding-top:4px"><span class="label">Trades this session</span><span class="value">${d.trade_volume}</span></div>`;
-    document.getElementById('stats').innerHTML=statsHtml;
+  }
 
-    // Events
-    const events=d.recent_events.slice().reverse();
-    document.getElementById('events').innerHTML=events.map(e=>`<div class="event"><span class="tick-num">T${e.tick}</span>${e.msg}</div>`).join('');
+  // Top inventory
+  const inv = D.total_inventory || {};
+  const topInv = Object.entries(inv).sort((a,b) => b[1]-a[1]).slice(0, 12);
 
-    // Ships
-    document.getElementById('ships').innerHTML=d.ships.map(s=>{
-      let loc=s.location;
-      if(s.state==='traveling') loc=`> ${s.destination} (${Math.round(s.progress*100)}%)`;
-      else if(s.timer>0) loc=`${s.location} [${s.timer}t]`;
-      const cargo=Object.entries(s.cargo).map(([k,v])=>`${Math.round(v)} ${k}`).join(', ')||'empty';
-      return `<div class="ship-row"><span class="role">${s.role}</span><span class="loc">${s.ship_class}</span><span class="name">${s.name}</span><span class="state state-${s.state}">${s.state}</span><span class="loc">${loc}</span><span class="cargo">${cargo}</span></div>`;
+  // Events
+  const events = (D.recent_events || []).slice().reverse().slice(0, 20);
+
+  el.innerHTML = `<div class="overview-grid">
+    <div class="panel">
+      <div class="panel-title">Simulation</div>
+      <div class="stat-row"><span class="label">Tick</span><span class="value">${D.tick}</span></div>
+      <div class="stat-row"><span class="label">Uptime</span><span class="value">${h}h ${m}m ${sec}s</span></div>
+      <div class="stat-row"><span class="label">Systems</span><span class="value">${D.systems ? Object.keys(D.systems).length : 0}</span></div>
+      <div class="stat-row"><span class="label">Ships</span><span class="value">${D.npc_ships}</span></div>
+      <div class="stat-row"><span class="label">Trades</span><span class="value">${D.trade_volume}</span></div>
+      <div class="stat-row" style="margin-top:6px;border-top:1px solid #152238;padding-top:4px"><span class="label">Idle</span><span class="value">${s.idle||0}</span></div>
+      <div class="stat-row"><span class="label">Traveling</span><span class="value">${(s.traveling||0)+(s.intra_traveling||0)}</span></div>
+      <div class="stat-row"><span class="label">Loading/Unloading</span><span class="value">${(s.loading||0)+(s.unloading||0)}</span></div>
+      <div class="stat-row"><span class="label">Mining</span><span class="value">${s.mining||0}</span></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Production Health</div>
+      <div class="stat-row"><span class="label">Active lines</span><span class="value" style="color:#66bb6a">${totalProducing}</span></div>
+      <div class="stat-row"><span class="label">Halted (no inputs)</span><span class="value" style="color:#ef5350">${totalHalted}</span></div>
+      <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:9px;color:#4a6a8a">HALTED STATIONS:</div>
+      ${haltedList.slice(0, 10).map(h => `<div class="stat-row"><span class="label">${h.station}</span><span class="value" style="color:#ef5350;font-size:9px">${h.output}</span></div>`).join('')}
+      ${haltedList.length > 10 ? `<div style="color:#5a7a9a;font-size:9px;margin-top:4px">+${haltedList.length-10} more</div>` : ''}
+    </div>
+    <div class="panel">
+      <div class="panel-title">Economy Inventory</div>
+      ${topInv.map(([k,v]) => `<div class="stat-row"><span class="label">${k}</span><span class="value">${Math.round(v)}</span></div>`).join('')}
+    </div>
+  </div>
+  <div class="panel" style="margin-top:8px">
+    <div class="panel-title">Recent Events</div>
+    ${events.map(e => `<div style="padding:1px 0;font-size:10px;border-bottom:1px solid #0a1420"><span style="color:#5a8aaa;margin-right:6px">T${e.tick}</span>${e.msg}</div>`).join('')}
+  </div>`;
+}
+
+// ── Stations ────────────────────────────────────────────────────────────────
+function renderStations() {
+  const el = document.getElementById('view-stations');
+  let rows = '';
+  for (const [sid, sys] of Object.entries(D.systems || {})) {
+    for (const st of sys.stations) {
+      if (!st.production.length) continue;
+      for (const p of st.production) {
+        const status = p.halted ? '<span class="badge badge-halt">HALTED</span>' : `<span class="badge badge-ok">${p.actual.toFixed(1)}/t</span>`;
+        const inputs = p.inputs.map(i => {
+          const pct = Math.min(100, (i.have / Math.max(i.need, 0.1)) * 100);
+          const col = pct > 50 ? '#66bb6a' : pct > 10 ? '#ffd54f' : '#ef5350';
+          return `<span style="color:${col}" title="${i.name}: ${i.have}/${i.need}">${i.name.split(' ')[0]}:${Math.round(i.have)}</span>`;
+        }).join(' | ');
+        rows += `<tr>
+          <td>${sys.name}</td>
+          <td>${st.name}</td>
+          <td><span class="badge badge-${sys.security}">${sys.security}</span></td>
+          <td style="color:#ffd54f">${p.name}</td>
+          <td>${status}</td>
+          <td style="color:#4fc3f7">${p.stock}</td>
+          <td style="font-size:9px">${inputs}</td>
+        </tr>`;
+      }
+    }
+  }
+  el.innerHTML = `<div class="panel" style="overflow:auto;max-height:100%">
+    <div class="panel-title">Production Lines (${rows ? rows.split('<tr>').length - 1 : 0} active)</div>
+    <table class="st-table">
+      <tr><th>System</th><th>Station</th><th>Sec</th><th>Output</th><th>Status</th><th>Stock</th><th>Inputs</th></tr>
+      ${rows}
+    </table>
+  </div>`;
+}
+
+// ── Ships ───────────────────────────────────────────────────────────────────
+function renderShips() {
+  const el = document.getElementById('view-ships');
+  const ships = D.ships || [];
+  const stateColors = {idle:'#66bb6a',traveling:'#4fc3f7',intra_traveling:'#4fc3f7',loading:'#ffd54f',unloading:'#ff8a65',mining:'#ab47bc'};
+
+  let list = ships.map(s => {
+    const isSelected = selectedShip === s.id;
+    const cargoPct = s.cargo_capacity > 0 ? (s.cargo_used / s.cargo_capacity * 100) : 0;
+    const cargoStr = Object.entries(s.cargo).map(([k,v]) => `${Math.round(v)} ${k}`).join(', ') || 'empty';
+    const col = stateColors[s.state] || '#5a7a9a';
+
+    let detail = '';
+    if (isSelected) {
+      detail = `<div class="ship-detail">
+        <div class="row"><span class="k">State</span><span class="v" style="color:${col}">${s.state}${s.timer ? ' ('+s.timer+'t)' : ''}</span></div>
+        <div class="row"><span class="k">Location</span><span class="v">${s.location}</span></div>
+        <div class="row"><span class="k">Destination</span><span class="v">${s.destination || '-'}</span></div>
+        <div class="row"><span class="k">Route</span><span class="v">${s.route_path.length ? s.route_path.join(' > ') : '-'}</span></div>
+        <div class="row"><span class="k">Risk</span><span class="v">${(s.risk_tolerance*100).toFixed(0)}%</span></div>
+        <div class="row"><span class="k">Cargo</span><span class="v">${cargoStr}</span></div>
+        <div class="cargo-bar"><div class="cargo-fill" style="width:${cargoPct}%"></div></div>
+        <div style="font-size:9px;color:#5a7a9a;margin-top:2px">${Math.round(s.cargo_used)}/${s.cargo_capacity} capacity</div>
+      </div>`;
+    }
+
+    return `<div class="ship-card ${isSelected?'selected':''}" onclick="selectShip('${s.id}')">
+      <div class="ship-header">
+        <span class="badge" style="background:${col}22;color:${col}">${s.state}</span>
+        <span class="badge" style="background:#1a284422;color:#8aa0b8">${s.role}</span>
+        <span class="ship-name">${s.name}</span>
+        <span class="ship-class">${s.ship_class}</span>
+        <span style="margin-left:auto;color:#5a7a9a;font-size:9px">${s.location}</span>
+      </div>
+      ${detail}
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div class="filter-bar">
+    <input class="filter-input" id="shipFilter" placeholder="Filter ships..." oninput="renderShips()">
+    <select class="filter-select" id="shipStateFilter" onchange="renderShips()">
+      <option value="">All states</option>
+      <option value="idle">Idle</option>
+      <option value="traveling">Traveling</option>
+      <option value="intra_traveling">Intra-travel</option>
+      <option value="loading">Loading</option>
+      <option value="unloading">Unloading</option>
+      <option value="mining">Mining</option>
+    </select>
+    <select class="filter-select" id="shipRoleFilter" onchange="renderShips()">
+      <option value="">All roles</option>
+      <option value="trader">Traders</option>
+      <option value="miner">Miners</option>
+    </select>
+  </div>${list}`;
+
+  // Apply filters (re-render just visibility)
+  applyShipFilters();
+}
+
+function applyShipFilters() {
+  const text = (document.getElementById('shipFilter')?.value || '').toLowerCase();
+  const stateF = document.getElementById('shipStateFilter')?.value || '';
+  const roleF = document.getElementById('shipRoleFilter')?.value || '';
+  const cards = document.querySelectorAll('#view-ships .ship-card');
+  const ships = D.ships || [];
+  cards.forEach((card, i) => {
+    if (i >= ships.length) return;
+    const s = ships[i];
+    let show = true;
+    if (text && !s.name.toLowerCase().includes(text) && !s.location.toLowerCase().includes(text)) show = false;
+    if (stateF && s.state !== stateF) show = false;
+    if (roleF && s.role !== roleF) show = false;
+    card.style.display = show ? '' : 'none';
+  });
+}
+
+function selectShip(id) {
+  selectedShip = selectedShip === id ? null : id;
+  renderShips();
+}
+
+// ── Market ──────────────────────────────────────────────────────────────────
+function renderMarket() {
+  const el = document.getElementById('view-market');
+  const prices = D.prices || {};
+  const commodities = Object.keys(prices).sort();
+
+  const cards = commodities.map(c => {
+    const entries = prices[c].sort((a,b) => a.price - b.price);
+    const minP = entries[0]?.price || 0;
+    const maxP = entries[entries.length-1]?.price || 0;
+    const spread = maxP - minP;
+    const rows = entries.slice(0, 6).map(e =>
+      `<div class="mkt-entry"><span class="loc">${e.station}</span><span class="price">${e.price.toFixed(0)}cr</span><span class="stock">${Math.round(e.stock)}</span></div>`
+    ).join('');
+    return `<div class="mkt-card">
+      <div class="mkt-card-title">${c} <span style="color:#5a7a9a;font-size:9px">(spread: ${spread.toFixed(0)}cr, ${entries.length} locations)</span></div>
+      ${rows}
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div class="filter-bar">
+    <input class="filter-input" id="mktFilter" placeholder="Filter commodities..." oninput="applyMktFilter()">
+  </div><div class="mkt-grid" id="mktGrid">${cards}</div>`;
+}
+
+function applyMktFilter() {
+  const text = (document.getElementById('mktFilter')?.value || '').toLowerCase();
+  document.querySelectorAll('#mktGrid .mkt-card').forEach(card => {
+    card.style.display = card.querySelector('.mkt-card-title').textContent.toLowerCase().includes(text) ? '' : 'none';
+  });
+}
+
+// ── Systems ─────────────────────────────────────────────────────────────────
+function renderSystems() {
+  const el = document.getElementById('view-systems');
+  const systems = D.systems || {};
+  const sids = Object.keys(systems).sort((a,b) => systems[a].name.localeCompare(systems[b].name));
+
+  if (!selectedSystem) selectedSystem = sids[0] || '';
+
+  const options = sids.map(sid => `<option value="${sid}" ${sid===selectedSystem?'selected':''}>${systems[sid].name} (${systems[sid].security})</option>`).join('');
+
+  const sys = systems[selectedSystem];
+  let content = '';
+  if (sys) {
+    // Station details
+    const stationPanels = sys.stations.map(st => {
+      const prodRows = st.production.map(p => {
+        const status = p.halted ? '<span class="badge badge-halt">HALTED</span>' : `<span class="badge badge-ok">${p.actual.toFixed(1)}/t</span>`;
+        const inputRows = p.inputs.map(i => {
+          const pct = Math.min(100, (i.have / Math.max(i.need, 0.1)) * 100);
+          const col = pct > 50 ? '#66bb6a' : pct > 10 ? '#ffd54f' : '#ef5350';
+          return `<div class="stat-row"><span class="label" style="padding-left:12px">${i.name}</span><span class="value" style="color:${col}">${i.have.toFixed(1)} / ${i.need.toFixed(1)}</span></div>`;
+        }).join('');
+        return `<div class="stat-row"><span class="label" style="color:#ffd54f">${p.name}</span>${status}</div><div class="stat-row"><span class="label" style="padding-left:12px">Stock</span><span class="value">${p.stock}</span></div>${inputRows}`;
+      }).join('');
+
+      const invRows = Object.entries(st.inventory).sort((a,b) => b[1]-a[1]).slice(0, 10).map(([k,v]) =>
+        `<div class="stat-row"><span class="label">${k}</span><span class="value">${v}</span></div>`
+      ).join('');
+
+      return `<div class="panel">
+        <div class="panel-title">${st.name} <span class="badge badge-${sys.security}">${st.type}</span></div>
+        ${prodRows || '<div style="color:#3a5a7a;font-size:9px">No production</div>'}
+        <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:9px;color:#4a6a8a">INVENTORY</div>
+        ${invRows || '<div style="color:#3a5a7a">Empty</div>'}
+      </div>`;
     }).join('');
 
-    // Prices - with view filter
-    const select=document.getElementById('price-view');
-    const systemNames=new Set();
-    const priceHtml=[];
-    const commodities=Object.keys(d.prices).sort();
-    for(const c of commodities){
-      let entries=d.prices[c].sort((a,b)=>b.stock-a.stock);
-      for(const e of entries) systemNames.add(e.system);
-      if(priceView!=='all') entries=entries.filter(e=>e.system===priceView);
-      for(const e of entries.slice(0,4)){
-        priceHtml.push(`<div class="price-row"><span class="commodity">${c}</span><span class="sys">${e.station}</span><span class="val">${e.price.toFixed(0)}</span><span class="stock">${Math.round(e.stock)}</span></div>`);
-      }
-    }
-    document.getElementById('prices').innerHTML=priceHtml.join('')||'<div style="color:#3a5a7a">No data for this view</div>';
+    // Ships in system
+    const shipsHere = (D.ships || []).filter(s => s.location_id === selectedSystem);
+    const shipList = shipsHere.map(s => `<div style="padding:2px 0;font-size:10px"><span class="badge" style="background:${s.role==='miner'?'#ab47bc22':'#4fc3f722'};color:${s.role==='miner'?'#ab47bc':'#4fc3f7'}">${s.role}</span> ${s.name} <span style="color:#5a7a9a">(${s.state})</span></div>`).join('');
 
-    // Update select options
-    const currentOpts=new Set([...select.options].map(o=>o.value));
-    for(const name of [...systemNames].sort()){
-      if(!currentOpts.has(name)){
-        const opt=document.createElement('option');opt.value=name;opt.textContent=name;select.appendChild(opt);
-      }
-    }
-  }catch(e){console.error(e)}
-}
-refresh();
-setInterval(refresh,2000);
+    // Belts
+    const beltInfo = sys.belts.map(b => `<div class="stat-row"><span class="label">${b.name}</span><span class="value">${b.yields.join(', ')} (d:${b.density})</span></div>`).join('');
 
-// System map dropdown - open inline system view
-document.getElementById('system-map-select').addEventListener('change',(e)=>{
-  if(e.target.value) openDbgSysView(e.target.value);
-  e.target.value='';
-});
-(async()=>{
-  const r=await fetch('/api/state');const d=await r.json();
-  const sel=document.getElementById('system-map-select');
-  Object.entries(d.systems).sort((a,b)=>a[1].name.localeCompare(b[1].name)).forEach(([id,sys])=>{
-    const opt=document.createElement('option');opt.value=id;opt.textContent=sys.name;sel.appendChild(opt);
-  });
-})();
-
-// ── Inline System Map ─────────────────────────────────────────────────────────
-(function(){
-const win=document.getElementById('dbgSysview'),bar=document.getElementById('dbgSysBar');
-const body=document.getElementById('dbgSysBody'),canvas=document.getElementById('dbgSysCanvas');
-const ctx=canvas.getContext('2d');
-let sysData=null,sysId='',shipPos={},cam={x:0,y:0,zoom:1};
-let panning=false,panS={x:0,y:0},camS={x:0,y:0},winDrag=false,winOff={x:0,y:0};
-const COL={star:'#ffd54f',gate:'#ab47bc',station:'#4fc3f7',asteroid_belt:'#ff8a65',planet:'#66bb6a',moon:'#8aa0b8'};
-
-bar.addEventListener('mousedown',e=>{winDrag=true;winOff={x:e.clientX-win.offsetLeft,y:e.clientY-win.offsetTop};});
-document.addEventListener('mousemove',e=>{if(winDrag){win.style.left=(e.clientX-winOff.x)+'px';win.style.top=(e.clientY-winOff.y)+'px';}});
-document.addEventListener('mouseup',()=>{winDrag=false;});
-document.getElementById('dbgSysClose').addEventListener('click',()=>{win.classList.remove('open');});
-
-canvas.addEventListener('mousedown',e=>{panning=true;panS={x:e.offsetX,y:e.offsetY};camS={x:cam.x,y:cam.y};});
-canvas.addEventListener('mousemove',e=>{if(panning){cam.x=camS.x-(e.offsetX-panS.x)/cam.zoom;cam.y=camS.y-(e.offsetY-panS.y)/cam.zoom;}});
-canvas.addEventListener('mouseup',()=>{panning=false;});
-canvas.addEventListener('mouseleave',()=>{panning=false;});
-canvas.addEventListener('wheel',e=>{e.preventDefault();cam.zoom=Math.max(0.3,Math.min(8,cam.zoom*(e.deltaY>0?0.85:1.18)));},{passive:false});
-
-function resize(){canvas.width=body.clientWidth*devicePixelRatio;canvas.height=body.clientHeight*devicePixelRatio;ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);}
-new ResizeObserver(resize).observe(body);
-
-function p2w(d,a){return{x:d*40*Math.cos(a),y:d*40*Math.sin(a)};}
-function w2s(wx,wy){const w=body.clientWidth,h=body.clientHeight;return{x:w/2+(wx-cam.x)*cam.zoom,y:h/2+(wy-cam.y)*cam.zoom};}
-
-function draw(){
-  if(!win.classList.contains('open')){requestAnimationFrame(draw);return;}
-  const w=body.clientWidth,h=body.clientHeight;ctx.clearRect(0,0,w,h);
-  if(!sysData){requestAnimationFrame(draw);return;}
-  // Advance ship progress
-  const now=performance.now();const dt=(now-lastFrame)/1000;lastFrame=now;
-  for(const id in shipPos){const s=shipPos[id];if(s.rate>0)s.p=Math.min(s.p+s.rate*dt,1.0);}
-  const center=w2s(0,0);
-  // Orbital lines
-  for(const o of sysData.objects){
-    if(o.type==='planet'){const r=o.distance*40*cam.zoom;ctx.beginPath();ctx.arc(center.x,center.y,r,0,Math.PI*2);ctx.strokeStyle='rgba(102,187,106,0.1)';ctx.lineWidth=0.5;ctx.stroke();}
+    content = `<div class="sys-panel">
+      <div>${stationPanels}</div>
+      <div>
+        <div class="panel">
+          <div class="panel-title">System Info</div>
+          <div class="stat-row"><span class="label">Cluster</span><span class="value">${sys.cluster}</span></div>
+          <div class="stat-row"><span class="label">Security</span><span class="value"><span class="badge badge-${sys.security}">${sys.security}</span></span></div>
+          <div class="stat-row"><span class="label">Type</span><span class="value">${sys.type}</span></div>
+          <div class="stat-row"><span class="label">Connections</span><span class="value">${sys.connections.length}</span></div>
+          <div class="stat-row"><span class="label">Ships here</span><span class="value">${sys.ships_count}</span></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Asteroid Fields</div>
+          ${beltInfo || '<div style="color:#3a5a7a">None</div>'}
+        </div>
+        <div class="panel">
+          <div class="panel-title">Ships in System (${shipsHere.length})</div>
+          ${shipList || '<div style="color:#3a5a7a">None</div>'}
+        </div>
+      </div>
+    </div>`;
   }
-  // Objects
-  for(const o of sysData.objects){
-    const wp=p2w(o.distance,o.angle),pos=w2s(wp.x,wp.y);
-    const col=COL[o.type]||'#5a7a9a';
-    const sz=({star:6,planet:3.5,moon:2,station:3,gate:4,asteroid_belt:2.5}[o.type]||3)*Math.min(cam.zoom,2);
-    if(o.type==='gate'){ctx.beginPath();ctx.moveTo(pos.x,pos.y-sz);ctx.lineTo(pos.x+sz,pos.y);ctx.lineTo(pos.x,pos.y+sz);ctx.lineTo(pos.x-sz,pos.y);ctx.closePath();ctx.fillStyle=col;ctx.fill();}
-    else if(o.type==='asteroid_belt'){ctx.setLineDash([3,4]);const r=o.distance*40*cam.zoom;ctx.beginPath();ctx.arc(center.x,center.y,r,o.angle-0.25,o.angle+0.25);ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke();ctx.setLineDash([]);}
-    else{ctx.beginPath();ctx.arc(pos.x,pos.y,sz,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();}
-    if(cam.zoom>0.6&&o.type!=='moon'&&o.type!=='planet'){ctx.fillStyle='rgba(200,212,224,0.5)';ctx.font=`600 ${Math.max(7,8*Math.min(cam.zoom,1.3))}px Orbitron,sans-serif`;ctx.textAlign='center';ctx.fillText(o.name,pos.x,pos.y+sz+9);}
-  }
-  // Ships
-  for(const id in shipPos){
-    const s=shipPos[id];if(!s.vis)continue;
-    const sx=s.fx+(s.tx-s.fx)*s.p, sy=s.fy+(s.ty-s.fy)*s.p;
-    const pos=w2s(sx,sy);
-    ctx.beginPath();ctx.arc(pos.x,pos.y,2.5,0,Math.PI*2);ctx.fillStyle=s.role==='miner'?'#ffd54f':'#ef5350';ctx.fill();
-    if(s.rate>0){const tp=w2s(s.tx,s.ty);ctx.beginPath();ctx.moveTo(pos.x,pos.y);ctx.lineTo(tp.x,tp.y);ctx.strokeStyle='rgba(239,83,80,0.2)';ctx.lineWidth=0.6;ctx.setLineDash([2,3]);ctx.stroke();ctx.setLineDash([]);}
-    ctx.fillStyle='rgba(220,230,240,0.8)';ctx.font='bold 10px JetBrains Mono';ctx.textAlign='left';ctx.fillText(id,pos.x+6,pos.y+4);
-  }
-  requestAnimationFrame(draw);
+
+  el.innerHTML = `<div class="filter-bar">
+    <select class="sys-select" id="sysSelect" onchange="selectedSystem=this.value;renderSystems()">${options}</select>
+  </div>${content}`;
 }
-let lastFrame=performance.now();
-draw();
 
-async function fetchSys(){
-  if(!sysId||!win.classList.contains('open'))return;
-  try{
-    const r=await fetch('/api/system/'+sysId);if(!r.ok)return;
-    const d=await r.json();sysData=d;
-    document.getElementById('dbgSysTitle').textContent=d.name+' ('+d.ships.length+' ships)';
-    for(const ship of d.ships){
-      const id=ship.name;
-      if(ship.state==='intra_traveling'&&ship.intra_from&&ship.intra_to){
-        const f=p2w(ship.intra_from.d,ship.intra_from.a),t=p2w(ship.intra_to.d,ship.intra_to.a);
-        const rate=ship.intra_speed/Math.max(ship.intra_dist,0.5);
-        shipPos[id]={fx:f.x,fy:f.y,tx:t.x,ty:t.y,p:ship.intra_progress,rate:rate,role:ship.role,vis:true};
-      }else if(ship.state==='mining'&&ship.intra_position){
-        const at=d.objects.find(o=>o.id===ship.intra_position);
-        if(at){const pos=p2w(at.distance,at.angle);shipPos[id]={fx:pos.x+5,fy:pos.y-5,tx:pos.x+5,ty:pos.y-5,p:0,rate:0,role:ship.role,vis:true};}
-      }else{
-        if(shipPos[id])shipPos[id].vis=false;
-      }
-    }
-  }catch(e){}
-}
-setInterval(fetchSys,1000);
-
-window.openDbgSysView=function(id){
-  sysId=id;sysData=null;shipPos={};cam={x:0,y:0,zoom:1};
-  win.classList.add('open');resize();fetchSys();
-};
-})();
-
-document.getElementById('nuke-btn').addEventListener('click',async()=>{
-  if(!confirm('NUKE: Reset the entire simulation to initial state?')) return;
-  await fetch('/api/nuke',{method:'POST'});
-  refresh();
+// ── Nuke ────────────────────────────────────────────────────────────────────
+document.getElementById('nukeBtn').addEventListener('click', async () => {
+  if (!confirm('NUKE: Reset the entire simulation to initial state?')) return;
+  await fetch('/api/nuke', {method: 'POST'});
+  fetchData();
 });
 </script>
 </body>
