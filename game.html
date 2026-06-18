@@ -203,7 +203,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
       <div id="system-info-content"><div style="color:#5a7a9a;font-size:10px">Select a system to view info</div></div>
     </div>
     <div class="tab-content" id="tab-r-market">
-      <div class="panel-title">Market Prices</div>
+      <div class="panel-title">Order Book</div>
       <div id="live-market"></div>
     </div>
   </div>
@@ -785,17 +785,24 @@ function updateLiveMarket(){
   const sysData=liveState.systems[sysId];
   if(!sysData) return;
   const market=document.getElementById('live-market');
-  let html=`<div style="font-size:10px;color:#8aa0b8;margin-bottom:8px">${sysData.name}</div>`;
+  let html=`<div style="font-size:10px;color:#8aa0b8;margin-bottom:6px">${sysData.name}</div>`;
   for(const station of sysData.stations){
-    const entries=Object.entries(station.prices).filter(([k])=>station.inventory[k]>0).sort((a,b)=>b[1]-a[1]);
-    for(const [commodity,price] of entries.slice(0,12)){
-      const stock=Math.round(station.inventory[commodity]||0);
-      const prevKey=sysId+'_'+commodity;
-      const prev=prevPrices[prevKey]||price;
-      const change=prev>0?((price-prev)/prev*100).toFixed(1):'0.0';
-      const cls=change>0?'up':change<0?'down':'';
-      prevPrices[prevKey]=price;
-      html+=`<div class="commodity-row"><div class="commodity-name">${commodity}</div><div class="commodity-price">${Math.round(price)}</div><div class="commodity-change ${cls}">${change>0?'+':''}${change}%</div></div>`;
+    html+=`<div style="font-size:9px;color:#4fc3f7;margin:8px 0 4px;letter-spacing:1px;text-transform:uppercase;font-family:Orbitron,sans-serif">${station.name}</div>`;
+    // Sell orders (asks)
+    if(station.sell_orders&&station.sell_orders.length){
+      html+=`<div style="font-size:8px;color:#ef5350;margin:4px 0 2px;letter-spacing:1px">SELL ORDERS</div>`;
+      for(const o of station.sell_orders.slice(0,6)){
+        const name=o.commodity.replace(/_/g,' ');
+        html+=`<div class="commodity-row"><div class="commodity-name">${name}</div><div class="commodity-vol">${Math.round(o.qty)}</div><div class="commodity-price">${Math.round(o.price)}</div></div>`;
+      }
+    }
+    // Buy orders (bids)
+    if(station.buy_orders&&station.buy_orders.length){
+      html+=`<div style="font-size:8px;color:#66bb6a;margin:4px 0 2px;letter-spacing:1px">BUY ORDERS</div>`;
+      for(const o of station.buy_orders.slice(0,6)){
+        const name=o.commodity.replace(/_/g,' ');
+        html+=`<div class="commodity-row"><div class="commodity-name">${name}</div><div class="commodity-vol">${Math.round(o.qty)}</div><div class="commodity-price" style="color:#66bb6a">${Math.round(o.price)}</div></div>`;
+      }
     }
   }
   market.innerHTML=html;
