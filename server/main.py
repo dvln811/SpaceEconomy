@@ -54,7 +54,7 @@ def economy_loop():
 
 
 threading.Thread(target=economy_loop, daemon=True).start()
-log.info(f"Economy loop started ({TICK_RATE}s/tick, {len(sim.ships)} NPCs)")
+log.info(f"Economy loop started ({sim_speed['rate']}s/tick, {len(sim.ships)} NPCs)")
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
@@ -300,19 +300,16 @@ def api_nuke():
     return jsonify({"status": "reset", "tick": sim.tick_count})
 
 
-@app.route("/api/speed", methods=["POST"])
+@app.route("/api/speed", methods=["GET", "POST"])
 def api_speed():
-    """Change simulation speed multiplier. 1=realtime, 120=2hrs/min."""
+    """Get or set simulation speed multiplier. 1=realtime, 120=2hrs/min."""
     from flask import request
-    data = request.get_json(force=True)
-    mult = max(1, min(120, int(data.get("multiplier", 1))))
-    sim_speed["multiplier"] = mult
-    log.info(f"Sim speed set to {mult}x")
-    return jsonify({"multiplier": mult})
-
-
-@app.route("/api/speed", methods=["GET"])
-def api_speed_get():
+    if request.method == "POST":
+        data = request.get_json(force=True)
+        mult = max(1, min(120, int(data.get("multiplier", 1))))
+        sim_speed["multiplier"] = mult
+        log.info(f"Sim speed set to {mult}x")
+        return jsonify({"multiplier": mult})
     return jsonify({"multiplier": sim_speed["multiplier"]})
 
 
