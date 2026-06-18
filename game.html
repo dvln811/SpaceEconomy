@@ -113,7 +113,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .bottom-section .panel-title{flex-shrink:0}
 .bottom-scroll{overflow-y:auto;flex:1}
 .ship-schematic{display:flex;justify-content:center;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #152238;flex-shrink:0}
-.ship-schematic svg{width:100%;max-width:280px;height:70px}
+.ship-schematic{width:100%;height:80px;background:#040810;border-radius:3px}
 .ship-stat{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #0f1a28}
 .ship-stat .label{color:#8aa0b8;font-size:10px}
 .ship-stat .value{color:#e0e8f0;font-size:11px}
@@ -218,83 +218,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <div class="bottom" id="bottom-panel">
     <div class="bottom-section">
       <div class="panel-title">Your Ship · "Rusty Venture"</div>
-      <div class="ship-schematic">
-        <svg viewBox="0 0 280 70" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Grid background -->
-          <defs>
-            <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-              <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#1a2844" stroke-width="0.3"/>
-            </pattern>
-          </defs>
-          <rect width="280" height="70" fill="url(#grid)" opacity="0.4"/>
-
-          <!-- Main hull - side profile, chunky freighter -->
-          <!-- Cargo hold (big boxy midsection) -->
-          <path d="M80 20 L180 18 L182 16 L184 16 L186 18 L186 52 L184 54 L182 54 L180 52 L80 50 L78 48 L78 22 Z" stroke="#4fc3f7" stroke-width="0.8" fill="none" opacity="0.8"/>
-          <!-- Hull plating lines -->
-          <line x1="100" y1="20" x2="100" y2="50" stroke="#4fc3f7" stroke-width="0.3" opacity="0.4"/>
-          <line x1="120" y1="19" x2="120" y2="51" stroke="#4fc3f7" stroke-width="0.3" opacity="0.4"/>
-          <line x1="140" y1="18" x2="140" y2="52" stroke="#4fc3f7" stroke-width="0.3" opacity="0.4"/>
-          <line x1="160" y1="18" x2="160" y2="52" stroke="#4fc3f7" stroke-width="0.3" opacity="0.4"/>
-          <!-- Cargo bay interior lines -->
-          <line x1="82" y1="30" x2="178" y2="29" stroke="#1a3050" stroke-width="0.4" stroke-dasharray="3,2"/>
-          <line x1="82" y1="40" x2="178" y2="41" stroke="#1a3050" stroke-width="0.4" stroke-dasharray="3,2"/>
-
-          <!-- Bridge/cockpit (angular, forward) -->
-          <path d="M186 22 L200 24 L216 28 L222 32 L224 35 L222 38 L216 42 L200 46 L186 48" stroke="#4fc3f7" stroke-width="0.8" fill="none" opacity="0.8"/>
-          <!-- Cockpit windscreen -->
-          <path d="M210 30 L218 33 L218 37 L210 40" stroke="#8ab4d4" stroke-width="0.6" fill="none"/>
-          <!-- Bridge detail lines -->
-          <line x1="195" y1="25" x2="195" y2="45" stroke="#4fc3f7" stroke-width="0.3" opacity="0.4"/>
-          <path d="M200 26 L200 44" stroke="#4fc3f7" stroke-width="0.3" opacity="0.3"/>
-
-          <!-- Engine section (rear, industrial) -->
-          <path d="M78 22 L60 20 L52 18 L48 20 L46 24 L46 46 L48 50 L52 52 L60 50 L78 48" stroke="#4fc3f7" stroke-width="0.8" fill="none" opacity="0.8"/>
-          <!-- Engine nacelle top -->
-          <path d="M48 20 L36 18 L30 20 L28 24 L28 28 L30 30 L36 30 L46 28" stroke="#5a7a9a" stroke-width="0.7" fill="none"/>
-          <!-- Engine nacelle bottom -->
-          <path d="M48 50 L36 52 L30 50 L28 46 L28 42 L30 40 L36 40 L46 42" stroke="#5a7a9a" stroke-width="0.7" fill="none"/>
-          <!-- Engine exhaust lines -->
-          <line x1="28" y1="22" x2="20" y2="22" stroke="#ef5350" stroke-width="0.5" opacity="0.6"/>
-          <line x1="28" y1="24" x2="16" y2="24" stroke="#ef5350" stroke-width="0.8" opacity="0.5"/>
-          <line x1="28" y1="26" x2="18" y2="26" stroke="#ef5350" stroke-width="0.5" opacity="0.6"/>
-          <line x1="28" y1="44" x2="18" y2="44" stroke="#ef5350" stroke-width="0.5" opacity="0.6"/>
-          <line x1="28" y1="46" x2="16" y2="46" stroke="#ef5350" stroke-width="0.8" opacity="0.5"/>
-          <line x1="28" y1="48" x2="20" y2="48" stroke="#ef5350" stroke-width="0.5" opacity="0.6"/>
-          <!-- Engine internal detail -->
-          <circle cx="37" cy="24" r="2" stroke="#5a7a9a" stroke-width="0.4" fill="none"/>
-          <circle cx="37" cy="46" r="2" stroke="#5a7a9a" stroke-width="0.4" fill="none"/>
-
-          <!-- Dorsal antenna/sensor mast -->
-          <line x1="150" y1="18" x2="150" y2="10" stroke="#5a7a9a" stroke-width="0.5"/>
-          <line x1="147" y1="10" x2="153" y2="10" stroke="#5a7a9a" stroke-width="0.5"/>
-
-          <!-- Ventral landing strut hints -->
-          <line x1="95" y1="50" x2="93" y2="56" stroke="#5a7a9a" stroke-width="0.4"/>
-          <line x1="165" y1="52" x2="163" y2="58" stroke="#5a7a9a" stroke-width="0.4"/>
-
-          <!-- Hardpoint mounts (bracket style) -->
-          <!-- HP1: Dorsal fore - Scanner -->
-          <rect x="108" y="12" width="8" height="6" rx="1" stroke="#ffd54f" stroke-width="0.7" fill="#ffd54f" fill-opacity="0.1"/>
-          <text x="112" y="10" text-anchor="middle" font-size="4" fill="#ffd54f" font-family="JetBrains Mono">SCAN</text>
-          <!-- HP2: Dorsal aft - Shield -->
-          <rect x="156" y="10" width="8" height="6" rx="1" stroke="#ffd54f" stroke-width="0.7" fill="#ffd54f" fill-opacity="0.1"/>
-          <text x="160" y="8" text-anchor="middle" font-size="4" fill="#ffd54f" font-family="JetBrains Mono">SHLD</text>
-          <!-- HP3: Ventral fore - Mining laser -->
-          <rect x="108" y="52" width="8" height="6" rx="1" stroke="#66bb6a" stroke-width="0.7" fill="#66bb6a" fill-opacity="0.1"/>
-          <text x="112" y="63" text-anchor="middle" font-size="4" fill="#66bb6a" font-family="JetBrains Mono">MINE</text>
-          <!-- HP4: Ventral aft - Tractor -->
-          <rect x="156" y="54" width="8" height="6" rx="1" stroke="#66bb6a" stroke-width="0.7" fill="#66bb6a" fill-opacity="0.1"/>
-          <text x="160" y="65" text-anchor="middle" font-size="4" fill="#66bb6a" font-family="JetBrains Mono">TRCT</text>
-          <!-- HP5: Nose - PDC -->
-          <rect x="220" y="32" width="8" height="6" rx="1" stroke="#ef5350" stroke-width="0.7" fill="#ef5350" fill-opacity="0.1"/>
-          <text x="235" y="37" text-anchor="start" font-size="4" fill="#ef5350" font-family="JetBrains Mono">PDC</text>
-
-          <!-- Ship class label -->
-          <text x="275" y="8" text-anchor="end" font-size="5" fill="#3a5a7a" font-family="Orbitron" letter-spacing="0.5">BISON MK.III</text>
-          <text x="275" y="14" text-anchor="end" font-size="3.5" fill="#2a4a6a" font-family="JetBrains Mono">HEAVY FREIGHTER</text>
-        </svg>
-      </div>
+      <div class="ship-schematic" id="playerShipViewer"></div>
       <div class="bottom-scroll">
       <div class="ship-stat"><span class="label">Class</span><span class="value">Bison Mk.III Freighter</span></div>
       <div class="ship-stat"><span class="label">Cargo</span><span class="value">340 / 500 units</span></div>
@@ -408,6 +332,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {CSS2DRenderer, CSS2DObject} from 'three/addons/renderers/CSS2DRenderer.js';
+import {buildShipFromData} from '/static/ship_renderer.js';
 
 const container = document.querySelector('.main');
 const renderer = new THREE.WebGLRenderer({antialias:true,alpha:true});
@@ -956,6 +881,31 @@ setInterval(fetchLiveData, 3000);
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) fetchLiveData();
 });
+
+// ── Player Ship 3D Viewer ─────────────────────────────────────────────────────
+(async function initPlayerShipViewer(){
+  try {
+    const resp = await fetch('/api/ship_model/bison_mk3');
+    const shipData = await resp.json();
+    const el = document.getElementById('playerShipViewer');
+    if (!el || el.clientWidth === 0) return;
+    const w = el.clientWidth, h = el.clientHeight;
+    const sc = new THREE.Scene();
+    const cam = new THREE.PerspectiveCamera(50, w/h, 0.1, 50);
+    cam.position.set(2.5, 1.5, 3);
+    const rnd = new THREE.WebGLRenderer({antialias:true, alpha:true});
+    rnd.setSize(w, h); rnd.setClearColor(0x040810);
+    el.appendChild(rnd.domElement);
+    sc.add(new THREE.AmbientLight(0x4fc3f7, 0.3));
+    const dir = new THREE.DirectionalLight(0xffffff, 0.7);
+    dir.position.set(2, 3, 2); sc.add(dir);
+    buildShipFromData(sc, shipData, {showHardpoints:false});
+    // Slow auto-rotate
+    let angle = 0;
+    function animShip(){requestAnimationFrame(animShip);angle+=0.003;cam.position.x=Math.cos(angle)*3;cam.position.z=Math.sin(angle)*3;cam.lookAt(0,0,0);rnd.render(sc,cam);}
+    animShip();
+  } catch(e) { console.error('Ship viewer:', e); }
+})();
 
 // ── Hover tooltip ─────────────────────────────────────────────────────────────
 const tooltip=document.getElementById('map-tooltip');
