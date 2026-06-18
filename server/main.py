@@ -168,6 +168,7 @@ def api_state():
             "cluster": sys.cluster,
             "security": sys.security,
             "faction": sys.faction,
+            "x": sys.x, "y": sys.y, "z": sys.z,
             "stations": stations,
             "asteroid_fields": [{"name": a.name, "type": a.field_type, "yields": a.yields, "density": a.density} for a in sys.asteroid_fields],
             "connections": sys.connections,

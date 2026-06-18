@@ -66,14 +66,14 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 
 /* Right Panel - Market */
 .right-panel{background:#0a0e18;overflow-y:auto;padding:12px;border-left:1px solid #1a2844;display:flex;flex-direction:column}
-.commodity-row{display:flex;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid #0f1a28;transition:background .15s}
+.commodity-row{display:flex;align-items:center;padding:4px 8px;border-bottom:1px solid #0f1a28;transition:background .15s;gap:8px}
 .commodity-row:hover{background:#111a28}
-.commodity-name{font-size:11px;color:#b0c4d8}
-.commodity-price{font-size:12px;font-weight:600;color:#ffd54f}
+.commodity-name{font-size:11px;color:#b0c4d8;flex:1;text-transform:capitalize}
+.commodity-price{font-size:11px;font-weight:600;color:#ffd54f;width:55px;text-align:right}
 .commodity-change{font-size:10px;width:50px;text-align:right}
 .commodity-change.up{color:#66bb6a}
 .commodity-change.down{color:#ef5350}
-.commodity-vol{font-size:9px;color:#3a5a7a;text-align:right;width:40px}
+.commodity-vol{font-size:10px;color:#b0c4d8;text-align:right;width:50px}
 .sparkline{width:60px;height:20px}
 .sparkline polyline{fill:none;stroke-width:1.2}
 
@@ -483,23 +483,41 @@ function makeShipTexture(shape){
   ctx.beginPath();
   if(shape==='triangle'){ctx.moveTo(16,4);ctx.lineTo(28,28);ctx.lineTo(4,28);ctx.closePath();}
   else if(shape==='square'){ctx.rect(6,6,20,20);}
-  else if(shape==='pentagon'){for(let i=0;i<5;i++){const a=Math.PI*2*i/5-Math.PI/2;ctx.lineTo(16+12*Math.cos(a),16+12*Math.sin(a));}ctx.closePath();}
-  else{ctx.arc(16,16,10,0,Math.PI*2);} // circle fallback
+  else{ctx.arc(16,16,10,0,Math.PI*2);}
   ctx.fill();ctx.stroke();
   return new THREE.CanvasTexture(c);
 }
+const fallbackShipTex=makeShipTexture('square');
 
-const traderTex=makeShipTexture('square');
-const minerTex=makeShipTexture('triangle');
-
-for(let i=0;i<40;i++){
-  const tex=i<30?traderTex:minerTex;
-  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,opacity:0.9});
-  const sprite=new THREE.Sprite(mat);
-  sprite.scale.set(6,6,1);
+// Pre-create 70 sprite placeholders
+for(let i=0;i<70;i++){
+  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:fallbackShipTex,transparent:true,opacity:0.9}));
+  sprite.scale.set(6,6,1);sprite.visible=false;
   scene.add(sprite);
   shipMeshes.push(sprite);
-  shipData.push({route:Math.floor(Math.random()*routes.length),progress:Math.random(),speed:0.0004+Math.random()*0.0008});
+  shipData.push({route:0,progress:0,speed:0});
+}
+
+// Load ship geometries and replace sprites with 3D models
+function classIdFromName(n){return n.toLowerCase().replace(/\./g,'').replace(/\s+/g,'_');}
+let mapShipGeos=null;
+let mapShip3D={}; // ship name -> {grp, idx}
+(async function(){try{const r=await fetch('/api/ship_model/all');if(r.ok)mapShipGeos=await r.json();}catch(e){}})();
+
+function getOrCreate3DShip(ship,idx){
+  if(mapShip3D[ship.name])return mapShip3D[ship.name];
+  if(!mapShipGeos)return null;
+  const cid=classIdFromName(ship.ship_class||'');
+  const geo=mapShipGeos[cid];
+  if(!geo)return null;
+  const tmpS=new THREE.Scene();
+  const grp=buildShipFromData(tmpS,geo,{showHardpoints:false});
+  tmpS.remove(grp);
+  grp.scale.set(3,3,3);
+  grp.visible=false;
+  scene.add(grp);
+  mapShip3D[ship.name]={grp,idx};
+  return mapShip3D[ship.name];
 }
 
 // Player indicator at Cygnus
@@ -541,29 +559,40 @@ function animate(){
   shipMeshes.forEach((mesh,i)=>{
     if(i>=liveShips.length){mesh.visible=false;return;}
     const ship=liveShips[i];
-    // Only show traveling ships
-    if(!ship||ship.state!=='traveling'){mesh.visible=false;return;}
-    mesh.visible=true;
-    const locIdx=systemIdToIndex[ship?.location];
-    const destIdx=systemIdToIndex[ship?.destination];
-    // Predict forward for traveling ships (server does 0.01*speed per second, we do per frame at 60fps)
-    if(ship&&ship.state==='traveling'&&locIdx!==undefined&&destIdx!==undefined){
+    if(!ship||ship.state!=='traveling'){
+      mesh.visible=false;
+      const m3d=mapShip3D[ship?.name];if(m3d)m3d.grp.visible=false;
+      return;
+    }
+    const locPos=sysPositions[ship?.location];
+    const destPos=sysPositions[ship?.destination];
+    if(ship&&ship.state==='traveling'&&locPos&&destPos){
       const serverRate=0.02*(ship.speed||1.0);
       mesh.userData.clientProgress=(mesh.userData.clientProgress||ship.progress)+(serverRate/60);
       if(mesh.userData.clientProgress>1) mesh.userData.clientProgress=1;
-      const a=systems[locIdx],b=systems[destIdx];
       const p=mesh.userData.clientProgress;
-      mesh.userData.target={x:a.x+(b.x-a.x)*p, y:a.y+(b.y-a.y)*p, z:a.z+(b.z-a.z)*p};
+      mesh.userData.target={x:locPos.x+(destPos.x-locPos.x)*p, y:locPos.y+(destPos.y-locPos.y)*p, z:locPos.z+(destPos.z-locPos.z)*p};
     }
     const t=mesh.userData.target;
     if(t){
-      // Lerp faster when far away (prevents shoot-out on state changes)
       const dx=t.x-mesh.position.x,dy=t.y-mesh.position.y,dz=t.z-mesh.position.z;
       const dist=Math.sqrt(dx*dx+dy*dy+dz*dz);
       const lerp=dist>50?0.3:0.05;
-      mesh.position.x+=dx*lerp;
-      mesh.position.y+=dy*lerp;
-      mesh.position.z+=dz*lerp;
+      mesh.position.x+=dx*lerp;mesh.position.y+=dy*lerp;mesh.position.z+=dz*lerp;
+    }
+    // Use 3D model if available, else sprite
+    const m3d=getOrCreate3DShip(ship,i);
+    if(m3d){
+      mesh.visible=false;
+      m3d.grp.visible=true;
+      m3d.grp.position.copy(mesh.position);
+      // Face destination
+      if(mesh.userData.target){
+        const destPos2=sysPositions[ship.destination];
+        if(destPos2)m3d.grp.lookAt(destPos2.x,destPos2.y,destPos2.z);
+      }
+    }else{
+      mesh.visible=true;
     }
   });
 
@@ -765,11 +794,16 @@ const playerShip={name:'Rusty Venture',class:'Bison Mk.III',cargo:'340/500',fuel
 
 let liveState=null;
 let prevPrices={};
+let sysPositions={}; // system_id -> {x, y, z} from live data
 
 async function fetchLiveData(){
   try{
     const [stateRes, shipsRes]=await Promise.all([fetch('/api/state'),fetch('/api/ships')]);
     liveState=await stateRes.json();
+    // Build position lookup from live system coords
+    for(const [sid, sys] of Object.entries(liveState.systems)){
+      sysPositions[sid]={x:sys.x, y:sys.y, z:sys.z};
+    }
     const shipsData=await shipsRes.json();
     liveShips=shipsData.ships;
     updateLiveMarket();
@@ -791,6 +825,7 @@ function updateLiveMarket(){
     // Sell orders (asks)
     if(station.sell_orders&&station.sell_orders.length){
       html+=`<div style="font-size:8px;color:#ef5350;margin:4px 0 2px;letter-spacing:1px">SELL ORDERS</div>`;
+      html+=`<div class="commodity-row" style="border-bottom:1px solid #1a2844;padding-bottom:2px;margin-bottom:2px"><div class="commodity-name" style="color:#5a7a9a;font-size:9px">Item</div><div class="commodity-vol" style="color:#5a7a9a;font-size:9px">Qty</div><div class="commodity-price" style="color:#5a7a9a;font-size:9px">Price</div></div>`;
       for(const o of station.sell_orders.slice(0,6)){
         const name=o.commodity.replace(/_/g,' ');
         html+=`<div class="commodity-row"><div class="commodity-name">${name}</div><div class="commodity-vol">${Math.round(o.qty)}</div><div class="commodity-price">${Math.round(o.price)}</div></div>`;
@@ -799,6 +834,7 @@ function updateLiveMarket(){
     // Buy orders (bids)
     if(station.buy_orders&&station.buy_orders.length){
       html+=`<div style="font-size:8px;color:#66bb6a;margin:4px 0 2px;letter-spacing:1px">BUY ORDERS</div>`;
+      html+=`<div class="commodity-row" style="border-bottom:1px solid #1a2844;padding-bottom:2px;margin-bottom:2px"><div class="commodity-name" style="color:#5a7a9a;font-size:9px">Item</div><div class="commodity-vol" style="color:#5a7a9a;font-size:9px">Qty</div><div class="commodity-price" style="color:#5a7a9a;font-size:9px">Price</div></div>`;
       for(const o of station.buy_orders.slice(0,6)){
         const name=o.commodity.replace(/_/g,' ');
         html+=`<div class="commodity-row"><div class="commodity-name">${name}</div><div class="commodity-vol">${Math.round(o.qty)}</div><div class="commodity-price" style="color:#66bb6a">${Math.round(o.price)}</div></div>`;
@@ -866,14 +902,12 @@ function updateMapShips(){
   liveShips.forEach((ship,i)=>{
     if(i>=shipMeshes.length) return;
     shipMeshes[i].userData.clientProgress=ship.progress; // sync to server
-    const locIdx=systemIdToIndex[ship.location];
-    const destIdx=systemIdToIndex[ship.destination];
-    if(ship.state==='traveling'&&locIdx!==undefined&&destIdx!==undefined){
-      const a=systems[locIdx],b=systems[destIdx];
-      shipMeshes[i].userData.target={x:a.x+(b.x-a.x)*ship.progress, y:a.y+(b.y-a.y)*ship.progress, z:a.z+(b.z-a.z)*ship.progress};
-    }else if(locIdx!==undefined){
-      const s=systems[locIdx];
-      shipMeshes[i].userData.target={x:s.x+5*(i%4-2), y:s.y+3, z:s.z+5*(Math.floor(i/4)%3-1)};
+    const locPos=sysPositions[ship.location];
+    const destPos=sysPositions[ship.destination];
+    if(ship.state==='traveling'&&locPos&&destPos){
+      shipMeshes[i].userData.target={x:locPos.x+(destPos.x-locPos.x)*ship.progress, y:locPos.y+(destPos.y-locPos.y)*ship.progress, z:locPos.z+(destPos.z-locPos.z)*ship.progress};
+    }else if(locPos){
+      shipMeshes[i].userData.target={x:locPos.x+5*(i%4-2), y:locPos.y+3, z:locPos.z+5*(Math.floor(i/4)%3-1)};
     }
   });
 }
@@ -1220,14 +1254,17 @@ function svBuildScene(){
       const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDiamondTexture(col,64),transparent:true}));
       spr.position.set(wp.x,wp.y,2);spr.scale.set(10,10,1);
       svObjectsGroup.add(spr);
-    }else{
-      // Glow sprite
-      const glowSize=obj.type==='star'?50:obj.type==='moon'?12:20;
+    }else if(obj.type==='star'){
+      // Star gets glow gradient
       const gSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeGlowTexture(col,128),transparent:true,depthWrite:false}));
-      gSpr.position.set(wp.x,wp.y,0);gSpr.scale.set(glowSize,glowSize,1);
+      gSpr.position.set(wp.x,wp.y,0);gSpr.scale.set(50,50,1);
       svObjectsGroup.add(gSpr);
-      // Solid dot
-      const dotSize=obj.type==='star'?12:obj.type==='planet'?8:obj.type==='moon'?4:6;
+      const dSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDotTexture(col,64),transparent:true}));
+      dSpr.position.set(wp.x,wp.y,1);dSpr.scale.set(12,12,1);
+      svObjectsGroup.add(dSpr);
+    }else{
+      // Planets, moons, stations: solid dot only (no glow gradient)
+      const dotSize=obj.type==='planet'?8:obj.type==='moon'?4:6;
       const dSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDotTexture(col,64),transparent:true}));
       dSpr.position.set(wp.x,wp.y,1);dSpr.scale.set(dotSize,dotSize,1);
       svObjectsGroup.add(dSpr);
