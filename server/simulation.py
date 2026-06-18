@@ -195,8 +195,16 @@ class Simulation:
 
     def _production_consumption(self):
         """Recipe-driven production: consume inputs, produce outputs. Halt on shortage."""
-        for sys in self.universe.values():
+        for sys_id, sys in self.universe.items():
             for station in sys.stations:
+                # Mining colonies passively generate ore from local asteroid fields
+                if station.station_type == "mining_colony" and sys.asteroid_fields:
+                    for field in sys.asteroid_fields:
+                        for ore in field.yields:
+                            current = station.inventory.get(ore, 0)
+                            if current < 500:  # cap to prevent infinite accumulation
+                                station.inventory[ore] = current + 1.5 * field.density
+
                 # Recipe-based production
                 for commodity_id in station.produces:
                     commodity = COMMODITIES.get(commodity_id)
@@ -431,7 +439,7 @@ class Simulation:
         return best
 
     def _find_best_trade(self, ship: NPCShip, loc: System):
-        """Find best buy-here sell-there opportunity within 2 hops (safety-aware)."""
+        """Find best buy-here sell-there opportunity within 3 hops (safety-aware)."""
         best = None
         for station in loc.stations:
             for commodity, stock in station.inventory.items():
@@ -460,6 +468,18 @@ class Simulation:
                             profit = (sell_price - buy_price) * 0.7  # discount for distance
                             if profit > 0 and (best is None or profit > best[3]):
                                 best = (commodity, station, hop2_id, profit)
+                        # 3-hop
+                        for hop3_id in hop2.connections:
+                            if hop3_id == ship.location or hop3_id == neighbor_id:
+                                continue
+                            if self._system_danger(hop3_id) > ship.risk_tolerance:
+                                continue
+                            hop3 = self.universe[hop3_id]
+                            for dest_station in hop3.stations:
+                                sell_price = dest_station.price_cache.get(commodity, 0)
+                                profit = (sell_price - buy_price) * 0.5  # bigger discount
+                                if profit > 0 and (best is None or profit > best[3]):
+                                    best = (commodity, station, hop3_id, profit)
         return best
 
     def _update_all_prices(self):
