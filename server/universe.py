@@ -1,5 +1,55 @@
 """Seed data for the 24-system universe."""
-from server.models import System, Station, AsteroidField
+import math
+from server.models import System, Station, AsteroidField, SystemObject
+
+
+def _generate_system_objects(system: System) -> list[SystemObject]:
+    """Generate intra-system objects (star, gates, stations, belts, planets) with polar positions."""
+    objects = []
+    angle_step = 0
+
+    # Star at center
+    objects.append(SystemObject(
+        id=f"{system.id}_star", name=f"{system.name} Star",
+        obj_type="star", distance=0, angle=0
+    ))
+
+    # Jump gates - one per connection, placed in outer ring (8-12 AU)
+    for i, conn in enumerate(system.connections):
+        angle = (2 * math.pi * i) / max(len(system.connections), 1)
+        objects.append(SystemObject(
+            id=f"{system.id}_gate_{conn}", name=f"Gate to {conn.title()}",
+            obj_type="gate", distance=10.0 + (i % 3) * 1.5, angle=angle,
+            connects_to=conn
+        ))
+
+    # Stations - mid ring (3-7 AU)
+    for i, station in enumerate(system.stations):
+        angle = (2 * math.pi * i) / max(len(system.stations), 1) + 0.5
+        station_id = f"{system.id}_st_{i}"
+        objects.append(SystemObject(
+            id=station_id, name=station.name,
+            obj_type="station", distance=3.0 + i * 1.5, angle=angle
+        ))
+
+    # Asteroid belts - varied ring (4-9 AU)
+    for i, belt in enumerate(system.asteroid_fields):
+        angle = (2 * math.pi * (i + 0.3)) / max(len(system.asteroid_fields), 1) + 1.2
+        objects.append(SystemObject(
+            id=f"{system.id}_belt_{i}", name=belt.name,
+            obj_type="asteroid_belt", distance=5.0 + i * 2.0, angle=angle
+        ))
+
+    # Planets - decorative, inner ring (1.5-4 AU)
+    planet_count = 2 + (hash(system.id) % 3)  # 2-4 planets per system
+    for i in range(planet_count):
+        angle = (2 * math.pi * i) / planet_count + 0.8
+        objects.append(SystemObject(
+            id=f"{system.id}_planet_{i}", name=f"{system.name} {['I','II','III','IV'][i]}",
+            obj_type="planet", distance=1.5 + i * 1.2, angle=angle
+        ))
+
+    return objects
 
 
 def build_universe() -> dict[str, System]:
@@ -409,5 +459,9 @@ def build_universe() -> dict[str, System]:
         asteroid_fields=[AsteroidField("Debris Storm", "debris", ["salvage", "components"], density=1.2, danger=0.3)],
         connections=["wolf359", "canopus", "pollux", "castor"],
     )
+
+    # Generate intra-system objects for all systems
+    for sys in systems.values():
+        sys.objects = _generate_system_objects(sys)
 
     return systems

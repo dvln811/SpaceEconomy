@@ -53,6 +53,8 @@ def save_simulation(sim):
             "progress": s.progress, "speed": s.speed, "state": s.state,
             "state_timer": s.state_timer, "role": s.role,
             "ship_class": s.ship_class, "route_path": s.route_path,
+            "intra_position": s.intra_position, "intra_destination": s.intra_destination,
+            "intra_progress": s.intra_progress, "intra_speed": s.intra_speed,
         })
 
     conn = _get_conn()
@@ -107,6 +109,10 @@ def load_simulation(sim) -> bool:
                 state=sd.get("state", "idle"), state_timer=sd.get("state_timer", 0),
                 role=sd.get("role", "trader"), ship_class=sd.get("ship_class", ""),
                 route_path=sd.get("route_path", []),
+                intra_position=sd.get("intra_position", ""),
+                intra_destination=sd.get("intra_destination", ""),
+                intra_progress=sd.get("intra_progress", 0.0),
+                intra_speed=sd.get("intra_speed", 1.5),
             ))
 
     conn.close()

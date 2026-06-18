@@ -1,4 +1,5 @@
 """Economy simulation engine. Runs each tick to update the universe."""
+import math
 import random
 import time
 from server.models import System, NPCShip, COMMODITIES, calculate_price
@@ -46,13 +47,10 @@ class Simulation:
                 location=loc, speed=0.8 + random.random() * 0.6, state="idle", role="trader",
                 ship_class=trader_classes[i % len(trader_classes)],
             )
-            # Stagger starts: some begin already traveling
-            if random.random() < 0.6:
-                dest = random.choice(self.universe[loc].connections) if self.universe[loc].connections else ""
-                if dest:
-                    ship.destination = dest
-                    ship.state = "traveling"
-                    ship.progress = random.random() * 0.5
+            # Place at a station in the system
+            station_objs = [o for o in self.universe[loc].objects if o.obj_type == "station"]
+            if station_objs:
+                ship.intra_position = station_objs[0].id
             self.ships.append(ship)
 
     def _spawn_miners(self, count: int):
@@ -60,12 +58,69 @@ class Simulation:
         miner_classes = ["Burro Driller", "Pickaxe Mk.II", "Anvil Corer"]
         for i in range(count):
             loc = random.choice(mining_systems)
-            self.ships.append(NPCShip(
+            ship = NPCShip(
                 id=f"miner_{i}", name=NPC_MINER_NAMES[i % len(NPC_MINER_NAMES)],
                 cargo_capacity=100 + random.randint(0, 100), fuel=100.0,
                 location=loc, speed=0.6 + random.random() * 0.4, state="idle", role="miner",
                 ship_class=miner_classes[i % len(miner_classes)],
-            ))
+            )
+            # Place at a random station in the system
+            sys_obj = self.universe[loc]
+            station_objs = [o for o in sys_obj.objects if o.obj_type == "station"]
+            if station_objs:
+                ship.intra_position = station_objs[0].id
+            self.ships.append(ship)
+
+    # ── Intra-system helpers ─────────────────────────────────────────────────
+
+    def _get_object(self, system_id: str, obj_id: str):
+        """Find a SystemObject by id within a system."""
+        for o in self.universe[system_id].objects:
+            if o.id == obj_id:
+                return o
+        return None
+
+    def _get_gate_for(self, system_id: str, dest_system_id: str) -> str:
+        """Find the gate object_id in system_id that connects to dest_system_id."""
+        for o in self.universe[system_id].objects:
+            if o.obj_type == "gate" and o.connects_to == dest_system_id:
+                return o.id
+        return ""
+
+    def _get_station_obj(self, system_id: str, station_index: int) -> str:
+        """Get the object_id for a station by its index."""
+        station_objs = [o for o in self.universe[system_id].objects if o.obj_type == "station"]
+        if station_index < len(station_objs):
+            return station_objs[station_index].id
+        return station_objs[0].id if station_objs else ""
+
+    def _get_belt_obj(self, system_id: str, belt_index: int = 0) -> str:
+        """Get the object_id for an asteroid belt."""
+        belt_objs = [o for o in self.universe[system_id].objects if o.obj_type == "asteroid_belt"]
+        if belt_index < len(belt_objs):
+            return belt_objs[belt_index].id
+        return belt_objs[0].id if belt_objs else ""
+
+    def _intra_distance(self, system_id: str, obj_a_id: str, obj_b_id: str) -> float:
+        """Calculate distance between two objects in a system (AU)."""
+        a = self._get_object(system_id, obj_a_id)
+        b = self._get_object(system_id, obj_b_id)
+        if not a or not b:
+            return 1.0
+        # Convert polar to cartesian and measure
+        ax = a.distance * math.cos(a.angle)
+        ay = a.distance * math.sin(a.angle)
+        bx = b.distance * math.cos(b.angle)
+        by = b.distance * math.sin(b.angle)
+        return max(0.5, math.sqrt((ax - bx) ** 2 + (ay - by) ** 2))
+
+    def _start_intra_travel(self, ship: NPCShip, dest_obj_id: str):
+        """Start a ship moving to a destination object within its current system."""
+        if ship.intra_position == dest_obj_id:
+            return  # already there
+        ship.intra_destination = dest_obj_id
+        ship.intra_progress = 0.0
+        ship.state = "intra_traveling"
 
     def tick(self):
         """Advance the simulation by one tick."""
@@ -73,6 +128,7 @@ class Simulation:
         self._production_consumption()
         self._process_timers()
         self._move_ships()
+        self._move_ships_intra()
         self._npc_decisions()
         self._update_all_prices()
         if len(self.events) > 100:
@@ -95,9 +151,17 @@ class Simulation:
                 ship.state_timer -= 1
                 if ship.state_timer <= 0:
                     if ship.state == "loading":
-                        # Done loading, now travel to destination
-                        ship.state = "traveling"
-                        self._log(f"{ship.name} departed {self.universe[ship.location].name} -> {self.universe[ship.destination].name}")
+                        # Done loading, navigate to gate then jump
+                        if ship.destination:
+                            gate_id = self._get_gate_for(ship.location, ship.route_path[0] if ship.route_path else ship.destination)
+                            if gate_id and ship.intra_position != gate_id:
+                                self._start_intra_travel(ship, gate_id)
+                                self._log(f"{ship.name} heading to gate in {self.universe[ship.location].name}")
+                            else:
+                                ship.state = "traveling"
+                                self._log(f"{ship.name} departed {self.universe[ship.location].name}")
+                        else:
+                            ship.state = "idle"
                     elif ship.state == "unloading":
                         ship.state = "idle"
                         self._log(f"{ship.name} finished unloading at {self.universe[ship.location].name}")
@@ -152,28 +216,82 @@ class Simulation:
             return False
         ship.route_path = path
         ship.destination = path[0]
-        ship.state = "traveling"
-        ship.progress = 0.0
+        # First, travel to the gate within the current system
+        gate_id = self._get_gate_for(ship.location, path[0])
+        if gate_id and ship.intra_position != gate_id:
+            self._start_intra_travel(ship, gate_id)
+        else:
+            # Already at gate (or no gate), jump immediately
+            ship.state = "traveling"
+            ship.progress = 0.0
         return True
 
     def _move_ships(self):
+        """Handle inter-system travel. Jumps through gates are instant."""
         for ship in self.ships:
             if ship.state != "traveling" or not ship.destination:
                 continue
-            ship.progress += 0.01 * ship.speed
-            if ship.progress >= 1.0:
-                ship.progress = 0.0
-                ship.location = ship.destination
-                # Check if there are more hops in the route
-                if ship.route_path and ship.location == ship.route_path[0]:
-                    ship.route_path.pop(0)
-                if ship.route_path:
-                    ship.destination = ship.route_path[0]
-                    self._log(f"{ship.name} transiting through {self.universe[ship.location].name}")
+            # Inter-system jump is instant - arrive at the gate on the other side
+            arrival_system = ship.destination
+            ship.location = arrival_system
+            ship.progress = 0.0
+
+            # Find the gate we arrived through (gate in new system pointing back)
+            prev_system = ship.route_path[0] if ship.route_path and ship.route_path[0] == arrival_system else ""
+            # Actually find gate pointing back to where we came from
+            # We need to figure out which system we came from
+            arrival_gate = ""
+            for o in self.universe[arrival_system].objects:
+                if o.obj_type == "gate":
+                    # Check if this gate connects back toward our origin
+                    # Since we just arrived, the gate we came through connects_to our previous location
+                    # We don't easily have "previous location" so just pick the first gate
+                    arrival_gate = o.id
+                    break
+            ship.intra_position = arrival_gate if arrival_gate else ""
+
+            # Advance route path
+            if ship.route_path and ship.location == ship.route_path[0]:
+                ship.route_path.pop(0)
+
+            if ship.route_path:
+                # More hops: need to travel to the next gate within this system
+                next_dest = ship.route_path[0]
+                gate_id = self._get_gate_for(ship.location, next_dest)
+                if gate_id and gate_id != ship.intra_position:
+                    ship.destination = next_dest
+                    self._start_intra_travel(ship, gate_id)
+                    self._log(f"{ship.name} transiting {self.universe[ship.location].name} toward gate")
                 else:
-                    ship.destination = ""
+                    # Already at the right gate or no gate found, jump immediately
+                    ship.destination = next_dest
+                    ship.state = "traveling"
+            else:
+                # Final destination system reached
+                ship.destination = ""
+                ship.state = "idle"
+                self._log(f"{ship.name} arrived at {self.universe[ship.location].name}")
+
+    def _move_ships_intra(self):
+        """Handle intra-system movement between objects."""
+        for ship in self.ships:
+            if ship.state != "intra_traveling" or not ship.intra_destination:
+                continue
+            dist = self._intra_distance(ship.location, ship.intra_position or f"{ship.location}_star", ship.intra_destination)
+            step = ship.intra_speed / max(dist, 0.5)
+            ship.intra_progress += step
+            if ship.intra_progress >= 1.0:
+                ship.intra_position = ship.intra_destination
+                ship.intra_destination = ""
+                ship.intra_progress = 0.0
+                # Check if we arrived at a gate and need to jump
+                obj = self._get_object(ship.location, ship.intra_position)
+                if obj and obj.obj_type == "gate" and ship.destination and obj.connects_to == ship.destination:
+                    # Jump through gate instantly
+                    ship.state = "traveling"
+                else:
                     ship.state = "idle"
-                    self._log(f"{ship.name} arrived at {self.universe[ship.location].name}")
+                    self._log(f"{ship.name} reached {obj.name if obj else 'destination'} in {self.universe[ship.location].name}")
 
     def _npc_decisions(self):
         for ship in self.ships:
@@ -186,6 +304,15 @@ class Simulation:
 
     def _trader_decision(self, ship: NPCShip):
         loc = self.universe[ship.location]
+
+        # If not at a station, travel to one first
+        station_objs = [o for o in loc.objects if o.obj_type == "station"]
+        at_station = any(ship.intra_position == o.id for o in station_objs)
+
+        if not at_station and station_objs:
+            # Go to the first station
+            self._start_intra_travel(ship, station_objs[0].id)
+            return
 
         # If carrying cargo, unload and sell
         if ship.cargo:
@@ -226,6 +353,14 @@ class Simulation:
 
         # If cargo is heavy, go sell at nearest station
         if sum(ship.cargo.values()) >= ship.cargo_capacity * 0.8:
+            # Check if at a station
+            station_objs = [o for o in loc.objects if o.obj_type == "station"]
+            at_station = any(ship.intra_position == o.id for o in station_objs)
+
+            if not at_station and station_objs:
+                self._start_intra_travel(ship, station_objs[0].id)
+                return
+
             best_sell = self._find_best_sell(ship, loc)
             if best_sell:
                 commodity, station, price = best_sell
@@ -241,8 +376,12 @@ class Simulation:
                 self._send_ship(ship, random.choice(loc.connections))
             return
 
-        # If in a system with asteroids, mine
+        # If in a system with asteroids, navigate to belt and mine
         if loc.asteroid_fields:
+            belt_id = self._get_belt_obj(ship.location)
+            if belt_id and ship.intra_position != belt_id:
+                self._start_intra_travel(ship, belt_id)
+                return
             ship.state = "mining"
             ship.state_timer = MINING_TICKS
             return

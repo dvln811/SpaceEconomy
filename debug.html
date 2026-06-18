@@ -33,6 +33,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .state-loading{background:#ffd54f22;color:#ffd54f}
 .state-unloading{background:#ff8a6522;color:#ff8a65}
 .state-mining{background:#ab47bc22;color:#ab47bc}
+.state-intra_traveling{background:#4fc3f722;color:#66bb6a}
 .ship-row .loc{color:#8aa0b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ship-row .cargo{color:#6a8aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .price-row{display:grid;grid-template-columns:1fr 1fr 60px 50px;gap:4px;padding:2px 0;border-bottom:1px solid #0f1a28;font-size:10px}
@@ -51,6 +52,9 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <h1>Debug Monitor</h1>
   <a href="/">Game</a>
   <a href="/design">Design</a>
+  <select id="system-map-select" style="font-size:10px;color:#5a7a9a;background:#0a1020;border:1px solid #1a2844;border-radius:3px;padding:5px 8px;font-family:Orbitron,sans-serif;letter-spacing:1px;cursor:pointer">
+    <option value="">System Map...</option>
+  </select>
   <button id="nuke-btn" style="margin-left:auto;font-size:10px;color:#ef5350;background:#1a0a0a;border:1px solid #ef5350;border-radius:3px;padding:6px 14px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;font-family:Orbitron,sans-serif;transition:all .15s" onmouseover="this.style.background='#ef5350';this.style.color='#fff'" onmouseout="this.style.background='#1a0a0a';this.style.color='#ef5350'">Nuke</button>
 </div>
 <div class="grid">
@@ -95,6 +99,7 @@ async function refresh(){
       <div class="stat"><span class="label">NPC Ships</span><span class="value">${d.npc_ships}</span></div>
       <div class="stat" style="border-top:1px solid #152238;margin-top:4px;padding-top:4px"><span class="label">Idle</span><span class="value">${states.idle||0}</span></div>
       <div class="stat"><span class="label">Traveling</span><span class="value">${states.traveling||0}</span></div>
+      <div class="stat"><span class="label">Intra-Travel</span><span class="value">${states.intra_traveling||0}</span></div>
       <div class="stat"><span class="label">Loading</span><span class="value">${states.loading||0}</span></div>
       <div class="stat"><span class="label">Unloading</span><span class="value">${states.unloading||0}</span></div>
       <div class="stat"><span class="label">Mining</span><span class="value">${states.mining||0}</span></div>
@@ -144,6 +149,19 @@ async function refresh(){
 }
 refresh();
 setInterval(refresh,2000);
+
+// System map dropdown
+document.getElementById('system-map-select').addEventListener('change',(e)=>{
+  if(e.target.value) window.open('/system_view?id='+e.target.value+'&debug=1&from=debug','_blank');
+  e.target.value='';
+});
+(async()=>{
+  const r=await fetch('/api/state');const d=await r.json();
+  const sel=document.getElementById('system-map-select');
+  Object.entries(d.systems).sort((a,b)=>a[1].name.localeCompare(b[1].name)).forEach(([id,sys])=>{
+    const opt=document.createElement('option');opt.value=id;opt.textContent=sys.name;sel.appendChild(opt);
+  });
+})();
 
 document.getElementById('nuke-btn').addEventListener('click',async()=>{
   if(!confirm('NUKE: Reset the entire simulation to initial state?')) return;

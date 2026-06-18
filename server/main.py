@@ -79,6 +79,11 @@ def debug_page():
     return send_from_directory(BASE_DIR, "debug.html")
 
 
+@app.route("/system_view")
+def system_view_page():
+    return send_from_directory(BASE_DIR, "system_view.html")
+
+
 @app.route("/health")
 def health():
     return {"status": "ok", "tick": sim.tick_count}
@@ -108,6 +113,7 @@ def api_state():
             "stations": stations,
             "asteroid_fields": [{"name": a.name, "type": a.field_type, "yields": a.yields, "density": a.density} for a in sys.asteroid_fields],
             "connections": sys.connections,
+            "objects": [{"id": o.id, "name": o.name, "type": o.obj_type, "distance": o.distance, "angle": round(o.angle, 4), "connects_to": o.connects_to} for o in sys.objects],
         }
     return jsonify({"tick": sim.tick_count, "systems": systems})
 
@@ -121,6 +127,8 @@ def api_ships():
             "name": s.name, "role": s.role, "ship_class": s.ship_class,
             "state": s.state, "location": s.location, "destination": s.destination,
             "progress": round(s.progress, 2), "speed": round(s.speed, 2), "cargo": s.cargo,
+            "intra_position": s.intra_position, "intra_destination": s.intra_destination,
+            "intra_progress": round(s.intra_progress, 3),
         })
     return jsonify({"tick": sim.tick_count, "ships": ships})
 
@@ -147,9 +155,34 @@ def api_debug():
             "ship_class": s.ship_class, "timer": s.state_timer,
             "location": loc_name, "destination": dest_name,
             "cargo": s.cargo, "progress": round(s.progress, 2),
+            "intra_position": s.intra_position, "intra_destination": s.intra_destination,
+            "intra_progress": round(s.intra_progress, 3),
         })
     summary["ships"] = ships
     return jsonify(summary)
+
+
+@app.route("/api/system/<system_id>")
+def api_system(system_id):
+    """Detailed system view with objects and ship positions."""
+    if system_id not in sim.universe:
+        return jsonify({"error": "unknown system"}), 404
+    sys_obj = sim.universe[system_id]
+    objects = [{"id": o.id, "name": o.name, "type": o.obj_type, "distance": o.distance, "angle": round(o.angle, 4), "connects_to": o.connects_to} for o in sys_obj.objects]
+    # Ships in this system
+    ships_here = []
+    for s in sim.ships:
+        if s.location == system_id:
+            ships_here.append({
+                "name": s.name, "role": s.role, "state": s.state,
+                "intra_position": s.intra_position, "intra_destination": s.intra_destination,
+                "intra_progress": round(s.intra_progress, 3),
+            })
+    return jsonify({
+        "id": system_id, "name": sys_obj.name, "type": sys_obj.system_type,
+        "security": sys_obj.security, "objects": objects, "ships": ships_here,
+        "tick": sim.tick_count,
+    })
 
 
 @app.route("/api/nuke", methods=["POST"])

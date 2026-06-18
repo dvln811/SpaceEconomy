@@ -20,6 +20,18 @@ class AsteroidField:
 
 
 @dataclass
+class SystemObject:
+    """An object within a star system (planet, station, belt, gate, etc.)."""
+    id: str
+    name: str
+    obj_type: str            # star, planet, station, asteroid_belt, gate
+    distance: float = 0.0    # AU from star (0 = center)
+    angle: float = 0.0       # radians, position on orbital ring
+    parent: str = ""         # id of parent object (e.g. planet for a moon/station)
+    connects_to: str = ""    # for gates: which system_id this gate leads to
+
+
+@dataclass
 class Station:
     name: str
     system_id: str
@@ -43,6 +55,7 @@ class System:
     stations: list[Station] = field(default_factory=list)
     asteroid_fields: list[AsteroidField] = field(default_factory=list)
     connections: list[str] = field(default_factory=list)  # system IDs this connects to
+    objects: list[SystemObject] = field(default_factory=list)  # all objects in-system (planets, gates, etc.)
 
 
 @dataclass
@@ -53,14 +66,19 @@ class NPCShip:
     cargo_capacity: float = 200.0
     fuel: float = 100.0
     location: str = ""       # system_id
-    destination: str = ""    # system_id
-    progress: float = 0.0    # 0-1 travel progress
+    destination: str = ""    # system_id (inter-system destination)
+    progress: float = 0.0    # 0-1 travel progress (inter-system)
     speed: float = 1.0
-    state: str = "idle"      # idle, traveling, loading, unloading, mining
+    state: str = "idle"      # idle, traveling, intra_traveling, loading, unloading, mining
     state_timer: int = 0     # ticks remaining in current state
     role: str = "trader"     # trader, miner
     ship_class: str = ""     # hull class name
     route_path: list[str] = field(default_factory=list)  # multi-hop path (system IDs)
+    # Intra-system navigation
+    intra_position: str = ""       # object_id the ship is currently at (or "" if in transit)
+    intra_destination: str = ""    # object_id the ship is traveling to within system
+    intra_progress: float = 0.0   # 0-1 progress toward intra_destination
+    intra_speed: float = 1.5        # AU per tick equivalent (intra-system speed)
 
 
 # All commodities in the game
