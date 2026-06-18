@@ -191,6 +191,15 @@ A browser-based space economy simulation game. Currently single-player with plan
 - **Comprehensive debug dashboard**
 
 ### Phase 2: Player Can Trade (NEXT)
+
+**Immediate next tasks (in progress):**
+1. Convert system_view from Canvas 2D to Three.js 3D (same renderer as star map)
+2. Use star gradient sprites in system map (consistent with star map)
+3. Render actual 3D ship models in system view (with LOD: full model close, simplified far)
+4. Fix economy starvation (production rate vs logistics throughput balancing)
+5. Order book UI in game market tab (buy/sell orders visible to player)
+
+**Then Phase 2 gameplay:**
 - Player can buy/sell commodities at current station
 - Player can set destination, travel takes real time
 - Fuel consumption during travel
