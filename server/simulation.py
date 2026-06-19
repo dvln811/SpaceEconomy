@@ -218,7 +218,7 @@ class Simulation:
                     for field in sys.asteroid_fields:
                         for ore in field.yields:
                             current = station.inventory.get(ore, 0)
-                            if current < 500:
+                            if current < 2000:
                                 station.inventory[ore] = current + 1.5 * field.density
 
                 # ── Passive trade goods generation at hubs/outposts ──
@@ -240,9 +240,12 @@ class Simulation:
                         possible = available / qty_needed
                         can_produce = min(can_produce, possible)
                     # Self-limit: smoothly adjust effective rate toward what's actually possible
-                    # This prevents boom/bust cycles - station produces at sustainable pace
                     target_rate = min(can_produce, station.production_rate)
-                    station.effective_rate += (target_rate - station.effective_rate) * 0.05
+                    # Ramp up fast (0.05), ramp down slow (0.005) - survives gaps between deliveries
+                    if target_rate > station.effective_rate:
+                        station.effective_rate += (target_rate - station.effective_rate) * 0.05
+                    else:
+                        station.effective_rate += (target_rate - station.effective_rate) * 0.005
                     station.effective_rate = max(0, min(station.effective_rate, station.production_rate))
                     actual = min(station.effective_rate, can_produce)
                     if actual < 0.01:
