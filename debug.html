@@ -49,7 +49,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .ship-card.selected{border-color:#4fc3f7;background:#0d1525}
 .ship-header{display:flex;align-items:center;gap:8px}
 .ship-name{color:#e0e8f0;font-weight:500}
-.ship-class{color:#5a7a9a;font-size:9px}
+.ship-class{color:#8aa0b8;font-size:9px}
 .ship-detail{margin-top:6px;padding-top:6px;border-top:1px solid #152238}
 .ship-detail .row{display:flex;gap:12px;padding:1px 0}
 .ship-detail .row .k{color:#5a7a9a;width:80px}
@@ -137,6 +137,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   </div>
 </div>
 <script>
+function fmtName(s){return s.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());}
 // ── Persistent UI state (survives re-renders) ───────────────────────────────
 let D = null;
 let selectedShip = null;
@@ -216,7 +217,7 @@ function renderOverview() {
       <div class="stat-row"><span class="label">Halted</span><span class="value" style="color:#ef5350">${totalHalted}</span></div>
       <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:9px;color:#4a6a8a">HALTED:</div>
       ${haltedList.slice(0,10).map(h=>`<div class="stat-row"><span class="label">${h.station}</span><span class="value" style="color:#ef5350;font-size:9px">${h.output}</span></div>`).join('')}
-      ${haltedList.length>10?`<div style="color:#5a7a9a;font-size:9px;margin-top:4px">+${haltedList.length-10} more</div>`:''}
+      ${haltedList.length>10?`<div style="color:#8aa0b8;font-size:9px;margin-top:4px">+${haltedList.length-10} more</div>`:''}
     </div>
     <div class="panel">
       <div class="panel-title">Economy Inventory</div>
@@ -232,7 +233,7 @@ function renderOverview() {
         let allBuys=[];
         for(const sys of Object.values(D.systems||{})){for(const st of sys.stations){for(const b of (st.buy_orders||[])){allBuys.push({...b,station:st.name,system:sys.name});}}}
         allBuys.sort((a,b)=>b.qty-a.qty);
-        return allBuys.slice(0,10).map(b=>`<div class="stat-row"><span class="label" style="color:#ef5350">${b.commodity}</span><span class="value">${Math.round(b.qty)} @ ${b.price.toFixed(0)} <span style="color:#5a7a9a;font-size:9px">${b.station}</span></span></div>`).join('')||'<div style="color:#3a5a7a">None</div>';
+        return allBuys.slice(0,10).map(b=>`<div class="stat-row"><span class="label" style="color:#ef5350">${b.commodity}</span><span class="value">${Math.round(b.qty)} @ ${b.price.toFixed(0)} <span style="color:#8aa0b8;font-size:9px">${b.station}</span></span></div>`).join('')||'<div style="color:#6a8aa0">None</div>';
       })()}
     </div>
   </div>
@@ -324,7 +325,7 @@ function renderShips() {
         <span class="badge" style="background:#1a284422;color:#8aa0b8">${s.role}</span>
         <span class="ship-name">${s.name}</span>
         <span class="ship-class">${s.ship_class}</span>
-        <span style="margin-left:auto;color:#5a7a9a;font-size:9px">${s.location}</span>
+        <span style="margin-left:auto;color:#8aa0b8;font-size:9px">${s.location}</span>
       </div>${detail}
     </div>`;
   }
@@ -439,10 +440,10 @@ function renderSystems() {
     // Order book
     const sellRows = (st.sell_orders||[]).slice(0,5).map(o=>`<div class="stat-row"><span class="label" style="color:#66bb6a">${o.commodity}</span><span class="value">${Math.round(o.qty)} @ ${o.price.toFixed(0)}</span></div>`).join('');
     const buyRows = (st.buy_orders||[]).slice(0,5).map(o=>`<div class="stat-row"><span class="label" style="color:#ef5350">${o.commodity}</span><span class="value">${Math.round(o.qty)} @ ${o.price.toFixed(0)}</span></div>`).join('');
-    return `<div class="panel"><div class="panel-title">${st.name} <span class="badge badge-${sys.security}">${st.type}</span></div>${prodRows||'<div style="color:#3a5a7a;font-size:9px">No production</div>'}
-    <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:9px;color:#4a6a8a">SELL ORDERS</div>${sellRows||'<div style="color:#3a5a7a;font-size:9px">None</div>'}
-    <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:9px;color:#4a6a8a">BUY ORDERS (DEMAND)</div>${buyRows||'<div style="color:#3a5a7a;font-size:9px">None</div>'}
-    <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:9px;color:#4a6a8a">INVENTORY</div>${invRows||'<div style="color:#3a5a7a">Empty</div>'}</div>`;
+    return `<div class="panel"><div class="panel-title">${st.name} <span class="badge badge-${sys.security}">${st.type}</span></div>${prodRows||'<div style="color:#6a8aa0;font-size:9px">No production</div>'}
+    <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:9px;color:#4a6a8a">SELL ORDERS</div>${sellRows||'<div style="color:#6a8aa0;font-size:9px">None</div>'}
+    <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:9px;color:#4a6a8a">BUY ORDERS (DEMAND)</div>${buyRows||'<div style="color:#6a8aa0;font-size:9px">None</div>'}
+    <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:9px;color:#4a6a8a">INVENTORY</div>${invRows||'<div style="color:#6a8aa0">Empty</div>'}</div>`;
   }).join('');
 
   const shipsHere = (D.ships||[]).filter(s => s.location_id === selectedSystem);
@@ -471,8 +472,8 @@ function renderSystems() {
         <div class="stat-row"><span class="label">Sell Orders</span><span class="value" style="color:#66bb6a">${totalSells}</span></div>`;
       })()}
     </div>
-    <div class="panel"><div class="panel-title">Asteroid Fields</div>${beltInfo||'<div style="color:#3a5a7a">None</div>'}</div>
-    <div class="panel"><div class="panel-title">Ships in System (${shipsHere.length})</div>${shipList||'<div style="color:#3a5a7a">None</div>'}</div>
+    <div class="panel"><div class="panel-title">Asteroid Fields</div>${beltInfo||'<div style="color:#6a8aa0">None</div>'}</div>
+    <div class="panel"><div class="panel-title">Ships in System (${shipsHere.length})</div>${shipList||'<div style="color:#6a8aa0">None</div>'}</div>
   </div></div>`;
 }
 

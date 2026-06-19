@@ -60,7 +60,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 /* Main - Star Map */
 .main{background:#05080f;position:relative;overflow:hidden}
 .main canvas{position:absolute;inset:0;width:100%!important;height:100%!important}
-.map-label{position:absolute;bottom:12px;left:12px;font-size:10px;color:#6a8aa0;letter-spacing:1px;text-transform:uppercase}
+.map-label{position:absolute;bottom:12px;left:12px;font-size:10px;color:#8aa0b8;letter-spacing:1px;text-transform:uppercase}
 .map-zoom{position:absolute;bottom:12px;right:12px;display:flex;flex-direction:column;gap:4px}
 .map-zoom button{width:28px;height:28px;background:#0a1020;border:1px solid #1a3050;color:#4fc3f7;border-radius:3px;cursor:pointer;font-size:14px}
 
@@ -115,7 +115,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .ship-stat{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #0f1a28}
 .ship-stat .label{color:#8aa0b8;font-size:10px}
 .ship-stat .value{color:#e0e8f0;font-size:11px}
-.activity-item{padding:4px 0;font-size:10px;color:#6a8aa0;border-bottom:1px solid #0a1420}
+.activity-item{padding:4px 0;font-size:10px;color:#8aa0b8;border-bottom:1px solid #0a1420}
 .activity-item .time{color:#6a9ab8;margin-right:8px}
 .activity-item .highlight{color:#4fc3f7}
 .activity-item .profit{color:#66bb6a}
@@ -140,7 +140,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .sysview-tooltip.visible{opacity:1}
 .sysview-tooltip .tt-name{color:#e0e8f0;font-weight:500;margin-bottom:2px}
 .sysview-tooltip .tt-type{color:#4fc3f7;font-size:9px;text-transform:uppercase;letter-spacing:1px}
-.sysview-tooltip .tt-detail{color:#6a8aa0;margin-top:3px}
+.sysview-tooltip .tt-detail{color:#8aa0b8;margin-top:3px}
 .sysview-zoom{position:absolute;bottom:6px;right:6px;display:flex;flex-direction:column;gap:2px}
 .sysview-zoom button{width:22px;height:22px;background:#0a1020;border:1px solid #1a3050;color:#4fc3f7;border-radius:3px;cursor:pointer;font-size:11px}
 .sysview-zoom button:hover{background:#1a2844}
@@ -156,8 +156,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     <a href="/docs" style="font-size:10px;color:#5a7a9a;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:Orbitron,sans-serif;transition:all .15s" onmouseover="this.style.color='#4fc3f7';this.style.borderColor='#4fc3f7'" onmouseout="this.style.color='#5a7a9a';this.style.borderColor='#1a2844'">Docs</a>
     <a href="/debug" style="font-size:10px;color:#5a7a9a;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:Orbitron,sans-serif;transition:all .15s" onmouseover="this.style.color='#ef5350';this.style.borderColor='#ef5350'" onmouseout="this.style.color='#5a7a9a';this.style.borderColor='#1a2844'">Debug</a>
     <div class="credits">Balance: <span>₡ 847,320</span></div>
-    <div class="rep">Rep: Merchant Guild ★★★☆</div>
-    <div class="clock">Cycle 2847.3 | 14:32 GST</div>
+    <div class="clock" id="gameClock">Cycle 0 | 00:00 GST</div>
   </div>
 
   <!-- Left: Systems List -->
@@ -229,14 +228,6 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
       <div class="activity-item"><span class="time">13:55</span>Trade Guild contract available: deliver Meds to Vega (+22% bonus)</div>
       </div>
     </div>
-    <div class="bottom-section">
-      <div class="panel-title">Profitable Routes</div>
-      <div class="bottom-scroll">
-      <div class="route-item"><span class="route-dot"></span><div class="route-info">Cygnus → Vega Outpost<br><span style="color:#5a7a9a">Medical Supplies · 3.2 hr</span></div><div class="route-profit">+₡ 34,200</div></div>
-      <div class="route-item"><span class="route-dot"></span><div class="route-info">Tau Ceti → Cygnus<br><span style="color:#5a7a9a">Food · 1.8 hr</span></div><div class="route-profit">+₡ 18,400</div></div>
-      <div class="route-item"><span class="route-dot warning"></span><div class="route-info">Kepler → Wolf 359<br><span style="color:#5a7a9a">Everything · 6.1 hr · ⚠ Risky</span></div><div class="route-profit">+₡ 89,000</div></div>
-      <div class="route-item"><span class="route-dot danger"></span><div class="route-info">Anywhere → Frontier<br><span style="color:#5a7a9a">Narcotics · Illegal · 8+ hr</span></div><div class="route-profit">+₡ 200,000+</div></div>
-      </div>
     </div>
   </div>
 </div>
@@ -265,9 +256,9 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     </div>
   </div>
   <div id="svSidebar" style="width:180px;overflow-y:auto;background:#0a0e18;border-left:1px solid #1a2844;padding:8px;font-size:10px;flex-shrink:0;display:flex;flex-direction:column">
-    <div style="font-family:Orbitron,sans-serif;font-size:8px;color:#5a7a9a;letter-spacing:1px;margin-bottom:4px">SOLAR BODIES</div>
+    <div style="font-family:Orbitron,sans-serif;font-size:8px;color:#8aa0b8;letter-spacing:1px;margin-bottom:4px">SOLAR BODIES</div>
     <div id="svBodiesList" style="max-height:45%;overflow-y:auto;margin-bottom:6px;border-bottom:1px solid #1a2844;padding-bottom:6px"></div>
-    <div style="font-family:Orbitron,sans-serif;font-size:8px;color:#5a7a9a;letter-spacing:1px;margin-bottom:4px">SHIPS</div>
+    <div style="font-family:Orbitron,sans-serif;font-size:8px;color:#8aa0b8;letter-spacing:1px;margin-bottom:4px">SHIPS</div>
     <div id="svShipList" style="flex:1;overflow-y:auto"></div>
   </div>
   </div>
@@ -763,6 +754,10 @@ async function fetchShips(){
     const r=await fetch('/api/ships');
     const d=await r.json();
     liveShips=d.ships;
+    // Update clock
+    const tick=d.tick||0;
+    const hrs=Math.floor(tick/3600);const mins=Math.floor((tick%3600)/60);
+    document.getElementById('gameClock').textContent=`Cycle ${tick} | ${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')} GST`;
     updateMapShips();
     updateLiveShipList();
   }catch(e){}
@@ -795,7 +790,7 @@ function updateLiveMarket(marketData){
       html+=`<div style="font-size:8px;color:#ef5350;margin:4px 0 2px;letter-spacing:1px">SELL ORDERS</div>`;
       html+=`<div class="commodity-row" style="border-bottom:1px solid #1a2844;padding-bottom:2px;margin-bottom:2px"><div class="commodity-name" style="color:#5a7a9a;font-size:9px">Item</div><div class="commodity-vol" style="color:#5a7a9a;font-size:9px">Qty</div><div class="commodity-price" style="color:#5a7a9a;font-size:9px">Price</div></div>`;
       for(const o of station.sell_orders.slice(0,6)){
-        const name=o.commodity.replace(/_/g,' ');
+        const name=o.commodity.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
         html+=`<div class="commodity-row"><div class="commodity-name">${name}</div><div class="commodity-vol">${Math.round(o.qty)}</div><div class="commodity-price">${Math.round(o.price)}</div></div>`;
       }
     }
@@ -804,7 +799,7 @@ function updateLiveMarket(marketData){
       html+=`<div style="font-size:8px;color:#66bb6a;margin:4px 0 2px;letter-spacing:1px">BUY ORDERS</div>`;
       html+=`<div class="commodity-row" style="border-bottom:1px solid #1a2844;padding-bottom:2px;margin-bottom:2px"><div class="commodity-name" style="color:#5a7a9a;font-size:9px">Item</div><div class="commodity-vol" style="color:#5a7a9a;font-size:9px">Qty</div><div class="commodity-price" style="color:#5a7a9a;font-size:9px">Price</div></div>`;
       for(const o of station.buy_orders.slice(0,6)){
-        const name=o.commodity.replace(/_/g,' ');
+        const name=o.commodity.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
         html+=`<div class="commodity-row"><div class="commodity-name">${name}</div><div class="commodity-vol">${Math.round(o.qty)}</div><div class="commodity-price" style="color:#66bb6a">${Math.round(o.price)}</div></div>`;
       }
     }
@@ -908,13 +903,18 @@ async function fetchActivity(){
     const d=await r.json();
     const newEvents=d.events.filter(e=>e.tick>lastEventTick);
     for(const e of newEvents){
+      // Only show newsworthy events (arrivals, unloading, mining finds)
+      const msg=e.msg;
+      if(msg.includes('heading to gate')||msg.includes('transiting'))continue;
       const div=document.createElement('div');
       div.className='activity-item';
-      div.innerHTML=`<span class="time">T${e.tick}</span><span class="highlight">${e.msg}</span>`;
+      // Format as news bulletin
+      const fmtMsg=msg.replace(/_/g,' ');
+      div.innerHTML=`<span class="time">T${e.tick}</span>${fmtMsg}`;
       activityFeed.insertBefore(div,activityFeed.firstChild);
       lastEventTick=e.tick;
     }
-    while(activityFeed.children.length>20) activityFeed.removeChild(activityFeed.lastChild);
+    while(activityFeed.children.length>15) activityFeed.removeChild(activityFeed.lastChild);
   }catch(e){}
 }
 fetchActivity();
