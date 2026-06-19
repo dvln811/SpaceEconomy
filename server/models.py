@@ -82,6 +82,7 @@ class NPCShip:
     intra_destination: str = ""
     intra_progress: float = 0.0
     intra_speed: float = 0.2
+    align_time: int = 5          # ticks to align before moving
     # Safety tolerance (0.0 = avoids all danger, 1.0 = will go anywhere)
     risk_tolerance: float = 0.5
     faction: str = ""        # owning corporation/faction

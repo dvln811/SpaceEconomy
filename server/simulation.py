@@ -80,6 +80,7 @@ class Simulation:
                 speed=st.speed, state="idle",
                 role="hauler", ship_class=st.id, intra_speed=st.intra_speed,
                 risk_tolerance=risk_by_tier.get(st.tier, 0.5), faction=faction,
+                align_time=st.align_time,
             )
             station_objs = [o for o in self.universe[loc].objects if o.obj_type == "station"]
             if station_objs:
@@ -104,6 +105,7 @@ class Simulation:
                 speed=st.speed, state="idle",
                 role="miner", ship_class=st.id, intra_speed=st.intra_speed,
                 risk_tolerance=risk_by_tier.get(st.tier, 0.5), faction=faction,
+                align_time=st.align_time,
             )
             station_objs = [o for o in self.universe[loc].objects if o.obj_type == "station"]
             if station_objs:
@@ -151,7 +153,7 @@ class Simulation:
         if ship.intra_position == dest_obj_id:
             return
         ship.intra_destination = dest_obj_id
-        ship.intra_progress = -1.0  # departure delay (5 ticks to align)
+        ship.intra_progress = -ship.align_time  # negative = aligning (ticks until 0)
         ship.state = "intra_traveling"
 
     # ── Safety-aware pathfinding ─────────────────────────────────────────────
@@ -348,9 +350,11 @@ class Simulation:
         for ship in self.ships:
             if ship.state != "intra_traveling" or not ship.intra_destination:
                 continue
-            # Departure delay: first 5 ticks are "aligning" (progress stays at 0)
+            # Departure delay: negative progress = aligning
             if ship.intra_progress < 0:
-                ship.intra_progress += 0.2  # takes 5 ticks to go from -1 to 0
+                ship.intra_progress += 1  # 1 tick = 1 second countdown
+                if ship.intra_progress > 0:
+                    ship.intra_progress = 0
                 continue
             dist = self._intra_distance(ship.location, ship.intra_position or f"{ship.location}_star", ship.intra_destination)
             # 15-45 ticks to cross based on distance
