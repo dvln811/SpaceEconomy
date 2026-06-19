@@ -112,7 +112,6 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .bottom-section{padding:12px 16px;display:flex;flex-direction:column;overflow:hidden}
 .bottom-section .panel-title{flex-shrink:0}
 .bottom-scroll{overflow-y:auto;flex:1}
-.ship-schematic{width:100%;min-height:60px;background:#040810;border-radius:3px;flex:1;overflow:hidden;margin-bottom:8px;border-bottom:1px solid #152238}
 .ship-stat{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #0f1a28}
 .ship-stat .label{color:#8aa0b8;font-size:10px}
 .ship-stat .value{color:#e0e8f0;font-size:11px}
@@ -210,7 +209,6 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <div class="bottom" id="bottom-panel">
     <div class="bottom-section">
       <div class="panel-title">Your Ship · "Rusty Venture"</div>
-      <div class="ship-schematic" id="playerShipViewer"></div>
       <div class="bottom-scroll">
       <div class="ship-stat"><span class="label">Class</span><span class="value">Bison Mk.III Freighter</span></div>
       <div class="ship-stat"><span class="label">Cargo</span><span class="value">340 / 500 units</span></div>
@@ -840,40 +838,6 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden) fetchLiveData();
 });
 
-// ── Player Ship 3D Viewer ─────────────────────────────────────────────────────
-(async function initPlayerShipViewer(){
-  try {
-    const resp = await fetch('/api/ship_model/bison_mk3');
-    const shipData = await resp.json();
-    const el = document.getElementById('playerShipViewer');
-    if (!el || el.clientWidth === 0) return;
-    const w = el.clientWidth, h = Math.max(el.clientHeight, 80);
-    const sc = new THREE.Scene();
-    const cam = new THREE.PerspectiveCamera(50, w/h, 0.1, 50);
-    cam.position.set(2.5, 1.5, 3);
-    const rnd = new THREE.WebGLRenderer({antialias:true, alpha:true});
-    rnd.setSize(w, h); rnd.setClearColor(0x040810);
-    rnd.domElement.style.display = 'block';
-    el.appendChild(rnd.domElement);
-    sc.add(new THREE.AmbientLight(0x4fc3f7, 0.3));
-    const dir = new THREE.DirectionalLight(0xffffff, 0.7);
-    dir.position.set(2, 3, 2); sc.add(dir);
-    buildShipFromData(sc, shipData, {showHardpoints:false});
-    // Resize handler
-    window.addEventListener('resize', () => {
-      const nw = el.clientWidth, nh = el.clientHeight;
-      if (nw === 0 || nh === 0) return;
-      cam.aspect = nw / nh;
-      cam.updateProjectionMatrix();
-      rnd.setSize(nw, nh);
-    });
-    // Slow auto-rotate
-    let angle = 0, shipFrame=0;
-    function animShip(){requestAnimationFrame(animShip);if(++shipFrame%3!==0)return;angle+=0.009;cam.position.x=Math.cos(angle)*3;cam.position.z=Math.sin(angle)*3;cam.lookAt(0,0,0);rnd.render(sc,cam);}
-    animShip();
-  } catch(e) { console.error('Ship viewer:', e); }
-})();
-
 // ── Hover tooltip ─────────────────────────────────────────────────────────────
 const tooltip=document.getElementById('map-tooltip');
 const ttRaycaster=new THREE.Raycaster();
@@ -961,24 +925,23 @@ const svTooltip=document.getElementById('svTooltip');
 
 let svData=null, svShipPos={}, svCurrentId='', svHovered=null;
 let svDragging=false, svDragOff={x:0,y:0};
-let svPanning=false, svPanStart={x:0,y:0}, svCamStart={x:0,y:0};
 
 const SV_COLORS={star:0xffd54f,gate:0xab47bc,station:0x4fc3f7,asteroid_belt:0xff8a65,planet:0x66bb6a,moon:0x8aa0b8};
 const SV_HEX={star:'#ffd54f',gate:'#ab47bc',station:'#4fc3f7',asteroid_belt:'#ff8a65',planet:'#66bb6a',moon:'#8aa0b8'};
 
-// Three.js scene setup (orthographic for 2D map)
+// Three.js scene setup (3D navigable)
 const svScene=new THREE.Scene();
 const svW=svContainer.clientWidth||600, svH=svContainer.clientHeight||400;
-const svAspect=svW/svH;
-let svZoom=200; // world units visible in half-height
-const svCam=new THREE.OrthographicCamera(-svZoom*svAspect,svZoom*svAspect,svZoom,-svZoom,0.1,1000);
-svCam.position.set(0,0,100);
-svCam.lookAt(0,0,0);
+const svCam=new THREE.PerspectiveCamera(60, svW/svH, 1, 5000);
+svCam.position.set(0,150,300);
 const svRenderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});
 svRenderer.setSize(svW,svH);
 svRenderer.setClearColor(0x0a0e18);
 svRenderer.domElement.style.display='block';
 svContainer.appendChild(svRenderer.domElement);
+const svControls=new OrbitControls(svCam, svRenderer.domElement);
+svControls.enableDamping=true;svControls.dampingFactor=0.08;
+svControls.minDistance=50;svControls.maxDistance=1500;
 
 // Groups
 const svOrbitsGroup=new THREE.Group(); svScene.add(svOrbitsGroup);
@@ -1025,8 +988,7 @@ function svResize(){
   const w=svContainer.clientWidth, h=svContainer.clientHeight;
   if(w===0||h===0)return;
   svRenderer.setSize(w,h);
-  const a=w/h;
-  svCam.left=-svZoom*a; svCam.right=svZoom*a; svCam.top=svZoom; svCam.bottom=-svZoom;
+  svCam.aspect=w/h;
   svCam.updateProjectionMatrix();
 }
 new ResizeObserver(svResize).observe(svContainer);
@@ -1037,41 +999,34 @@ document.addEventListener('mousemove',e=>{if(svDragging){svWin.style.left=(e.cli
 document.addEventListener('mouseup',()=>{svDragging=false;document.body.style.userSelect='';});
 document.getElementById('svClose').addEventListener('click',()=>{svWin.classList.remove('open');});
 
-// Zoom buttons
-document.getElementById('svZoomIn').addEventListener('click',()=>{svZoom=Math.max(25,svZoom*0.7);svResize();});
-document.getElementById('svZoomOut').addEventListener('click',()=>{svZoom=Math.min(1600,svZoom*1.4);svResize();});
+// Zoom buttons (adjust OrbitControls distance)
+document.getElementById('svZoomIn').addEventListener('click',()=>{svCam.position.multiplyScalar(0.7);svControls.update();});
+document.getElementById('svZoomOut').addEventListener('click',()=>{svCam.position.multiplyScalar(1.4);svControls.update();});
 
-// Pan/Zoom on renderer
+// Hover for tooltip
 const svEl=svRenderer.domElement;
-svEl.addEventListener('mousedown',e=>{if(e.button===0){svPanning=true;svPanStart={x:e.clientX,y:e.clientY};svCamStart={x:svCam.position.x,y:svCam.position.y};}});
-svEl.addEventListener('mousemove',e=>{
-  if(svPanning){
-    const dx=(e.clientX-svPanStart.x)/svContainer.clientWidth*svZoom*2*(svContainer.clientWidth/svContainer.clientHeight);
-    const dy=(e.clientY-svPanStart.y)/svContainer.clientHeight*svZoom*2;
-    svCam.position.x=svCamStart.x-dx;
-    svCam.position.y=svCamStart.y+dy;
-  }
-  svHandleHover(e);
-});
-svEl.addEventListener('mouseup',()=>{svPanning=false;});
-svEl.addEventListener('mouseleave',()=>{svPanning=false;svTooltip.classList.remove('visible');});
-svEl.addEventListener('wheel',e=>{e.preventDefault();const f=e.deltaY>0?1.15:0.85;svZoom=Math.max(25,Math.min(1600,svZoom*f));svResize();},{passive:false});
+svEl.addEventListener('mousemove',e=>{svHandleHover(e);});
 
 function svPolar(d,a){return{x:d*40*Math.cos(a),y:d*40*Math.sin(a)};}
 
 // Tooltip / Hover
 let svObjPositions=[]; // [{obj, x, y}] rebuilt on data change
+const svRaycaster=new THREE.Raycaster();
+const svMouse=new THREE.Vector2();
+let svSelected=null; // currently selected object/ship
+
 function svHandleHover(e){
-  if(!svData||svPanning){svTooltip.classList.remove('visible');return;}
+  if(!svData){svTooltip.classList.remove('visible');return;}
   const rect=svEl.getBoundingClientRect();
   const mx=e.clientX-rect.left, my=e.clientY-rect.top;
-  // Convert screen to world
-  const ndcX=(mx/rect.width)*2-1, ndcY=-(my/rect.height)*2+1;
-  const wx=svCam.position.x+ndcX*svZoom*(rect.width/rect.height);
-  const wy=svCam.position.y+ndcY*svZoom;
-  let closest=null, closestD=15;
+  svMouse.x=(mx/rect.width)*2-1;
+  svMouse.y=-(my/rect.height)*2+1;
+  svRaycaster.setFromCamera(svMouse,svCam);
+  // Check objects by distance to ray
+  let closest=null, closestD=20;
   for(const op of svObjPositions){
-    const d=Math.hypot(op.x-wx,op.y-wy);
+    const pt=new THREE.Vector3(op.x,op.y,0);
+    const d=svRaycaster.ray.distanceToPoint(pt);
     if(d<closestD){closest=op.obj;closestD=d;}
   }
   if(closest){
@@ -1088,6 +1043,39 @@ function svHandleHover(e){
     svTooltip.classList.add('visible');
   }else{svHovered=null;svTooltip.classList.remove('visible');}
 }
+
+// Click to select objects
+svEl.addEventListener('click',e=>{
+  if(!svData)return;
+  const rect=svEl.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const mouse=new THREE.Vector2((mx/rect.width)*2-1,-(my/rect.height)*2+1);
+  const rc=new THREE.Raycaster();
+  rc.setFromCamera(mouse,svCam);
+  let closest=null, closestD=15;
+  for(const op of svObjPositions){
+    const d=rc.ray.distanceToPoint(new THREE.Vector3(op.x,op.y,0));
+    if(d<closestD){closest=op.obj;closestD=d;}
+  }
+  svSelected=closest;
+  // Update info in ship list panel
+  const panel=document.getElementById('svShipList');
+  if(closest){
+    let html=`<div style="font-family:Orbitron,sans-serif;font-size:9px;color:#4fc3f7;margin-bottom:6px">${closest.name}</div>`;
+    html+=`<div style="color:#5a7a9a;font-size:10px;margin-bottom:4px">${closest.type.replace('_',' ')}</div>`;
+    if(closest.type==='gate'&&closest.connects_to)html+=`<div style="color:#8aa0b8;font-size:10px">Leads to: ${closest.connects_to}</div>`;
+    if(closest.type==='station')html+=`<div style="color:#8aa0b8;font-size:10px">Orbit: ${closest.distance.toFixed(1)} AU</div>`;
+    if(closest.type==='planet')html+=`<div style="color:#8aa0b8;font-size:10px">Orbit: ${closest.distance.toFixed(1)} AU</div>`;
+    html+=`<hr style="border:0;border-top:1px solid #1a2844;margin:8px 0">`;
+    // Show ships at this location
+    if(svData.ships){
+      const here=svData.ships.filter(s=>s.intra_position===closest.id);
+      if(here.length)html+=`<div style="font-size:9px;color:#5a7a9a;margin-bottom:4px">DOCKED/NEARBY:</div>`;
+      for(const s of here) html+=`<div style="color:#b0c4d8;font-size:10px;padding:2px 0">${s.name}</div>`;
+    }
+    panel.innerHTML=html;
+  }
+});
 
 function svUpdateTargets(){
   if(!svData||!svData.ships)return;
@@ -1239,10 +1227,17 @@ function svUpdateShipMeshes(){
     }
     cached.group.visible=true;
     cached.group.position.set(sx,sy,3);
-    // Face travel direction in XY plane
-    if(sp.rate>0){
-      const angle=Math.atan2(sp.ty-sp.fy,sp.tx-sp.fx);
-      cached.group.rotation.z=angle;
+    // Rotation: lerp from random arrival angle to destination angle
+    const targetAngle=Math.atan2(sp.ty-sp.fy,sp.tx-sp.fx);
+    if(cached.startAngle===undefined) cached.startAngle=Math.random()*Math.PI*2;
+    if(sp.p<0.01&&sp.rate>0){
+      // Aligning: lerp toward target
+      cached.startAngle+=(targetAngle-cached.startAngle)*0.05;
+      cached.group.rotation.z=cached.startAngle;
+    }else if(sp.rate>0){
+      // Moving: snap to target, clear start angle for next align
+      cached.group.rotation.z=targetAngle;
+      cached.startAngle=undefined;
     }
 
     // Trail line - reuse existing or create once
@@ -1268,6 +1263,7 @@ function svAnimate(){
   requestAnimationFrame(svAnimate);
   if(!svWin.classList.contains('open'))return;
   if(++svFrameCount%2!==0)return;
+  svControls.update();
   svAdvanceShips();
   svUpdateShipMeshes();
   svRenderer.render(svScene,svCam);
@@ -1290,8 +1286,8 @@ setInterval(svFetch,3000);
 window.openSystemView=function(sysId){
   svCurrentId=sysId;window._svCurrentId=sysId;svData=null;svShipPos={};
   svShipCache={};svShipsGroup.clear();svBuiltForId='';
-  svZoom=200;
-  svCam.position.set(0,0,100);
+  svCam.position.set(0,150,300);
+  svControls.target.set(0,0,0);svControls.update();
   svWin.classList.add('open');
   svResize();
   document.getElementById('svTitle').textContent='System Map';
