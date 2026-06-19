@@ -357,8 +357,8 @@ class Simulation:
                     ship.intra_progress = 0
                 continue
             dist = self._intra_distance(ship.location, ship.intra_position or f"{ship.location}_star", ship.intra_destination)
-            # 15-45 ticks to cross based on distance
-            travel_ticks = max(15, min(45, dist * 2))
+            # 30-90 ticks to cross based on distance
+            travel_ticks = max(30, min(90, dist * 5))
             step = 1.0 / travel_ticks
             ship.intra_progress += step
             if ship.intra_progress >= 1.0:

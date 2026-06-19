@@ -249,6 +249,9 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     <button class="sv-close" id="svClose">&times;</button>
   </div>
   <div style="flex:1;display:flex;flex-direction:row;overflow:hidden">
+  <div id="svInfoPanel" style="width:200px;overflow-y:auto;background:#0a0e18;border-right:1px solid #1a2844;padding:10px;font-size:10px;flex-shrink:0">
+    <div id="svSelInfo"><div style="color:#5a7a9a;font-size:9px">Click an object or ship to view details</div></div>
+  </div>
   <div class="sysview-body" id="sysviewBody">
     <div id="svRenderer" style="position:absolute;inset:0;overflow:hidden;cursor:grab"></div>
     <div class="sysview-tooltip" id="svTooltip">
@@ -261,10 +264,9 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
       <button id="svZoomOut">&minus;</button>
     </div>
   </div>
-  <div id="svSidebar" style="width:200px;overflow-y:auto;background:#0a0e18;border-left:1px solid #1a2844;padding:8px;font-size:10px;flex-shrink:0;display:flex;flex-direction:column;gap:0">
-    <div id="svSelInfo" style="min-height:60px;border-bottom:1px solid #1a2844;padding-bottom:6px;margin-bottom:6px"></div>
+  <div id="svSidebar" style="width:180px;overflow-y:auto;background:#0a0e18;border-left:1px solid #1a2844;padding:8px;font-size:10px;flex-shrink:0;display:flex;flex-direction:column">
     <div style="font-family:Orbitron,sans-serif;font-size:8px;color:#5a7a9a;letter-spacing:1px;margin-bottom:4px">SOLAR BODIES</div>
-    <div id="svBodiesList" style="max-height:35%;overflow-y:auto;margin-bottom:8px;border-bottom:1px solid #1a2844;padding-bottom:6px"></div>
+    <div id="svBodiesList" style="max-height:45%;overflow-y:auto;margin-bottom:6px;border-bottom:1px solid #1a2844;padding-bottom:6px"></div>
     <div style="font-family:Orbitron,sans-serif;font-size:8px;color:#5a7a9a;letter-spacing:1px;margin-bottom:4px">SHIPS</div>
     <div id="svShipList" style="flex:1;overflow-y:auto"></div>
   </div>
@@ -948,10 +950,13 @@ svRenderer.setSize(svW,svH);
 svRenderer.setClearColor(0x0a0e18);
 svRenderer.domElement.style.display='block';
 svContainer.appendChild(svRenderer.domElement);
+const svLabelRenderer=new CSS2DRenderer();
+svLabelRenderer.setSize(svW,svH);
+svLabelRenderer.domElement.style.position='absolute';svLabelRenderer.domElement.style.top='0';svLabelRenderer.domElement.style.pointerEvents='none';
+svContainer.appendChild(svLabelRenderer.domElement);
 const svControls=new OrbitControls(svCam, svRenderer.domElement);
 svControls.enableDamping=true;svControls.dampingFactor=0.08;
 svControls.minDistance=50;svControls.maxDistance=1500;
-svControls.maxPolarAngle=Math.PI*0.85;
 
 // Groups
 const svOrbitsGroup=new THREE.Group(); svScene.add(svOrbitsGroup);
@@ -998,6 +1003,7 @@ function svResize(){
   const w=svContainer.clientWidth, h=svContainer.clientHeight;
   if(w===0||h===0)return;
   svRenderer.setSize(w,h);
+  svLabelRenderer.setSize(w,h);
   svCam.aspect=w/h;
   svCam.updateProjectionMatrix();
 }
@@ -1017,7 +1023,13 @@ document.getElementById('svZoomOut').addEventListener('click',()=>{svCam.positio
 const svEl=svRenderer.domElement;
 svEl.addEventListener('mousemove',e=>{svHandleHover(e);});
 
-function svPolar(d,a){return{x:d*40*Math.cos(a),y:d*40*Math.sin(a)};}
+function svPolar(d,a,name){
+  const x=d*40*Math.cos(a), z=d*40*Math.sin(a);
+  // Slight Y variance based on name hash for 3D depth (realistic orbital inclination)
+  let h=0;if(name){for(let i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))|0;}
+  const y=((h%100)/100-0.5)*d*4; // ±2x distance as max Y offset
+  return{x,y,z};
+}
 
 // Tooltip / Hover
 let svObjPositions=[]; // [{obj, x, y}] rebuilt on data change
@@ -1035,7 +1047,7 @@ function svHandleHover(e){
   // Check objects by distance to ray
   let closest=null, closestD=20;
   for(const op of svObjPositions){
-    const pt=new THREE.Vector3(op.x,op.y,0);
+    const pt=new THREE.Vector3(op.x,op.y,op.z||0);
     const d=svRaycaster.ray.distanceToPoint(pt);
     if(d<closestD){closest=op.obj;closestD=d;}
   }
@@ -1064,7 +1076,7 @@ svEl.addEventListener('click',e=>{
   rc.setFromCamera(mouse,svCam);
   let closest=null, closestD=15;
   for(const op of svObjPositions){
-    const d=rc.ray.distanceToPoint(new THREE.Vector3(op.x,op.y,0));
+    const d=rc.ray.distanceToPoint(new THREE.Vector3(op.x,op.y,op.z||0));
     if(d<closestD){closest=op.obj;closestD=d;}
   }
   if(closest){svSelectedShip=null;svShowObjectInfo(closest);}
@@ -1075,22 +1087,20 @@ function svUpdateTargets(){
   for(const ship of svData.ships){
     const id=ship.name;
     if(ship.state==='intra_traveling'&&ship.intra_from&&ship.intra_to){
-      const f=svPolar(ship.intra_from.d,ship.intra_from.a);
-      const t=svPolar(ship.intra_to.d,ship.intra_to.a);
-      // Match server: 15-45 ticks based on distance
-      const travelTicks=Math.max(15,Math.min(45,ship.intra_dist*2));
+      const f=svPolar(ship.intra_from.d,ship.intra_from.a,ship.name+'_from');
+      const t=svPolar(ship.intra_to.d,ship.intra_to.a,ship.name+'_to');
+      const travelTicks=Math.max(30,Math.min(90,ship.intra_dist*5));
       const rate=1.0/travelTicks;
       const existing=svShipPos[id];
-      // Clamp progress: negative = still at origin (departing)
       const displayP=Math.max(0, ship.intra_progress);
-      if(existing&&existing.fx===f.x&&existing.fy===f.y&&existing.tx===t.x&&existing.ty===t.y){
+      if(existing&&existing.fx===f.x&&existing.fz===f.z&&existing.tx===t.x&&existing.tz===t.z){
         existing.rate=rate;
       }else{
-        svShipPos[id]={fx:f.x,fy:f.y,tx:t.x,ty:t.y,p:displayP,rate:rate,role:ship.role,vis:true};
+        svShipPos[id]={fx:f.x,fy:f.y,fz:f.z,tx:t.x,ty:t.y,tz:t.z,p:displayP,rate:rate,role:ship.role,vis:true};
       }
     }else if(ship.state==='mining'&&ship.intra_position){
       const at=svData.objects.find(o=>o.id===ship.intra_position);
-      if(at){const pos=svPolar(at.distance,at.angle);svShipPos[id]={fx:pos.x+5,fy:pos.y-5,tx:pos.x+5,ty:pos.y-5,p:0,rate:0,role:ship.role,vis:true};}
+      if(at){const pos=svPolar(at.distance,at.angle,at.name);svShipPos[id]={fx:pos.x+5,fy:pos.y,fz:pos.z-5,tx:pos.x+5,ty:pos.y,tz:pos.z-5,p:0,rate:0,role:ship.role,vis:true};}
     }else{
       if(svShipPos[id])svShipPos[id].vis=false;
     }
@@ -1115,7 +1125,7 @@ function svBuildScene(){
   const radarMat=new THREE.LineBasicMaterial({color:0x1a2844,transparent:true,opacity:0.25});
   for(let i=0;i<8;i++){
     const a=Math.PI*2*i/8;
-    const pts=[new THREE.Vector3(0,0,0),new THREE.Vector3(Math.cos(a)*600,Math.sin(a)*600,0)];
+    const pts=[new THREE.Vector3(0,0,0),new THREE.Vector3(Math.cos(a)*600,0,Math.sin(a)*600)];
     svRadarGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),radarMat));
   }
 
@@ -1123,15 +1133,15 @@ function svBuildScene(){
   for(const obj of svData.objects){
     if(obj.type==='planet'){
       const r=obj.distance*40;
-      const pts=[];for(let i=0;i<=64;i++){const a=Math.PI*2*i/64;pts.push(new THREE.Vector3(Math.cos(a)*r,Math.sin(a)*r,0));}
+      const pts=[];for(let i=0;i<=64;i++){const a=Math.PI*2*i/64;pts.push(new THREE.Vector3(Math.cos(a)*r,0,Math.sin(a)*r));}
       const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x66bb6a,transparent:true,opacity:0.1}));
       svOrbitsGroup.add(line);
     }else if(obj.type==='moon'&&obj.parent){
       const par=svData.objects.find(p=>p.id===obj.parent);
       if(par){
-        const pc=svPolar(par.distance,par.angle);
+        const pc=svPolar(par.distance,par.angle,par.name);
         const mr=(obj.distance-par.distance)*40;
-        const pts=[];for(let i=0;i<=32;i++){const a=Math.PI*2*i/32;pts.push(new THREE.Vector3(pc.x+Math.cos(a)*mr,pc.y+Math.sin(a)*mr,0));}
+        const pts=[];for(let i=0;i<=32;i++){const a=Math.PI*2*i/32;pts.push(new THREE.Vector3(pc.x+Math.cos(a)*mr,pc.y,pc.z+Math.sin(a)*mr));}
         svOrbitsGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x8aa0b8,transparent:true,opacity:0.12})));
       }
     }
@@ -1139,42 +1149,49 @@ function svBuildScene(){
 
   // Objects as sprites
   for(const obj of svData.objects){
-    const wp=svPolar(obj.distance,obj.angle);
+    const wp=svPolar(obj.distance,obj.angle,obj.name);
     const col=SV_HEX[obj.type]||'#5a7a9a';
     const colInt=SV_COLORS[obj.type]||0x5a7a9a;
-    svObjPositions.push({obj,x:wp.x,y:wp.y});
+    svObjPositions.push({obj,x:wp.x,y:wp.y,z:wp.z});
 
     if(obj.type==='asteroid_belt'){
       // Arc for belt
       const r=obj.distance*40;
-      const pts=[];for(let i=0;i<=12;i++){const a=obj.angle-0.25+0.5*i/12;pts.push(new THREE.Vector3(Math.cos(a)*r,Math.sin(a)*r,0));}
+      const pts=[];for(let i=0;i<=12;i++){const a=obj.angle-0.25+0.5*i/12;pts.push(new THREE.Vector3(Math.cos(a)*r,0,Math.sin(a)*r));}
       const bLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineDashedMaterial({color:colInt,dashSize:3,gapSize:3,transparent:true,opacity:0.8}));
       bLine.computeLineDistances();
       svObjectsGroup.add(bLine);
       // Small dot at center
       const dotSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDotTexture(col,32),transparent:true}));
-      dotSpr.position.set(wp.x,wp.y,1);dotSpr.scale.set(5,5,1);
+      dotSpr.position.set(wp.x,wp.y,wp.z);dotSpr.scale.set(5,5,1);
       svObjectsGroup.add(dotSpr);
     }else if(obj.type==='gate'){
       // Diamond sprite
       const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDiamondTexture(col,64),transparent:true}));
-      spr.position.set(wp.x,wp.y,2);spr.scale.set(10,10,1);
+      spr.position.set(wp.x,wp.y,wp.z);spr.scale.set(10,10,1);
       svObjectsGroup.add(spr);
     }else if(obj.type==='star'){
       // Star gets glow gradient
       const gSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeGlowTexture(col,128),transparent:true,depthWrite:false}));
-      gSpr.position.set(wp.x,wp.y,0);gSpr.scale.set(50,50,1);
+      gSpr.position.set(wp.x,wp.y,wp.z);gSpr.scale.set(50,50,1);
       svObjectsGroup.add(gSpr);
       const dSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDotTexture(col,64),transparent:true}));
-      dSpr.position.set(wp.x,wp.y,1);dSpr.scale.set(12,12,1);
+      dSpr.position.set(wp.x,wp.y,wp.z);dSpr.scale.set(12,12,1);
       svObjectsGroup.add(dSpr);
     }else{
       // Planets, moons, stations: solid dot only (no glow gradient)
       const dotSize=obj.type==='planet'?8:obj.type==='moon'?4:6;
       const dSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDotTexture(col,64),transparent:true}));
-      dSpr.position.set(wp.x,wp.y,1);dSpr.scale.set(dotSize,dotSize,1);
+      dSpr.position.set(wp.x,wp.y,wp.z);dSpr.scale.set(dotSize,dotSize,1);
       svObjectsGroup.add(dSpr);
     }
+    // Label for all bodies
+    const lDiv=document.createElement('div');
+    lDiv.className='system-label';lDiv.textContent=obj.name;
+    lDiv.style.fontSize='8px';lDiv.style.color=col;
+    const lbl=new CSS2DObject(lDiv);
+    lbl.position.set(wp.x,wp.y+5,wp.z);
+    svLabelsGroup.add(lbl);
   }
 }
 
@@ -1194,10 +1211,21 @@ function svBuildBodiesList(){
 function svShowObjectInfo(obj){
   const el=document.getElementById('svSelInfo');
   const col=SV_HEX[obj.type]||'#5a7a9a';
-  let html=`<div style="font-family:Orbitron,sans-serif;font-size:9px;color:${col};margin-bottom:4px">${obj.name}</div>`;
-  html+=`<div style="color:#5a7a9a;font-size:9px;margin-bottom:4px">${obj.type.replace('_',' ')}</div>`;
-  if(obj.distance)html+=`<div style="color:#8aa0b8;font-size:9px">Orbit: ${obj.distance.toFixed(1)} AU</div>`;
-  if(obj.connects_to)html+=`<div style="color:#8aa0b8;font-size:9px">Jump to: ${obj.connects_to}</div>`;
+  let html=`<div style="font-family:Orbitron,sans-serif;font-size:10px;color:${col};margin-bottom:6px">${obj.name}</div>`;
+  html+=`<div style="color:#5a7a9a;font-size:9px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">${obj.type.replace('_',' ')}</div>`;
+  if(obj.distance)html+=`<div style="color:#8aa0b8;font-size:10px">Orbital Distance: ${obj.distance.toFixed(2)} AU</div>`;
+  if(obj.connects_to)html+=`<div style="color:#ab47bc;font-size:10px;margin-top:4px">Jump Destination: ${obj.connects_to}</div>`;
+  if(obj.type==='station')html+=`<div style="color:#4fc3f7;font-size:10px;margin-top:4px">Docking Available</div>`;
+  if(obj.type==='asteroid_belt')html+=`<div style="color:#ff8a65;font-size:10px;margin-top:4px">Mineable Resources</div>`;
+  if(obj.type==='planet')html+=`<div style="color:#66bb6a;font-size:10px;margin-top:4px">Celestial Body</div>`;
+  // Show ships at this location
+  if(svData&&svData.ships){
+    const here=svData.ships.filter(s=>s.intra_position===obj.id);
+    if(here.length){
+      html+=`<div style="color:#5a7a9a;font-size:8px;margin-top:8px;letter-spacing:1px">SHIPS HERE (${here.length}):</div>`;
+      for(const s of here.slice(0,8))html+=`<div style="color:#b0c4d8;font-size:9px;padding:2px 0;cursor:pointer" onclick="svSelectedShip='${s.name}'">${s.name}</div>`;
+    }
+  }
   el.innerHTML=html;
 }
 window._svShowShipInfo=function(ship){
@@ -1225,7 +1253,7 @@ function svUpdateShipMeshes(){
   if(!svData||!svData.ships)return;
   for(const ship of svData.ships){
     const sp=svShipPos[ship.name];if(!sp||!sp.vis)continue;
-    const sx=sp.fx+(sp.tx-sp.fx)*sp.p, sy=sp.fy+(sp.ty-sp.fy)*sp.p;
+    const sx=sp.fx+(sp.tx-sp.fx)*sp.p, sy=sp.fy+(sp.ty-sp.fy)*sp.p, sz=(sp.fz||0)+((sp.tz||0)-(sp.fz||0))*sp.p;
 
     // Get or create ship model
     let cached=svShipCache[ship.name];
@@ -1255,9 +1283,9 @@ function svUpdateShipMeshes(){
       }
     }
     cached.group.visible=true;
-    cached.group.position.set(sx,sy,3);
+    cached.group.position.set(sx,sy,sz);
     // Rotation: lerp from random arrival angle to destination angle
-    const targetAngle=Math.atan2(sp.ty-sp.fy,sp.tx-sp.fx);
+    const targetAngle=Math.atan2(sp.tz-sp.fz,sp.tx-sp.fx);
     if(cached.startAngle===undefined) cached.startAngle=Math.random()*Math.PI*2;
     if(sp.p<0.01&&sp.rate>0){
       // Aligning: lerp toward target
@@ -1277,14 +1305,20 @@ function svUpdateShipMeshes(){
         svShipsGroup.add(cached.trail);
       }
       const posArr=cached.trail.geometry.attributes.position.array;
-      posArr[0]=sx;posArr[1]=sy;posArr[2]=2;
-      posArr[3]=sp.tx;posArr[4]=sp.ty;posArr[5]=2;
+      posArr[0]=sx;posArr[1]=sy;posArr[2]=sz;
+      posArr[3]=sp.tx;posArr[4]=sp.ty;posArr[5]=sp.tz||0;
       cached.trail.geometry.attributes.position.needsUpdate=true;
       cached.trail.computeLineDistances();
       cached.trail.visible=true;
     }
   }
 }
+
+// Selected ship label
+const svShipLabelDiv=document.createElement('div');
+svShipLabelDiv.className='system-label';svShipLabelDiv.style.cssText='font-size:9px;color:#4fc3f7;background:rgba(10,14,24,0.8);padding:2px 6px;border-radius:3px';
+const svShipLabel=new CSS2DObject(svShipLabelDiv);
+svShipLabel.visible=false;svScene.add(svShipLabel);
 
 // Render loop
 let svFrameCount=0;
@@ -1295,7 +1329,15 @@ function svAnimate(){
   svControls.update();
   svAdvanceShips();
   svUpdateShipMeshes();
+  // Ship label follows selected
+  if(svSelectedShip&&svShipCache[svSelectedShip]){
+    const grp=svShipCache[svSelectedShip].group;
+    svShipLabel.position.set(grp.position.x,grp.position.y+8,grp.position.z);
+    svShipLabelDiv.textContent=svSelectedShip;
+    svShipLabel.visible=true;
+  }else{svShipLabel.visible=false;}
   svRenderer.render(svScene,svCam);
+  svLabelRenderer.render(svScene,svCam);
 }
 svAnimate();
 
