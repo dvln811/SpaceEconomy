@@ -826,7 +826,7 @@ function updateLiveShipList(){
     if(ship.location!==viewId) return;
     const div=document.createElement('div');
     const isSel=svSelectedShip===ship.name;
-    div.style.cssText=`padding:3px 0;border-bottom:1px solid #0a1420;cursor:pointer;color:${isSel?'#4fc3f7':'#b0c4d8'}`;
+    div.style.cssText=`padding:3px 0;border-bottom:1px solid #0a1420;cursor:pointer;user-select:none;color:${isSel?'#4fc3f7':'#b0c4d8'}`;
     let status=ship.state;
     if(ship.state==='traveling'&&ship.destination){
       const destIdx=systemIdToIndex[ship.destination];
@@ -834,9 +834,7 @@ function updateLiveShipList(){
     }
     div.innerHTML=`<div style="color:${isSel?'#4fc3f7':'#e0e8f0'}">${ship.name}</div><div style="color:#5a7a9a;font-size:9px">${ship.ship_class||ship.role} · ${status}</div>`;
     div.addEventListener('click',()=>{svSelectedShip=ship.name;window._svShowShipInfo&&window._svShowShipInfo(ship);});
-    div.addEventListener('dblclick',()=>{
-      const c=svShipCache[ship.name];if(c&&c.group.visible){const p=c.group.position;svControls.target.set(p.x,p.y,p.z);svCam.position.set(p.x+20,p.y+15,p.z+20);svControls.update();}
-    });
+    div.addEventListener('dblclick',()=>{window._svZoomToShip&&window._svZoomToShip(ship.name);});
     el.appendChild(div);
   });
 }
@@ -1118,7 +1116,7 @@ function svAdvanceShips(){
   const now=performance.now();
   const dt=(now-svLastFrame)/1000;
   svLastFrame=now;
-  for(const id in svShipPos){const s=svShipPos[id];if(s.rate>0)s.p=Math.min(s.p+s.rate*dt,1.0);}
+  for(const id in svShipPos){const s=svShipPos[id];if(s.rate>0){s.p=Math.min(s.p+s.rate*dt,1.0);if(s.p>=1.0)s.vis=false;}}
 }
 
 // Build scene objects from data
@@ -1208,7 +1206,7 @@ function svBuildBodiesList(){
   el.innerHTML='';
   for(const obj of svData.objects){
     const div=document.createElement('div');
-    div.style.cssText='padding:3px 0;border-bottom:1px solid #0a1420;cursor:pointer;color:#b0c4d8';
+    div.style.cssText='padding:3px 0;border-bottom:1px solid #0a1420;cursor:pointer;user-select:none;color:#b0c4d8';
     const col=SV_HEX[obj.type]||'#5a7a9a';
     div.innerHTML=`<span style="color:${col}">● </span>${obj.name}`;
     div.addEventListener('click',()=>{svSelectedShip=null;svShowObjectInfo(obj);});
@@ -1222,19 +1220,43 @@ function svBuildBodiesList(){
 function svShowObjectInfo(obj){
   const el=document.getElementById('svSelInfo');
   const col=SV_HEX[obj.type]||'#5a7a9a';
+  // Generate deterministic stats from name hash
+  let h=0;for(let i=0;i<obj.name.length;i++)h=(h*31+obj.name.charCodeAt(i))|0;
+  const abs=Math.abs;
   let html=`<div style="font-family:Orbitron,sans-serif;font-size:10px;color:${col};margin-bottom:6px">${obj.name}</div>`;
-  html+=`<div style="color:#5a7a9a;font-size:9px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">${obj.type.replace('_',' ')}</div>`;
-  if(obj.distance)html+=`<div style="color:#8aa0b8;font-size:10px">Orbital Distance: ${obj.distance.toFixed(2)} AU</div>`;
-  if(obj.connects_to)html+=`<div style="color:#ab47bc;font-size:10px;margin-top:4px">Jump Destination: ${obj.connects_to}</div>`;
-  if(obj.type==='station')html+=`<div style="color:#4fc3f7;font-size:10px;margin-top:4px">Docking Available</div>`;
-  if(obj.type==='asteroid_belt')html+=`<div style="color:#ff8a65;font-size:10px;margin-top:4px">Mineable Resources</div>`;
-  if(obj.type==='planet')html+=`<div style="color:#66bb6a;font-size:10px;margin-top:4px">Celestial Body</div>`;
-  // Show ships at this location
+  html+=`<div style="color:#5a7a9a;font-size:9px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-family:JetBrains Mono,monospace">${obj.type.replace('_',' ')}</div>`;
+  if(obj.distance)html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Orbit: ${obj.distance.toFixed(2)} AU</div>`;
+  if(obj.type==='planet'){
+    const radius=3000+abs(h%12000);const temp=-50+abs((h>>4)%400);
+    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Radius: ${radius} km</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Surface Temp: ${temp}°C</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Atmosphere: ${temp>0&&temp<100?'Breathable':'Hostile'}</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Gravity: ${(0.3+abs((h>>8)%15)/10).toFixed(1)}g</div>`;
+  }else if(obj.type==='star'){
+    const classes=['M','K','G','F','A','B','O'];const cls=classes[abs(h%7)];
+    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Class: ${cls}-type</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Luminosity: ${(0.5+abs((h>>4)%30)/10).toFixed(1)} L☉</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Mass: ${(0.4+abs((h>>8)%20)/10).toFixed(1)} M☉</div>`;
+  }else if(obj.type==='gate'){
+    html+=`<div style="color:#ab47bc;font-size:9px;font-family:JetBrains Mono,monospace">Destination: ${obj.connects_to||'Unknown'}</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Status: Online</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Clearance: Open</div>`;
+  }else if(obj.type==='station'){
+    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Services: Dock, Trade, Repair</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Population: ${(10+abs(h%990))}K</div>`;
+  }else if(obj.type==='asteroid_belt'){
+    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Density: ${['Sparse','Moderate','Dense','Rich'][abs(h%4)]}</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Hazard: ${['Low','Moderate','High'][abs(h%3)]}</div>`;
+  }else if(obj.type==='moon'){
+    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Radius: ${200+abs(h%2000)} km</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Tidally Locked: ${abs(h%2)?'Yes':'No'}</div>`;
+  }
+  // Ships at this location
   if(svData&&svData.ships){
     const here=svData.ships.filter(s=>s.intra_position===obj.id);
     if(here.length){
-      html+=`<div style="color:#5a7a9a;font-size:8px;margin-top:8px;letter-spacing:1px">SHIPS HERE (${here.length}):</div>`;
-      for(const s of here.slice(0,8))html+=`<div style="color:#b0c4d8;font-size:9px;padding:2px 0;cursor:pointer" onclick="svSelectedShip='${s.name}'">${s.name}</div>`;
+      html+=`<div style="color:#5a7a9a;font-size:8px;margin-top:8px;letter-spacing:1px;font-family:JetBrains Mono,monospace">SHIPS (${here.length}):</div>`;
+      for(const s of here.slice(0,8))html+=`<div style="color:#b0c4d8;font-size:9px;padding:1px 0;font-family:JetBrains Mono,monospace">${s.name}</div>`;
     }
   }
   el.innerHTML=html;
@@ -1344,6 +1366,37 @@ const svShipLabelDiv=document.createElement('div');
 svShipLabelDiv.style.cssText='font-size:9px;color:#4fc3f7;background:rgba(10,14,24,0.8);padding:2px 6px;border-radius:3px;font-family:JetBrains Mono,monospace';
 const svShipLabel=new CSS2DObject(svShipLabelDiv);
 svShipLabel.visible=false;svScene.add(svShipLabel);
+
+// Starfield background
+const sfGeo=new THREE.BufferGeometry();const sfVerts=new Float32Array(1000*3);
+for(let i=0;i<1000;i++){sfVerts[i*3]=(Math.random()-0.5)*2000;sfVerts[i*3+1]=(Math.random()-0.5)*2000;sfVerts[i*3+2]=(Math.random()-0.5)*2000;}
+sfGeo.setAttribute('position',new THREE.BufferAttribute(sfVerts,3));
+svScene.add(new THREE.Points(sfGeo,new THREE.PointsMaterial({color:0xb4c8dc,size:1,sizeAttenuation:true,transparent:true,opacity:0.4})));
+
+// Zoom to ship (exposed for list dblclick)
+window._svZoomToShip=function(name){
+  const c=svShipCache[name];
+  if(c&&c.group.visible){const p=c.group.position;svControls.target.set(p.x,p.y,p.z);svCam.position.set(p.x+20,p.y+15,p.z+20);svControls.update();}
+};
+
+// Click ship in 3D map to select
+svEl.addEventListener('click',e=>{
+  if(!svData||!svData.ships)return;
+  const rect=svEl.getBoundingClientRect();
+  const mouse=new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-((e.clientY-rect.top)/rect.height)*2+1);
+  const rc=new THREE.Raycaster();rc.setFromCamera(mouse,svCam);
+  // Check ships
+  for(const name in svShipCache){
+    const c=svShipCache[name];if(!c.group.visible)continue;
+    const d=rc.ray.distanceToPoint(c.group.position);
+    if(d<8){
+      svSelectedShip=name;
+      const ship=liveShips.find(s=>s.name===name);
+      if(ship)window._svShowShipInfo(ship);
+      return;
+    }
+  }
+});
 
 // Render loop
 let svFrameCount=0;
