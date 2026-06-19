@@ -129,7 +129,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .route-profit{margin-left:auto;font-size:11px;color:#66bb6a}
 
 /* Inline System View Window */
-.sysview-window{position:fixed;top:80px;left:320px;width:600px;height:450px;background:#0a0e18;border:1px solid #1a2844;border-radius:6px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.7);z-index:200;resize:both;min-width:350px;min-height:250px}
+.sysview-window{position:fixed;top:60px;left:300px;width:800px;height:600px;background:#0a0e18;border:1px solid #1a2844;border-radius:6px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.7);z-index:200;resize:both;min-width:500px;min-height:350px}
 .sysview-window.open{display:flex}
 .sysview-titlebar{display:flex;align-items:center;padding:0 12px;height:30px;background:#0a0f1a;border-bottom:1px solid #1a2844;cursor:move;flex-shrink:0;user-select:none}
 .sysview-titlebar h2{font-family:'Orbitron',sans-serif;font-size:9px;font-weight:600;color:#4fc3f7;letter-spacing:2px;text-transform:uppercase}
@@ -250,6 +250,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     <span class="sv-meta" id="svMeta"></span>
     <button class="sv-close" id="svClose">&times;</button>
   </div>
+  <div style="flex:1;display:flex;flex-direction:row;overflow:hidden">
   <div class="sysview-body" id="sysviewBody">
     <div id="svRenderer" style="position:absolute;inset:0;overflow:hidden;cursor:grab"></div>
     <div class="sysview-tooltip" id="svTooltip">
@@ -261,7 +262,10 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
       <button id="svZoomIn">+</button>
       <button id="svZoomOut">&minus;</button>
     </div>
-    <div id="svShipList" style="position:absolute;bottom:0;left:0;right:0;max-height:140px;overflow-y:auto;background:rgba(10,14,24,0.9);border-top:1px solid #1a2844;padding:6px;font-size:10px"></div>
+  </div>
+  <div id="svShipList" style="width:180px;overflow-y:auto;background:#0a0e18;border-left:1px solid #1a2844;padding:8px;font-size:10px;flex-shrink:0">
+    <div style="font-family:Orbitron,sans-serif;font-size:8px;color:#5a7a9a;letter-spacing:1px;margin-bottom:6px">SHIPS IN SYSTEM</div>
+  </div>
   </div>
 </div>
 
@@ -532,49 +536,7 @@ function animate(){
   controls.update();
   applyKeyNav();
 
-  // Move ships: time-based prediction between API updates
-  const now=performance.now();
-  shipMeshes.forEach((mesh,i)=>{
-    if(i>=liveShips.length){mesh.visible=false;return;}
-    const ship=liveShips[i];
-    if(!ship||ship.state!=='traveling'){
-      mesh.visible=false;
-      const m3d=mapShip3D[ship?.name];if(m3d)m3d.grp.visible=false;
-      return;
-    }
-    const locPos=sysPositions[ship?.location];
-    const destPos=sysPositions[ship?.destination];
-    if(ship&&ship.state==='traveling'&&locPos&&destPos){
-      const ud=mesh.userData;
-      // On first frame or route change, seed from server
-      if(ud.clientProgress===undefined||ud.lastLoc!==ship.location||ud.lastDest!==ship.destination){
-        ud.clientProgress=ship.progress;
-        ud.lastLoc=ship.location;ud.lastDest=ship.destination;
-        ud.lastTime=now;
-      }
-      // Time-based: advance by elapsed seconds * server rate from API
-      const elapsed=(now-ud.lastTime)/1000;
-      ud.lastTime=now;
-      const rate=ship.travel_rate||0.1;
-      ud.clientProgress+=elapsed*rate;
-      if(ud.clientProgress>1) ud.clientProgress=1;
-      const p=ud.clientProgress;
-      mesh.position.set(locPos.x+(destPos.x-locPos.x)*p, locPos.y+(destPos.y-locPos.y)*p, locPos.z+(destPos.z-locPos.z)*p);
-    }
-    // Use 3D model if available, else sprite. Cull by distance from camera.
-    const camDist=camera.position.distanceTo(mesh.position);
-    if(camDist>800){mesh.visible=false;const m3d=mapShip3D[ship?.name];if(m3d)m3d.grp.visible=false;return;}
-    const m3d=getOrCreate3DShip(ship,i);
-    if(m3d){
-      mesh.visible=false;
-      m3d.grp.visible=true;
-      m3d.grp.position.copy(mesh.position);
-      const dp=sysPositions[ship.destination];
-      if(dp)m3d.grp.lookAt(dp.x,dp.y,dp.z);
-    }else{
-      mesh.visible=true;
-    }
-  });
+  // Ships rendered in system view only now
 
   // Fade system labels by distance, override for selected
   document.querySelectorAll('.system-label').forEach((el,i)=>{
@@ -850,29 +812,19 @@ function updateLiveMarket(marketData){
 function updateSystemCards(){}
 
 function updateLiveShipList(){
-  shipList.innerHTML='';
-  // Player ship first
-  const pdiv=document.createElement('div');
-  pdiv.className='ship-item player'+(selectedShip===-2?' active':'');
-  pdiv.innerHTML=`<div class="ship-name">⬡ ${playerShip.name} <span style="color:#4fc3f7;font-size:9px">[YOU]</span></div>
-    <div class="ship-detail">${playerShip.class} · Docked</div>
-    <div class="ship-stats"><div>Cargo: ${playerShip.cargo} · Fuel: ${playerShip.fuel}%</div><div>Hull: ${playerShip.hull}% · ${playerShip.location}</div></div>`;
-  pdiv.addEventListener('click',()=>{selectedShip=-2;selectedSystem=-1;focusSystem(0);});
-  shipList.appendChild(pdiv);
-  // NPC ships from live data
+  shipList.innerHTML='<div style="font-family:Orbitron,sans-serif;font-size:8px;color:#5a7a9a;letter-spacing:1px;margin-bottom:6px">SHIPS IN SYSTEM</div>';
+  const viewId=window._svCurrentId||'';
+  if(!viewId) return;
   liveShips.forEach((ship,i)=>{
+    if(ship.location!==viewId) return;
     const div=document.createElement('div');
-    div.className='ship-item'+(selectedShip===i?' active':'');
-    const locIdx=systemIdToIndex[ship.location];
-    const locName=locIdx!==undefined?systems[locIdx].name:ship.location;
+    div.style.cssText='padding:4px 0;border-bottom:1px solid #0f1a28;color:#b0c4d8;cursor:pointer';
     let status=ship.state;
     if(ship.state==='traveling'&&ship.destination){
       const destIdx=systemIdToIndex[ship.destination];
-      const destName=destIdx!==undefined?systems[destIdx].name:ship.destination;
-      status=`-> ${destName} (${Math.round(ship.progress*100)}%)`;
+      status=`-> ${destIdx!==undefined?systems[destIdx].name:ship.destination}`;
     }
-    div.innerHTML=`<div class="ship-name">${ship.name}</div><div class="ship-detail">${ship.ship_class||ship.role} · ${status}</div><div class="ship-route">${locName}</div>`;
-    div.addEventListener('click',()=>focusShip(i));
+    div.innerHTML=`<div style="color:#e0e8f0">${ship.name}</div><div style="color:#5a7a9a;font-size:9px">${ship.ship_class||ship.role} · ${status}</div>`;
     shipList.appendChild(div);
   });
 }
@@ -1327,7 +1279,7 @@ setInterval(svFetch,3000);
 
 // Open system view
 window.openSystemView=function(sysId){
-  svCurrentId=sysId;svData=null;svShipPos={};
+  svCurrentId=sysId;window._svCurrentId=sysId;svData=null;svShipPos={};
   svShipCache={};svShipsGroup.clear();svBuiltForId='';
   svZoom=200;
   svCam.position.set(0,0,100);

@@ -49,7 +49,7 @@ class Simulation:
         self._update_all_prices()
 
     def _bootstrap_seed(self):
-        """Seed all producing stations with ~300 ticks of input supply."""
+        """Seed all producing stations with ~1000 ticks of input supply."""
         for sys in self.universe.values():
             for station in sys.stations:
                 for prod_id in station.produces:
@@ -57,7 +57,7 @@ class Simulation:
                     if not commodity or not commodity.recipe:
                         continue
                     for input_id, qty_needed in commodity.recipe.items():
-                        need = qty_needed * station.production_rate * 300
+                        need = qty_needed * station.production_rate * 1000
                         current = station.inventory.get(input_id, 0)
                         if current < need:
                             station.inventory[input_id] = need
