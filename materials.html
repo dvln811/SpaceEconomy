@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Space Economy - Materials &amp; Manufacturing</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Orbitron:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:13px;padding:40px;max-width:1200px;margin:0 auto}
+h1{font-family:'Orbitron',sans-serif;color:#4fc3f7;font-size:20px;letter-spacing:3px;margin-bottom:24px}
+h2{font-family:'Orbitron',sans-serif;color:#4fc3f7;font-size:14px;letter-spacing:2px;margin:32px 0 16px;border-bottom:1px solid #1a2844;padding-bottom:8px}
+h3{color:#ffd54f;font-size:12px;margin:16px 0 8px}
+p{color:#8aa0b8;line-height:1.6;margin-bottom:12px}
+table{width:100%;border-collapse:collapse;margin:12px 0 24px}
+th{font-family:'Orbitron',sans-serif;font-size:9px;color:#5a7a9a;letter-spacing:1px;text-transform:uppercase;text-align:left;padding:8px;border-bottom:1px solid #1a2844}
+td{padding:6px 8px;border-bottom:1px solid #0f1a28;font-size:11px}
+.recipe{color:#66bb6a;font-size:10px}
+.vol{color:#5a7a9a}
+a{color:#4fc3f7;text-decoration:none}
+a:hover{text-decoration:underline}
+.nav{margin-bottom:24px;font-size:11px}
+.note{background:#0a1020;border:1px solid #1a2844;border-radius:4px;padding:12px;margin:12px 0;font-size:11px;color:#6a8aa0}
+.tier{font-family:'Orbitron',sans-serif;font-size:8px;letter-spacing:1px;padding:2px 6px;border-radius:2px;display:inline-block}
+.t2{background:#1a2844;color:#4fc3f7}
+.t3{background:#1a1840;color:#ab47bc}
+</style>
+</head>
+<body>
+<div class="nav"><a href="/docs">Docs</a> &gt; <a href="/economy">Economy</a> &gt; Materials</div>
+<h1>T2-T3: Refined &amp; Manufactured Materials</h1>
+<p>Raw ores are processed into refined materials at refineries (T2), then combined into advanced manufactured materials at industrial hubs (T3). Each step adds value and reduces volume.</p>
+
+<h2>T2: Refined Materials</h2>
+<p>Produced at <strong>Refineries</strong>. Simple 1-2 input recipes. High throughput, moderate margins.</p>
+
+<h3>Metals</h3>
+<table>
+<tr><th>Material</th><th>Recipe</th><th>Vol</th><th>Price</th><th>Used In</th></tr>
+<tr><td><span class="tier t2">T2</span> Refined Iron</td><td class="recipe">3x Iron Ore + 1x Carbonite</td><td class="vol">4 m3</td><td>80</td><td>Steel, hull plating, structural frames</td></tr>
+<tr><td><span class="tier t2">T2</span> Refined Copper</td><td class="recipe">3x Copper Ore</td><td class="vol">4 m3</td><td>70</td><td>Wiring looms, conductors, heat sinks</td></tr>
+<tr><td><span class="tier t2">T2</span> Refined Titanium</td><td class="recipe">3x Titanium Ore + 1x Argon Gas</td><td class="vol">3 m3</td><td>250</td><td>Aerospace alloys, lightweight armor</td></tr>
+<tr><td><span class="tier t2">T2</span> Refined Tungsten</td><td class="recipe">2x Tungsten Ore + 1x Carbonite</td><td class="vol">2 m3</td><td>300</td><td>Penetrators, thermal components</td></tr>
+<tr><td><span class="tier t2">T2</span> Chromium Plate</td><td class="recipe">3x Chromium Ore + 1x Nickel Ore</td><td class="vol">3 m3</td><td>180</td><td>Corrosion resistance, reflective armor</td></tr>
+<tr><td><span class="tier t2">T2</span> Bronze Alloy</td><td class="recipe">2x Copper Ore + 1x Tin Ore</td><td class="vol">4 m3</td><td>60</td><td>Bearings, low-friction components</td></tr>
+<tr><td><span class="tier t2">T2</span> Cobalt Ingot</td><td class="recipe">2x Cobalt Ore</td><td class="vol">3 m3</td><td>75</td><td>Magnetic alloys, battery cells</td></tr>
+</table>
+
+<h3>Fuels &amp; Chemicals</h3>
+<table>
+<tr><th>Material</th><th>Recipe</th><th>Vol</th><th>Price</th><th>Used In</th></tr>
+<tr><td><span class="tier t2">T2</span> Hydrogen Fuel</td><td class="recipe">2x Hydral Ice</td><td class="vol">8 m3</td><td>40</td><td>Ship fuel, station power</td></tr>
+<tr><td><span class="tier t2">T2</span> Liquid Nitrogen</td><td class="recipe">2x Nitrogen Ice</td><td class="vol">8 m3</td><td>35</td><td>Coolant, propellant</td></tr>
+<tr><td><span class="tier t2">T2</span> Methane Fuel</td><td class="recipe">2x Methane Ice</td><td class="vol">8 m3</td><td>45</td><td>Chemical feedstock, fuel blend</td></tr>
+<tr><td><span class="tier t2">T2</span> Purified Water</td><td class="recipe">1x Hydral Ice + 1x Nitrogen Ice</td><td class="vol">6 m3</td><td>30</td><td>Life support, coolant, farming</td></tr>
+<tr><td><span class="tier t2">T2</span> Industrial Solvent</td><td class="recipe">1x Methane Ice + 1x Silicon Ore</td><td class="vol">5 m3</td><td>55</td><td>Chemical processing, cleaning</td></tr>
+<tr><td><span class="tier t2">T2</span> Enriched Helium-3</td><td class="recipe">3x Helium-3 Gas</td><td class="vol">5 m3</td><td>400</td><td>Fusion reactors, jump drives</td></tr>
+<tr><td><span class="tier t2">T2</span> Xenon Propellant</td><td class="recipe">2x Xenon Gas + 1x Argon Gas</td><td class="vol">6 m3</td><td>280</td><td>Ion thrusters, maneuvering</td></tr>
+</table>
+
+<h3>Organics &amp; Bio</h3>
+<table>
+<tr><th>Material</th><th>Recipe</th><th>Vol</th><th>Price</th><th>Used In</th></tr>
+<tr><td><span class="tier t2">T2</span> Processed Protein</td><td class="recipe">2x Biomass + 1x Purified Water</td><td class="vol">4 m3</td><td>50</td><td>Food rations, pharmaceuticals</td></tr>
+<tr><td><span class="tier t2">T2</span> Bio-Catalyst</td><td class="recipe">1x Spore Clusters + 1x Industrial Solvent</td><td class="vol">2 m3</td><td>120</td><td>Drug synthesis, advanced pharma</td></tr>
+<tr><td><span class="tier t2">T2</span> Synthetic Polymer</td><td class="recipe">2x Methane Ice + 1x Silicon Ore</td><td class="vol">5 m3</td><td>65</td><td>Insulation, flexible components</td></tr>
+</table>
+
+<h3>Electronics Base</h3>
+<table>
+<tr><th>Material</th><th>Recipe</th><th>Vol</th><th>Price</th><th>Used In</th></tr>
+<tr><td><span class="tier t2">T2</span> Silicon Wafer</td><td class="recipe">2x Silicon Ore + 1x Purified Water</td><td class="vol">1 m3</td><td>90</td><td>Microchips, processors, sensors</td></tr>
+<tr><td><span class="tier t2">T2</span> Copper Wiring Loom</td><td class="recipe">2x Refined Copper</td><td class="vol">3 m3</td><td>160</td><td>All electronics, power distribution</td></tr>
+<tr><td><span class="tier t2">T2</span> Lithium Cell</td><td class="recipe">2x Lithium Crystal + 1x Cobalt Ingot</td><td class="vol">2 m3</td><td>550</td><td>Capacitors, energy storage, batteries</td></tr>
+</table>
+
+<h2>T3: Manufactured Materials</h2>
+<p>Produced at <strong>Industrial Hubs</strong>. Multi-input recipes combining T2 materials. These are the building blocks for all products.</p>
+
+<h3>Structural</h3>
+<table>
+<tr><th>Material</th><th>Recipe</th><th>Vol</th><th>Price</th><th>Used In</th></tr>
+<tr><td><span class="tier t3">T3</span> Steel Plate</td><td class="recipe">2x Refined Iron + 1x Carbonite</td><td class="vol">3 m3</td><td>220</td><td>Hull plating, structural frames, stations</td></tr>
+<tr><td><span class="tier t3">T3</span> Titanium Alloy</td><td class="recipe">2x Refined Titanium + 1x Chromium Plate</td><td class="vol">2 m3</td><td>750</td><td>Lightweight armor, aerospace frames</td></tr>
+<tr><td><span class="tier t3">T3</span> Tungsten Carbide</td><td class="recipe">1x Refined Tungsten + 2x Carbonite</td><td class="vol">1 m3</td><td>800</td><td>Armor penetrators, drill heads, cutting tools</td></tr>
+<tr><td><span class="tier t3">T3</span> Carbon Composite</td><td class="recipe">3x Carbonite + 1x Synthetic Polymer</td><td class="vol">3 m3</td><td>300</td><td>Lightweight structures, fairings</td></tr>
+<tr><td><span class="tier t3">T3</span> Ceramic Plate</td><td class="recipe">2x Calciumite + 1x Silicon Ore + 1x Refined Iron</td><td class="vol">2 m3</td><td>350</td><td>Thermal shielding, ablative armor</td></tr>
+</table>
+
+<h3>Electronics &amp; Computing</h3>
+<table>
+<tr><th>Material</th><th>Recipe</th><th>Vol</th><th>Price</th><th>Used In</th></tr>
+<tr><td><span class="tier t3">T3</span> Microprocessor</td><td class="recipe">2x Silicon Wafer + 1x Copper Wiring Loom + 1x Gold Ore</td><td class="vol">0.5 m3</td><td>900</td><td>All electronics, computers, targeting</td></tr>
+<tr><td><span class="tier t3">T3</span> Superconductor</td><td class="recipe">1x Gold Ore + 1x Refined Copper + 1x Liquid Nitrogen</td><td class="vol">1 m3</td><td>1100</td><td>Power systems, shields, energy weapons</td></tr>
+<tr><td><span class="tier t3">T3</span> Optical Lens</td><td class="recipe">2x Quartz Crystal + 1x Beryllium Crystal</td><td class="vol">0.5 m3</td><td>800</td><td>Sensors, scanners, laser focusing</td></tr>
+<tr><td><span class="tier t3">T3</span> Power Cell</td><td class="recipe">2x Lithium Cell + 1x Cobalt Ingot + 1x Copper Wiring Loom</td><td class="vol">2 m3</td><td>1400</td><td>Energy weapons, shields, capacitors</td></tr>
+<tr><td><span class="tier t3">T3</span> Quantum Filament</td><td class="recipe">1x Kraxolite + 1x Superconductor + 1x Void Shard</td><td class="vol">0.2 m3</td><td>8000</td><td>Jump drives, cloaking, quantum comms</td></tr>
+</table>
+
+<h3>Propulsion &amp; Energy</h3>
+<table>
+<tr><th>Material</th><th>Recipe</th><th>Vol</th><th>Price</th><th>Used In</th></tr>
+<tr><td><span class="tier t3">T3</span> Fusion Pellet</td><td class="recipe">2x Enriched Helium-3 + 1x Beryllium Crystal</td><td class="vol">1 m3</td><td>1200</td><td>Reactor fuel, jump drives</td></tr>
+<tr><td><span class="tier t3">T3</span> Thruster Nozzle</td><td class="recipe">1x Refined Tungsten + 1x Ceramic Plate + 1x Titanium Alloy</td><td class="vol">2 m3</td><td>2000</td><td>Engines, maneuvering thrusters</td></tr>
+<tr><td><span class="tier t3">T3</span> Plasma Conduit</td><td class="recipe">1x Superconductor + 1x Ceramic Plate + 1x Xenon Propellant</td><td class="vol">1 m3</td><td>1800</td><td>Energy weapons, plasma engines</td></tr>
+<tr><td><span class="tier t3">T3</span> Magnetic Coil</td><td class="recipe">2x Cobalt Ingot + 1x Superconductor + 1x Copper Wiring Loom</td><td class="vol">2 m3</td><td>1600</td><td>Railguns, shields, containment</td></tr>
+</table>
+
+<h3>Chemical &amp; Biological</h3>
+<table>
+<tr><th>Material</th><th>Recipe</th><th>Vol</th><th>Price</th><th>Used In</th></tr>
+<tr><td><span class="tier t3">T3</span> Pharmaceutical Grade</td><td class="recipe">1x Bio-Catalyst + 1x Amino Gel + 1x Purified Water</td><td class="vol">1 m3</td><td>600</td><td>Medical bays, stim packs, life support</td></tr>
+<tr><td><span class="tier t3">T3</span> Nanite Paste</td><td class="recipe">1x Platinum Ore + 1x Bio-Catalyst + 1x Silicon Wafer</td><td class="vol">0.5 m3</td><td>2500</td><td>Self-repair systems, drones, medicine</td></tr>
+<tr><td><span class="tier t3">T3</span> Explosive Compound</td><td class="recipe">2x Nitrogen Ice + 1x Methane Fuel + 1x Carbonite</td><td class="vol">2 m3</td><td>400</td><td>Warheads, mining charges, demo</td></tr>
+<tr><td><span class="tier t3">T3</span> Radiation Shielding</td><td class="recipe">1x Gold Ore + 2x Steel Plate + 1x Synthetic Polymer</td><td class="vol">3 m3</td><td>900</td><td>Reactor housings, crew quarters</td></tr>
+</table>
+
+<h2>Design Notes</h2>
+<div class="note">
+<strong>Recipe Logic:</strong><br>
+- Steel needs iron + carbon (logical metallurgy)<br>
+- Titanium alloy needs titanium + chromium (real aerospace practice)<br>
+- Electronics need silicon + copper + gold (mirrors real manufacturing)<br>
+- Fuel needs ice (hydrogen extraction) or helium-3 (fusion)<br>
+- Exotic materials (Quantum Filament) require null-sec inputs<br><br>
+<strong>Volume Compression:</strong> Refining reduces volume significantly (10 m3 ore -> 4 m3 refined -> 2 m3 alloy). This means higher-tier goods are easier to haul but have much more value per m3.<br><br>
+<strong>Station Tier Mapping:</strong><br>
+- Refineries: T1 -> T2 (simple processing)<br>
+- Industrial Hubs: T2 -> T3 (complex manufacturing)<br>
+- Component Factories: T3 -> T4 (assembly, next page)<br>
+- Shipyards: T4 -> T5 (final products, next page)
+</div>
+</body>
+</html>
