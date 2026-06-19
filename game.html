@@ -1087,8 +1087,11 @@ function svUpdateTargets(){
   for(const ship of svData.ships){
     const id=ship.name;
     if(ship.state==='intra_traveling'&&ship.intra_from&&ship.intra_to){
-      const f=svPolar(ship.intra_from.d,ship.intra_from.a,ship.name+'_from');
-      const t=svPolar(ship.intra_to.d,ship.intra_to.a,ship.name+'_to');
+      // Look up object names for consistent Y hash
+      const fromObj=svData.objects.find(o=>Math.abs(o.distance-ship.intra_from.d)<0.01&&Math.abs(o.angle-ship.intra_from.a)<0.01);
+      const toObj=svData.objects.find(o=>Math.abs(o.distance-ship.intra_to.d)<0.01&&Math.abs(o.angle-ship.intra_to.a)<0.01);
+      const f=svPolar(ship.intra_from.d,ship.intra_from.a,fromObj?fromObj.name:'');
+      const t=svPolar(ship.intra_to.d,ship.intra_to.a,toObj?toObj.name:'');
       const travelTicks=Math.max(30,Math.min(90,ship.intra_dist*5));
       const rate=1.0/travelTicks;
       const existing=svShipPos[id];
@@ -1133,8 +1136,9 @@ function svBuildScene(){
   for(const obj of svData.objects){
     if(obj.type==='planet'){
       const r=obj.distance*40;
-      const pts=[];for(let i=0;i<=64;i++){const a=Math.PI*2*i/64;pts.push(new THREE.Vector3(Math.cos(a)*r,0,Math.sin(a)*r));}
-      const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x66bb6a,transparent:true,opacity:0.1}));
+      const pPos=svPolar(obj.distance,obj.angle,obj.name);
+      const pts=[];for(let i=0;i<=64;i++){const a=Math.PI*2*i/64;pts.push(new THREE.Vector3(Math.cos(a)*r,pPos.y,Math.sin(a)*r));}
+      const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x66bb6a,transparent:true,opacity:0.35}));
       svOrbitsGroup.add(line);
     }else if(obj.type==='moon'&&obj.parent){
       const par=svData.objects.find(p=>p.id===obj.parent);
@@ -1142,7 +1146,7 @@ function svBuildScene(){
         const pc=svPolar(par.distance,par.angle,par.name);
         const mr=(obj.distance-par.distance)*40;
         const pts=[];for(let i=0;i<=32;i++){const a=Math.PI*2*i/32;pts.push(new THREE.Vector3(pc.x+Math.cos(a)*mr,pc.y,pc.z+Math.sin(a)*mr));}
-        svOrbitsGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x8aa0b8,transparent:true,opacity:0.12})));
+        svOrbitsGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x8aa0b8,transparent:true,opacity:0.3})));
       }
     }
   }
@@ -1157,7 +1161,7 @@ function svBuildScene(){
     if(obj.type==='asteroid_belt'){
       // Arc for belt
       const r=obj.distance*40;
-      const pts=[];for(let i=0;i<=12;i++){const a=obj.angle-0.25+0.5*i/12;pts.push(new THREE.Vector3(Math.cos(a)*r,0,Math.sin(a)*r));}
+      const pts=[];for(let i=0;i<=12;i++){const a=obj.angle-0.25+0.5*i/12;pts.push(new THREE.Vector3(Math.cos(a)*r,wp.y,Math.sin(a)*r));}
       const bLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineDashedMaterial({color:colInt,dashSize:3,gapSize:3,transparent:true,opacity:0.8}));
       bLine.computeLineDistances();
       svObjectsGroup.add(bLine);
@@ -1316,7 +1320,7 @@ function svUpdateShipMeshes(){
 
 // Selected ship label
 const svShipLabelDiv=document.createElement('div');
-svShipLabelDiv.className='system-label';svShipLabelDiv.style.cssText='font-size:9px;color:#4fc3f7;background:rgba(10,14,24,0.8);padding:2px 6px;border-radius:3px';
+svShipLabelDiv.style.cssText='font-size:9px;color:#4fc3f7;background:rgba(10,14,24,0.8);padding:2px 6px;border-radius:3px;font-family:JetBrains Mono,monospace';
 const svShipLabel=new CSS2DObject(svShipLabelDiv);
 svShipLabel.visible=false;svScene.add(svShipLabel);
 
