@@ -834,6 +834,9 @@ function updateLiveShipList(){
     }
     div.innerHTML=`<div style="color:${isSel?'#4fc3f7':'#e0e8f0'}">${ship.name}</div><div style="color:#5a7a9a;font-size:9px">${ship.ship_class||ship.role} · ${status}</div>`;
     div.addEventListener('click',()=>{svSelectedShip=ship.name;window._svShowShipInfo&&window._svShowShipInfo(ship);});
+    div.addEventListener('dblclick',()=>{
+      const c=svShipCache[ship.name];if(c&&c.group.visible){const p=c.group.position;svControls.target.set(p.x,p.y,p.z);svCam.position.set(p.x+20,p.y+15,p.z+20);svControls.update();}
+    });
     el.appendChild(div);
   });
 }
@@ -1138,7 +1141,7 @@ function svBuildScene(){
       const r=obj.distance*40;
       const pPos=svPolar(obj.distance,obj.angle,obj.name);
       const pts=[];for(let i=0;i<=64;i++){const a=Math.PI*2*i/64;pts.push(new THREE.Vector3(Math.cos(a)*r,pPos.y,Math.sin(a)*r));}
-      const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x66bb6a,transparent:true,opacity:0.35}));
+      const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0xccddee,transparent:true,opacity:0.2}));
       svOrbitsGroup.add(line);
     }else if(obj.type==='moon'&&obj.parent){
       const par=svData.objects.find(p=>p.id===obj.parent);
@@ -1146,7 +1149,7 @@ function svBuildScene(){
         const pc=svPolar(par.distance,par.angle,par.name);
         const mr=(obj.distance-par.distance)*40;
         const pts=[];for(let i=0;i<=32;i++){const a=Math.PI*2*i/32;pts.push(new THREE.Vector3(pc.x+Math.cos(a)*mr,pc.y,pc.z+Math.sin(a)*mr));}
-        svOrbitsGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x8aa0b8,transparent:true,opacity:0.3})));
+        svOrbitsGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0xaabbcc,transparent:true,opacity:0.15})));
       }
     }
   }
@@ -1209,6 +1212,10 @@ function svBuildBodiesList(){
     const col=SV_HEX[obj.type]||'#5a7a9a';
     div.innerHTML=`<span style="color:${col}">● </span>${obj.name}`;
     div.addEventListener('click',()=>{svSelectedShip=null;svShowObjectInfo(obj);});
+    div.addEventListener('dblclick',()=>{
+      const pos=svPolar(obj.distance,obj.angle,obj.name);
+      svControls.target.set(pos.x,pos.y,pos.z);svCam.position.set(pos.x+30,pos.y+20,pos.z+30);svControls.update();
+    });
     el.appendChild(div);
   }
 }
@@ -1234,14 +1241,27 @@ function svShowObjectInfo(obj){
 }
 window._svShowShipInfo=function(ship){
   const el=document.getElementById('svSelInfo');
-  let html=`<div style="font-family:Orbitron,sans-serif;font-size:9px;color:#4fc3f7;margin-bottom:4px">${ship.name}</div>`;
-  html+=`<div style="color:#ffd54f;font-size:9px;margin-bottom:2px">${ship.ship_class||'Unknown'}</div>`;
-  html+=`<div style="color:#5a7a9a;font-size:9px">Role: ${ship.role}</div>`;
-  html+=`<div style="color:#5a7a9a;font-size:9px">State: ${ship.state}</div>`;
-  if(ship.faction)html+=`<div style="color:#5a7a9a;font-size:9px">Faction: ${ship.faction}</div>`;
+  let html=`<div style="font-family:Orbitron,sans-serif;font-size:10px;color:#4fc3f7;margin-bottom:6px">${ship.name}</div>`;
+  html+=`<div style="color:#ffd54f;font-size:10px;margin-bottom:4px">${ship.ship_class||'Unknown Class'}</div>`;
+  html+=`<div style="color:#8aa0b8;font-size:9px">Role: ${ship.role}</div>`;
+  html+=`<div style="color:#8aa0b8;font-size:9px">State: ${ship.state}</div>`;
+  if(ship.faction)html+=`<div style="color:#8aa0b8;font-size:9px">Faction: ${ship.faction}</div>`;
+  if(ship.destination){
+    const destIdx=systemIdToIndex[ship.destination];
+    html+=`<div style="color:#8aa0b8;font-size:9px">Dest: ${destIdx!==undefined?systems[destIdx].name:ship.destination}</div>`;
+  }
+  if(ship.intra_position){
+    const atObj=svData?svData.objects.find(o=>o.id===ship.intra_position):null;
+    html+=`<div style="color:#8aa0b8;font-size:9px">At: ${atObj?atObj.name:ship.intra_position}</div>`;
+  }
+  if(ship.intra_destination){
+    const toObj=svData?svData.objects.find(o=>o.id===ship.intra_destination):null;
+    if(toObj)html+=`<div style="color:#8aa0b8;font-size:9px">Heading: ${toObj.name}</div>`;
+  }
+  const cargoVol=ship.cargo?Object.values(ship.cargo).reduce((a,b)=>a+b,0):0;
+  html+=`<div style="color:#8aa0b8;font-size:9px;margin-top:4px">Cargo: ${Math.round(cargoVol)} units</div>`;
   if(ship.cargo&&Object.keys(ship.cargo).length){
-    html+=`<div style="color:#5a7a9a;font-size:9px;margin-top:4px">Cargo:</div>`;
-    for(const [k,v] of Object.entries(ship.cargo))html+=`<div style="color:#8aa0b8;font-size:9px;padding-left:6px">${k.replace(/_/g,' ')}: ${Math.round(v)}</div>`;
+    for(const [k,v] of Object.entries(ship.cargo))html+=`<div style="color:#6a8aa0;font-size:9px;padding-left:8px">${k.replace(/_/g,' ')}: ${Math.round(v)}</div>`;
   }
   el.innerHTML=html;
 };
@@ -1268,8 +1288,8 @@ function svUpdateShipMeshes(){
         const tmpScene=new THREE.Scene();
         const inner=buildShipFromData(tmpScene,geo,{showHardpoints:false});
         tmpScene.remove(inner);
-        inner.scale.set(4,4,4);
-        inner.rotation.x=-Math.PI/2; // lay flat (top-down)
+        inner.scale.set(2,2,2);
+        inner.rotation.y=-Math.PI/2; // nose points +Z (for lookAt)
         const wrapper=new THREE.Group();
         wrapper.add(inner);
         svShipsGroup.add(wrapper);
@@ -1288,17 +1308,18 @@ function svUpdateShipMeshes(){
     }
     cached.group.visible=true;
     cached.group.position.set(sx,sy,sz);
-    // Rotation: lerp from random arrival angle to destination angle
-    const targetAngle=Math.atan2(sp.tz-sp.fz,sp.tx-sp.fx);
-    if(cached.startAngle===undefined) cached.startAngle=Math.random()*Math.PI*2;
-    if(sp.p<0.01&&sp.rate>0){
-      // Aligning: lerp toward target
-      cached.startAngle+=(targetAngle-cached.startAngle)*0.05;
-      cached.group.rotation.z=cached.startAngle;
-    }else if(sp.rate>0){
-      // Moving: snap to target, clear start angle for next align
-      cached.group.rotation.z=targetAngle;
-      cached.startAngle=undefined;
+    // Orientation: lookAt destination
+    if(sp.rate>0){
+      if(sp.p<0.01){
+        // Aligning: lerp toward target direction
+        if(!cached.targetDir)cached.targetDir=new THREE.Vector3(sp.tx,sp.ty,sp.tz||0);
+        cached.targetDir.lerp(new THREE.Vector3(sp.tx,sp.ty,sp.tz||0),0.05);
+        cached.group.lookAt(cached.targetDir);
+      }else{
+        // Moving: face destination directly
+        cached.group.lookAt(sp.tx,sp.ty,sp.tz||0);
+        cached.targetDir=null;
+      }
     }
 
     // Trail line - only for selected ship
