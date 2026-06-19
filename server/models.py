@@ -40,7 +40,8 @@ class Station:
     produces: list[str] = field(default_factory=list)        # commodity_ids this station can produce
     inventory: dict[str, float] = field(default_factory=dict)
     price_cache: dict[str, float] = field(default_factory=dict)
-    production_rate: float = 1.0  # units produced per tick (when inputs available)
+    production_rate: float = 1.0  # MAX units produced per tick (capacity ceiling)
+    effective_rate: float = 0.0   # actual rate based on input availability (self-adjusting)
 
 
 @dataclass

@@ -49,7 +49,7 @@ class Simulation:
         self._update_all_prices()
 
     def _bootstrap_seed(self):
-        """Seed all producing stations with ~100 ticks of input supply."""
+        """Seed all producing stations with ~300 ticks of input supply."""
         for sys in self.universe.values():
             for station in sys.stations:
                 for prod_id in station.produces:
@@ -57,7 +57,7 @@ class Simulation:
                     if not commodity or not commodity.recipe:
                         continue
                     for input_id, qty_needed in commodity.recipe.items():
-                        need = qty_needed * station.production_rate * 100
+                        need = qty_needed * station.production_rate * 300
                         current = station.inventory.get(input_id, 0)
                         if current < need:
                             station.inventory[input_id] = need
@@ -228,21 +228,28 @@ class Simulation:
                         if current < 100:
                             station.inventory[tg] = current + 0.5
 
-                # ── Recipe-based production ──
+                # ── Recipe-based production (self-limiting) ──
                 for commodity_id in station.produces:
                     commodity = COMMODITIES.get(commodity_id)
                     if not commodity or not commodity.recipe:
                         continue
+                    # Calculate max possible from available inputs
                     can_produce = station.production_rate
                     for input_id, qty_needed in commodity.recipe.items():
                         available = station.inventory.get(input_id, 0)
                         possible = available / qty_needed
                         can_produce = min(can_produce, possible)
-                    if can_produce <= 0:
+                    # Self-limit: smoothly adjust effective rate toward what's actually possible
+                    # This prevents boom/bust cycles - station produces at sustainable pace
+                    target_rate = min(can_produce, station.production_rate)
+                    station.effective_rate += (target_rate - station.effective_rate) * 0.05
+                    station.effective_rate = max(0, min(station.effective_rate, station.production_rate))
+                    actual = min(station.effective_rate, can_produce)
+                    if actual < 0.01:
                         continue
                     for input_id, qty_needed in commodity.recipe.items():
-                        station.inventory[input_id] = station.inventory.get(input_id, 0) - qty_needed * can_produce
-                    station.inventory[commodity_id] = station.inventory.get(commodity_id, 0) + can_produce
+                        station.inventory[input_id] = station.inventory.get(input_id, 0) - qty_needed * actual
+                    station.inventory[commodity_id] = station.inventory.get(commodity_id, 0) + actual
 
                 # ── End-use consumption ──
                 consumables = STATION_CONSUMPTION.get(station.station_type, [])
