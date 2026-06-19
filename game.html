@@ -1096,16 +1096,16 @@ function svUpdateTargets(){
     if(ship.state==='intra_traveling'&&ship.intra_from&&ship.intra_to){
       const f=svPolar(ship.intra_from.d,ship.intra_from.a);
       const t=svPolar(ship.intra_to.d,ship.intra_to.a);
-      // Match server formula: (intra_speed/0.2) / max(5, min(15, dist/2))
-      const travelTicks=Math.max(5,Math.min(15,ship.intra_dist/2));
-      const rate=(ship.intra_speed/0.2)/travelTicks;
+      // Match server: 15-45 ticks based on distance
+      const travelTicks=Math.max(15,Math.min(45,ship.intra_dist*2));
+      const rate=1.0/travelTicks;
       const existing=svShipPos[id];
+      // Clamp progress: negative = still at origin (departing)
+      const displayP=Math.max(0, ship.intra_progress);
       if(existing&&existing.fx===f.x&&existing.fy===f.y&&existing.tx===t.x&&existing.ty===t.y){
-        // Same route: don't reset progress, just update rate
         existing.rate=rate;
       }else{
-        // New route: initialize
-        svShipPos[id]={fx:f.x,fy:f.y,tx:t.x,ty:t.y,p:ship.intra_progress,rate:rate,role:ship.role,vis:true};
+        svShipPos[id]={fx:f.x,fy:f.y,tx:t.x,ty:t.y,p:displayP,rate:rate,role:ship.role,vis:true};
       }
     }else if(ship.state==='mining'&&ship.intra_position){
       const at=svData.objects.find(o=>o.id===ship.intra_position);

@@ -151,7 +151,7 @@ class Simulation:
         if ship.intra_position == dest_obj_id:
             return
         ship.intra_destination = dest_obj_id
-        ship.intra_progress = 0.0
+        ship.intra_progress = -1.0  # departure delay (5 ticks to align)
         ship.state = "intra_traveling"
 
     # ── Safety-aware pathfinding ─────────────────────────────────────────────
@@ -348,11 +348,14 @@ class Simulation:
         for ship in self.ships:
             if ship.state != "intra_traveling" or not ship.intra_destination:
                 continue
+            # Departure delay: first 5 ticks are "aligning" (progress stays at 0)
+            if ship.intra_progress < 0:
+                ship.intra_progress += 0.2  # takes 5 ticks to go from -1 to 0
+                continue
             dist = self._intra_distance(ship.location, ship.intra_position or f"{ship.location}_star", ship.intra_destination)
-            # 5-15 ticks to cross based on distance, scaled by ship intra_speed
-            travel_ticks = max(5, min(15, dist / 2))
-            step = ship.intra_speed / (travel_ticks * ship.intra_speed)  # simplifies to 1/travel_ticks * speed_mult
-            step = (ship.intra_speed / 0.2) / travel_ticks  # normalized: base intra_speed=0.2 gives 1x
+            # 15-45 ticks to cross based on distance
+            travel_ticks = max(15, min(45, dist * 2))
+            step = 1.0 / travel_ticks
             ship.intra_progress += step
             if ship.intra_progress >= 1.0:
                 ship.intra_position = ship.intra_destination
