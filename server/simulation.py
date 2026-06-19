@@ -222,7 +222,6 @@ class Simulation:
 
                 # ── Passive trade goods generation at hubs/outposts ──
                 if station.station_type in ("trade_hub", "frontier_outpost"):
-                    from server.models import STATION_CONSUMPTION
                     for tg in STATION_CONSUMPTION.get(station.station_type, []):
                         current = station.inventory.get(tg, 0)
                         if current < 100:
