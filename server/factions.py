@@ -173,7 +173,7 @@ SYSTEM_FACTIONS = {
     # Rim - Frontier Alliance
     "barnards": "free_states", "antares": "free_states", "betelgeuse": "free_states",
     "castor": "free_states", "achernar": "free_states", "draconis": "free_states",
-    "lyra": "free_states", "serpentis": "free_states", "havens_edge": "free_states",
+    "lyra": "free_states", "serpentis": "free_states", "haven_rim": "free_states",
     "helios": "free_states", "osiris": "free_states",
     # Rim - Mixed
     "corvus": "iron_compact", "fornax": "iron_compact",
@@ -182,8 +182,8 @@ SYSTEM_FACTIONS = {
     "wolf359": "iron_compact", "rigel": "iron_compact", "canopus": "iron_compact",
     "spica": "iron_compact", "terminus": "iron_compact",
     # Frontier - Corsairs
-    "the_void": "corsairs", "obsidian": "corsairs", "erebus": "corsairs",
-    "phantom": "corsairs", "the_abyss": "corsairs", "nyx": "corsairs",
+    "void": "corsairs", "obsidian": "corsairs", "erebus": "corsairs",
+    "phantom": "corsairs", "abyss": "corsairs", "nyx": "corsairs",
     # Frontier - Contested
     "pollux": "corsairs", "pyxis": "iron_compact",
 }
