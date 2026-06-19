@@ -515,6 +515,14 @@ const shipLabel=new CSS2DObject(shipLabelDiv);
 shipLabel.visible=false;
 scene.add(shipLabel);
 
+// Selection reticle
+const reticleGeo=new THREE.RingGeometry(14,16,32);
+const reticleMat=new THREE.MeshBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.7,side:THREE.DoubleSide});
+const reticle=new THREE.Mesh(reticleGeo,reticleMat);
+reticle.visible=false;
+scene.add(reticle);
+let reticleAngle=0;
+
 let selectedSystem=-1;
 let selectedShip=-1;
 
@@ -526,6 +534,7 @@ function animate(){
   requestAnimationFrame(animate);
   if(++mainFrame%2!==0)return;
   controls.update();
+  applyKeyNav();
 
   // Move ships: client-side prediction between API updates
   shipMeshes.forEach((mesh,i)=>{
@@ -539,37 +548,63 @@ function animate(){
     const locPos=sysPositions[ship?.location];
     const destPos=sysPositions[ship?.destination];
     if(ship&&ship.state==='traveling'&&locPos&&destPos){
-      const serverRate=0.02*(ship.speed||1.0);
-      mesh.userData.clientProgress=(mesh.userData.clientProgress||ship.progress)+(serverRate/60);
-      if(mesh.userData.clientProgress>1) mesh.userData.clientProgress=1;
-      const p=mesh.userData.clientProgress;
-      mesh.userData.target={x:locPos.x+(destPos.x-locPos.x)*p, y:locPos.y+(destPos.y-locPos.y)*p, z:locPos.z+(destPos.z-locPos.z)*p};
+      // Advance at server rate (0.02*speed per second, we run at ~30fps)
+      const rate=0.02*(ship.speed||1.0)/30;
+      const ud=mesh.userData;
+      if(ud.clientProgress===undefined) ud.clientProgress=ship.progress;
+      ud.clientProgress+=rate;
+      // Gently correct toward server value to avoid drift
+      const serverP=ship.progress+(rate*30*(performance.now()-(ud.lastSync||performance.now()))/1000);
+      ud.clientProgress+=(ship.progress-ud.clientProgress)*0.02;
+      if(ud.clientProgress>1) ud.clientProgress=1;
+      const p=ud.clientProgress;
+      mesh.position.set(locPos.x+(destPos.x-locPos.x)*p, locPos.y+(destPos.y-locPos.y)*p, locPos.z+(destPos.z-locPos.z)*p);
     }
-    const t=mesh.userData.target;
-    if(t){
-      const dx=t.x-mesh.position.x,dy=t.y-mesh.position.y,dz=t.z-mesh.position.z;
-      const dist=Math.sqrt(dx*dx+dy*dy+dz*dz);
-      const lerp=dist>50?0.3:0.05;
-      mesh.position.x+=dx*lerp;mesh.position.y+=dy*lerp;mesh.position.z+=dz*lerp;
-    }
-    // Use 3D model if available, else sprite
+    // Use 3D model if available, else sprite. Cull by distance from camera.
+    const camDist=camera.position.distanceTo(mesh.position);
+    if(camDist>800){mesh.visible=false;const m3d=mapShip3D[ship?.name];if(m3d)m3d.grp.visible=false;return;}
     const m3d=getOrCreate3DShip(ship,i);
     if(m3d){
       mesh.visible=false;
       m3d.grp.visible=true;
       m3d.grp.position.copy(mesh.position);
-      // Face destination
-      if(mesh.userData.target){
-        const destPos2=sysPositions[ship.destination];
-        if(destPos2)m3d.grp.lookAt(destPos2.x,destPos2.y,destPos2.z);
-      }
+      const dp=sysPositions[ship.destination];
+      if(dp)m3d.grp.lookAt(dp.x,dp.y,dp.z);
     }else{
       mesh.visible=true;
     }
   });
 
+  // Fade system labels by distance, override for selected
+  document.querySelectorAll('.system-label').forEach((el,i)=>{
+    if(i>=systems.length)return;
+    const s=systems[i];
+    const d=camera.position.distanceTo(new THREE.Vector3(s.x,s.y,s.z));
+    if(i===selectedSystem){el.style.opacity='1';el.style.display='';}
+    else if(d>600){el.style.display='none';}
+    else{el.style.display='';el.style.opacity=String(Math.max(0,1-(d-200)/400));}
+  });
+
   // Rotate player ring to face camera
   playerRing.lookAt(camera.position);
+
+  // Selection reticle
+  reticleAngle+=0.02;
+  reticle.rotation.z=reticleAngle;
+  if(selectedSystem>=0&&selectedSystem<systems.length){
+    const s=systems[selectedSystem];
+    reticle.position.set(s.x,s.y,s.z);
+    reticle.lookAt(camera.position);
+    reticle.visible=true;
+  }else if(selectedShip>=0&&selectedShip<shipMeshes.length&&shipMeshes[selectedShip].position){
+    reticle.position.copy(shipMeshes[selectedShip].position);
+    reticle.lookAt(camera.position);
+    reticle.scale.set(0.5,0.5,0.5);
+    reticle.visible=true;
+  }else{
+    reticle.visible=false;
+  }
+  if(selectedSystem>=0)reticle.scale.set(1,1,1);
 
   // Update selected ship label
   if(selectedShip>=0&&selectedShip<shipMeshes.length&&shipMeshes[selectedShip].visible){
@@ -603,6 +638,23 @@ document.querySelectorAll('.map-zoom button').forEach((btn,i)=>{
     controls.update();
   });
 });
+
+// WASDQE keyboard navigation
+const keys={};
+document.addEventListener('keydown',e=>{if('wasdqe'.includes(e.key.toLowerCase()))keys[e.key.toLowerCase()]=true;});
+document.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+function applyKeyNav(){
+  const speed=5;
+  const forward=new THREE.Vector3();camera.getWorldDirection(forward);
+  const right=new THREE.Vector3();right.crossVectors(forward,camera.up).normalize();
+  if(keys['w']){controls.target.addScaledVector(forward,speed);camera.position.addScaledVector(forward,speed);}
+  if(keys['s']){controls.target.addScaledVector(forward,-speed);camera.position.addScaledVector(forward,-speed);}
+  if(keys['a']){controls.target.addScaledVector(right,-speed);camera.position.addScaledVector(right,-speed);}
+  if(keys['d']){controls.target.addScaledVector(right,speed);camera.position.addScaledVector(right,speed);}
+  if(keys['q']){controls.target.y-=speed;camera.position.y-=speed;}
+  if(keys['e']){controls.target.y+=speed;camera.position.y+=speed;}
+}
+
 
 // ── Camera focus animation ────────────────────────────────────────────────────
 let animating=false;
@@ -831,16 +883,14 @@ function updateLiveShipList(){
 }
 
 function updateMapShips(){
-  // Set ship target positions from live data (actual movement is lerped in animate loop)
   liveShips.forEach((ship,i)=>{
     if(i>=shipMeshes.length) return;
-    shipMeshes[i].userData.clientProgress=ship.progress; // sync to server
-    const locPos=sysPositions[ship.location];
-    const destPos=sysPositions[ship.destination];
-    if(ship.state==='traveling'&&locPos&&destPos){
-      shipMeshes[i].userData.target={x:locPos.x+(destPos.x-locPos.x)*ship.progress, y:locPos.y+(destPos.y-locPos.y)*ship.progress, z:locPos.z+(destPos.z-locPos.z)*ship.progress};
-    }else if(locPos){
-      shipMeshes[i].userData.target={x:locPos.x+5*(i%4-2), y:locPos.y+3, z:locPos.z+5*(Math.floor(i/4)%3-1)};
+    const ud=shipMeshes[i].userData;
+    ud.lastSync=performance.now();
+    // Only snap if route changed (different location/destination)
+    if(ud.lastLoc!==ship.location||ud.lastDest!==ship.destination){
+      ud.clientProgress=ship.progress;
+      ud.lastLoc=ship.location;ud.lastDest=ship.destination;
     }
   });
 }
