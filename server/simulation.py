@@ -210,10 +210,6 @@ class Simulation:
 
     def _production_consumption(self):
         """Recipe-driven production: consume inputs, produce outputs. Halt on shortage."""
-        COMMON_ORES = ["iron_ore", "copper_ore", "ice", "organics"]
-        MID_ORES = ["titanium_ore", "helium3"]
-        # Rare ores (platinum, crystals, rare_earths, uranium) must be hauled from frontier
-
         for sys_id, sys in self.universe.items():
             for station in sys.stations:
                 # ── Passive ore generation based on security tier ──
@@ -223,22 +219,6 @@ class Simulation:
                             current = station.inventory.get(ore, 0)
                             if current < 500:
                                 station.inventory[ore] = current + 1.5 * field.density
-
-                # Refineries in high-sec passively get common ores (local mining)
-                if station.station_type == "refinery" and sys.security in ("high", "medium"):
-                    for ore in COMMON_ORES:
-                        if any(ore in (COMMODITIES[p].recipe or {}) for p in station.produces):
-                            current = station.inventory.get(ore, 0)
-                            if current < 200:
-                                station.inventory[ore] = current + 0.8
-
-                # Refineries in med-sec also get mid-grade ores
-                if station.station_type == "refinery" and sys.security == "medium":
-                    for ore in MID_ORES:
-                        if any(ore in (COMMODITIES[p].recipe or {}) for p in station.produces):
-                            current = station.inventory.get(ore, 0)
-                            if current < 200:
-                                station.inventory[ore] = current + 0.5
 
                 # ── Passive trade goods generation at hubs/outposts ──
                 if station.station_type in ("trade_hub", "frontier_outpost"):

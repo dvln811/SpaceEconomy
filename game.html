@@ -968,14 +968,10 @@ container.addEventListener('mousemove',(e)=>{
     const idx=systemMeshes.indexOf(sysHits[0].object);
     if(idx>=0){
       const s=systems[idx];
-      const d=systemDetails[idx];
       let html=`<div class="tt-title">${s.name}</div>
-        <div class="tt-row">Type: <span class="tt-val">${s.type}</span></div>`;
-      if(d){
-        html+=`<div class="tt-row">Pop: <span class="tt-val">${d.pop}</span></div>
-          <div class="tt-row">Security: <span class="tt-val">${d.security}</span></div>
-          <div class="tt-row">Stations: <span class="tt-val">${d.stations.length}</span></div>`;
-      }
+        <div class="tt-row">Type: <span class="tt-val">${typeLabels[s.type]||s.type}</span></div>
+        <div class="tt-row">Security: <span class="tt-val">${s.security}</span></div>
+        <div class="tt-row">Stations: <span class="tt-val">${s.station_count}</span></div>`;
       tooltip.innerHTML=html;
       tooltip.style.left=(e.clientX-rect.left+12)+'px';
       tooltip.style.top=(e.clientY-rect.top-8)+'px';
