@@ -38,6 +38,10 @@ MINING_TICKS = 5
 class Simulation:
     def __init__(self):
         self.universe = build_universe()
+        # Assign factions to systems
+        from server.factions import get_system_faction
+        for sid, sys in self.universe.items():
+            sys.faction = get_system_faction(sid)
         self.ships: list[NPCShip] = []
         self.tick_count = 0
         self.start_time = time.time()
@@ -64,13 +68,14 @@ class Simulation:
 
     def _spawn_traders(self, count: int):
         from server.ship_types import HAULER_SHIPS
+        from server.factions import FACTIONS
         system_ids = list(self.universe.keys())
         hauler_types = list(HAULER_SHIPS.values())
-        hauler_factions = ["Trade Guild", "Free Traders", "Industrial Corp", "Agrarian League", "Frontier Logistics"]
+        trade_corps = ["Voidway Logistics", "Galactic Exchange", "Federal Transit Authority", "Smelter's Union", "Terraform Pioneers"]
         risk_by_tier = {1: 0.2, 2: 0.5, 3: 0.7, 4: 0.9}
         for i in range(count):
             st = hauler_types[i % len(hauler_types)]
-            faction = hauler_factions[i % len(hauler_factions)]
+            faction = trade_corps[i % len(trade_corps)]
             registry = f"HLR-{random.randint(1000,9999)}"
             loc = random.choice(system_ids)
             ship = NPCShip(
@@ -91,7 +96,7 @@ class Simulation:
         mining_systems = [sid for sid, sys in self.universe.items() if sys.asteroid_fields]
         from server.ship_types import MINER_SHIPS
         miner_types = list(MINER_SHIPS.values())
-        miner_factions = ["Miners Union", "Deep Rock Corp", "Frontier Logistics"]
+        miner_factions = ["Rockbreaker Collective", "Deepvein Extraction", "Smelter's Union"]
         risk_by_tier = {1: 0.2, 2: 0.5, 3: 0.8}
         for i in range(count):
             st = miner_types[i % len(miner_types)]
