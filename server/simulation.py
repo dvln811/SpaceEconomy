@@ -204,7 +204,8 @@ class Simulation:
         self._move_ships()
         self._move_ships_intra()
         self._npc_decisions()
-        self._update_all_prices()
+        if self.tick_count % 10 == 0:
+            self._update_all_prices()
         if len(self.events) > 100:
             self.events = self.events[-100:]
 
