@@ -45,7 +45,22 @@ class Simulation:
         self.trade_volume = 0
         self._spawn_traders(50)
         self._spawn_miners(20)
+        self._bootstrap_seed()
         self._update_all_prices()
+
+    def _bootstrap_seed(self):
+        """Seed all producing stations with ~100 ticks of input supply."""
+        for sys in self.universe.values():
+            for station in sys.stations:
+                for prod_id in station.produces:
+                    commodity = COMMODITIES.get(prod_id)
+                    if not commodity or not commodity.recipe:
+                        continue
+                    for input_id, qty_needed in commodity.recipe.items():
+                        need = qty_needed * station.production_rate * 100
+                        current = station.inventory.get(input_id, 0)
+                        if current < need:
+                            station.inventory[input_id] = need
 
     def _spawn_traders(self, count: int):
         from server.ship_types import HAULER_SHIPS
@@ -195,22 +210,49 @@ class Simulation:
 
     def _production_consumption(self):
         """Recipe-driven production: consume inputs, produce outputs. Halt on shortage."""
+        COMMON_ORES = ["iron_ore", "copper_ore", "ice", "organics"]
+        MID_ORES = ["titanium_ore", "helium3"]
+        # Rare ores (platinum, crystals, rare_earths, uranium) must be hauled from frontier
+
         for sys_id, sys in self.universe.items():
             for station in sys.stations:
-                # Mining colonies passively generate ore from local asteroid fields
+                # ── Passive ore generation based on security tier ──
                 if station.station_type == "mining_colony" and sys.asteroid_fields:
                     for field in sys.asteroid_fields:
                         for ore in field.yields:
                             current = station.inventory.get(ore, 0)
-                            if current < 500:  # cap to prevent infinite accumulation
+                            if current < 500:
                                 station.inventory[ore] = current + 1.5 * field.density
 
-                # Recipe-based production
+                # Refineries in high-sec passively get common ores (local mining)
+                if station.station_type == "refinery" and sys.security in ("high", "medium"):
+                    for ore in COMMON_ORES:
+                        if any(ore in (COMMODITIES[p].recipe or {}) for p in station.produces):
+                            current = station.inventory.get(ore, 0)
+                            if current < 200:
+                                station.inventory[ore] = current + 0.8
+
+                # Refineries in med-sec also get mid-grade ores
+                if station.station_type == "refinery" and sys.security == "medium":
+                    for ore in MID_ORES:
+                        if any(ore in (COMMODITIES[p].recipe or {}) for p in station.produces):
+                            current = station.inventory.get(ore, 0)
+                            if current < 200:
+                                station.inventory[ore] = current + 0.5
+
+                # ── Passive trade goods generation at hubs/outposts ──
+                if station.station_type in ("trade_hub", "frontier_outpost"):
+                    from server.models import STATION_CONSUMPTION
+                    for tg in STATION_CONSUMPTION.get(station.station_type, []):
+                        current = station.inventory.get(tg, 0)
+                        if current < 100:
+                            station.inventory[tg] = current + 0.5
+
+                # ── Recipe-based production ──
                 for commodity_id in station.produces:
                     commodity = COMMODITIES.get(commodity_id)
                     if not commodity or not commodity.recipe:
                         continue
-                    # Check all inputs available
                     can_produce = station.production_rate
                     for input_id, qty_needed in commodity.recipe.items():
                         available = station.inventory.get(input_id, 0)
@@ -218,16 +260,14 @@ class Simulation:
                         can_produce = min(can_produce, possible)
                     if can_produce <= 0:
                         continue
-                    # Consume inputs
                     for input_id, qty_needed in commodity.recipe.items():
                         station.inventory[input_id] = station.inventory.get(input_id, 0) - qty_needed * can_produce
-                    # Produce output
                     station.inventory[commodity_id] = station.inventory.get(commodity_id, 0) + can_produce
 
-                # End-use consumption (frontier outposts, military bases, trade hubs)
+                # ── End-use consumption ──
                 consumables = STATION_CONSUMPTION.get(station.station_type, [])
                 for commodity_id in consumables:
-                    station.inventory[commodity_id] = max(0, station.inventory.get(commodity_id, 0) - 0.2)
+                    station.inventory[commodity_id] = max(0, station.inventory.get(commodity_id, 0) - 0.1)
 
     def _process_timers(self):
         for ship in self.ships:
@@ -439,55 +479,55 @@ class Simulation:
         return best
 
     def _find_best_trade(self, ship: NPCShip, loc: System):
-        """Find best buy-here sell-there opportunity within 3 hops (safety-aware)."""
+        """Find best buy-here sell-anywhere-in-cluster opportunity (sector-wide visibility)."""
         best = None
+        cluster = loc.cluster
         for station in loc.stations:
             for commodity, stock in station.inventory.items():
                 if stock < 5 or commodity not in COMMODITIES:
                     continue
                 buy_price = station.price_cache.get(commodity, 999999)
-                # Check 1-hop neighbors
-                for neighbor_id in loc.connections:
-                    if self._system_danger(neighbor_id) > ship.risk_tolerance:
+                # Search all systems in same cluster
+                for dest_id, dest_sys in self.universe.items():
+                    if dest_id == ship.location:
                         continue
-                    neighbor = self.universe[neighbor_id]
-                    for dest_station in neighbor.stations:
+                    if dest_sys.cluster != cluster:
+                        continue
+                    if self._system_danger(dest_id) > ship.risk_tolerance:
+                        continue
+                    for dest_station in dest_sys.stations:
                         sell_price = dest_station.price_cache.get(commodity, 0)
-                        profit = sell_price - buy_price
+                        # Discount by hop distance (rough estimate)
+                        hops = self._estimate_hops(ship.location, dest_id)
+                        discount = max(0.3, 1.0 - hops * 0.1)
+                        profit = (sell_price - buy_price) * discount
                         if profit > 0 and (best is None or profit > best[3]):
-                            best = (commodity, station, neighbor_id, profit)
-                    # 2-hop
-                    for hop2_id in neighbor.connections:
-                        if hop2_id == ship.location:
-                            continue
-                        if self._system_danger(hop2_id) > ship.risk_tolerance:
-                            continue
-                        hop2 = self.universe[hop2_id]
-                        for dest_station in hop2.stations:
-                            sell_price = dest_station.price_cache.get(commodity, 0)
-                            profit = (sell_price - buy_price) * 0.7  # discount for distance
-                            if profit > 0 and (best is None or profit > best[3]):
-                                best = (commodity, station, hop2_id, profit)
-                        # 3-hop
-                        for hop3_id in hop2.connections:
-                            if hop3_id == ship.location or hop3_id == neighbor_id:
-                                continue
-                            if self._system_danger(hop3_id) > ship.risk_tolerance:
-                                continue
-                            hop3 = self.universe[hop3_id]
-                            for dest_station in hop3.stations:
-                                sell_price = dest_station.price_cache.get(commodity, 0)
-                                profit = (sell_price - buy_price) * 0.5  # bigger discount
-                                if profit > 0 and (best is None or profit > best[3]):
-                                    best = (commodity, station, hop3_id, profit)
+                            best = (commodity, station, dest_id, profit)
         return best
+
+    def _estimate_hops(self, from_id: str, to_id: str) -> int:
+        """BFS hop count estimate."""
+        if from_id == to_id:
+            return 0
+        visited = {from_id}
+        queue = [(from_id, 0)]
+        while queue:
+            current, depth = queue.pop(0)
+            if depth > 6:
+                return 7
+            for neighbor in self.universe[current].connections:
+                if neighbor == to_id:
+                    return depth + 1
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append((neighbor, depth + 1))
+        return 7
 
     def _update_all_prices(self):
         for sys in self.universe.values():
             for station in sys.stations:
                 for commodity_id in COMMODITIES:
                     stock = station.inventory.get(commodity_id, 0)
-                    # Demand = production inputs needed + end-use consumption + base
                     demand = 5.0
                     # Stations that produce things want their inputs
                     for prod_id in station.produces:
@@ -497,8 +537,26 @@ class Simulation:
                     # End-use consumption
                     if commodity_id in STATION_CONSUMPTION.get(station.station_type, []):
                         demand += 20
+
+                    # Dynamic pressure: track unfilled demand / unsold supply over time
+                    if not hasattr(station, 'price_pressure'):
+                        station.price_pressure = {}
+                    pressure = station.price_pressure.get(commodity_id, 0)
+                    if demand > 10 and stock < demand:
+                        # Unfilled demand: raise buy pressure
+                        pressure = min(pressure + 0.5, 50)
+                    elif stock > demand * 3:
+                        # Oversupply: lower sell pressure
+                        pressure = max(pressure - 0.5, -30)
+                    else:
+                        # Stable: decay toward 0
+                        pressure *= 0.98
+                    station.price_pressure[commodity_id] = pressure
+
                     supply = max(1, stock)
-                    station.price_cache[commodity_id] = calculate_price(commodity_id, supply, demand)
+                    base_price = calculate_price(commodity_id, supply, demand)
+                    # Apply pressure as percentage modifier
+                    station.price_cache[commodity_id] = round(base_price * (1 + pressure / 100), 2)
 
     def _log(self, msg: str):
         self.events.append({"tick": self.tick_count, "time": time.time(), "msg": msg})
