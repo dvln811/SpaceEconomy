@@ -24,11 +24,11 @@ A browser-based space economy simulation game. Currently single-player with plan
 
 ---
 
-## Current State (Phase 1 COMPLETE + Production Chain Economy)
+## Current State (Phase 1 COMPLETE + Production Chain Economy + Phase 2 In Progress)
 
 ### Architecture
 - **Backend:** Python (Flask), always-on server on fly.io (shared-cpu-2x, 1GB)
-- **Frontend:** Vanilla JS + Three.js (3D star map) + HTML/CSS panels + Canvas (intra-system map)
+- **Frontend:** Vanilla JS + Three.js (3D star map + 3D system map) + HTML/CSS panels
 - **Economy Engine:** Real-time agent-based tick simulation (1 tick/sec, background thread)
 - **Database:** SQLite on persistent fly.io volume (`/app/data/game.db`), saves every 10 ticks
 - **Deployment:** fly.io, auto-deploy via GitHub Actions on push to master
@@ -190,22 +190,39 @@ A browser-based space economy simulation game. Currently single-player with plan
 - **Safety-aware NPC pathfinding (risk tolerance per ship class)**
 - **Comprehensive debug dashboard**
 
-### Phase 2: Player Can Trade (NEXT)
+### Phase 2: Player Can Trade (IN PROGRESS)
 
-**Immediate next tasks (in progress):**
-1. Convert system_view from Canvas 2D to Three.js 3D (same renderer as star map)
-2. Use star gradient sprites in system map (consistent with star map)
-3. Render actual 3D ship models in system view (with LOD: full model close, simplified far)
-4. Fix economy starvation (production rate vs logistics throughput balancing)
-5. Order book UI in game market tab (buy/sell orders visible to player)
+**Completed this session:**
+1. ~~Convert system_view from Canvas 2D to Three.js 3D~~
+2. ~~Star gradient sprites in system map~~
+3. ~~Render 3D ship models in system view and star map~~
+4. ~~Fix economy starvation (bootstrap seeding, sector-wide trade AI, dynamic pricing)~~
+5. ~~Order book UI in game market tab~~
+6. ~~Performance: throttled render loops, optimized API polling~~
+7. ~~All 48 systems rendered dynamically from API data~~
+8. ~~WASDQE navigation, selection reticle, label fading, ship LOD culling~~
 
-**Then Phase 2 gameplay:**
-- Player can buy/sell commodities at current station
-- Player can set destination, travel takes real time
-- Fuel consumption during travel
-- Balance and cargo tracking
-- Ship upgrades (cargo capacity, fuel efficiency, speed)
-- Player mining (use mining laser hardpoint on asteroid fields)
+**Economy overhaul implemented:**
+- Bootstrap seeding: 100 ticks of inputs on init
+- Mining colonies passively generate ore (asteroid fields)
+- Trade hubs/outposts passively generate trade goods
+- Sector-wide trade AI: traders see all opportunities in their cluster
+- Dynamic pricing pressure: unfilled demand raises price, oversupply lowers it
+- Prices recalculate every 10 ticks (not every tick)
+- Production rates halved for logistics balance
+
+**API optimization:**
+- `/api/positions` (fetched once) - all system coords, connections
+- `/api/market/<system_id>` (every 5s, selected system only)
+- `/api/ships` (every 3s)
+- `/api/events` (every 8s, lightweight)
+- Removed polling of massive `/api/state` endpoint
+
+**Immediate next tasks:**
+1. Observe economy at 120x speed, tune production rates vs logistics throughput
+2. Order queue system (X4-style: stations post orders, traders claim them)
+3. Player can buy/sell commodities at current station
+4. Player can set destination, travel takes real time
 
 ### Phase 3: Blueprints and Fittings
 - Blueprint system (recipes as discoverable/tradeable items)
