@@ -536,7 +536,8 @@ function animate(){
   controls.update();
   applyKeyNav();
 
-  // Move ships: client-side prediction between API updates
+  // Move ships: time-based prediction between API updates
+  const now=performance.now();
   shipMeshes.forEach((mesh,i)=>{
     if(i>=liveShips.length){mesh.visible=false;return;}
     const ship=liveShips[i];
@@ -548,14 +549,17 @@ function animate(){
     const locPos=sysPositions[ship?.location];
     const destPos=sysPositions[ship?.destination];
     if(ship&&ship.state==='traveling'&&locPos&&destPos){
-      // Advance at server rate (0.02*speed per second, we run at ~30fps)
-      const rate=0.02*(ship.speed||1.0)/30;
       const ud=mesh.userData;
-      if(ud.clientProgress===undefined) ud.clientProgress=ship.progress;
-      ud.clientProgress+=rate;
-      // Gently correct toward server value to avoid drift
-      const serverP=ship.progress+(rate*30*(performance.now()-(ud.lastSync||performance.now()))/1000);
-      ud.clientProgress+=(ship.progress-ud.clientProgress)*0.02;
+      // On first frame or route change, seed from server
+      if(ud.clientProgress===undefined||ud.lastLoc!==ship.location||ud.lastDest!==ship.destination){
+        ud.clientProgress=ship.progress;
+        ud.lastLoc=ship.location;ud.lastDest=ship.destination;
+        ud.lastTime=now;
+      }
+      // Time-based: advance by elapsed seconds * server rate
+      const elapsed=(now-ud.lastTime)/1000;
+      ud.lastTime=now;
+      ud.clientProgress+=elapsed*0.02*(ship.speed||1.0);
       if(ud.clientProgress>1) ud.clientProgress=1;
       const p=ud.clientProgress;
       mesh.position.set(locPos.x+(destPos.x-locPos.x)*p, locPos.y+(destPos.y-locPos.y)*p, locPos.z+(destPos.z-locPos.z)*p);
@@ -882,18 +886,7 @@ function updateLiveShipList(){
   });
 }
 
-function updateMapShips(){
-  liveShips.forEach((ship,i)=>{
-    if(i>=shipMeshes.length) return;
-    const ud=shipMeshes[i].userData;
-    ud.lastSync=performance.now();
-    // Only snap if route changed (different location/destination)
-    if(ud.lastLoc!==ship.location||ud.lastDest!==ship.destination){
-      ud.clientProgress=ship.progress;
-      ud.lastLoc=ship.location;ud.lastDest=ship.destination;
-    }
-  });
-}
+function updateMapShips(){}
 
 fetchLiveData();
 setInterval(fetchShips, 3000);
