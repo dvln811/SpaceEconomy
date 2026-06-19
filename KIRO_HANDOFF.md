@@ -203,13 +203,24 @@ A browser-based space economy simulation game. Currently single-player with plan
 8. ~~WASDQE navigation, selection reticle, label fading, ship LOD culling~~
 
 **Economy overhaul implemented:**
-- Bootstrap seeding: 100 ticks of inputs on init
+- 124 commodities (29 T1 ores, 20 T2 refined, 18 T3 manufactured, 22 T4 components, 29 T5 products, 6 trade goods)
+- Volume-based cargo (common ores 1-2m3, rare 4-6m3, exotic 8-20m3)
+- Logical recipe chains (steel=iron+carbon, electronics=silicon+copper+gold)
+- Bootstrap seeding: 1000 ticks of inputs, scaled by rarity
 - Mining colonies passively generate ore (asteroid fields)
 - Trade hubs/outposts passively generate trade goods
 - Sector-wide trade AI: traders see all opportunities in their cluster
 - Dynamic pricing pressure: unfilled demand raises price, oversupply lowers it
+- Self-limiting production: effective_rate smoothly adjusts to input availability
 - Prices recalculate every 10 ticks (not every tick)
-- Production rates halved for logistics balance
+- Production rates: refineries 0.5-1.0, industrial 0.3-0.5, component 0.2-0.4, shipyard 0.1-0.2
+
+**Factions:**
+- 6 factions: Terran Federation, Nexus Collective, Merchants Guild, Frontier Alliance, Iron Compact, The Corsairs
+- 24 corporations across factions (4 per faction)
+- All 48 systems assigned to a faction
+- Ally/enemy relationships defined
+- NPC ships assigned to faction corps
 
 **API optimization:**
 - `/api/positions` (fetched once) - all system coords, connections
