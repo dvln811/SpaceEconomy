@@ -24,8 +24,8 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   flex-shrink:0;user-select:none;
 }
 .sys-titlebar h2{font-family:'Orbitron',sans-serif;font-size:10px;font-weight:600;color:#4fc3f7;letter-spacing:2px;text-transform:uppercase}
-.sys-titlebar .meta{margin-left:12px;font-size:9px;color:#5a7a9a}
-.sys-titlebar .close{margin-left:auto;width:20px;height:20px;border:none;background:none;color:#5a7a9a;cursor:pointer;font-size:14px;line-height:20px;text-align:center;border-radius:3px}
+.sys-titlebar .meta{margin-left:12px;font-size:9px;color:#8aa0b8}
+.sys-titlebar .close{margin-left:auto;width:20px;height:20px;border:none;background:none;color:#8aa0b8;cursor:pointer;font-size:14px;line-height:20px;text-align:center;border-radius:3px}
 .sys-titlebar .close:hover{background:#1a0a0a;color:#ef5350}
 .sys-body{flex:1;position:relative;overflow:hidden}
 .sys-body canvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab}
@@ -42,7 +42,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .sys-tooltip.visible{opacity:1}
 .sys-tooltip .tt-name{color:#e0e8f0;font-weight:500;margin-bottom:4px}
 .sys-tooltip .tt-type{color:#4fc3f7;font-size:9px;text-transform:uppercase;letter-spacing:1px}
-.sys-tooltip .tt-detail{color:#6a8aa0;margin-top:4px}
+.sys-tooltip .tt-detail{color:#8aa0b8;margin-top:4px}
 
 /* Zoom controls */
 .sys-zoom{position:absolute;bottom:8px;right:8px;display:flex;flex-direction:column;gap:3px}
@@ -282,7 +282,7 @@ function draw() {
   for (const obj of systemData.objects) {
     const wPos = polarToWorld(obj.distance, obj.angle);
     const pos = worldToScreen(wPos.x, wPos.y);
-    const color = COLORS[obj.type] || '#5a7a9a';
+    const color = COLORS[obj.type] || '#8aa0b8';
     const isHovered = hoveredObj && hoveredObj.id === obj.id;
 
     // Glow

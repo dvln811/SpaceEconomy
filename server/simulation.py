@@ -565,7 +565,16 @@ class Simulation:
                     supply = max(1, stock)
                     base_price = calculate_price(commodity_id, supply, demand)
                     # Apply pressure as percentage modifier
-                    station.price_cache[commodity_id] = round(base_price * (1 + pressure / 100), 2)
+                    new_price = round(base_price * (1 + pressure / 100), 2)
+                    old_price = station.price_cache.get(commodity_id, new_price)
+                    station.price_cache[commodity_id] = new_price
+                    # Log significant price changes (>10%)
+                    if old_price > 0 and stock > 1:
+                        pct = (new_price - old_price) / old_price * 100
+                        if abs(pct) > 10:
+                            name = COMMODITIES[commodity_id].name
+                            direction = "▲" if pct > 0 else "▼"
+                            self._log(f"{direction} {name} {pct:+.0f}% at {station.name} ({sys.name})")
 
     def _log(self, msg: str):
         self.events.append({"tick": self.tick_count, "time": time.time(), "msg": msg})

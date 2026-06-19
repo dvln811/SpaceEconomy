@@ -14,17 +14,17 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .nav h1{font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;color:#ef5350;letter-spacing:2px}
 .live-dot{width:7px;height:7px;border-radius:50%;background:#66bb6a;animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
-.nav a,.tab-btn{font-size:10px;color:#5a7a9a;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;font-family:'Orbitron',sans-serif;background:none;transition:all .12s}
+.nav a,.tab-btn{font-size:10px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;font-family:'Orbitron',sans-serif;background:none;transition:all .12s}
 .tab-btn:hover,.nav a:hover{color:#4fc3f7;border-color:#4fc3f7}
 .tab-btn.active{color:#4fc3f7;border-color:#4fc3f7;background:#0d1a2f}
 .nuke-btn{margin-left:auto;color:#ef5350!important;border-color:#ef5350!important;background:#1a0a0a!important}
 .nuke-btn:hover{background:#ef5350!important;color:#fff!important}
-.tick-info{color:#4a6a8a;font-size:10px;margin-left:auto;margin-right:8px}
+.tick-info{color:#8aa0b8;font-size:10px;margin-left:auto;margin-right:8px}
 .main{flex:1;overflow:hidden;position:relative}
 .view{display:none;height:100%;overflow-y:auto;padding:10px}
 .view.active{display:block}
 .panel{background:#0a0e18;border:1px solid #1a2844;border-radius:4px;padding:10px;margin-bottom:8px}
-.panel-title{font-family:'Orbitron',sans-serif;font-size:9px;color:#4a6a8a;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #152238}
+.panel-title{font-family:'Orbitron',sans-serif;font-size:9px;color:#8aa0b8;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #152238}
 .stat-row{display:flex;justify-content:space-between;padding:2px 0}
 .stat-row .label{color:#8aa0b8}
 .stat-row .value{color:#4fc3f7;font-weight:500}
@@ -40,7 +40,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 /* Tables with sticky headers */
 .tbl-wrap{overflow:auto;max-height:calc(100vh - 120px)}
 .tbl{width:100%;border-collapse:collapse}
-.tbl th{font-family:'Orbitron',sans-serif;font-size:9px;color:#4a6a8a;letter-spacing:1px;text-align:left;padding:4px 6px;border-bottom:1px solid #1a2844;position:sticky;top:0;background:#0a0e18;z-index:1}
+.tbl th{font-family:'Orbitron',sans-serif;font-size:9px;color:#8aa0b8;letter-spacing:1px;text-align:left;padding:4px 6px;border-bottom:1px solid #1a2844;position:sticky;top:0;background:#0a0e18;z-index:1}
 .tbl td{padding:4px 6px;border-bottom:1px solid #0f1a28;font-size:10px;vertical-align:top}
 .tbl tr:hover td{background:#0d1525}
 /* Ships */
@@ -52,7 +52,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .ship-class{color:#8aa0b8;font-size:9px}
 .ship-detail{margin-top:6px;padding-top:6px;border-top:1px solid #152238}
 .ship-detail .row{display:flex;gap:12px;padding:1px 0}
-.ship-detail .row .k{color:#5a7a9a;width:80px}
+.ship-detail .row .k{color:#8aa0b8;width:80px}
 .ship-detail .row .v{color:#c8d4e0}
 .cargo-bar{height:6px;background:#152238;border-radius:3px;margin-top:3px;overflow:hidden}
 .cargo-fill{height:100%;background:#4fc3f7;border-radius:3px}
@@ -215,7 +215,7 @@ function renderOverview() {
       <div class="panel-title">Production Health</div>
       <div class="stat-row"><span class="label">Active lines</span><span class="value" style="color:#66bb6a">${totalProducing}</span></div>
       <div class="stat-row"><span class="label">Halted</span><span class="value" style="color:#ef5350">${totalHalted}</span></div>
-      <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:9px;color:#4a6a8a">HALTED:</div>
+      <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:9px;color:#8aa0b8">HALTED:</div>
       ${haltedList.slice(0,10).map(h=>`<div class="stat-row"><span class="label">${h.station}</span><span class="value" style="color:#ef5350;font-size:9px">${h.output}</span></div>`).join('')}
       ${haltedList.length>10?`<div style="color:#8aa0b8;font-size:9px;margin-top:4px">+${haltedList.length-10} more</div>`:''}
     </div>
@@ -233,7 +233,7 @@ function renderOverview() {
         let allBuys=[];
         for(const sys of Object.values(D.systems||{})){for(const st of sys.stations){for(const b of (st.buy_orders||[])){allBuys.push({...b,station:st.name,system:sys.name});}}}
         allBuys.sort((a,b)=>b.qty-a.qty);
-        return allBuys.slice(0,10).map(b=>`<div class="stat-row"><span class="label" style="color:#ef5350">${b.commodity}</span><span class="value">${Math.round(b.qty)} @ ${b.price.toFixed(0)} <span style="color:#8aa0b8;font-size:9px">${b.station}</span></span></div>`).join('')||'<div style="color:#6a8aa0">None</div>';
+        return allBuys.slice(0,10).map(b=>`<div class="stat-row"><span class="label" style="color:#ef5350">${fmtName(b.commodity)}</span><span class="value">${Math.round(b.qty)} @ ${b.price.toFixed(0)} <span style="color:#8aa0b8;font-size:9px">${b.station}</span></span></div>`).join('')||'<div style="color:#8aa0b8">None</div>';
       })()}
     </div>
   </div>
@@ -276,7 +276,7 @@ function renderStations() {
       }).join(' ');
       return `<div style="padding:2px 0;border-bottom:1px solid #0a1420"><span style="color:#ffd54f">${p.name}</span> ${status} <span style="color:#4fc3f7;margin:0 6px">stk:${Math.round(p.stock)}</span><span style="font-size:9px">${inputs}</span></div>`;
     }).join('');
-    const buys = r.buyOrders.slice(0,4).map(b => `<div style="font-size:9px;padding:1px 0"><span style="color:#ef5350">${b.commodity}</span> ${Math.round(b.qty)} @${b.price.toFixed(0)}</div>`).join('');
+    const buys = r.buyOrders.slice(0,4).map(b => `<div style="font-size:9px;padding:1px 0"><span style="color:#ef5350">${fmtName(b.commodity)}</span> ${Math.round(b.qty)} @${b.price.toFixed(0)}</div>`).join('');
     rows += `<tr><td>${r.sys}</td><td>${r.station}</td><td><span class="badge badge-${r.security}">${r.security}</span></td><td style="vertical-align:top">${prodLines}</td><td style="vertical-align:top">${buys||'-'}</td></tr>`;
   }
   document.getElementById('stBody').innerHTML = rows;
@@ -304,7 +304,7 @@ function renderShips() {
     const isSelected = selectedShip === s.id;
     const cargoPct = s.cargo_capacity > 0 ? (s.cargo_used / s.cargo_capacity * 100) : 0;
     const cargoStr = Object.entries(s.cargo).map(([k,v]) => `${Math.round(v)} ${k}`).join(', ') || 'empty';
-    const col = stateColors[s.state] || '#5a7a9a';
+    const col = stateColors[s.state] || '#8aa0b8';
 
     let detail = '';
     if (isSelected) {
@@ -316,7 +316,7 @@ function renderShips() {
         <div class="row"><span class="k">Risk</span><span class="v">${(s.risk_tolerance*100).toFixed(0)}%</span></div>
         <div class="row"><span class="k">Cargo</span><span class="v">${cargoStr}</span></div>
         <div class="cargo-bar"><div class="cargo-fill" style="width:${cargoPct}%"></div></div>
-        <div style="font-size:9px;color:#5a7a9a;margin-top:2px">${Math.round(s.cargo_used)}/${s.cargo_capacity} capacity</div>
+        <div style="font-size:9px;color:#8aa0b8;margin-top:2px">${Math.round(s.cargo_used)}/${s.cargo_capacity} capacity</div>
       </div>`;
     }
     html += `<div class="ship-card ${isSelected?'selected':''}" data-id="${s.id}">
@@ -392,7 +392,7 @@ function renderMarket() {
 
   let rows = '';
   for (const e of allEntries) {
-    rows += `<tr><td style="color:#ffd54f">${e.commodity}</td><td style="color:#5a7a9a">T${getTier(e.commodity)}</td><td>${e.system}</td><td style="color:#8aa0b8">${e.station}</td><td style="color:#e0e8f0;text-align:right">${e.price.toFixed(0)}</td><td style="color:#4fc3f7;text-align:right">${Math.round(e.stock)}</td></tr>`;
+    rows += `<tr><td style="color:#ffd54f">${fmtName(e.commodity)}</td><td style="color:#8aa0b8">T${getTier(e.commodity)}</td><td>${e.system}</td><td style="color:#8aa0b8">${e.station}</td><td style="color:#e0e8f0;text-align:right">${e.price.toFixed(0)}</td><td style="color:#4fc3f7;text-align:right">${Math.round(e.stock)}</td></tr>`;
   }
   document.getElementById('mktBody').innerHTML = rows;
 }
@@ -440,14 +440,14 @@ function renderSystems() {
     // Order book
     const sellRows = (st.sell_orders||[]).slice(0,5).map(o=>`<div class="stat-row"><span class="label" style="color:#66bb6a">${o.commodity}</span><span class="value">${Math.round(o.qty)} @ ${o.price.toFixed(0)}</span></div>`).join('');
     const buyRows = (st.buy_orders||[]).slice(0,5).map(o=>`<div class="stat-row"><span class="label" style="color:#ef5350">${o.commodity}</span><span class="value">${Math.round(o.qty)} @ ${o.price.toFixed(0)}</span></div>`).join('');
-    return `<div class="panel"><div class="panel-title">${st.name} <span class="badge badge-${sys.security}">${st.type}</span></div>${prodRows||'<div style="color:#6a8aa0;font-size:9px">No production</div>'}
-    <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:9px;color:#4a6a8a">SELL ORDERS</div>${sellRows||'<div style="color:#6a8aa0;font-size:9px">None</div>'}
-    <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:9px;color:#4a6a8a">BUY ORDERS (DEMAND)</div>${buyRows||'<div style="color:#6a8aa0;font-size:9px">None</div>'}
-    <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:9px;color:#4a6a8a">INVENTORY</div>${invRows||'<div style="color:#6a8aa0">Empty</div>'}</div>`;
+    return `<div class="panel"><div class="panel-title">${st.name} <span class="badge badge-${sys.security}">${st.type}</span></div>${prodRows||'<div style="color:#8aa0b8;font-size:9px">No production</div>'}
+    <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:9px;color:#8aa0b8">SELL ORDERS</div>${sellRows||'<div style="color:#8aa0b8;font-size:9px">None</div>'}
+    <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:9px;color:#8aa0b8">BUY ORDERS (DEMAND)</div>${buyRows||'<div style="color:#8aa0b8;font-size:9px">None</div>'}
+    <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:9px;color:#8aa0b8">INVENTORY</div>${invRows||'<div style="color:#8aa0b8">Empty</div>'}</div>`;
   }).join('');
 
   const shipsHere = (D.ships||[]).filter(s => s.location_id === selectedSystem);
-  const shipList = shipsHere.map(s => `<div style="padding:2px 0;font-size:10px"><span class="badge" style="background:${s.role==='miner'?'#ab47bc22':'#4fc3f722'};color:${s.role==='miner'?'#ab47bc':'#4fc3f7'}">${s.role}</span> ${s.name} <span style="color:#5a7a9a">(${s.state})</span></div>`).join('');
+  const shipList = shipsHere.map(s => `<div style="padding:2px 0;font-size:10px"><span class="badge" style="background:${s.role==='miner'?'#ab47bc22':'#4fc3f722'};color:${s.role==='miner'?'#ab47bc':'#4fc3f7'}">${s.role}</span> ${s.name} <span style="color:#8aa0b8">(${s.state})</span></div>`).join('');
   const beltInfo = sys.belts.map(b => `<div class="stat-row"><span class="label">${b.name}</span><span class="value">${b.yields.join(', ')} (d:${b.density})</span></div>`).join('');
 
   document.getElementById('sysContent').innerHTML = `<div class="sys-panel"><div>${stationPanels}</div><div>
@@ -472,8 +472,8 @@ function renderSystems() {
         <div class="stat-row"><span class="label">Sell Orders</span><span class="value" style="color:#66bb6a">${totalSells}</span></div>`;
       })()}
     </div>
-    <div class="panel"><div class="panel-title">Asteroid Fields</div>${beltInfo||'<div style="color:#6a8aa0">None</div>'}</div>
-    <div class="panel"><div class="panel-title">Ships in System (${shipsHere.length})</div>${shipList||'<div style="color:#6a8aa0">None</div>'}</div>
+    <div class="panel"><div class="panel-title">Asteroid Fields</div>${beltInfo||'<div style="color:#8aa0b8">None</div>'}</div>
+    <div class="panel"><div class="panel-title">Ships in System (${shipsHere.length})</div>${shipList||'<div style="color:#8aa0b8">None</div>'}</div>
   </div></div>`;
 }
 

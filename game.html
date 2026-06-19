@@ -24,12 +24,12 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 /* Side resize handles */
 .side-handle{background:#0a0f1a;cursor:ew-resize;display:flex;align-items:center;justify-content:center;transition:background .15s}
 .side-handle:hover{background:#1a2844}
-.side-handle::after{content:'';width:2px;height:30px;background:#3a5a7a;border-radius:1px}
+.side-handle::after{content:'';width:2px;height:30px;background:#8aa0b8;border-radius:1px}
 
 /* Resize handle */
 .resize-handle{grid-column:1/-1;height:6px;background:#0a0f1a;cursor:ns-resize;display:flex;align-items:center;justify-content:center;transition:background .15s}
 .resize-handle:hover{background:#1a2844}
-.resize-handle::after{content:'';width:40px;height:2px;background:#3a5a7a;border-radius:1px}
+.resize-handle::after{content:'';width:40px;height:2px;background:#8aa0b8;border-radius:1px}
 
 /* Header */
 .header{grid-column:1/-1;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:0 20px;gap:20px}
@@ -55,7 +55,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .system-prices{display:flex;gap:8px;margin-top:4px}
 .price-up{color:#66bb6a;font-size:10px}
 .price-down{color:#ef5350;font-size:10px}
-.price-neutral{color:#5a7a9a;font-size:10px}
+.price-neutral{color:#8aa0b8;font-size:10px}
 
 /* Main - Star Map */
 .main{background:#05080f;position:relative;overflow:hidden}
@@ -96,7 +96,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .system-detail .detail-row{display:flex;justify-content:space-between;padding:2px 0;color:#8aa0b8}
 .system-detail .detail-row .val{color:#e0e8f0}
 .system-detail .detail-section{margin-top:6px;padding-top:4px;border-top:1px solid #152238}
-.system-detail .detail-section-title{font-family:'Orbitron',sans-serif;font-size:8px;color:#4a6a8a;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
+.system-detail .detail-section-title{font-family:'Orbitron',sans-serif;font-size:8px;color:#8aa0b8;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
 .system-detail .planet-item{color:#8ab4d4;padding:1px 0}
 .system-detail .station-item{color:#ffd54f;padding:1px 0}
 
@@ -132,8 +132,8 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .sysview-window.open{display:flex}
 .sysview-titlebar{display:flex;align-items:center;padding:0 12px;height:30px;background:#0a0f1a;border-bottom:1px solid #1a2844;cursor:move;flex-shrink:0;user-select:none}
 .sysview-titlebar h2{font-family:'Orbitron',sans-serif;font-size:9px;font-weight:600;color:#4fc3f7;letter-spacing:2px;text-transform:uppercase}
-.sysview-titlebar .sv-meta{margin-left:10px;font-size:9px;color:#5a7a9a}
-.sysview-titlebar .sv-close{margin-left:auto;width:18px;height:18px;border:none;background:none;color:#5a7a9a;cursor:pointer;font-size:13px;border-radius:3px}
+.sysview-titlebar .sv-meta{margin-left:10px;font-size:9px;color:#8aa0b8}
+.sysview-titlebar .sv-close{margin-left:auto;width:18px;height:18px;border:none;background:none;color:#8aa0b8;cursor:pointer;font-size:13px;border-radius:3px}
 .sysview-titlebar .sv-close:hover{background:#1a0a0a;color:#ef5350}
 .sysview-body{flex:1;position:relative;overflow:hidden}
 .sysview-tooltip{position:absolute;pointer-events:none;background:#0a0f1a;border:1px solid #1a2844;border-radius:4px;padding:6px 10px;font-size:10px;max-width:180px;box-shadow:0 4px 12px rgba(0,0,0,0.5);opacity:0;transition:opacity .12s;z-index:10}
@@ -153,8 +153,8 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <!-- Header -->
   <div class="header">
     <h1>Hauler's Almanac</h1>
-    <a href="/docs" style="font-size:10px;color:#5a7a9a;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:Orbitron,sans-serif;transition:all .15s" onmouseover="this.style.color='#4fc3f7';this.style.borderColor='#4fc3f7'" onmouseout="this.style.color='#5a7a9a';this.style.borderColor='#1a2844'">Docs</a>
-    <a href="/debug" style="font-size:10px;color:#5a7a9a;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:Orbitron,sans-serif;transition:all .15s" onmouseover="this.style.color='#ef5350';this.style.borderColor='#ef5350'" onmouseout="this.style.color='#5a7a9a';this.style.borderColor='#1a2844'">Debug</a>
+    <a href="/docs" style="font-size:10px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:Orbitron,sans-serif;transition:all .15s" onmouseover="this.style.color='#4fc3f7';this.style.borderColor='#4fc3f7'" onmouseout="this.style.color='#8aa0b8';this.style.borderColor='#1a2844'">Docs</a>
+    <a href="/debug" style="font-size:10px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:Orbitron,sans-serif;transition:all .15s" onmouseover="this.style.color='#ef5350';this.style.borderColor='#ef5350'" onmouseout="this.style.color='#8aa0b8';this.style.borderColor='#1a2844'">Debug</a>
     <div class="credits">Balance: <span>₡ 847,320</span></div>
     <div class="clock" id="gameClock">Cycle 0 | 00:00 GST</div>
   </div>
@@ -193,7 +193,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
       <div class="panel-tab" data-tab="r-market">Market</div>
     </div>
     <div class="tab-content active" id="tab-r-info">
-      <div id="system-info-content"><div style="color:#5a7a9a;font-size:10px">Select a system to view info</div></div>
+      <div id="system-info-content"><div style="color:#8aa0b8;font-size:10px">Select a system to view info</div></div>
     </div>
     <div class="tab-content" id="tab-r-market">
       <div class="panel-title">Order Book</div>
@@ -241,7 +241,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   </div>
   <div style="flex:1;display:flex;flex-direction:row;overflow:hidden">
   <div id="svInfoPanel" style="width:200px;overflow-y:auto;background:#0a0e18;border-right:1px solid #1a2844;padding:10px;font-size:10px;flex-shrink:0">
-    <div id="svSelInfo"><div style="color:#5a7a9a;font-size:9px">Click an object or ship to view details</div></div>
+    <div id="svSelInfo"><div style="color:#8aa0b8;font-size:9px">Click an object or ship to view details</div></div>
   </div>
   <div class="sysview-body" id="sysviewBody">
     <div id="svRenderer" style="position:absolute;inset:0;overflow:hidden;cursor:grab"></div>
@@ -788,7 +788,7 @@ function updateLiveMarket(marketData){
     // Sell orders (asks)
     if(station.sell_orders&&station.sell_orders.length){
       html+=`<div style="font-size:8px;color:#ef5350;margin:4px 0 2px;letter-spacing:1px">SELL ORDERS</div>`;
-      html+=`<div class="commodity-row" style="border-bottom:1px solid #1a2844;padding-bottom:2px;margin-bottom:2px"><div class="commodity-name" style="color:#5a7a9a;font-size:9px">Item</div><div class="commodity-vol" style="color:#5a7a9a;font-size:9px">Qty</div><div class="commodity-price" style="color:#5a7a9a;font-size:9px">Price</div></div>`;
+      html+=`<div class="commodity-row" style="border-bottom:1px solid #1a2844;padding-bottom:2px;margin-bottom:2px"><div class="commodity-name" style="color:#8aa0b8;font-size:9px">Item</div><div class="commodity-vol" style="color:#8aa0b8;font-size:9px">Qty</div><div class="commodity-price" style="color:#8aa0b8;font-size:9px">Price</div></div>`;
       for(const o of station.sell_orders.slice(0,6)){
         const name=o.commodity.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
         html+=`<div class="commodity-row"><div class="commodity-name">${name}</div><div class="commodity-vol">${Math.round(o.qty)}</div><div class="commodity-price">${Math.round(o.price)}</div></div>`;
@@ -797,7 +797,7 @@ function updateLiveMarket(marketData){
     // Buy orders (bids)
     if(station.buy_orders&&station.buy_orders.length){
       html+=`<div style="font-size:8px;color:#66bb6a;margin:4px 0 2px;letter-spacing:1px">BUY ORDERS</div>`;
-      html+=`<div class="commodity-row" style="border-bottom:1px solid #1a2844;padding-bottom:2px;margin-bottom:2px"><div class="commodity-name" style="color:#5a7a9a;font-size:9px">Item</div><div class="commodity-vol" style="color:#5a7a9a;font-size:9px">Qty</div><div class="commodity-price" style="color:#5a7a9a;font-size:9px">Price</div></div>`;
+      html+=`<div class="commodity-row" style="border-bottom:1px solid #1a2844;padding-bottom:2px;margin-bottom:2px"><div class="commodity-name" style="color:#8aa0b8;font-size:9px">Item</div><div class="commodity-vol" style="color:#8aa0b8;font-size:9px">Qty</div><div class="commodity-price" style="color:#8aa0b8;font-size:9px">Price</div></div>`;
       for(const o of station.buy_orders.slice(0,6)){
         const name=o.commodity.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
         html+=`<div class="commodity-row"><div class="commodity-name">${name}</div><div class="commodity-vol">${Math.round(o.qty)}</div><div class="commodity-price" style="color:#66bb6a">${Math.round(o.price)}</div></div>`;
@@ -822,7 +822,7 @@ function updateLiveShipList(){
     const div=document.createElement('div');
     const isSel=svSelectedShip===ship.name;
     div.style.cssText=`padding:4px 6px;margin:1px 0;border-radius:3px;cursor:pointer;user-select:none;${isSel?'background:#0d1a2f;border:1px solid #1a3050':'border:1px solid transparent'}`;
-    div.innerHTML=`<div style="color:${isSel?'#4fc3f7':'#e0e8f0'};font-size:10px">${ship.name}</div>${ship.faction?`<div style="color:#5a7a9a;font-size:9px">${ship.faction}</div>`:''}`;
+    div.innerHTML=`<div style="color:${isSel?'#4fc3f7':'#e0e8f0'};font-size:10px">${ship.name}</div>${ship.faction?`<div style="color:#8aa0b8;font-size:9px">${ship.faction}</div>`:''}`;
     div.addEventListener('click',()=>{svSelectedShip=ship.name;window._svShowShipInfo&&window._svShowShipInfo(ship);updateLiveShipList();});
     div.addEventListener('dblclick',()=>{window._svZoomToShip&&window._svZoomToShip(ship.name);});
     el.appendChild(div);
@@ -903,14 +903,13 @@ async function fetchActivity(){
     const d=await r.json();
     const newEvents=d.events.filter(e=>e.tick>lastEventTick);
     for(const e of newEvents){
-      // Only show newsworthy events (arrivals, unloading, mining finds)
       const msg=e.msg;
-      if(msg.includes('heading to gate')||msg.includes('transiting'))continue;
+      // Only show price changes
+      if(!msg.includes('▲')&&!msg.includes('▼'))continue;
       const div=document.createElement('div');
       div.className='activity-item';
-      // Format as news bulletin
-      const fmtMsg=msg.replace(/_/g,' ');
-      div.innerHTML=`<span class="time">T${e.tick}</span>${fmtMsg}`;
+      const color=msg.includes('▲')?'#66bb6a':'#ef5350';
+      div.innerHTML=`<span class="time">T${e.tick}</span><span style="color:${color}">${msg}</span>`;
       activityFeed.insertBefore(div,activityFeed.firstChild);
       lastEventTick=e.tick;
     }
@@ -1150,7 +1149,7 @@ function svBuildScene(){
   // Objects as sprites
   for(const obj of svData.objects){
     const wp=svPolar(obj.distance,obj.angle,obj.name);
-    const col=SV_HEX[obj.type]||'#5a7a9a';
+    const col=SV_HEX[obj.type]||'#8aa0b8';
     const colInt=SV_COLORS[obj.type]||0x5a7a9a;
     svObjPositions.push({obj,x:wp.x,y:wp.y,z:wp.z});
 
@@ -1202,7 +1201,7 @@ function svBuildBodiesList(){
   for(const obj of svData.objects){
     const div=document.createElement('div');
     div.style.cssText='padding:3px 0;border-bottom:1px solid #0a1420;cursor:pointer;user-select:none;color:#b0c4d8';
-    const col=SV_HEX[obj.type]||'#5a7a9a';
+    const col=SV_HEX[obj.type]||'#8aa0b8';
     div.innerHTML=`<span style="color:${col}">● </span>${obj.name.replace(' Star','')}`;
     div.addEventListener('click',()=>{svSelectedShip=null;svShowObjectInfo(obj);});
     div.addEventListener('dblclick',()=>{
@@ -1214,12 +1213,12 @@ function svBuildBodiesList(){
 }
 function svShowObjectInfo(obj){
   const el=document.getElementById('svSelInfo');
-  const col=SV_HEX[obj.type]||'#5a7a9a';
+  const col=SV_HEX[obj.type]||'#8aa0b8';
   // Generate deterministic stats from name hash
   let h=0;for(let i=0;i<obj.name.length;i++)h=(h*31+obj.name.charCodeAt(i))|0;
   const abs=Math.abs;
   let html=`<div style="font-family:Orbitron,sans-serif;font-size:10px;color:${col};margin-bottom:6px">${obj.name.replace(' Star','')}</div>`;
-  html+=`<div style="color:#5a7a9a;font-size:9px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-family:JetBrains Mono,monospace">${obj.type.replace('_',' ')}</div>`;
+  html+=`<div style="color:#8aa0b8;font-size:9px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-family:JetBrains Mono,monospace">${obj.type.replace('_',' ')}</div>`;
   if(obj.distance)html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Orbit: ${obj.distance.toFixed(2)} AU</div>`;
   if(obj.type==='planet'){
     const radius=3000+abs(h%12000);const temp=-50+abs((h>>4)%400);
@@ -1250,7 +1249,7 @@ function svShowObjectInfo(obj){
   if(svData&&svData.ships){
     const here=svData.ships.filter(s=>s.intra_position===obj.id);
     if(here.length){
-      html+=`<div style="color:#5a7a9a;font-size:8px;margin-top:8px;letter-spacing:1px;font-family:JetBrains Mono,monospace">SHIPS (${here.length}):</div>`;
+      html+=`<div style="color:#8aa0b8;font-size:8px;margin-top:8px;letter-spacing:1px;font-family:JetBrains Mono,monospace">SHIPS (${here.length}):</div>`;
       for(const s of here.slice(0,8))html+=`<div style="color:#b0c4d8;font-size:9px;padding:1px 0;font-family:JetBrains Mono,monospace">${s.name}</div>`;
     }
   }
@@ -1278,7 +1277,7 @@ window._svShowShipInfo=function(ship){
   const cargoVol=ship.cargo?Object.values(ship.cargo).reduce((a,b)=>a+b,0):0;
   html+=`<div style="color:#8aa0b8;font-size:9px;margin-top:4px">Cargo: ${Math.round(cargoVol)} units</div>`;
   if(ship.cargo&&Object.keys(ship.cargo).length){
-    for(const [k,v] of Object.entries(ship.cargo))html+=`<div style="color:#6a8aa0;font-size:9px;padding-left:8px">${k.replace(/_/g,' ')}: ${Math.round(v)}</div>`;
+    for(const [k,v] of Object.entries(ship.cargo))html+=`<div style="color:#8aa0b8;font-size:9px;padding-left:8px">${k.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}: ${Math.round(v)}</div>`;
   }
   el.innerHTML=html;
 };

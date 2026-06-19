@@ -1,0 +1,591 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ship Design - Component Vocabulary</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Orbitron:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:12px;padding:24px}
+h1{font-family:'Orbitron',sans-serif;font-size:16px;color:#4fc3f7;letter-spacing:3px;margin-bottom:8px}
+h2{font-family:'Orbitron',sans-serif;font-size:12px;color:#ffd54f;letter-spacing:1px;margin:32px 0 12px;text-transform:uppercase}
+p{color:#8aa0b8;font-size:11px;margin-bottom:16px;max-width:800px;line-height:1.6}
+.vocab-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:32px}
+.vocab-item{background:#0a0e18;border:1px solid #1a2844;border-radius:4px;padding:8px;text-align:center}
+.vocab-item svg{width:100%;height:60px;display:block;margin-bottom:4px}
+.vocab-item span{font-size:9px;color:#6a9ab8}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:1200px}
+.card{background:#0a0e18;border:1px solid #1a2844;border-radius:6px;padding:16px}
+.card h3{font-family:'Orbitron',sans-serif;font-size:10px;color:#8aa0b8;letter-spacing:1px;margin-bottom:8px}
+svg.ship{width:100%;height:200px;display:block;background:#060a12;border-radius:4px;filter:brightness(1.4)}
+#ship-viewer-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;max-width:1400px;margin-top:16px}
+.viewer-card{background:#0a0e18;border:1px solid #1a2844;border-radius:6px;overflow:hidden}
+.viewer-header{padding:8px 12px;border-bottom:1px solid #1a2844;display:flex;justify-content:space-between;align-items:center}
+.viewer-name{font-family:'Orbitron',sans-serif;font-size:10px;color:#e0e8f0;letter-spacing:1px}
+.viewer-meta{font-size:9px;color:#6a9ab8;text-transform:uppercase}
+.viewer-canvas{width:100%;height:250px}
+</style>
+</head>
+<body>
+<h1>Ship Design - Component Vocabulary</h1>
+<p>Standard structural components used to construct all vessels. Each has a distinct profile that implies 3D volume and structural purpose. Ships are assembled by connecting these components along spines and pylons.</p>
+
+<h2>Structural Components</h2>
+<div class="vocab-grid">
+
+
+<!-- BRIDGES / COCKPITS -->
+<div class="vocab-item">
+  <svg viewBox="0 0 80 60"><path d="M20 20 L50 18 L62 24 L66 30 L62 36 L50 42 L20 40 Z" stroke="#4fc3f7" stroke-width="1" fill="none"/><line x1="50" y1="18" x2="50" y2="42" stroke="#4fc3f7" stroke-width="0.4" opacity="0.5"/></svg>
+  <span>Bridge (tapered)</span>
+</div>
+<div class="vocab-item">
+  <svg viewBox="0 0 80 60"><polygon points="20,22 55,20 65,26 68,30 65,34 55,40 20,38" stroke="#4fc3f7" stroke-width="1" fill="none"/><polygon points="50,24 60,28 60,32 50,36" stroke="#8ab4d4" stroke-width="0.6" fill="none" opacity="0.6"/></svg>
+  <span>Bridge (angular)</span>
+</div>
+<div class="vocab-item">
+  <svg viewBox="0 0 80 60"><path d="M25 22 L55 22 L62 26 L62 34 L55 38 L25 38 L20 34 L20 26 Z" stroke="#4fc3f7" stroke-width="1" fill="none"/></svg>
+  <span>Bridge (armored)</span>
+</div>
+
+<!-- HULL SECTIONS -->
+<div class="vocab-item">
+  <svg viewBox="0 0 80 60"><path d="M15 18 L65 16 L70 22 L70 38 L65 44 L15 42 L10 36 L10 24 Z" stroke="#4fc3f7" stroke-width="1" fill="none"/><line x1="30" y1="17" x2="30" y2="43" stroke="#4fc3f7" stroke-width="0.3" opacity="0.4"/><line x1="48" y1="16" x2="48" y2="44" stroke="#4fc3f7" stroke-width="0.3" opacity="0.4"/></svg>
+  <span>Hull (beveled)</span>
+</div>
+<div class="vocab-item">
+  <svg viewBox="0 0 80 60"><polygon points="15,20 65,18 68,22 68,38 65,42 15,40 12,36 12,24" stroke="#4fc3f7" stroke-width="1" fill="none"/></svg>
+  <span>Hull (angular)</span>
+</div>
+<div class="vocab-item">
+  <svg viewBox="0 0 80 60"><rect x="12" y="18" width="56" height="24" rx="5" stroke="#4fc3f7" stroke-width="1" fill="none"/></svg>
+  <span>Hull (rounded)</span>
+</div>
+
+<!-- CARGO MODULES -->
+<div class="vocab-item">
+  <svg viewBox="0 0 80 60"><rect x="12" y="15" width="56" height="30" rx="3" stroke="#ffd54f" stroke-width="0.8" fill="none"/><line x1="30" y1="15" x2="30" y2="45" stroke="#ffd54f" stroke-width="0.3" opacity="0.4"/><line x1="48" y1="15" x2="48" y2="45" stroke="#ffd54f" stroke-width="0.3" opacity="0.4"/></svg>
+  <span>Cargo (standard)</span>
+</div>
+<div class="vocab-item">
+  <svg viewBox="0 0 80 60"><path d="M12 20 L68 18 L70 22 L70 38 L68 42 L12 40 L10 36 L10 24 Z" stroke="#ffd54f" stroke-width="0.8" fill="none"/><line x1="12" y1="30" x2="68" y2="30" stroke="#ffd54f" stroke-width="0.3" opacity="0.3"/></svg>
+  <span>Cargo (tapered)</span>
+</div>
+<div class="vocab-item">
+  <svg viewBox="0 0 80 60"><polygon points="15,15 65,15 68,18 68,42 65,45 15,45 12,42 12,18" stroke="#ffd54f" stroke-width="0.8" fill="none"/><line x1="12" y1="30" x2="68" y2="30" stroke="#ffd54f" stroke-width="0.3" opacity="0.3"/><line x1="40" y1="15" x2="40" y2="45" stroke="#ffd54f" stroke-width="0.3" opacity="0.3"/></svg>
+  <span>Cargo (heavy)</span>
+</div>
+
+<!-- ENGINES -->
+<div class="vocab-item">
+  <svg viewBox="0 0 80 60"><rect x="30" y="20" width="24" height="20" rx="3" stroke="#8aa0b8" stroke-width="0.8" fill="none"/><rect x="20" y="24" width="10" height="12" rx="2" stroke="#ef5350" stroke-width="0.6" fill="#ef535010"/><line x1="20" y1="29" x2="10" y2="29" stroke="#ef5350" stroke-width="0.6" opacity="0.5"/><line x1="20" y1="33" x2="8" y2="33" stroke="#ef5350" stroke-width="0.8" opacity="0.4"/></svg>
+  <span>Engine (single)</span>
+</div>
+<div class="vocab-item">
+  <svg viewBox="0 0 80 60"><rect x="30" y="12" width="22" height="14" rx="2" stroke="#8aa0b8" stroke-width="0.7" fill="none"/><rect x="30" y="34" width="22" height="14" rx="2" stroke="#8aa0b8" stroke-width="0.7" fill="none"/><line x1="30" y1="18" x2="16" y2="18" stroke="#ef5350" stroke-width="0.6" opacity="0.4"/><line x1="30" y1="40" x2="16" y2="40" stroke="#ef5350" stroke-width="0.6" opacity="0.4"/></svg>
+  <span>Engine (twin)</span>
+</div>
+<div class="vocab-item">
+  <svg viewBox="0 0 80 60"><rect x="32" y="8" width="18" height="12" rx="2" stroke="#8aa0b8" stroke-width="0.6" fill="none"/><rect x="32" y="24" width="18" height="12" rx="2" stroke="#8aa0b8" stroke-width="0.6" fill="none"/><rect x="32" y="40" width="18" height="12" rx="2" stroke="#8aa0b8" stroke-width="0.6" fill="none"/><line x1="32" y1="13" x2="18" y2="13" stroke="#ef5350" stroke-width="0.5" opacity="0.4"/><line x1="32" y1="30" x2="16" y2="30" stroke="#ef5350" stroke-width="0.7" opacity="0.4"/><line x1="32" y1="46" x2="18" y2="46" stroke="#ef5350" stroke-width="0.5" opacity="0.4"/></svg>
+  <span>Engine (triple)</span>
+</div>
+
+<!-- CONNECTORS -->
+<div class="vocab-item">
+  <svg viewBox="0 0 80 60"><rect x="30" y="22" width="20" height="16" rx="2" stroke="#4fc3f7" stroke-width="0.6" fill="none" opacity="0.7"/><circle cx="40" cy="30" r="3" stroke="#4fc3f7" stroke-width="0.3" fill="none"/></svg>
+  <span>Spine (standard)</span>
+</div>
+<div class="vocab-item">
+  <svg viewBox="0 0 80 60"><path d="M30 22 L50 20 L52 24 L52 36 L50 40 L30 38 L28 34 L28 26 Z" stroke="#4fc3f7" stroke-width="0.6" fill="none" opacity="0.7"/></svg>
+  <span>Spine (tapered)</span>
+</div>
+<div class="vocab-item">
+  <svg viewBox="0 0 80 60"><line x1="25" y1="30" x2="55" y2="30" stroke="#4fc3f7" stroke-width="0.8" opacity="0.6"/><circle cx="25" cy="30" r="2" stroke="#4fc3f7" stroke-width="0.5" fill="none"/><circle cx="55" cy="30" r="2" stroke="#4fc3f7" stroke-width="0.5" fill="none"/></svg>
+  <span>Pylon (strut)</span>
+</div>
+
+<!-- HARDPOINTS -->
+<div class="vocab-item">
+  <svg viewBox="0 0 80 60"><circle cx="30" cy="30" r="6" stroke="#ef5350" stroke-width="0.7" fill="#ef535010"/><line x1="30" y1="24" x2="30" y2="16" stroke="#ef5350" stroke-width="0.5"/><circle cx="55" cy="30" r="5" stroke="#66bb6a" stroke-width="0.6" fill="#66bb6a10"/><path d="M55 25 Q 48 30 55 35" stroke="#66bb6a" stroke-width="0.4" fill="none"/></svg>
+  <span>Turret / Shield</span>
+</div>
+<div class="vocab-item">
+  <svg viewBox="0 0 80 60"><rect x="22" y="24" width="16" height="12" rx="2" stroke="#4fc3f7" stroke-width="0.6" fill="#4fc3f708"/><rect x="48" y="24" width="16" height="12" rx="2" stroke="#ffd54f" stroke-width="0.6" fill="#ffd54f08"/></svg>
+  <span>Utility / Industrial</span>
+</div>
+<div class="vocab-item">
+  <svg viewBox="0 0 80 60"><rect x="25" y="24" width="30" height="8" rx="2" stroke="#ab47bc" stroke-width="0.7" fill="none"/><circle cx="55" cy="28" r="5" stroke="#ab47bc" stroke-width="0.6" fill="#ab47bc15"/><line x1="60" y1="28" x2="72" y2="26" stroke="#ab47bc" stroke-width="0.4" opacity="0.5" stroke-dasharray="2,2"/></svg>
+  <span>Mining arm</span>
+</div>
+
+</div>
+
+<h2>Design Principles</h2>
+<p>1. No single-outline hulls. Every ship built from 3+ distinct connected sections.<br>
+2. Bridges are always tapered or angular, never square. They imply a forward-facing viewport area.<br>
+3. Cargo modules use warm yellow stroke. Hull/structure uses cyan. Weapons use red. Mining uses purple.<br>
+4. Connectors (spines, pylons) link sections visibly - ships look constructed, not grown.<br>
+5. Internal detail lines show paneling/segmentation within modules (implies depth).<br>
+6. Every component should suggest a 3D form that could be extrapolated to a side/3-4 view.<br>
+7. Larger ships = more modules. Tier scales by adding sections, not stretching one shape.</p>
+
+<h2>Rebuilt Designs</h2>
+<div class="grid">
+
+<!-- Mule Freighter - rebuilt with vocabulary -->
+<div class="card">
+<h3>Mule Freighter - Rebuilt</h3>
+<svg class="ship" viewBox="0 0 400 200" fill="none">
+  <defs><pattern id="gV1" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1a2844" stroke-width="0.3"/></pattern></defs>
+  <rect width="400" height="200" fill="url(#gV1)" opacity="0.3"/>
+
+  <!-- ENGINE (twin, from vocab) -->
+  <rect x="42" y="68" width="26" height="20" rx="3" stroke="#8aa0b8" stroke-width="0.8" fill="none"/>
+  <rect x="42" y="112" width="26" height="20" rx="3" stroke="#8aa0b8" stroke-width="0.8" fill="none"/>
+  <rect x="32" y="72" width="10" height="12" rx="2" stroke="#ef5350" stroke-width="0.6" fill="#ef535010"/>
+  <rect x="32" y="116" width="10" height="12" rx="2" stroke="#ef5350" stroke-width="0.6" fill="#ef535010"/>
+  <line x1="32" y1="77" x2="18" y2="77" stroke="#ef5350" stroke-width="0.7" opacity="0.4"/>
+  <line x1="32" y1="80" x2="20" y2="80" stroke="#ef5350" stroke-width="0.5" opacity="0.3"/>
+  <line x1="32" y1="121" x2="18" y2="121" stroke="#ef5350" stroke-width="0.7" opacity="0.4"/>
+  <line x1="32" y1="124" x2="20" y2="124" stroke="#ef5350" stroke-width="0.5" opacity="0.3"/>
+
+  <!-- SPINE (tapered, connects engine to cargo) -->
+  <path d="M68 80 L86 78 L88 82 L88 98 L86 102 L68 100 L66 96 L66 84 Z" stroke="#4fc3f7" stroke-width="0.6" fill="none" opacity="0.7"/>
+  <!-- Pylon struts to engines -->
+  <line x1="68" y1="84" x2="68" y2="78" stroke="#4fc3f7" stroke-width="0.5" opacity="0.5"/>
+  <line x1="68" y1="96" x2="68" y2="122" stroke="#4fc3f7" stroke-width="0.5" opacity="0.5"/>
+
+  <!-- CARGO (beveled hull shape, single large) -->
+  <path d="M88 58 L215 55 L222 62 L222 138 L215 145 L88 142 L82 135 L82 65 Z" stroke="#4fc3f7" stroke-width="0.9" fill="none"/>
+  <!-- Internal paneling -->
+  <line x1="120" y1="56" x2="120" y2="144" stroke="#4fc3f7" stroke-width="0.3" opacity="0.35"/>
+  <line x1="155" y1="55" x2="155" y2="145" stroke="#4fc3f7" stroke-width="0.3" opacity="0.35"/>
+  <line x1="190" y1="55" x2="190" y2="145" stroke="#4fc3f7" stroke-width="0.3" opacity="0.35"/>
+  <line x1="88" y1="100" x2="222" y2="100" stroke="#4fc3f7" stroke-width="0.3" opacity="0.3"/>
+  <!-- Cargo fill -->
+  <rect x="92" y="62" width="60" height="6" rx="1" stroke="none" fill="#ffd54f" opacity="0.15"/>
+
+  <!-- SPINE (to bridge) -->
+  <path d="M222 88 L238 86 L240 90 L240 110 L238 114 L222 112 L220 108 L220 92 Z" stroke="#4fc3f7" stroke-width="0.6" fill="none" opacity="0.7"/>
+
+  <!-- BRIDGE (tapered, from vocab) -->
+  <path d="M240 76 L275 74 L290 82 L294 100 L290 118 L275 126 L240 124 Z" stroke="#4fc3f7" stroke-width="0.9" fill="none"/>
+  <!-- Bridge internal detail -->
+  <line x1="262" y1="75" x2="262" y2="125" stroke="#4fc3f7" stroke-width="0.3" opacity="0.4"/>
+  <polygon points="278,82 286,90 286,110 278,118" stroke="#8ab4d4" stroke-width="0.5" fill="none" opacity="0.6"/>
+
+  <!-- HARDPOINTS -->
+  <!-- Utility pylon (top) -->
+  <rect x="140" y="46" width="14" height="10" rx="2" stroke="#4fc3f7" stroke-width="0.6" fill="#4fc3f708"/>
+  <line x1="147" y1="56" x2="147" y2="58" stroke="#4fc3f7" stroke-width="0.4"/>
+  <!-- Defense turret (starboard top) -->
+  <circle cx="195" cy="50" r="5" stroke="#66bb6a" stroke-width="0.6" fill="#66bb6a08"/>
+  <line x1="195" y1="45" x2="195" y2="38" stroke="#66bb6a" stroke-width="0.4"/>
+
+  <!-- SENSOR MAST -->
+  <line x1="155" y1="55" x2="155" y2="40" stroke="#8aa0b8" stroke-width="0.4"/>
+  <circle cx="155" cy="38" r="2.5" stroke="#8aa0b8" stroke-width="0.4" fill="none"/>
+
+  <text x="388" y="14" text-anchor="end" font-size="9" fill="#6a9ab8" font-family="Orbitron">MULE FREIGHTER</text>
+  <text x="388" y="24" text-anchor="end" font-size="6" fill="#4a7a9a" font-family="JetBrains Mono">WORKHORSE HAULER</text>
+</svg>
+</div>
+
+<!-- Warden Frigate - rebuilt with vocabulary -->
+<div class="card">
+<h3>Warden Frigate - Rebuilt</h3>
+<svg class="ship" viewBox="0 0 400 200" fill="none">
+  <defs><pattern id="gV2" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1a2844" stroke-width="0.3"/></pattern></defs>
+  <rect width="400" height="200" fill="url(#gV2)" opacity="0.3"/>
+
+  <!-- ENGINE BLOCK (quad in armored nacelle frame) -->
+  <path d="M32 38 L54 36 L58 42 L58 158 L54 164 L32 162 L28 156 L28 44 Z" stroke="#ef5350" stroke-width="0.8" fill="none"/>
+  <rect x="18" y="44" width="10" height="14" rx="2" stroke="#ef5350" stroke-width="0.6" fill="#ef535010"/>
+  <rect x="18" y="68" width="10" height="14" rx="2" stroke="#ef5350" stroke-width="0.6" fill="#ef535010"/>
+  <rect x="18" y="118" width="10" height="14" rx="2" stroke="#ef5350" stroke-width="0.6" fill="#ef535010"/>
+  <rect x="18" y="142" width="10" height="14" rx="2" stroke="#ef5350" stroke-width="0.6" fill="#ef535010"/>
+  <line x1="18" y1="50" x2="6" y2="50" stroke="#ef5350" stroke-width="0.7" opacity="0.4"/>
+  <line x1="18" y1="74" x2="6" y2="74" stroke="#ef5350" stroke-width="0.8" opacity="0.4"/>
+  <line x1="18" y1="124" x2="6" y2="124" stroke="#ef5350" stroke-width="0.8" opacity="0.4"/>
+  <line x1="18" y1="148" x2="6" y2="148" stroke="#ef5350" stroke-width="0.7" opacity="0.4"/>
+
+  <!-- SPINE (heavy, armored connector) -->
+  <path d="M58 75 L78 72 L82 78 L82 122 L78 128 L58 125 Z" stroke="#ef5350" stroke-width="0.7" fill="none" opacity="0.7"/>
+  <!-- Cross bracing -->
+  <line x1="62" y1="80" x2="78" y2="120" stroke="#ef5350" stroke-width="0.3" opacity="0.3"/>
+  <line x1="78" y1="80" x2="62" y2="120" stroke="#ef5350" stroke-width="0.3" opacity="0.3"/>
+
+  <!-- MAIN HULL (beveled, heavy armor plating) -->
+  <path d="M82 42 L220 38 L228 48 L228 152 L220 162 L82 158 L76 148 L76 52 Z" stroke="#ef5350" stroke-width="1.0" fill="none"/>
+  <!-- Heavy armor paneling -->
+  <line x1="115" y1="40" x2="115" y2="160" stroke="#ef5350" stroke-width="0.4" opacity="0.25"/>
+  <line x1="150" y1="39" x2="150" y2="161" stroke="#ef5350" stroke-width="0.4" opacity="0.25"/>
+  <line x1="185" y1="38" x2="185" y2="162" stroke="#ef5350" stroke-width="0.4" opacity="0.25"/>
+  <line x1="82" y1="100" x2="228" y2="100" stroke="#ef5350" stroke-width="0.3" opacity="0.2"/>
+
+  <!-- SPINE to bridge -->
+  <path d="M228 80 L244 78 L248 84 L248 116 L244 122 L228 120 Z" stroke="#ef5350" stroke-width="0.6" fill="none" opacity="0.7"/>
+
+  <!-- BRIDGE (armored, from vocab) -->
+  <path d="M248 68 L282 66 L290 74 L292 100 L290 126 L282 134 L248 132 Z" stroke="#ef5350" stroke-width="0.9" fill="none"/>
+  <line x1="268" y1="67" x2="268" y2="133" stroke="#ef5350" stroke-width="0.3" opacity="0.3"/>
+  <!-- Viewport (small, armored) -->
+  <path d="M280 80 L286 88 L286 112 L280 120" stroke="#8ab4d4" stroke-width="0.5" fill="none" opacity="0.5"/>
+
+  <!-- WEAPON TURRETS (4, on pylons) -->
+  <line x1="115" y1="42" x2="115" y2="30" stroke="#ef5350" stroke-width="0.5"/>
+  <circle cx="115" cy="26" r="6" stroke="#ef5350" stroke-width="0.7" fill="#ef535010"/>
+  <line x1="115" y1="20" x2="115" y2="12" stroke="#ef5350" stroke-width="0.5"/>
+  <line x1="175" y1="38" x2="175" y2="26" stroke="#ef5350" stroke-width="0.5"/>
+  <circle cx="175" cy="22" r="6" stroke="#ef5350" stroke-width="0.7" fill="#ef535010"/>
+  <line x1="175" y1="16" x2="175" y2="8" stroke="#ef5350" stroke-width="0.5"/>
+  <line x1="115" y1="158" x2="115" y2="170" stroke="#ef5350" stroke-width="0.5"/>
+  <circle cx="115" cy="174" r="6" stroke="#ef5350" stroke-width="0.7" fill="#ef535010"/>
+  <line x1="115" y1="180" x2="115" y2="188" stroke="#ef5350" stroke-width="0.5"/>
+  <line x1="175" y1="162" x2="175" y2="174" stroke="#ef5350" stroke-width="0.5"/>
+  <circle cx="175" cy="178" r="6" stroke="#ef5350" stroke-width="0.7" fill="#ef535010"/>
+  <line x1="175" y1="184" x2="175" y2="192" stroke="#ef5350" stroke-width="0.5"/>
+
+  <!-- SHIELD EMITTERS (3, along ventral) -->
+  <path d="M100 160 Q 92 165 100 170" stroke="#66bb6a" stroke-width="0.5" fill="none"/>
+  <path d="M145 162 Q 137 167 145 172" stroke="#66bb6a" stroke-width="0.5" fill="none"/>
+  <path d="M200 162 Q 192 167 200 172" stroke="#66bb6a" stroke-width="0.5" fill="none"/>
+
+  <!-- UTILITY -->
+  <rect x="205" y="32" width="12" height="8" rx="2" stroke="#4fc3f7" stroke-width="0.5" fill="#4fc3f708"/>
+
+  <text x="388" y="14" text-anchor="end" font-size="9" fill="#6a9ab8" font-family="Orbitron">WARDEN FRIGATE</text>
+  <text x="388" y="24" text-anchor="end" font-size="6" fill="#4a7a9a" font-family="JetBrains Mono">HEAVY ENFORCEMENT</text>
+</svg>
+</div>
+
+</div>
+
+<h2>3D Ship Viewer (from API)</h2>
+<p>All ship geometries loaded from /api/ship_model/all and rendered dynamically. Orbit any ship with mouse.</p>
+<h2>3D Ship Viewer</h2>
+<p>Select a ship to view its 3D model. Orbit with mouse drag, zoom with scroll.</p>
+<div style="display:flex;gap:16px;max-width:1200px;margin-top:16px">
+  <div style="width:200px;flex-shrink:0">
+    <div id="ship-selector" style="display:flex;flex-direction:column;gap:4px"></div>
+  </div>
+  <div style="flex:1">
+    <div id="ship-viewer-single" style="width:100%;height:500px;background:#060a12;border:1px solid #1a2844;border-radius:6px"></div>
+  </div>
+</div>
+
+<h2>3D Component Viewer</h2>
+<p>Component viewer - select a module type to inspect in 3D.</p>
+<div style="display:flex;gap:16px;max-width:1000px;margin-bottom:32px">
+  <div style="width:180px;flex-shrink:0;display:flex;flex-direction:column;gap:2px;overflow-y:auto;max-height:350px">
+    <div style="font-size:8px;color:#ffd54f;text-transform:uppercase;letter-spacing:1px;padding:4px 0;font-family:Orbitron">Bridges</div>
+    <button class="comp-btn" data-comp="bridge_tapered" style="display:block;width:100%;padding:5px 8px;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;color:#8aa0b8;font-family:inherit;font-size:10px;cursor:pointer;text-align:left">Bridge (tapered)</button>
+    <button class="comp-btn" data-comp="bridge_dome" style="display:block;width:100%;padding:5px 8px;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;color:#8aa0b8;font-family:inherit;font-size:10px;cursor:pointer;text-align:left">Bridge (dome)</button>
+    <button class="comp-btn" data-comp="bridge_angular" style="display:block;width:100%;padding:5px 8px;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;color:#8aa0b8;font-family:inherit;font-size:10px;cursor:pointer;text-align:left">Bridge (angular)</button>
+    <div style="font-size:8px;color:#ffd54f;text-transform:uppercase;letter-spacing:1px;padding:4px 0;font-family:Orbitron;margin-top:6px">Pods</div>
+    <button class="comp-btn" data-comp="pod_beveled" style="display:block;width:100%;padding:5px 8px;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;color:#8aa0b8;font-family:inherit;font-size:10px;cursor:pointer;text-align:left">Pod (beveled box)</button>
+    <button class="comp-btn" data-comp="pod_sphere" style="display:block;width:100%;padding:5px 8px;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;color:#8aa0b8;font-family:inherit;font-size:10px;cursor:pointer;text-align:left">Pod (spherical)</button>
+    <button class="comp-btn" data-comp="pod_round" style="display:block;width:100%;padding:5px 8px;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;color:#8aa0b8;font-family:inherit;font-size:10px;cursor:pointer;text-align:left">Pod (rounded cyl)</button>
+    <div style="font-size:8px;color:#ffd54f;text-transform:uppercase;letter-spacing:1px;padding:4px 0;font-family:Orbitron;margin-top:6px">Connectors</div>
+    <button class="comp-btn" data-comp="spine" style="display:block;width:100%;padding:5px 8px;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;color:#8aa0b8;font-family:inherit;font-size:10px;cursor:pointer;text-align:left">Spine (hex)</button>
+    <button class="comp-btn" data-comp="collar" style="display:block;width:100%;padding:5px 8px;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;color:#8aa0b8;font-family:inherit;font-size:10px;cursor:pointer;text-align:left">Collar (cylindrical)</button>
+    <button class="comp-btn" data-comp="bracket" style="display:block;width:100%;padding:5px 8px;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;color:#8aa0b8;font-family:inherit;font-size:10px;cursor:pointer;text-align:left">Bracket (plate)</button>
+    <div style="font-size:8px;color:#ffd54f;text-transform:uppercase;letter-spacing:1px;padding:4px 0;font-family:Orbitron;margin-top:6px">Engines</div>
+    <button class="comp-btn" data-comp="engine_single" style="display:block;width:100%;padding:5px 8px;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;color:#8aa0b8;font-family:inherit;font-size:10px;cursor:pointer;text-align:left">Engine (single)</button>
+    <button class="comp-btn" data-comp="engine_twin" style="display:block;width:100%;padding:5px 8px;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;color:#8aa0b8;font-family:inherit;font-size:10px;cursor:pointer;text-align:left">Engine (twin)</button>
+    <div style="font-size:8px;color:#ffd54f;text-transform:uppercase;letter-spacing:1px;padding:4px 0;font-family:Orbitron;margin-top:6px">Hardpoints</div>
+    <button class="comp-btn" data-comp="turret" style="display:block;width:100%;padding:5px 8px;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;color:#8aa0b8;font-family:inherit;font-size:10px;cursor:pointer;text-align:left">Weapon Turret</button>
+    <button class="comp-btn" data-comp="mining_arm" style="display:block;width:100%;padding:5px 8px;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;color:#8aa0b8;font-family:inherit;font-size:10px;cursor:pointer;text-align:left">Mining Arm</button>
+  </div>
+  <div style="flex:1">
+    <div id="comp-viewer" style="width:100%;height:300px;background:#060a12;border:1px solid #1a2844;border-radius:6px"></div>
+  </div>
+</div>
+
+<script src="_ship_data.js"></script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+
+// â”€â”€ Ship Renderer: builds Three.js geometry from component data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const MATERIALS = {
+  hull: () => new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1428, shininess:0, transparent:true, opacity:0.7}),
+  engine: () => new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1020, shininess:0, transparent:true, opacity:0.7}),
+  cargo: () => new THREE.MeshPhongMaterial({color:0x1a1808, emissive:0x0a0a05, shininess:0, transparent:true, opacity:0.7}),
+  mining: () => new THREE.MeshPhongMaterial({color:0x1a1028, emissive:0x0a0818, shininess:0, transparent:true, opacity:0.7}),
+  weapon: () => new THREE.MeshPhongMaterial({color:0x1a1018, emissive:0x100508, shininess:0, transparent:true, opacity:0.7}),
+  shield: () => new THREE.MeshPhongMaterial({color:0x0a1a0a, emissive:0x050a05, shininess:0, transparent:true, opacity:0.7}),
+  accent: () => new THREE.MeshPhongMaterial({color:0x1a2040, emissive:0x0a0a1a, shininess:0, transparent:true, opacity:0.7}),
+};
+const EDGE_COLOR = {hull:0x4fc3f7, engine:0x5a7a9a, cargo:0xffd54f, mining:0xab47bc, weapon:0xef5350, shield:0x66bb6a, accent:0xef5350};
+const HP_COLORS = {defense:0x66bb6a, utility:0x4fc3f7, industrial:0xffd54f, mining:0xab47bc, weapon:0xef5350, shield:0x66bb6a};
+
+function buildShipFromData(scene, data) {
+  for (const comp of data.components) {
+    const mat = (MATERIALS[comp.material] || MATERIALS.hull)();
+    const [px, py, pz] = comp.pos;
+    const [rx, ry, rz] = comp.rot || [0,0,0];
+    let mesh = null;
+
+    switch(comp.type) {
+      case 'pod': {
+        const {length, height, width} = comp.params;
+        const b=0.04, hw=width/2, hh=height/2;
+        const s = new THREE.Shape();
+        s.moveTo(-hh+b,-hw); s.lineTo(hh-b,-hw); s.lineTo(hh,-hw+b);
+        s.lineTo(hh,hw-b); s.lineTo(hh-b,hw); s.lineTo(-hh+b,hw);
+        s.lineTo(-hh,hw-b); s.lineTo(-hh,-hw+b); s.closePath();
+        const g = new THREE.ExtrudeGeometry(s, {depth:length, bevelEnabled:true, bevelThickness:0.01, bevelSize:0.01});
+        g.center();
+        mesh = new THREE.Mesh(g, mat);
+        if (rx === 0 && ry === 0 && rz === 0) mesh.rotation.y = Math.PI/2;
+        break;
+      }
+      case 'cylinder': {
+        const {r_top, r_bot, length} = comp.params;
+        const g = new THREE.CylinderGeometry(r_top, r_bot, length, 8);
+        mesh = new THREE.Mesh(g, mat);
+        // Cylinders default along Y. If no custom rot, orient along X (ship forward)
+        // If rot is specified, use it directly (no default added)
+        if (rx === 0 && ry === 0 && rz === 0 && !comp.params.vertical) mesh.rotation.z = Math.PI/2;
+        break;
+      }
+      case 'cone': {
+        const {radius, length} = comp.params;
+        const g = new THREE.ConeGeometry(radius, length, 8);
+        mesh = new THREE.Mesh(g, mat);
+        if (rx === 0 && ry === 0 && rz === 0 && !comp.params.vertical) mesh.rotation.z = Math.PI/2;
+        break;
+      }
+      case 'spine': {
+        const {length, radius, flange_r} = comp.params;
+        const grp = new THREE.Group();
+        const s = new THREE.Shape();
+        for(let i=0;i<=6;i++){const a=Math.PI*2*i/6; if(i===0)s.moveTo(Math.cos(a)*radius,Math.sin(a)*radius); else s.lineTo(Math.cos(a)*radius,Math.sin(a)*radius);}
+        const bg = new THREE.ExtrudeGeometry(s,{depth:length,bevelEnabled:false}); bg.center();
+        const body = new THREE.Mesh(bg, mat); body.rotation.y=Math.PI/2; grp.add(body);
+        const fg = new THREE.CylinderGeometry(flange_r,flange_r,0.04,8);
+        const fA = new THREE.Mesh(fg, mat); fA.rotation.z=Math.PI/2; fA.position.x=-length/2-0.02; grp.add(fA);
+        const fB = new THREE.Mesh(fg.clone(), mat); fB.rotation.z=Math.PI/2; fB.position.x=length/2+0.02; grp.add(fB);
+        grp.position.set(px, py, pz);
+        scene.add(grp);
+        // Add edges to group children
+        grp.traverse(child => { if(child.isMesh) addEdges(child, comp.material); });
+        continue; // skip normal positioning
+      }
+      case 'box': {
+        const {x, y, z} = comp.params;
+        mesh = new THREE.Mesh(new THREE.BoxGeometry(x, y, z), mat);
+        break;
+      }
+      case 'sphere': {
+        const {radius, half} = comp.params;
+        const g = half ? new THREE.SphereGeometry(radius, 8, 6, 0, Math.PI*2, 0, Math.PI/2) : new THREE.SphereGeometry(radius, 8, 6);
+        mesh = new THREE.Mesh(g, mat);
+        break;
+      }
+      case 'torus': {
+        const {radius, tube} = comp.params;
+        mesh = new THREE.Mesh(new THREE.TorusGeometry(radius, tube, 6, 12), mat);
+        if (rx === 0 && ry === 0 && rz === 0) mesh.rotation.y = Math.PI/2;
+        break;
+      }
+      case 'wedge': {
+        const {profile, depth} = comp.params;
+        const s = new THREE.Shape();
+        profile.forEach((p,i) => i===0 ? s.moveTo(p[0],p[1]) : s.lineTo(p[0],p[1]));
+        s.closePath();
+        const g = new THREE.ExtrudeGeometry(s, {depth, bevelEnabled:true, bevelThickness:0.01, bevelSize:0.01});
+        g.center();
+        mesh = new THREE.Mesh(g, mat);
+        break;
+      }
+      case 'hardpoint': {
+        const {slot_type} = comp.params;
+        const col = HP_COLORS[slot_type] || 0xffffff;
+        const g = new THREE.OctahedronGeometry(0.05);
+        mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({color:col, wireframe:true, transparent:true, opacity:0.8}));
+        break;
+      }
+      default: continue;
+    }
+    if (mesh) {
+      mesh.position.set(px, py, pz);
+      // Apply component rotation on top of any type-specific default rotation
+      mesh.rotation.x += rx; mesh.rotation.y += ry; mesh.rotation.z += rz;
+      scene.add(mesh);
+      if (comp.type !== 'hardpoint') addEdges(mesh, comp.material);
+    }
+  }
+}
+
+function addEdges(mesh, material) {
+  if (!mesh.geometry) return;
+  const col = EDGE_COLOR[material] || 0x4fc3f7;
+  const edges = new THREE.EdgesGeometry(mesh.geometry, 15);
+  const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color:col, transparent:true, opacity:0.5}));
+  mesh.add(line);
+}
+
+// â”€â”€ Create viewer for a given container and ship data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function createShipViewer(containerId, shipData) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const w = el.clientWidth, h = el.clientHeight;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(50, w/h, 0.1, 100);
+  const bounds = shipData.bounds || {length:4, height:1, width:1.5};
+  const dist = Math.max(bounds.length, bounds.width, bounds.height) * 1.2;
+  camera.position.set(dist*0.7, dist*0.5, dist*0.8);
+  const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  renderer.setSize(w, h); renderer.setClearColor(0x060a12);
+  el.appendChild(renderer.domElement);
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true; controls.dampingFactor = 0.1;
+  scene.add(new THREE.AmbientLight(0x4fc3f7, 0.3));
+  const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+  dir.position.set(3, 4, 2); scene.add(dir);
+
+  buildShipFromData(scene, shipData);
+
+  (function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);})();
+}
+
+// â”€â”€ Component viewer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+let compRenderer = null, compAnimId = null;
+const COMPONENT_DEFS = {
+  // Bridges
+  bridge_tapered: {components:[{type:'wedge',pos:[0,0,0],rot:[0,0,0],params:{profile:[[0,-0.2],[0.6,-0.12],[0.75,0],[0.6,0.12],[0,0.2]],depth:0.35},material:'hull'}]},
+  // Dome: axe-head, wedge-shaped top-to-bottom (top pulled inward)
+  bridge_dome: {components:[
+    // Bottom half (wider)
+    {type:'wedge',pos:[0,-0.03,0],rot:[1.5708,0,0],params:{profile:[[0,-0.25],[0,0.25],[0.22,0.24],[0.38,0.2],[0.48,0.12],[0.52,0],[0.48,-0.12],[0.38,-0.2],[0.22,-0.24]],depth:0.05},material:'hull'},
+    // Top half (narrower - pulled in)
+    {type:'wedge',pos:[0,0.03,0],rot:[1.5708,0,0],params:{profile:[[0,-0.18],[0,0.18],[0.16,0.17],[0.28,0.14],[0.35,0.08],[0.38,0],[0.35,-0.08],[0.28,-0.14],[0.16,-0.17]],depth:0.05},material:'hull'},
+  ]},
+  // Angular: sharp diamond cross-section, aggressive flat panels
+  bridge_angular: {components:[{type:'wedge',pos:[0,0,0],rot:[0,0,0],params:{profile:[[0,-0.1],[0.55,-0.1],[0.65,0],[0.55,0.1],[0,0.1],[-0.2,0.18],[-0.35,0.18],[-0.35,-0.06],[-0.2,-0.1]],depth:0.3},material:'hull'}]},
+  // Pods
+  pod_beveled: {components:[{type:'pod',pos:[0,0,0],rot:[0,0,0],params:{length:0.8,height:0.4,width:0.6},material:'hull'}]},
+  pod_sphere: {components:[{type:'sphere',pos:[0,0,0],rot:[0,0,0],params:{radius:0.3,half:false},material:'hull'}]},
+  pod_round: {components:[{type:'wedge',pos:[0,0,0],rot:[0,0,0],params:{profile:[[0,-0.25],[0.3,-0.25],[0.35,-0.22],[0.35,0.22],[0.3,0.25],[0,0.25],[-0.3,0.25],[-0.35,0.22],[-0.35,-0.22],[-0.3,-0.25]],depth:0.7},material:'hull'}]},
+  // Connectors
+  spine: {components:[{type:'spine',pos:[0,0,0],params:{length:0.4,radius:0.15,flange_r:0.19},material:'hull'}]},
+  collar: {components:[{type:'cylinder',pos:[0,0,0],rot:[0,0,0],params:{r_top:0.12,r_bot:0.14,length:0.2},material:'hull'}]},
+  bracket: {components:[{type:'box',pos:[0,0,0],rot:[0,0,0],params:{x:0.15,y:0.3,z:0.06},material:'hull'}]},
+  // Engines
+  engine_single: {components:[
+    {type:'cylinder',pos:[0,0,0],rot:[0,0,0],params:{r_top:0.15,r_bot:0.2,length:0.5},material:'engine'},
+    {type:'cone',pos:[-0.35,0,0],rot:[0,0,0],params:{radius:0.12,length:0.18},material:'engine'},
+  ]},
+  engine_twin: {components:[
+    {type:'cylinder',pos:[0,0,0.2],rot:[0,0,0],params:{r_top:0.12,r_bot:0.16,length:0.45},material:'engine'},
+    {type:'cylinder',pos:[0,0,-0.2],rot:[0,0,0],params:{r_top:0.12,r_bot:0.16,length:0.45},material:'engine'},
+    {type:'cone',pos:[-0.3,0,0.2],rot:[0,0,0],params:{radius:0.1,length:0.15},material:'engine'},
+    {type:'cone',pos:[-0.3,0,-0.2],rot:[0,0,0],params:{radius:0.1,length:0.15},material:'engine'},
+  ]},
+  // Hardpoints
+  turret: {components:[
+    {type:'cylinder',pos:[0,-0.04,0],rot:[0,0,0],params:{r_top:0.12,r_bot:0.14,length:0.05,vertical:true},material:'accent'},
+    {type:'sphere',pos:[0,0.01,0],rot:[0,0,0],params:{radius:0.1,half:true},material:'accent'},
+    {type:'cylinder',pos:[0.12,0.01,0],rot:[0,0,-1.5708],params:{r_top:0.02,r_bot:0.02,length:0.15},material:'accent'},
+  ]},
+  mining_arm: {components:[
+    {type:'sphere',pos:[0,0,0],rot:[0,0,0],params:{radius:0.06,half:false},material:'mining'},
+    {type:'cylinder',pos:[0,0,0.3],rot:[1.5708,0,0],params:{r_top:0.03,r_bot:0.04,length:0.5},material:'mining'},
+    {type:'sphere',pos:[0,0,0.55],rot:[0,0,0],params:{radius:0.07,half:false},material:'mining'},
+  ]},
+};
+
+function loadComponent(id) {
+  const data = COMPONENT_DEFS[id];
+  if (!data) return;
+  const el = document.getElementById('comp-viewer');
+  if (compRenderer) { el.removeChild(compRenderer.domElement); cancelAnimationFrame(compAnimId); compRenderer.dispose(); }
+  const w = el.clientWidth, h = el.clientHeight;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(50, w/h, 0.1, 100);
+  camera.position.set(1.5, 1, 2);
+  compRenderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  compRenderer.setSize(w, h); compRenderer.setClearColor(0x060a12);
+  el.appendChild(compRenderer.domElement);
+  const controls = new OrbitControls(camera, compRenderer.domElement);
+  controls.enableDamping = true;
+  scene.add(new THREE.AmbientLight(0x4fc3f7, 0.3));
+  const dir = new THREE.DirectionalLight(0xffffff, 0.8); dir.position.set(3, 4, 2); scene.add(dir);
+  buildShipFromData(scene, data);
+  // Axis gizmo
+  const axLen = 0.4;
+  scene.add(new THREE.ArrowHelper(new THREE.Vector3(1,0,0), new THREE.Vector3(-0.8,-0.5,-0.5), axLen, 0xff0000, 0.06, 0.04));
+  scene.add(new THREE.ArrowHelper(new THREE.Vector3(0,1,0), new THREE.Vector3(-0.8,-0.5,-0.5), axLen, 0x00ff00, 0.06, 0.04));
+  scene.add(new THREE.ArrowHelper(new THREE.Vector3(0,0,1), new THREE.Vector3(-0.8,-0.5,-0.5), axLen, 0x0000ff, 0.06, 0.04));
+  function animate(){compAnimId=requestAnimationFrame(animate);controls.update();compRenderer.render(scene,camera);}
+  animate();
+  document.querySelectorAll('.comp-btn').forEach(b => b.style.borderColor = b.dataset.comp === id ? '#4fc3f7' : '#1a2844');
+}
+
+document.querySelectorAll('.comp-btn').forEach(b => b.addEventListener('click', () => loadComponent(b.dataset.comp)));
+loadComponent('bridge_tapered');
+
+// â”€â”€ Single viewer with ship selector â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+let currentScene = null;
+let currentRenderer = null;
+let currentCamera = null;
+let currentControls = null;
+let animId = null;
+
+function loadShip(id) {
+  const data = SHIP_DATA[id];
+  if (!data) return;
+  const el = document.getElementById('ship-viewer-single');
+
+  // Clear previous
+  if (currentRenderer) { el.removeChild(currentRenderer.domElement); cancelAnimationFrame(animId); currentRenderer.dispose(); }
+
+  const w = el.clientWidth, h = el.clientHeight;
+  currentScene = new THREE.Scene();
+  currentCamera = new THREE.PerspectiveCamera(50, w/h, 0.1, 100);
+  const bounds = data.bounds || {length:4, height:1, width:1.5};
+  const dist = Math.max(bounds.length, bounds.width, bounds.height) * 1.1;
+  currentCamera.position.set(dist*0.7, dist*0.5, dist*0.8);
+  currentRenderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  currentRenderer.setSize(w, h); currentRenderer.setClearColor(0x060a12);
+  el.appendChild(currentRenderer.domElement);
+  currentControls = new OrbitControls(currentCamera, currentRenderer.domElement);
+  currentControls.enableDamping = true; currentControls.dampingFactor = 0.1;
+  currentScene.add(new THREE.AmbientLight(0x4fc3f7, 0.3));
+  const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+  dir.position.set(3, 4, 2); currentScene.add(dir);
+
+  buildShipFromData(currentScene, data);
+
+  function animate(){animId=requestAnimationFrame(animate);currentControls.update();currentRenderer.render(currentScene,currentCamera);}
+  animate();
+
+  // Highlight active in selector
+  document.querySelectorAll('.ship-btn').forEach(b => b.style.borderColor = b.dataset.id === id ? '#4fc3f7' : '#1a2844');
+}
+
+function init() {
+  const allShips = SHIP_DATA;
+  const selector = document.getElementById('ship-selector');
+  for (const [id, data] of Object.entries(allShips)) {
+    const btn = document.createElement('button');
+    btn.className = 'ship-btn';
+    btn.dataset.id = id;
+    btn.style.cssText = 'display:block;width:100%;padding:6px 10px;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;color:#8aa0b8;font-family:inherit;font-size:10px;cursor:pointer;text-align:left;margin:0;transition:all .15s';
+    btn.innerHTML = `<span style="color:#e0e8f0">${data.name}</span><br><span style="font-size:9px;color:#6a9ab8">${data.role} T${data.tier}</span>`;
+    btn.addEventListener('click', () => loadShip(id));
+    btn.addEventListener('mouseenter', () => { if(btn.style.borderColor!=='rgb(79, 195, 247)') btn.style.borderColor='#2a4060'; });
+    btn.addEventListener('mouseleave', () => { if(btn.style.borderColor!=='rgb(79, 195, 247)') btn.style.borderColor='#1a2844'; });
+    selector.appendChild(btn);
+  }
+  // Load first ship
+  loadShip(Object.keys(allShips)[0]);
+}
+init();
+</script>
+
+</body>
+</html>
