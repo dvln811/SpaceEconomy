@@ -138,6 +138,11 @@ def products_page():
     return send_from_directory(BASE_DIR, "products.html")
 
 
+@app.route("/fitting")
+def fitting_page():
+    return send_from_directory(BASE_DIR, "fitting.html")
+
+
 @app.route("/docs")
 def docs_page():
     return send_from_directory(BASE_DIR, "docs.html")
