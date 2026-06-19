@@ -301,11 +301,20 @@ class Simulation:
             ship.state = "mining"
             ship.state_timer = MINING_TICKS
 
+    def _inter_travel_rate(self, from_id: str, to_id: str, speed: float) -> float:
+        """Calculate progress per tick based on actual distance. 3-15s per hop."""
+        a = self.universe[from_id]
+        b = self.universe[to_id]
+        dist = math.sqrt((a.x - b.x)**2 + (a.y - b.y)**2 + (a.z - b.z)**2)
+        travel_ticks = max(3, min(15, dist / 70))
+        return speed / travel_ticks
+
     def _move_ships(self):
         for ship in self.ships:
             if ship.state != "traveling" or not ship.destination:
                 continue
-            ship.progress += 0.02 * ship.speed
+            rate = self._inter_travel_rate(ship.location, ship.destination, ship.speed)
+            ship.progress += rate
             if ship.progress >= 1.0:
                 ship.progress = 0.0
                 ship.location = ship.destination
@@ -340,7 +349,10 @@ class Simulation:
             if ship.state != "intra_traveling" or not ship.intra_destination:
                 continue
             dist = self._intra_distance(ship.location, ship.intra_position or f"{ship.location}_star", ship.intra_destination)
-            step = ship.intra_speed / max(dist, 0.5)
+            # 5-15 ticks to cross based on distance, scaled by ship intra_speed
+            travel_ticks = max(5, min(15, dist / 2))
+            step = ship.intra_speed / (travel_ticks * ship.intra_speed)  # simplifies to 1/travel_ticks * speed_mult
+            step = (ship.intra_speed / 0.2) / travel_ticks  # normalized: base intra_speed=0.2 gives 1x
             ship.intra_progress += step
             if ship.intra_progress >= 1.0:
                 ship.intra_position = ship.intra_destination

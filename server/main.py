@@ -221,6 +221,9 @@ def api_ships():
             "intra_position": s.intra_position, "intra_destination": s.intra_destination,
             "intra_progress": round(s.intra_progress, 4), "intra_speed": s.intra_speed,
         }
+        # Include travel rate for client prediction
+        if s.state == "traveling" and s.destination and s.location in sim.universe and s.destination in sim.universe:
+            ship_data["travel_rate"] = round(sim._inter_travel_rate(s.location, s.destination, s.speed), 4)
         # Include origin/dest coordinates for client-side interpolation
         if s.state == "intra_traveling" and s.intra_position and s.intra_destination:
             from_obj = next((o for o in sim.universe[s.location].objects if o.id == s.intra_position), None)

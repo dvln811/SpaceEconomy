@@ -165,15 +165,10 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <div class="left-panel">
     <div class="panel-tabs">
       <div class="panel-tab active" data-tab="systems">Systems</div>
-      <div class="panel-tab" data-tab="ships">Ships</div>
     </div>
     <div class="tab-content active" id="tab-systems">
     <div class="panel-title">Known Systems</div>
     <div id="system-list"></div>
-    </div>
-    <div class="tab-content" id="tab-ships">
-    <div class="panel-title">Visible Ships</div>
-    <div id="ship-list"></div>
     </div>
   </div>
 
@@ -266,6 +261,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
       <button id="svZoomIn">+</button>
       <button id="svZoomOut">&minus;</button>
     </div>
+    <div id="svShipList" style="position:absolute;bottom:0;left:0;right:0;max-height:140px;overflow-y:auto;background:rgba(10,14,24,0.9);border-top:1px solid #1a2844;padding:6px;font-size:10px"></div>
   </div>
 </div>
 
@@ -556,10 +552,11 @@ function animate(){
         ud.lastLoc=ship.location;ud.lastDest=ship.destination;
         ud.lastTime=now;
       }
-      // Time-based: advance by elapsed seconds * server rate
+      // Time-based: advance by elapsed seconds * server rate from API
       const elapsed=(now-ud.lastTime)/1000;
       ud.lastTime=now;
-      ud.clientProgress+=elapsed*0.02*(ship.speed||1.0);
+      const rate=ship.travel_rate||0.1;
+      ud.clientProgress+=elapsed*rate;
       if(ud.clientProgress>1) ud.clientProgress=1;
       const p=ud.clientProgress;
       mesh.position.set(locPos.x+(destPos.x-locPos.x)*p, locPos.y+(destPos.y-locPos.y)*p, locPos.z+(destPos.z-locPos.z)*p);
@@ -716,12 +713,7 @@ function focusShip(index){
     else animating=false;
   }
   step();
-  // Switch to ships tab and highlight
-  const lp=document.querySelector('.left-panel');
-  lp.querySelectorAll('.panel-tab').forEach(t=>t.classList.remove('active'));
-  lp.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-  lp.querySelector('[data-tab="ships"]').classList.add('active');
-  document.getElementById('tab-ships').classList.add('active');
+  // Highlight in ship list
   updateLiveShipList();
 }
 
@@ -794,7 +786,7 @@ document.querySelectorAll('.panel-tab').forEach(tab=>{
 });
 
 // ── Ships panel (live from API) ────────────────────────────────────────────────
-const shipList=document.getElementById('ship-list');
+const shipList=document.getElementById('svShipList');
 const playerShip={name:'Rusty Venture',class:'Bison Mk.III',cargo:'340/500',fuel:62,hull:94,location:'Cygnus Station',manifest:'220x Ore, 80x Meds, 40x Fuel'};
 
 // Map system IDs to our 3D positions (defined above)
