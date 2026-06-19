@@ -14,11 +14,10 @@ p{color:#8aa0b8;line-height:1.6;margin-bottom:12px}
 table{width:100%;border-collapse:collapse;margin:12px 0 24px}
 th{font-family:'Orbitron',sans-serif;font-size:9px;color:#5a7a9a;letter-spacing:1px;text-transform:uppercase;text-align:left;padding:8px;border-bottom:1px solid #1a2844}
 td{padding:6px 8px;border-bottom:1px solid #0f1a28;font-size:12px}
-.ore{color:#ffd54f}
-.gas{color:#66bb6a}
-.crystal{color:#ab47bc}
-.organic{color:#4fc3f7}
-.rare{color:#ef5350}
+.common{color:#66bb6a}
+.mid{color:#ffd54f}
+.rare{color:#ff8a65}
+.exotic{color:#ef5350}
 .vol{color:#5a7a9a;font-size:11px}
 .sec-high{color:#66bb6a}
 .sec-med{color:#ffd54f}
@@ -33,96 +32,83 @@ a:hover{text-decoration:underline}
 <body>
 <div class="nav"><a href="/docs">Docs</a> &gt; <a href="/economy">Economy</a> &gt; Resources</div>
 <h1>T1: Harvestable Resources</h1>
-<p>All raw materials are extracted from asteroid fields by mining vessels. Each asteroid field has a type that determines which ores can be harvested. Richer fields exist in more dangerous space.</p>
+<p>All raw materials are extracted from asteroid fields by mining vessels. Every system can have asteroid fields. Within each field are various <strong>asteroid types</strong>, each yielding a specific ore when mined. Common asteroids appear everywhere; rarer types only spawn in dangerous space.</p>
 
-<h2>Asteroid Field Types</h2>
-<p>Fields are categorized by their primary composition. A field may contain 2-4 ore types depending on its richness.</p>
+<h2>Asteroid Types</h2>
+<p>When a miner targets an asteroid, its type determines the ore extracted. Fields in safer space contain only common types. As you venture into lower security, richer and rarer asteroid types appear alongside the common ones.</p>
 
+<h3 class="common">Common Asteroids (All Fields, All Security)</h3>
 <table>
-<tr><th>Field Type</th><th>Appearance</th><th>Primary Yields</th><th>Security</th><th>Density Range</th></tr>
-<tr><td>Ferrous Belt</td><td>Dark reddish-brown rocks</td><td>Iron Ore, Cobalt Ore, Nickel Ore</td><td class="sec-high">High-Med</td><td>0.8 - 1.5</td></tr>
-<tr><td>Silicate Cluster</td><td>Gray-white porous rocks</td><td>Silicon Ore, CarbonIte, CalciumIte</td><td class="sec-high">High-Med</td><td>0.8 - 1.3</td></tr>
-<tr><td>Ice Field</td><td>Translucent blue-white chunks</td><td>Hydral Ice, Nitrogen Ice, Methane Ice</td><td class="sec-high">High-Med</td><td>1.0 - 2.0</td></tr>
-<tr><td>Copper Vein</td><td>Green-tinged metallic rocks</td><td>Copper Ore, Zinc Ore, Tin Ore</td><td class="sec-high">High-Med</td><td>0.7 - 1.2</td></tr>
-<tr><td>Heavy Metal Deposit</td><td>Dense dark metallic asteroids</td><td>Titanium Ore, Tungsten Ore, Chromium Ore</td><td class="sec-med">Med-Low</td><td>0.5 - 1.0</td></tr>
-<tr><td>Volatile Pocket</td><td>Gaseous clouds around rocks</td><td>Helium-3 Gas, Xenon Gas, Argon Gas</td><td class="sec-med">Med-Low</td><td>0.6 - 1.2</td></tr>
-<tr><td>Crystal Formation</td><td>Glittering faceted structures</td><td>Quartz Crystal, Lithium Crystal, Beryllium Crystal</td><td class="sec-low">Low-Null</td><td>0.3 - 0.8</td></tr>
-<tr><td>Organic Drift</td><td>Bio-luminescent masses</td><td>Biomass, Spore Clusters, Amino Gel</td><td class="sec-med">Med-Low</td><td>0.5 - 1.0</td></tr>
-<tr><td>Precious Seam</td><td>Glinting veins in dark rock</td><td>Platinum Ore, Gold Ore, Palladium Ore</td><td class="sec-low">Low-Null</td><td>0.2 - 0.6</td></tr>
-<tr><td>Exotic Anomaly</td><td>Unstable shimmering formations</td><td>Kraxolite, Void Shard, Neutronium Flake</td><td class="sec-null">Null only</td><td>0.1 - 0.4</td></tr>
+<tr><th>Asteroid Type</th><th>Appearance</th><th>Yields</th><th>Vol/unit</th><th>Base Price</th></tr>
+<tr><td class="common">Veltoite</td><td>Dark gray, porous</td><td>Iron Ore</td><td class="vol">1 m3</td><td>8</td></tr>
+<tr><td class="common">Corsite</td><td>Green-tinged metallic</td><td>Copper Ore</td><td class="vol">1 m3</td><td>10</td></tr>
+<tr><td class="common">Calite</td><td>White chalky surface</td><td>Calciumite</td><td class="vol">1 m3</td><td>6</td></tr>
+<tr><td class="common">Carite</td><td>Black matte, dense</td><td>Carbonite</td><td class="vol">1 m3</td><td>7</td></tr>
+<tr><td class="common">Frostine</td><td>Translucent blue-white</td><td>Hydral Ice</td><td class="vol">2 m3</td><td>5</td></tr>
+<tr><td class="common">Silite</td><td>Glassy smooth surface</td><td>Silicon Ore</td><td class="vol">1 m3</td><td>9</td></tr>
 </table>
 
-<h2>Ore &amp; Resource Catalog</h2>
-
-<h3>Common Ores (High-Sec)</h3>
-<p>Abundant, cheap, high volume. The backbone of industrial production.</p>
+<h3 class="mid">Uncommon Asteroids (Med-Sec and below)</h3>
 <table>
-<tr><th>Resource</th><th>Source Field</th><th>Vol/unit</th><th>Base Price</th><th>Used For</th></tr>
-<tr><td class="ore">Iron Ore</td><td>Ferrous Belt</td><td class="vol">10 m3</td><td>15</td><td>Steel, hull plating, structural alloys</td></tr>
-<tr><td class="ore">Cobalt Ore</td><td>Ferrous Belt</td><td class="vol">10 m3</td><td>25</td><td>Magnetic alloys, battery cells</td></tr>
-<tr><td class="ore">Nickel Ore</td><td>Ferrous Belt</td><td class="vol">10 m3</td><td>20</td><td>Corrosion-resistant alloys, catalysts</td></tr>
-<tr><td class="ore">Copper Ore</td><td>Copper Vein</td><td class="vol">10 m3</td><td>18</td><td>Wiring, conductors, electronics</td></tr>
-<tr><td class="ore">Zinc Ore</td><td>Copper Vein</td><td class="vol">10 m3</td><td>14</td><td>Galvanization, alloy hardening</td></tr>
-<tr><td class="ore">Tin Ore</td><td>Copper Vein</td><td class="vol">8 m3</td><td>16</td><td>Solder, bronze alloys</td></tr>
-<tr><td class="ore">Silicon Ore</td><td>Silicate Cluster</td><td class="vol">12 m3</td><td>12</td><td>Semiconductors, glass, ceramics</td></tr>
-<tr><td class="ore">Carbon Ite</td><td>Silicate Cluster</td><td class="vol">8 m3</td><td>10</td><td>Steel hardening, carbon fiber, polymers</td></tr>
-<tr><td class="ore">Calcium Ite</td><td>Silicate Cluster</td><td class="vol">12 m3</td><td>8</td><td>Ceramics, thermal shielding</td></tr>
-<tr><td class="gas">Hydral Ice</td><td>Ice Field</td><td class="vol">15 m3</td><td>8</td><td>Water, hydrogen fuel, coolant</td></tr>
-<tr><td class="gas">Nitrogen Ice</td><td>Ice Field</td><td class="vol">15 m3</td><td>10</td><td>Atmosphere processing, propellant</td></tr>
-<tr><td class="gas">Methane Ice</td><td>Ice Field</td><td class="vol">15 m3</td><td>12</td><td>Fuel, chemical feedstock</td></tr>
+<tr><th>Asteroid Type</th><th>Appearance</th><th>Yields</th><th>Vol/unit</th><th>Base Price</th></tr>
+<tr><td class="mid">Ferranox</td><td>Rust-red, heavy</td><td>Cobalt Ore</td><td class="vol">2 m3</td><td>25</td></tr>
+<tr><td class="mid">Zincara</td><td>Pale blue metallic</td><td>Zinc Ore</td><td class="vol">2 m3</td><td>18</td></tr>
+<tr><td class="mid">Stannite</td><td>Silver-gray nodules</td><td>Tin Ore</td><td class="vol">2 m3</td><td>20</td></tr>
+<tr><td class="mid">Nitrine</td><td>Frosted yellow chunks</td><td>Nitrogen Ice</td><td class="vol">3 m3</td><td>14</td></tr>
+<tr><td class="mid">Methrix</td><td>Dark with orange veins</td><td>Methane Ice</td><td class="vol">3 m3</td><td>16</td></tr>
+<tr><td class="mid">Biovex</td><td>Green bioluminescent</td><td>Biomass</td><td class="vol">3 m3</td><td>30</td></tr>
+<tr><td class="mid">Nickeline</td><td>Silvery streaked</td><td>Nickel Ore</td><td class="vol">2 m3</td><td>22</td></tr>
 </table>
 
-<h3>Mid-Grade Ores (Med-Sec)</h3>
-<p>Harder to reach, more valuable. Required for advanced manufacturing.</p>
+<h3 class="rare">Rare Asteroids (Low-Sec and below)</h3>
 <table>
-<tr><th>Resource</th><th>Source Field</th><th>Vol/unit</th><th>Base Price</th><th>Used For</th></tr>
-<tr><td class="ore">Titanium Ore</td><td>Heavy Metal Deposit</td><td class="vol">8 m3</td><td>65</td><td>Lightweight armor, aerospace alloys</td></tr>
-<tr><td class="ore">Tungsten Ore</td><td>Heavy Metal Deposit</td><td class="vol">6 m3</td><td>80</td><td>Armor penetrators, heat-resistant parts</td></tr>
-<tr><td class="ore">Chromium Ore</td><td>Heavy Metal Deposit</td><td class="vol">8 m3</td><td>55</td><td>Stainless alloys, reflective coatings</td></tr>
-<tr><td class="gas">Helium-3 Gas</td><td>Volatile Pocket</td><td class="vol">20 m3</td><td>120</td><td>Fusion fuel, reactor cores</td></tr>
-<tr><td class="gas">Xenon Gas</td><td>Volatile Pocket</td><td class="vol">20 m3</td><td>90</td><td>Ion thrusters, plasma weapons</td></tr>
-<tr><td class="gas">Argon Gas</td><td>Volatile Pocket</td><td class="vol">20 m3</td><td>45</td><td>Shielding gas, inert atmosphere</td></tr>
-<tr><td class="organic">Biomass</td><td>Organic Drift</td><td class="vol">14 m3</td><td>35</td><td>Food processing, pharmaceuticals</td></tr>
-<tr><td class="organic">Spore Clusters</td><td>Organic Drift</td><td class="vol">12 m3</td><td>50</td><td>Bio-catalysts, medicine</td></tr>
-<tr><td class="organic">Amino Gel</td><td>Organic Drift</td><td class="vol">10 m3</td><td>70</td><td>Advanced pharmaceuticals, biotech</td></tr>
+<tr><th>Asteroid Type</th><th>Appearance</th><th>Yields</th><th>Vol/unit</th><th>Base Price</th></tr>
+<tr><td class="rare">Titanex</td><td>Iridescent blue-gray</td><td>Titanium Ore</td><td class="vol">4 m3</td><td>65</td></tr>
+<tr><td class="rare">Tungstine</td><td>Ultra-dense dark metal</td><td>Tungsten Ore</td><td class="vol">5 m3</td><td>80</td></tr>
+<tr><td class="rare">Chromax</td><td>Mirror-finish surface</td><td>Chromium Ore</td><td class="vol">4 m3</td><td>55</td></tr>
+<tr><td class="rare">Heliox</td><td>Shimmering gas pockets</td><td>Helium-3 Gas</td><td class="vol">6 m3</td><td>120</td></tr>
+<tr><td class="rare">Xenolith</td><td>Purple crystalline gas</td><td>Xenon Gas</td><td class="vol">6 m3</td><td>90</td></tr>
+<tr><td class="rare">Sporite</td><td>Pulsing organic mass</td><td>Spore Clusters</td><td class="vol">5 m3</td><td>50</td></tr>
+<tr><td class="rare">Aminox</td><td>Gel-filled translucent</td><td>Amino Gel</td><td class="vol">5 m3</td><td>70</td></tr>
 </table>
 
-<h3>Rare Resources (Low/Null-Sec)</h3>
-<p>Dangerous to harvest, extremely valuable. Found only in frontier space.</p>
+<h3 class="exotic">Exotic Asteroids (Null-Sec Only)</h3>
 <table>
-<tr><th>Resource</th><th>Source Field</th><th>Vol/unit</th><th>Base Price</th><th>Used For</th></tr>
-<tr><td class="crystal">Quartz Crystal</td><td>Crystal Formation</td><td class="vol">4 m3</td><td>150</td><td>Optics, sensors, lasers</td></tr>
-<tr><td class="crystal">Lithium Crystal</td><td>Crystal Formation</td><td class="vol">4 m3</td><td>200</td><td>Batteries, capacitors, energy storage</td></tr>
-<tr><td class="crystal">Beryllium Crystal</td><td>Crystal Formation</td><td class="vol">3 m3</td><td>280</td><td>X-ray optics, nuclear components</td></tr>
-<tr><td class="rare">Platinum Ore</td><td>Precious Seam</td><td class="vol">4 m3</td><td>350</td><td>Catalysts, high-end electronics</td></tr>
-<tr><td class="rare">Gold Ore</td><td>Precious Seam</td><td class="vol">4 m3</td><td>300</td><td>Superconductors, radiation shielding</td></tr>
-<tr><td class="rare">Palladium Ore</td><td>Precious Seam</td><td class="vol">3 m3</td><td>400</td><td>Fuel cells, advanced catalysis</td></tr>
+<tr><th>Asteroid Type</th><th>Appearance</th><th>Yields</th><th>Vol/unit</th><th>Base Price</th></tr>
+<tr><td class="exotic">Platinox</td><td>Brilliant white metallic</td><td>Platinum Ore</td><td class="vol">8 m3</td><td>350</td></tr>
+<tr><td class="exotic">Aurelite</td><td>Deep golden glow</td><td>Gold Ore</td><td class="vol">8 m3</td><td>300</td></tr>
+<tr><td class="exotic">Palladine</td><td>Pale silver shimmer</td><td>Palladium Ore</td><td class="vol">8 m3</td><td>400</td></tr>
+<tr><td class="exotic">Quartzion</td><td>Faceted prismatic</td><td>Quartz Crystal</td><td class="vol">10 m3</td><td>150</td></tr>
+<tr><td class="exotic">Lithex</td><td>Electric blue veins</td><td>Lithium Crystal</td><td class="vol">10 m3</td><td>200</td></tr>
+<tr><td class="exotic">Berylox</td><td>Transparent green prism</td><td>Beryllium Crystal</td><td class="vol">10 m3</td><td>280</td></tr>
+<tr><td class="exotic">Kraxolith</td><td>Unstable violet shimmer</td><td>Kraxolite</td><td class="vol">12 m3</td><td>1200</td></tr>
+<tr><td class="exotic">Voidstone</td><td>Light-absorbing black</td><td>Void Shard</td><td class="vol">15 m3</td><td>2000</td></tr>
+<tr><td class="exotic">Neutrite</td><td>Impossibly heavy flake</td><td>Neutronium Flake</td><td class="vol">20 m3</td><td>3500</td></tr>
 </table>
 
-<h3>Exotic Materials (Null-Sec Only)</h3>
-<p>Unstable, incredibly rare. Used in the most advanced technology. Harvesting requires specialized equipment and nerves of steel.</p>
-<table>
-<tr><th>Resource</th><th>Source Field</th><th>Vol/unit</th><th>Base Price</th><th>Used For</th></tr>
-<tr><td class="rare">Kraxolite</td><td>Exotic Anomaly</td><td class="vol">2 m3</td><td>1200</td><td>Jump drive cores, dimensional stabilizers</td></tr>
-<tr><td class="rare">Void Shard</td><td>Exotic Anomaly</td><td class="vol">1 m3</td><td>2000</td><td>Cloaking tech, gravity manipulation</td></tr>
-<tr><td class="rare">Neutronium Flake</td><td>Exotic Anomaly</td><td class="vol">1 m3</td><td>3500</td><td>Ultra-dense armor, singularity weapons</td></tr>
-</table>
+<h2>Field Composition by Security</h2>
+<div class="note">
+<strong>High-Sec Fields:</strong> Veltoite, Corsite, Calite, Carite, Frostine, Silite (6 types)<br>
+<strong>Med-Sec Fields:</strong> All common + Ferranox, Zincara, Stannite, Nitrine, Methrix, Biovex, Nickeline (13 types)<br>
+<strong>Low-Sec Fields:</strong> All above + Titanex, Tungstine, Chromax, Heliox, Xenolith, Sporite, Aminox (20 types)<br>
+<strong>Null-Sec Fields:</strong> All above + Platinox, Aurelite, Palladine, Quartzion, Lithex, Berylox, Kraxolith, Voidstone, Neutrite (29 types)<br><br>
+Every field always contains common asteroids. Richer fields have higher density and more variety.
+</div>
+
+<h2>Volume Design Philosophy</h2>
+<div class="note">
+<strong>Common = Small Volume (1-2 m3):</strong> A small mining ship with 100 m3 cargo can haul 50-100 units of iron ore per trip. This means common ores flow freely through the economy. Stations consuming iron never starve because traders can carry massive amounts cheaply.<br><br>
+<strong>Rare = Large Volume (8-20 m3):</strong> That same 100 m3 ship can only carry 5-12 units of exotic ore. This naturally limits supply of rare materials, makes them genuinely scarce without artificial mechanics, and creates demand for larger hauler ships on dangerous routes.<br><br>
+<strong>Result:</strong> The economy self-balances. Common materials are abundant (cheap per unit, easy to move in bulk). Rare materials are genuinely scarce (expensive per unit AND hard to move). You need a big, slow, vulnerable ship to haul meaningful quantities of exotics through null-sec space.
+</div>
 
 <h2>Harvesting Mechanics</h2>
 <div class="note">
-<strong>Mining Yield Formula:</strong> units_per_cycle = mining_power * field_density * ore_modifier<br><br>
-<strong>Cycle Time:</strong> Base 5 seconds per mining cycle. Reduced by mining laser tier.<br><br>
-<strong>Volume:</strong> Raw ores are bulky. A mining ship with 200 m3 cargo can carry 20 iron ore (10 m3 each) or 200 void shards (1 m3 each). This naturally limits how much cheap ore floods the market per trip while making rare materials worth dedicated runs.
-</div>
-
-<h2>Design Notes</h2>
-<div class="note">
-<strong>Security Distribution:</strong><br>
-- High-sec: Common ores only. Safe, abundant, low value per trip.<br>
-- Med-sec: Mid-grade ores + some common. Moderate risk, better margins.<br>
-- Low-sec: Rare crystals + precious metals. High risk, high reward.<br>
-- Null-sec: Exotics. Extreme danger, extreme value. Requires escort or stealth.<br><br>
-<strong>Economic Role:</strong> Raw ores are the foundation. They're cheap individually but consumed in enormous quantities by refineries. The volume mechanic means hauling 1000 iron ore requires multiple trips even with large cargo ships, creating natural logistics demand.
+<strong>Mining Cycle:</strong> Target asteroid, activate mining laser, ore extracted per cycle.<br>
+<strong>Yield:</strong> units_per_cycle = mining_power * density_modifier<br>
+<strong>Cycle Time:</strong> 5 seconds base. Reduced by laser tier.<br>
+<strong>Asteroid Depletion:</strong> Asteroids have HP. When depleted, they respawn after a cooldown (common: 30s, rare: 5min, exotic: 30min).<br>
+<strong>Field Density:</strong> 0.5-2.0 multiplier. Higher density = more asteroids per field = faster extraction overall.
 </div>
 </body>
 </html>
