@@ -94,7 +94,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <!-- Stations: filter bar is static, only data area updates -->
   <div class="view" id="view-stations">
     <div class="filter-bar">
-      <input class="filter-input" id="stFilter" placeholder="Filter stations...">
+      <input type="search" class="filter-input" id="stFilter" placeholder="Filter stations...">
       <select class="filter-select" id="stStatusFilter"><option value="">All</option><option value="active">Active</option><option value="halted">Halted</option></select>
       <select class="filter-select" id="stSortBy"><option value="system">Sort: System</option><option value="station">Sort: Station</option><option value="status">Sort: Status</option></select>
     </div>
@@ -103,7 +103,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <!-- Ships: static filter bar -->
   <div class="view" id="view-ships">
     <div class="filter-bar">
-      <input class="filter-input" id="shipFilter" placeholder="Filter ships...">
+      <input type="search" class="filter-input" id="shipFilter" placeholder="Filter ships...">
       <select class="filter-select" id="shipStateFilter">
         <option value="">All states</option>
         <option value="idle">Idle</option>
@@ -124,7 +124,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <!-- Market: static filter bar -->
   <div class="view" id="view-market">
     <div class="filter-bar">
-      <input class="filter-input" id="mktSearch" placeholder="Search items...">
+      <input type="search" class="filter-input" id="mktSearch" placeholder="Search items...">
       <select class="filter-select" id="mktCommodityFilter"><option value="">All commodities</option></select>
       <select class="filter-select" id="mktSystemFilter"><option value="">All systems</option></select>
       <select class="filter-select" id="mktSortBy"><option value="commodity">Sort: Name</option><option value="price_asc">Sort: Price Low</option><option value="price_desc">Sort: Price High</option><option value="stock_desc">Sort: Stock High</option></select>

@@ -51,7 +51,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 </div>
 <div class="main">
 <div class="sidebar">
-  <input type="text" id="search" placeholder="Search...">
+  <input type="search" id="search" placeholder="Search...">
   <div class="side-list" id="list"></div>
 </div>
 <div class="content" id="content">
@@ -136,6 +136,7 @@ function buildList(filter) {
   if (f) document.querySelectorAll('.side-cat').forEach(c => c.classList.add('open'));
 }
 document.getElementById('search').addEventListener('input', e => buildList(e.target.value));
+document.getElementById('search').addEventListener('search', e => buildList(e.target.value));
 
 function getFullTree(id, qty, depth) {
   if (depth > 12) return [];
