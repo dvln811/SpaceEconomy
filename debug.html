@@ -211,47 +211,47 @@ function renderOverview() {
       <div class="stat-row"><span class="label">Trades</span><span class="value">${D.trade_volume}</span></div>
       <div class="stat-row" style="margin-top:6px;border-top:1px solid #152238;padding-top:4px"><span class="label">Idle</span><span class="value">${s.idle||0}</span></div>
       <div class="stat-row"><span class="label">Traveling</span><span class="value">${(s.traveling||0)+(s.intra_traveling||0)}</span></div>
-      <div class="stat-row"><span class="label">Loading/Unloading</span><span class="value">${(s.loading||0)+(s.unloading||0)}</span></div>
+      <div class="stat-row"><span class="label">Loading</span><span class="value">${(s.loading||0)+(s.unloading||0)}</span></div>
       <div class="stat-row"><span class="label">Mining</span><span class="value">${s.mining||0}</span></div>
     </div>
     <div class="panel">
-      <div class="panel-title">Production Health</div>
-      <div class="stat-row"><span class="label">Active lines</span><span class="value" style="color:#66bb6a">${totalProducing}</span></div>
+      <div class="panel-title">Production</div>
+      <div class="stat-row"><span class="label">Active</span><span class="value" style="color:#66bb6a">${totalProducing}</span></div>
       <div class="stat-row"><span class="label">Halted</span><span class="value" style="color:#ef5350">${totalHalted}</span></div>
-      <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:9px;color:#8aa0b8">HALTED:</div>
-      ${haltedList.slice(0,10).map(h=>`<div class="stat-row"><span class="label">${h.station}</span><span class="value" style="color:#ef5350;font-size:9px">${h.output}</span></div>`).join('')}
-      ${haltedList.length>10?`<div style="color:#8aa0b8;font-size:9px;margin-top:4px">+${haltedList.length-10} more</div>`:''}
+      ${haltedList.slice(0,8).map(h=>`<div class="stat-row"><span class="label">${h.station}</span><span class="value" style="color:#ef5350;font-size:9px">${h.output}</span></div>`).join('')}
     </div>
     <div class="panel">
-      <div class="panel-title">Economy Inventory</div>
+      <div class="panel-title">Warfare</div>
+      <div class="stat-row"><span class="label">Destroyed</span><span class="value" style="color:#ef5350">${(D.warfare||{}).ships_destroyed||0}</span></div>
+      <div class="stat-row"><span class="label">Built</span><span class="value" style="color:#66bb6a">${(D.warfare||{}).ships_built||0}</span></div>
+      <div class="stat-row"><span class="label">Ammo Used</span><span class="value">${(D.warfare||{}).ammo_consumed||0}</span></div>
+      ${(()=>{const w=D.warfare||{};const fs=w.fleet_strength||{};return Object.entries(fs).map(([f,s])=>`<div class="stat-row"><span class="label">${fmtName(f)}</span><span class="value">${s}</span></div>`).join('');})()}
+    </div>
+    <div class="panel">
+      <div class="panel-title">Inventory (Top)</div>
       ${topInv.map(([k,v])=>`<div class="stat-row"><span class="label">${fmtName(k)}</span><span class="value">${Math.round(v)}</span></div>`).join('')}
     </div>
     <div class="panel">
-      <div class="panel-title">Demand / Supply Balance</div>
-      ${(()=>{const dem=D.demand||{};const sorted=Object.entries(dem).sort((a,b)=>a[1].ticks_remaining-b[1].ticks_remaining);return sorted.slice(0,12).map(([k,v])=>{const col=v.ticks_remaining<10?'#ef5350':v.ticks_remaining<50?'#ffd54f':'#66bb6a';return `<div class="stat-row"><span class="label">${v.name||k}</span><span class="value" style="color:${col}">${v.ticks_remaining<9999?v.ticks_remaining+'t':'OK'} (${v.demand_per_tick.toFixed(1)}/t)</span></div>`;}).join('');})()}
+      <div class="panel-title">Demand Balance</div>
+      ${(()=>{const dem=D.demand||{};const sorted=Object.entries(dem).sort((a,b)=>a[1].ticks_remaining-b[1].ticks_remaining);return sorted.slice(0,10).map(([k,v])=>{const col=v.ticks_remaining<10?'#ef5350':v.ticks_remaining<50?'#ffd54f':'#66bb6a';return `<div class="stat-row"><span class="label">${v.name||fmtName(k)}</span><span class="value" style="color:${col}">${v.ticks_remaining<9999?v.ticks_remaining+'t':'OK'}</span></div>`;}).join('');})()}
     </div>
     <div class="panel">
-      <div class="panel-title">Top Buy Orders (Unfilled Demand)</div>
+      <div class="panel-title">Buy Orders</div>
       ${(()=>{
         let allBuys=[];
-        for(const sys of Object.values(D.systems||{})){for(const st of sys.stations){for(const b of (st.buy_orders||[])){allBuys.push({...b,station:st.name,system:sys.name});}}}
+        for(const sys of Object.values(D.systems||{})){for(const st of sys.stations){for(const b of (st.buy_orders||[])){allBuys.push({...b,station:st.name});}}}
         allBuys.sort((a,b)=>b.qty-a.qty);
-        return allBuys.slice(0,10).map(b=>`<div class="stat-row"><span class="label" style="color:#ef5350">${fmtName(b.commodity)}</span><span class="value">${Math.round(b.qty)} @ ${b.price.toFixed(0)} <span style="color:#8aa0b8;font-size:9px">${b.station}</span></span></div>`).join('')||'<div style="color:#8aa0b8">None</div>';
+        return allBuys.slice(0,8).map(b=>`<div class="stat-row"><span class="label">${fmtName(b.commodity)}</span><span class="value">${Math.round(b.qty)}</span></div>`).join('')||'<div style="color:#8aa0b8">None</div>';
       })()}
     </div>
-  </div>
     <div class="panel">
-    <div class="panel-title">Warfare</div>
-    <div class="stat-row"><span class="label">Ships Destroyed</span><span class="value" style="color:#ef5350">${(D.warfare||{}).ships_destroyed||0}</span></div>
-    <div class="stat-row"><span class="label">Ships Built</span><span class="value" style="color:#66bb6a">${(D.warfare||{}).ships_built||0}</span></div>
-    <div class="stat-row"><span class="label">Ammo Consumed</span><span class="value">${(D.warfare||{}).ammo_consumed||0}</span></div>
-    ${(()=>{const w=D.warfare||{};const fs=w.fleet_strength||{};return Object.entries(fs).map(([f,s])=>`<div class="stat-row"><span class="label">${fmtName(f)}</span><span class="value">${s}</span></div>`).join('');})()}
-    ${(()=>{const battles=(D.warfare||{}).recent_battles||[];return battles.slice(-3).map(b=>`<div style="padding:2px 0;font-size:9px;border-bottom:1px solid #0a1420"><span style="color:#ef5350">${b.attacker}</span> vs <span style="color:#4fc3f7">${b.defender}</span>: ${b.a_losses}+${b.d_losses}</div>`).join('');})()}
-  </div>
-  <div class="panel">
-    <div class="panel-title">Recent Events</div>
-    ${events.slice(0,12).map(e=>`<div style="padding:1px 0;font-size:9px;border-bottom:1px solid #0a1420"><span style="color:#8aa0b8;margin-right:4px">T${e.tick}</span>${e.msg}</div>`).join('')}
-  </div>
+      <div class="panel-title">Battles</div>
+      ${(()=>{const battles=(D.warfare||{}).recent_battles||[];return battles.slice(-5).map(b=>`<div style="padding:2px 0;font-size:9px;border-bottom:1px solid #0a1420"><span style="color:#ef5350">${b.attacker}</span> vs <span style="color:#4fc3f7">${b.defender}</span> ${b.a_losses}+${b.d_losses}</div>`).join('')||'<div style="color:#8aa0b8">No battles yet</div>';})()}
+    </div>
+    <div class="panel">
+      <div class="panel-title">Events</div>
+      ${events.slice(0,10).map(e=>`<div style="padding:1px 0;font-size:9px;border-bottom:1px solid #0a1420"><span style="color:#8aa0b8;margin-right:4px">T${e.tick}</span>${e.msg}</div>`).join('')}
+    </div>
   </div>`;
 }
 
