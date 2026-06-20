@@ -84,6 +84,20 @@ MILITARY_SHIPS = {
         modules=["shield_gen_l", "repair_module", "scanner_array", "jump_drive"],
         build_cost={"hull_plating": 20, "std_engine": 3, "combat_drone": 30, "shield_gen_l": 1, "jump_drive": 1, "repair_module": 2},
         crew=80, description="Drone carrier. Deploys swarms of AI-controlled combat drones. Minimal direct armament."),
+    "nc_frigate": MilitaryShipClass(
+        id="nc_frigate", name="Axiom Frigate", hull_class="frigate", faction="science_collective",
+        hull_hp=350, armor_hp=150, shield_hp=500,
+        weapons=["beam_laser", "beam_laser", "point_defense"],
+        modules=["shield_generator", "ecm_jammer", "scanner_array"],
+        build_cost={"hull_plating": 4, "std_engine": 1, "beam_laser": 2, "shield_generator": 1, "ecm_jammer": 1},
+        crew=8, description="Shield-heavy EW platform. Layered barriers absorb fire while jammers blind enemy sensors."),
+    "nc_battleship": MilitaryShipClass(
+        id="nc_battleship", name="Paradigm Battleship", hull_class="battleship", faction="science_collective",
+        hull_hp=3500, armor_hp=2000, shield_hp=4000,
+        weapons=["plasma_cannon_l", "plasma_cannon_l", "beam_laser_m", "point_defense", "point_defense"],
+        modules=["shield_gen_l", "shield_gen_l", "ecm_jammer", "repair_module", "jump_drive"],
+        build_cost={"hull_plating": 25, "std_engine": 4, "plasma_cannon_l": 2, "beam_laser_m": 1, "shield_gen_l": 2, "jump_drive": 1, "combat_drone": 20},
+        crew=200, description="Drone-assisted capital ship. Autonomous combat drones extend its reach while dual plasma cannons annihilate targets."),
 
     # ── MERCHANTS GUILD ───────────────────────────────────────────────────────
     "mg_escort": MilitaryShipClass(
@@ -100,6 +114,20 @@ MILITARY_SHIPS = {
         modules=["armor_plates_m", "armor_repairer", "cargo_expander", "maneuver_rig"],
         build_cost={"hull_plating": 12, "armor_plates_m": 2, "std_engine": 2, "autocannon_m": 2, "missile_launcher_m": 2},
         crew=55, description="Armed merchantman. Quad weapons bays and heavy armor. Trade route enforcer."),
+    "mg_picket": MilitaryShipClass(
+        id="mg_picket", name="Venture Picket", hull_class="fighter", faction="merchants_guild",
+        hull_hp=220, armor_hp=180, shield_hp=100,
+        weapons=["autocannon", "missile_launcher"],
+        modules=["armor_plates", "afterburner"],
+        build_cost={"hull_plating": 2, "std_engine": 1, "autocannon": 1, "missile_launcher": 1, "armor_plates": 1},
+        crew=1, description="Cheap convoy screen. Mass-produced to patrol trade lanes and deter opportunistic raiders."),
+    "mg_battlecruiser": MilitaryShipClass(
+        id="mg_battlecruiser", name="Sovereign Battlecruiser", hull_class="battlecruiser", faction="merchants_guild",
+        hull_hp=2800, armor_hp=2200, shield_hp=1200,
+        weapons=["autocannon_m", "autocannon_m", "autocannon_m", "missile_launcher_m", "missile_launcher_m", "point_defense", "point_defense"],
+        modules=["armor_plates_m", "armor_plates_m", "armor_repairer", "maneuver_rig", "jump_drive"],
+        build_cost={"hull_plating": 20, "armor_plates_m": 4, "std_engine": 3, "autocannon_m": 3, "missile_launcher_m": 2, "jump_drive": 1},
+        crew=150, description="Trade lane enforcer. The Guild's answer to organized piracy—overwhelming firepower protecting profit margins."),
 
     # ── FRONTIER ALLIANCE ─────────────────────────────────────────────────────
     "fa_skirmisher": MilitaryShipClass(
@@ -123,6 +151,13 @@ MILITARY_SHIPS = {
         modules=["armor_plates_m", "armor_plates_m", "armor_repairer", "maneuver_rig", "jump_drive"],
         build_cost={"hull_plating": 18, "armor_plates_m": 4, "std_engine": 3, "autocannon_m": 3, "missile_launcher_m": 2, "jump_drive": 1},
         crew=120, description="Militia flagship. Overwhelming volume of fire from massed autocannons. Built in hidden dockyards."),
+    "fa_cruiser": MilitaryShipClass(
+        id="fa_cruiser", name="Mantis Cruiser", hull_class="cruiser", faction="free_states",
+        hull_hp=1100, armor_hp=900, shield_hp=600,
+        weapons=["autocannon_m", "autocannon_m", "missile_launcher_m", "point_defense"],
+        modules=["armor_plates_m", "afterburner", "ecm_jammer", "maneuver_rig"],
+        build_cost={"hull_plating": 10, "armor_plates_m": 2, "std_engine": 2, "autocannon_m": 2, "missile_launcher_m": 1, "ecm_jammer": 1},
+        crew=40, description="Guerrilla warfare platform. Fast enough to choose engagements, tough enough to survive them. Strike and fade."),
 
     # ── IRON COMPACT ──────────────────────────────────────────────────────────
     "ic_interceptor": MilitaryShipClass(
@@ -146,6 +181,13 @@ MILITARY_SHIPS = {
         modules=["armor_plates_l", "armor_plates_l", "armor_plates_l", "shield_gen_l", "jump_drive", "repair_module"],
         build_cost={"hull_plating": 50, "armor_plates_l": 6, "std_engine": 6, "railgun_l": 4, "shield_gen_l": 1, "jump_drive": 1},
         crew=800, description="Siege capital ship. Four large railguns reduce stations to scrap. The Iron Compact's ultimate weapon."),
+    "ic_destroyer": MilitaryShipClass(
+        id="ic_destroyer", name="Hammer Destroyer", hull_class="destroyer", faction="iron_compact",
+        hull_hp=800, armor_hp=700, shield_hp=200,
+        weapons=["railgun", "railgun", "railgun", "railgun", "autocannon", "autocannon"],
+        modules=["armor_plates", "armor_plates", "maneuver_rig"],
+        build_cost={"hull_plating": 7, "armor_plates": 3, "std_engine": 1, "railgun": 4, "autocannon": 2},
+        crew=20, description="Anti-fighter screen. Quad railguns deliver withering salvos that shred anything smaller than a cruiser."),
 
     # ── CORSAIRS ──────────────────────────────────────────────────────────────
     "crs_raider": MilitaryShipClass(
@@ -162,14 +204,28 @@ MILITARY_SHIPS = {
         modules=["shield_gen_m", "afterburner", "ecm_jammer", "cargo_expander"],
         build_cost={"hull_plating": 10, "std_engine": 2, "plasma_cannon_m": 2, "autocannon_m": 2, "shield_gen_m": 1, "ecm_jammer": 1},
         crew=40, description="Pirate flagship. Fast enough to catch traders, armed enough to kill escorts. Cargo bay for loot."),
+    "crs_interceptor": MilitaryShipClass(
+        id="crs_interceptor", name="Gnat Interceptor", hull_class="fighter", faction="corsairs",
+        hull_hp=160, armor_hp=80, shield_hp=120,
+        weapons=["autocannon", "autocannon"],
+        modules=["afterburner", "afterburner", "ecm_jammer"],
+        build_cost={"hull_plating": 1, "std_engine": 1, "autocannon": 2, "afterburner": 2, "ecm_jammer": 1},
+        crew=1, description="Fast tackle/scrambler. Dual afterburners close distance before jammers disable warp drives. Disposable and deadly in packs."),
+    "crs_battleship": MilitaryShipClass(
+        id="crs_battleship", name="Dread Pirate", hull_class="battleship", faction="corsairs",
+        hull_hp=3000, armor_hp=2000, shield_hp=2000,
+        weapons=["plasma_cannon_l", "plasma_cannon_l", "autocannon_m", "autocannon_m", "missile_launcher_m", "point_defense"],
+        modules=["shield_gen_l", "armor_plates_m", "afterburner", "ecm_jammer", "cargo_expander", "jump_drive"],
+        build_cost={"hull_plating": 22, "armor_plates_m": 2, "std_engine": 4, "plasma_cannon_l": 2, "autocannon_m": 2, "shield_gen_l": 1, "jump_drive": 1},
+        crew=250, description="Pirate flagship for raids. A terror of the shipping lanes—jumps in, disables escorts, loots everything that moves."),
 }
 
 # Fleet composition per faction (how many of each to maintain)
 FLEET_TARGETS = {
     "terran_fed": {"tf_interceptor": 8, "tf_frigate": 6, "tf_cruiser": 4, "tf_battleship": 1},
-    "science_collective": {"nc_scout": 6, "nc_cruiser": 4, "nc_carrier": 1},
-    "merchants_guild": {"mg_escort": 8, "mg_cruiser": 3},
-    "free_states": {"fa_skirmisher": 10, "fa_destroyer": 5, "fa_battlecruiser": 2},
-    "iron_compact": {"ic_interceptor": 8, "ic_cruiser": 5, "ic_dreadnought": 1},
-    "corsairs": {"crs_raider": 12, "crs_cruiser": 3},
+    "science_collective": {"nc_scout": 6, "nc_cruiser": 4, "nc_carrier": 1, "nc_frigate": 4, "nc_battleship": 1},
+    "merchants_guild": {"mg_escort": 8, "mg_cruiser": 3, "mg_picket": 6, "mg_battlecruiser": 1},
+    "free_states": {"fa_skirmisher": 10, "fa_destroyer": 5, "fa_battlecruiser": 2, "fa_cruiser": 3},
+    "iron_compact": {"ic_interceptor": 8, "ic_cruiser": 5, "ic_dreadnought": 1, "ic_destroyer": 4},
+    "corsairs": {"crs_raider": 12, "crs_cruiser": 3, "crs_interceptor": 8, "crs_battleship": 1},
 }
