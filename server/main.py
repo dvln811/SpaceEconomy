@@ -15,6 +15,14 @@ app = Flask(__name__, static_folder=None)
 # ── Simulation ─────────────────────────────────────────────────────────────────
 from server.simulation import Simulation
 from server.persistence import init_db, save_simulation, load_simulation, clear_db
+from server.data_access import is_db_ready
+
+# Ensure game_data.db exists (migrate from Python sources if needed)
+if not is_db_ready():
+    log.info("game_data.db not found, running migration...")
+    from server.migrate_to_db import main as run_migration
+    run_migration()
+    log.info("Migration complete")
 
 init_db()
 sim = Simulation()
