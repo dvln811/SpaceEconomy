@@ -105,8 +105,8 @@ def poisson_disk_3d(count, radius, bounds, existing=None):
 
 
 def build_connections(systems, max_dist=120, max_connections=6, min_connections=2):
-    """Build jump gate network using distance-based connectivity.
-    Max 5 for claimed (high/med), max 3 for null-sec. Dead-ends allowed."""
+    """Build jump gate network. Ensures fully connected graph (no islands).
+    Max 5 for high/med-sec, max 3 for null-sec. Dead-ends allowed but no orphans."""
     connections = {sid: [] for sid in systems}
     positions = {sid: (s['x'], s['y'], s['z']) for sid, s in systems.items()}
     
@@ -114,13 +114,12 @@ def build_connections(systems, max_dist=120, max_connections=6, min_connections=
         sec = systems[sid]['security']
         if sec in ('high', 'medium'):
             return 5
-        elif sec == 'low':
-            return 3
-        return 3  # null-sec
+        return 3
     
-    # Calculate all distances and connect nearest within limits
     sids = list(systems.keys())
-    for i, sid1 in enumerate(sids):
+    
+    # Phase 1: Connect each system to its nearest neighbor(s) within range
+    for sid1 in sids:
         cap = max_for(sid1)
         if len(connections[sid1]) >= cap:
             continue
@@ -143,21 +142,56 @@ def build_connections(systems, max_dist=120, max_connections=6, min_connections=
                 connections[sid1].append(sid2)
                 connections[sid2].append(sid1)
     
-    # Ensure connectivity: every system has at least 1 connection (no islands)
+    # Phase 2: Ensure every system has at least 1 connection
     for sid in sids:
         if len(connections[sid]) == 0:
-            distances = []
-            for sid2 in sids:
-                if sid2 == sid:
-                    continue
-                p1, p2 = positions[sid], positions[sid2]
-                dist = math.sqrt(sum((a - b)**2 for a, b in zip(p1, p2)))
-                distances.append((dist, sid2))
+            distances = [(math.sqrt(sum((a-b)**2 for a,b in zip(positions[sid],positions[s2]))), s2) for s2 in sids if s2 != sid]
             distances.sort()
-            # Connect to nearest regardless of cap
             sid2 = distances[0][1]
             connections[sid].append(sid2)
             connections[sid2].append(sid)
+    
+    # Phase 3: Ensure full graph connectivity (merge isolated components)
+    def bfs_component(start):
+        visited = set()
+        queue = [start]
+        while queue:
+            node = queue.pop(0)
+            if node in visited:
+                continue
+            visited.add(node)
+            for neighbor in connections[node]:
+                if neighbor not in visited:
+                    queue.append(neighbor)
+        return visited
+    
+    visited_all = set()
+    components = []
+    for sid in sids:
+        if sid not in visited_all:
+            comp = bfs_component(sid)
+            components.append(comp)
+            visited_all.update(comp)
+    
+    # Connect components by finding nearest pair between each component and the largest
+    if len(components) > 1:
+        components.sort(key=len, reverse=True)
+        main_comp = components[0]
+        for comp in components[1:]:
+            best_dist = float('inf')
+            best_pair = None
+            for s1 in comp:
+                for s2 in main_comp:
+                    d = math.sqrt(sum((a-b)**2 for a,b in zip(positions[s1], positions[s2])))
+                    if d < best_dist:
+                        best_dist = d
+                        best_pair = (s1, s2)
+            if best_pair:
+                s1, s2 = best_pair
+                connections[s1].append(s2)
+                connections[s2].append(s1)
+                main_comp.update(comp)
+        print(f"  Merged {len(components)-1} isolated components into main graph")
     
     return connections
 
@@ -261,16 +295,20 @@ def generate_universe():
     target_total = 2500
     remaining = target_total - len(systems)
     
-    # Use a looser spacing for the wild systems
-    bounds = 1200
+    # Use a looser spacing for the wild systems - SPHERICAL distribution
+    radius_max = 1200
     min_spacing = 40
     
     null_positions = []
     attempts = 0
     while len(null_positions) < remaining and attempts < remaining * 50:
-        x = random.uniform(-bounds, bounds)
-        y = random.uniform(-bounds, bounds)
-        z = random.uniform(-bounds * 0.25, bounds * 0.25)
+        # Spherical distribution (slightly flattened)
+        r = random.uniform(100, radius_max) * (random.random() ** 0.33)  # cube root for uniform volume
+        theta = random.uniform(0, 2 * math.pi)
+        phi = random.uniform(-0.4, 0.4)  # flatten z
+        x = r * math.cos(theta) * math.cos(phi)
+        y = r * math.sin(theta) * math.cos(phi)
+        z = r * math.sin(phi) * 0.3  # extra flatten
         
         # Check against all existing
         too_close = False
@@ -288,7 +326,15 @@ def generate_universe():
     
     print(f"  Generated {len(null_positions)} null-sec positions")
     
-    # Create null-sec system entries
+    # Create null-sec system entries with constellation names
+    CONSTELLATIONS = [
+        'Outer Reach', 'Void Expanse', 'Dark Nebula', 'Shattered Rim',
+        'Ghost Sector', 'Iron Veil', 'Crimson Drift', 'Silent Deep',
+        'Ember Fields', 'Frozen Wake', 'Obsidian Cluster', 'Tempest Zone',
+        'Serpent Arm', 'Dead Light', 'Ashen Corridor', 'Wraith Nebula',
+        'Storm Front', 'Hollow Stars', 'Burning Edge', 'Pale Expanse',
+        'Shadow Reach', 'Broken Chain', 'Rust Belt', 'Nova Remnant',
+    ]
     used_names = set()
     for x, y, z in null_positions:
         name = generate_null_sec_name()
@@ -306,12 +352,18 @@ def generate_universe():
         else:
             security = 'none'
         
+        # Assign constellation based on angular sector
+        angle = math.atan2(y, x)
+        sector_idx = int((angle + math.pi) / (2 * math.pi) * len(CONSTELLATIONS))
+        sector_idx = min(sector_idx, len(CONSTELLATIONS) - 1)
+        constellation = CONSTELLATIONS[sector_idx]
+        
         sys_type = random.choice(SYSTEM_TYPES_WILD)
         
         systems[sid] = {
             'name': name, 'x': round(x, 1), 'y': round(y, 1), 'z': round(z, 1),
             'system_type': sys_type, 'security': security, 'faction_id': '',
-            'cluster': 'Null-Sec',
+            'cluster': constellation,
         }
     
     print(f"Total systems: {len(systems)}")

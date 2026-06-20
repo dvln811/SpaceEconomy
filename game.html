@@ -403,7 +403,9 @@ async function initSystems(){
 
   function updateRouteLines(){
     const camPos=camera.position;
-    const showDist=250;
+    const camDist=camPos.length();
+    const showDist=Math.max(150,camDist*0.4);
+    const showDistSq=showDist*showDist;
     const sel=selectedSystem;
     const connSet=new Set();
     if(sel>=0){
@@ -413,13 +415,12 @@ async function initSystems(){
     for(const [i,j] of routes){
       const key=Math.min(i,j)+'-'+Math.max(i,j);
       const si=systems[i],sj=systems[j];
-      // Show if selected system's connections OR if both endpoints near camera
       if(connSet.has(key)){
         verts.push(si.x,si.y,si.z,sj.x,sj.y,sj.z);
       }else{
         const di=(si.x-camPos.x)**2+(si.y-camPos.y)**2+(si.z-camPos.z)**2;
         const dj=(sj.x-camPos.x)**2+(sj.y-camPos.y)**2+(sj.z-camPos.z)**2;
-        if(di<showDist*showDist&&dj<showDist*showDist){
+        if(di<showDistSq&&dj<showDistSq){
           verts.push(si.x,si.y,si.z,sj.x,sj.y,sj.z);
         }
       }
@@ -441,7 +442,8 @@ async function initSystems(){
   // Label visibility update
   function updateLabelVisibility(){
     const camPos=camera.position;
-    const showRadius=200;
+    const camDist=camPos.length();
+    const showRadius=Math.max(150,camDist*0.4);
     const sel=selectedSystem;
     const connSet=new Set();
     if(sel>=0&&systems[sel].connections){
@@ -460,24 +462,26 @@ async function initSystems(){
   }
 
   // Region labels (faction territory markers)
-  const regionLabels=[
-    {name:'Terran Federation',x:0,y:0,z:0,color:'#4fc3f7'},
-    {name:'Nexus Collective',x:300,y:200,z:50,color:'#ab47bc'},
-    {name:'Merchants Guild',x:-250,y:250,z:-30,color:'#ffd54f'},
-    {name:'Frontier Alliance',x:-300,y:-200,z:40,color:'#66bb6a'},
-    {name:'Iron Compact',x:200,y:-300,z:-50,color:'#ff8a65'},
-    {name:'The Corsairs',x:0,y:-400,z:0,color:'#ef5350'},
-    {name:'NULL-SEC',x:800,y:0,z:0,color:'#555'},
-    {name:'NULL-SEC',x:-800,y:0,z:0,color:'#555'},
-    {name:'NULL-SEC',x:0,y:800,z:0,color:'#555'},
-    {name:'NULL-SEC',x:0,y:-800,z:0,color:'#555'},
-  ];
-  regionLabels.forEach(r=>{
+  // Region/constellation labels from system cluster data
+  const clusterCenters={};
+  systems.forEach(s=>{
+    if(!s.cluster)return;
+    if(!clusterCenters[s.cluster])clusterCenters[s.cluster]={x:0,y:0,z:0,n:0,faction:s.faction};
+    clusterCenters[s.cluster].x+=s.x;
+    clusterCenters[s.cluster].y+=s.y;
+    clusterCenters[s.cluster].z+=s.z;
+    clusterCenters[s.cluster].n++;
+  });
+  const facColors2={terran_fed:'#4fc3f7',science_collective:'#ab47bc',merchants_guild:'#ffd54f',free_states:'#66bb6a',iron_compact:'#ff8a65',corsairs:'#ef5350'};
+  Object.entries(clusterCenters).forEach(([name,c])=>{
+    c.x/=c.n;c.y/=c.n;c.z/=c.n;
+    const color=facColors2[c.faction]||'#445566';
+    const sz=c.faction?'11':'9';
     const div=document.createElement('div');
-    div.style.cssText=`font-family:Orbitron,sans-serif;font-size:12px;color:${r.color};letter-spacing:3px;text-transform:uppercase;opacity:0.6;pointer-events:none`;
-    div.textContent=r.name;
+    div.style.cssText=`font-family:Orbitron,sans-serif;font-size:${sz}px;color:${color};letter-spacing:2px;text-transform:uppercase;opacity:0.5;pointer-events:none;white-space:nowrap`;
+    div.textContent=name;
     const label=new CSS2DObject(div);
-    label.position.set(r.x,r.y+20,r.z);
+    label.position.set(c.x,c.y+30,c.z);
     scene.add(label);
   });
   // Build system list cards
