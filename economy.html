@@ -3,297 +3,77 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Space Economy - Economy Design</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Orbitron:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html{height:100%}
-body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:14px;line-height:1.7;min-height:100%}
-.nav{position:sticky;top:0;z-index:100;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:0 24px;height:48px;gap:20px}
-.nav h1{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:#4fc3f7;letter-spacing:3px;text-transform:uppercase}
-.nav a{font-size:11px;color:#8aa0b8;text-decoration:none;padding:6px 14px;border:1px solid #1a2844;border-radius:3px;transition:all .15s;letter-spacing:1px;text-transform:uppercase;font-family:'Orbitron',sans-serif}
-.nav a:hover{color:#4fc3f7;border-color:#4fc3f7;background:#0d1a2f}
-.nav a.active{color:#4fc3f7;border-color:#4fc3f7}
-.content{max-width:900px;margin:0 auto;padding:48px 24px 96px}
-.content h2{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:700;color:#4fc3f7;letter-spacing:2px;text-transform:uppercase;margin:48px 0 16px;padding-bottom:8px;border-bottom:1px solid #1a2844}
-.content h2:first-child{margin-top:0}
-.content h3{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:600;color:#ffd54f;letter-spacing:1px;text-transform:uppercase;margin:32px 0 12px}
-.content h4{font-size:12px;color:#e0e8f0;margin:20px 0 8px}
-.content p{margin-bottom:16px;color:#a0b4c8}
-.content ul,.content ol{margin:0 0 16px 20px;color:#a0b4c8}
-.content li{margin-bottom:8px}
-.content strong{color:#e0e8f0}
-.content em{color:#4fc3f7;font-style:normal}
-.card{background:#0a0e18;border:1px solid #1a2844;border-radius:6px;padding:20px;margin:16px 0}
-.card-title{font-family:'Orbitron',sans-serif;font-size:11px;color:#8aa0b8;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
-.tag{display:inline-block;font-size:10px;padding:3px 8px;border-radius:3px;margin:2px 4px 2px 0;letter-spacing:1px;text-transform:uppercase}
-.tag-t1{background:#66bb6a22;color:#66bb6a;border:1px solid #66bb6a44}
-.tag-t2{background:#4fc3f722;color:#4fc3f7;border:1px solid #4fc3f744}
-.tag-t3{background:#ffd54f22;color:#ffd54f;border:1px solid #ffd54f44}
-.tag-t4{background:#ff8a6522;color:#ff8a65;border:1px solid #ff8a6544}
-.tag-t5{background:#ab47bc22;color:#ab47bc;border:1px solid #ab47bc44}
-.tag-tech{background:#ef535022;color:#ef5350;border:1px solid #ef535044}
-table{width:100%;border-collapse:collapse;margin:16px 0}
-th{font-family:'Orbitron',sans-serif;font-size:10px;color:#8aa0b8;letter-spacing:1px;text-transform:uppercase;text-align:left;padding:8px;border-bottom:1px solid #1a2844}
-td{padding:8px;border-bottom:1px solid #0f1a28;font-size:12px;color:#a0b4c8}
-blockquote{border-left:3px solid #4fc3f7;padding:12px 16px;margin:16px 0;background:#0a0f1a;color:#8aa0b8;font-style:italic}
-.flow{display:flex;align-items:center;gap:12px;margin:16px 0;flex-wrap:wrap}
-.flow-item{background:#0a0e18;border:1px solid #1a2844;border-radius:4px;padding:8px 14px;font-size:11px}
-.flow-arrow{color:#4fc3f7;font-size:16px}
+body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:13px;padding:40px;max-width:1000px;margin:0 auto}
+h1{font-family:'Orbitron',sans-serif;color:#4fc3f7;font-size:20px;letter-spacing:3px;margin-bottom:12px}
+h2{font-family:'Orbitron',sans-serif;color:#4fc3f7;font-size:14px;letter-spacing:2px;margin:32px 0 16px;border-bottom:1px solid #1a2844;padding-bottom:8px}
+p{color:#8aa0b8;line-height:1.6;margin-bottom:12px}
+a{color:#4fc3f7;text-decoration:none}
+a:hover{text-decoration:underline}
+.nav{margin-bottom:24px;font-size:11px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+.card{background:#0a0e18;border:1px solid #1a2844;border-radius:6px;padding:20px;text-decoration:none;transition:all .15s;display:block}
+.card:hover{border-color:#4fc3f7;background:#0d1a2f;transform:translateY(-2px);text-decoration:none}
+.card h3{font-family:'Orbitron',sans-serif;font-size:12px;color:#4fc3f7;letter-spacing:1px;margin-bottom:8px}
+.card p{color:#8aa0b8;font-size:11px;margin:0}
+.card .count{color:#ffd54f;font-size:10px;margin-top:6px}
+.note{background:#0a1020;border:1px solid #1a2844;border-radius:4px;padding:12px;margin:12px 0;font-size:11px;color:#8aa0b8}
 </style>
 </head>
 <body>
-<div class="nav">
-  <h1>Hauler's Almanac</h1>
-  <a href="/">Game</a>
-  <a href="/docs">Docs</a>
-  <a href="/economy" class="active">Economy</a>
+<div class="nav"><a href="/docs">Docs</a> &gt; Economy</div>
+<h1>Economy Design</h1>
+<p>The economy is a living production chain. Raw materials are mined, refined into materials, manufactured into components, and assembled into final products. Every item flows through this chain via NPC and player traders.</p>
+
+<h2>Production Chain</h2>
+<div class="note">
+<strong>Flow:</strong> Asteroid Fields → Mining Colony → Refinery → Industrial Hub → Component Factory → Shipyard<br><br>
+<strong>Volume Design:</strong> Common ores are tiny (0.1 m3) so ships can haul thousands per trip. Exotic materials are bulky (1-2 m3) limiting supply. Final products are 2-5 m3 each.
 </div>
 
-<div class="content">
-<h2>Economy Model</h2>
-
-<blockquote>
-The economy is a production chain. Raw materials flow upward through refining, manufacturing, and assembly into complex products. Every finished good has a traceable lineage back to rocks pulled out of asteroid fields.
-</blockquote>
-
-<h3>Core Principles</h3>
-<ul>
-<li><strong>Mining-centric:</strong> The vast majority of raw material production comes from ships (player and NPC miners), not stations. Mining colonies provide infrastructure and buying, but the ore comes from the belt.</li>
-<li><strong>Production chains:</strong> Each tier consumes goods from the tier below it. Disrupting one layer cascades upward.</li>
-<li><strong>Directional trade:</strong> Goods flow up the chain (ore toward factories) and finished products flow back out (components toward frontier). This gives trade routes natural direction.</li>
-<li><strong>No free lunch:</strong> Nothing appears from nowhere. Every unit of steel was once iron ore that a ship mined, hauled, and delivered to a refinery.</li>
-<li><strong>Tech levels:</strong> Higher tech versions of products require rarer inputs and more complex recipes. Same product category, harder to produce, more valuable.</li>
-</ul>
-
-<h2>Production Tiers</h2>
-
-<div class="flow">
-<div class="flow-item"><span class="tag tag-t1">T1</span> Raw Materials</div>
-<div class="flow-arrow">&#8594;</div>
-<div class="flow-item"><span class="tag tag-t2">T2</span> Refined Materials</div>
-<div class="flow-arrow">&#8594;</div>
-<div class="flow-item"><span class="tag tag-t3">T3</span> Industrial Materials</div>
-<div class="flow-arrow">&#8594;</div>
-<div class="flow-item"><span class="tag tag-t4">T4</span> Components</div>
-<div class="flow-arrow">&#8594;</div>
-<div class="flow-item"><span class="tag tag-t5">T5</span> Complex Products</div>
+<div class="grid">
+  <a href="/resources" class="card">
+    <h3>Raw Materials</h3>
+    <p>Asteroid types, harvestable ores, security distribution. What you mine from belts.</p>
+    <div class="count">29 raw resources</div>
+  </a>
+  <a href="/materials" class="card">
+    <h3>Refined &amp; Manufactured</h3>
+    <p>Processing chains from ore to refined metals, fuels, electronics, and advanced materials.</p>
+    <div class="count">20 refined + 18 manufactured = 38 materials</div>
+  </a>
+  <a href="/products" class="card">
+    <h3>Components &amp; Products</h3>
+    <p>Assembled components and final products: weapons, shields, engines, drones, mining gear.</p>
+    <div class="count">22 components + 29 products = 51 items</div>
+  </a>
+  <a href="/items" class="card">
+    <h3>Items Database</h3>
+    <p>Complete searchable, sortable, filterable database of all 124 items with prices, volumes, and recipes.</p>
+    <div class="count">124 total items</div>
+  </a>
 </div>
 
-<h3>Tier 1: Raw Materials</h3>
-<p>Extracted directly from asteroid fields, gas clouds, ice rings, and planetary surfaces. <strong>Primarily produced by mining ships</strong>, not stations. Mining colonies provide docking, refueling, and a market for selling ore.</p>
-
-<table>
-<tr><th>Commodity</th><th>Source</th><th>Abundance</th><th>Notes</th></tr>
-<tr><td>Iron Ore</td><td>Asteroid belts</td><td>Common</td><td>Backbone of industry. Found everywhere.</td></tr>
-<tr><td>Copper Ore</td><td>Asteroid belts</td><td>Common</td><td>Electronics precursor. Widespread.</td></tr>
-<tr><td>Titanium Ore</td><td>Asteroid belts</td><td>Moderate</td><td>Hull-grade material. Mid-tier belts.</td></tr>
-<tr><td>Platinum</td><td>Dense asteroids</td><td>Rare</td><td>High-value. Limited regions only.</td></tr>
-<tr><td>Crystals</td><td>Crystal formations</td><td>Rare</td><td>Tech component. Frontier/anomaly only.</td></tr>
-<tr><td>Ice</td><td>Ice rings</td><td>Common</td><td>Water and fuel precursor.</td></tr>
-<tr><td>Helium-3</td><td>Gas clouds</td><td>Moderate</td><td>Reactor fuel. Specific systems.</td></tr>
-<tr><td>Organics</td><td>Bio-asteroids, agri-worlds</td><td>Moderate</td><td>Food and pharma precursor.</td></tr>
-<tr><td>Rare Earths</td><td>Planetary mining</td><td>Rare</td><td>Advanced electronics. Regional.</td></tr>
-<tr><td>Uranium</td><td>Deep core asteroids</td><td>Scarce</td><td>Military applications. Controlled.</td></tr>
-</table>
-
-<h3>Tier 2: Refined Materials</h3>
-<p>Produced at <strong>refineries and processing stations</strong>. Consumes T1 raw materials. This is the first value-add step. Refineries are strategically important infrastructure.</p>
-
-<table>
-<tr><th>Commodity</th><th>Recipe (inputs)</th><th>Notes</th></tr>
-<tr><td>Refined Iron</td><td>Iron Ore</td><td>Basic structural metal</td></tr>
-<tr><td>Refined Copper</td><td>Copper Ore</td><td>Conductor material</td></tr>
-<tr><td>Refined Titanium</td><td>Titanium Ore</td><td>Lightweight, strong</td></tr>
-<tr><td>Water</td><td>Ice</td><td>Life support, coolant</td></tr>
-<tr><td>Hydrogen Fuel</td><td>Ice + Helium-3</td><td>Ship fuel. Universal demand.</td></tr>
-<tr><td>Processed Food</td><td>Organics + Water</td><td>Feeds stations and crews</td></tr>
-<tr><td>Chemicals</td><td>Organics + Ice</td><td>Industrial solvent, pharma base</td></tr>
-<tr><td>Enriched Uranium</td><td>Uranium</td><td>Reactor fuel, weapons grade</td></tr>
-</table>
-
-<h3>Tier 3: Industrial Materials</h3>
-<p>Produced at <strong>industrial hubs and factories</strong>. Consumes T2 refined materials. These are the building blocks that everything else is made from.</p>
-
-<table>
-<tr><th>Commodity</th><th>Recipe (inputs)</th><th>Notes</th></tr>
-<tr><td>Steel Alloy</td><td>Refined Iron + Chemicals</td><td>Structural standard</td></tr>
-<tr><td>Titanium Alloy</td><td>Refined Titanium + Chemicals</td><td>Premium hulls, military</td></tr>
-<tr><td>Polymers</td><td>Chemicals + Hydrogen Fuel</td><td>Plastic, insulation, seals</td></tr>
-<tr><td>Composites</td><td>Polymers + Refined Titanium</td><td>Lightweight armor, panels</td></tr>
-<tr><td>Superconductors</td><td>Refined Copper + Rare Earths</td><td>Power systems, sensors</td></tr>
-<tr><td>Pharmaceuticals</td><td>Chemicals + Organics</td><td>Medical, crew morale</td></tr>
-<tr><td>Ceramics</td><td>Refined Iron + Chemicals</td><td>Heat shielding, reactors</td></tr>
-<tr><td>Glass</td><td>Crystals + Chemicals</td><td>Optics, viewports, sensors</td></tr>
-</table>
-
-<h3>Tier 4: Components</h3>
-<p>Produced at <strong>component factories and specialized stations</strong>. Consumes T3 materials. These are the functional pieces that go into finished products.</p>
-
-<table>
-<tr><th>Commodity</th><th>Recipe (inputs)</th><th>Notes</th></tr>
-<tr><td>Electronics</td><td>Superconductors + Glass</td><td>Computers, sensors, comms</td></tr>
-<tr><td>Engine Parts</td><td>Steel Alloy + Superconductors</td><td>Thrusters, drive systems</td></tr>
-<tr><td>Hull Plating</td><td>Steel Alloy + Composites</td><td>Ship armor, station walls</td></tr>
-<tr><td>Reactor Cores</td><td>Enriched Uranium + Ceramics + Superconductors</td><td>Power generation</td></tr>
-<tr><td>Life Support Units</td><td>Polymers + Electronics + Water</td><td>Atmosphere, recycling</td></tr>
-<tr><td>Weapon Systems</td><td>Electronics + Titanium Alloy + Reactor Cores</td><td>Military only. Controlled.</td></tr>
-<tr><td>Mining Lasers</td><td>Electronics + Glass + Reactor Cores</td><td>Mining equipment. High demand.</td></tr>
-<tr><td>Navigation Arrays</td><td>Electronics + Glass</td><td>Sensors, jump computers</td></tr>
-</table>
-
-<h3>Tier 5: Complex Products</h3>
-<p>Produced at <strong>shipyards, military installations, and advanced factories</strong>. Consumes T4 components (and some T3). These are the end products of the industrial chain.</p>
-
-<table>
-<tr><th>Commodity</th><th>Recipe (inputs)</th><th>Notes</th></tr>
-<tr><td>Ship Modules</td><td>Hull Plating + Life Support + Engine Parts</td><td>Modular ship construction</td></tr>
-<tr><td>Station Modules</td><td>Hull Plating + Life Support + Reactor Cores</td><td>Station expansion/construction</td></tr>
-<tr><td>Combat Drones</td><td>Electronics + Weapon Systems + Engine Parts</td><td>Autonomous defense</td></tr>
-<tr><td>Mining Rigs</td><td>Mining Lasers + Engine Parts + Hull Plating</td><td>Deployable mining platforms</td></tr>
-<tr><td>Medical Bays</td><td>Pharmaceuticals + Electronics + Life Support Units</td><td>Advanced healthcare</td></tr>
-<tr><td>Jump Drives</td><td>Reactor Cores + Navigation Arrays + Superconductors</td><td>Long-range travel. Very expensive.</td></tr>
-</table>
-
-<h2>Tech Levels</h2>
-
-<p>Tech levels are a <strong>quality multiplier</strong> applied to T3-T5 products. Higher tech requires rarer inputs, more complex recipes, and produces superior goods worth significantly more.</p>
-
-<table>
-<tr><th>Tech Level</th><th>Requirements</th><th>Value Multiplier</th><th>Availability</th></tr>
-<tr><td><span class="tag tag-t1">Tech 1</span></td><td>Standard recipes</td><td>1x</td><td>Everywhere</td></tr>
-<tr><td><span class="tag tag-t2">Tech 2</span></td><td>+ Platinum or Rare Earths in recipe</td><td>3-5x</td><td>Established industrial systems</td></tr>
-<tr><td><span class="tag tag-t3">Tech 3</span></td><td>+ Crystals + multiple rare inputs</td><td>10-20x</td><td>Advanced research stations only</td></tr>
-<tr><td><span class="tag tag-tech">Prototype</span></td><td>Unique anomaly materials + research</td><td>50-100x</td><td>One-offs. Discovery-based.</td></tr>
-</table>
-
-<div class="card">
-<div class="card-title">Example: Hull Plating Across Tech Levels</div>
-<ul>
-<li><strong>T1 Hull Plating:</strong> Steel Alloy + Composites (standard)</li>
-<li><strong>T2 Hull Plating:</strong> Titanium Alloy + Composites + Platinum coating (lighter, tougher)</li>
-<li><strong>T3 Hull Plating:</strong> Titanium Alloy + Composites + Crystals + Rare Earths (adaptive armor)</li>
-</ul>
+<h2>Related Systems</h2>
+<div class="grid">
+  <a href="/fitting" class="card">
+    <h3>Ship Fitting</h3>
+    <p>Module slots (High/Mid/Low/Engine/Rig), CPU/Power Grid budgets, stat effects.</p>
+  </a>
+  <a href="/factions" class="card">
+    <h3>Factions &amp; Corporations</h3>
+    <p>Six major factions, their corps, territories, trade relationships, and conflicts.</p>
+  </a>
 </div>
 
-<h2>Mining Model</h2>
-
-<blockquote>
-Mining ships are the foundation of the economy. Without miners, refineries starve, factories halt, and shipyards go silent. The economy literally depends on people (and NPCs) flying into asteroid fields and pulling rocks out.
-</blockquote>
-
-<h3>How Mining Works</h3>
-<ul>
-<li><strong>Asteroid fields</strong> exist in specific systems, each with a density rating and yield list</li>
-<li><strong>Mining ships</strong> fly to a field, deploy lasers, and extract over time (tick-based)</li>
-<li><strong>Yield varies</strong> by field density, ship mining equipment tier, and some randomness</li>
-<li><strong>Cargo fills up</strong>, miner travels to nearest buyer (refinery/station) and sells</li>
-<li><strong>Fields are not depletable</strong> in v1 (infinite source, limited by mining rate)</li>
-<li><strong>Rare materials</strong> only appear in specific field types in specific regions</li>
-</ul>
-
-<h3>Mining Ship Roles (NPC and Player)</h3>
-<table>
-<tr><th>Class</th><th>Cargo</th><th>Mining Speed</th><th>Range</th><th>Notes</th></tr>
-<tr><td>Prospect Skiff</td><td>Small</td><td>Slow</td><td>Local</td><td>Starter. Cheap. Solo belt work.</td></tr>
-<tr><td>Strip Miner</td><td>Medium</td><td>Fast</td><td>Regional</td><td>Workhorse. Good yield/trip ratio.</td></tr>
-<tr><td>Deep Core Borer</td><td>Large</td><td>Slow</td><td>Long</td><td>Accesses rare deep deposits.</td></tr>
-<tr><td>Fleet Tender</td><td>Massive</td><td>None</td><td>Long</td><td>Collects from other miners. Hauler.</td></tr>
-</table>
-
-<h3>Mining vs Trading (Player Choice)</h3>
-<ul>
-<li><strong>Mining:</strong> Guaranteed income, slower, predictable. The "safe" path. You always know you can mine.</li>
-<li><strong>Trading:</strong> Higher potential profit, volatile, requires market knowledge. The "smart" path.</li>
-<li><strong>Both:</strong> Mine on the way, trade the refined product. Vertical integration.</li>
-</ul>
-
-<h2>Trade Flow Model</h2>
-
-<p>The production chain creates <strong>natural directional trade</strong>. Goods do not just bounce between two stations. They flow through the economy:</p>
-
-<div class="flow">
-<div class="flow-item">Asteroid Field</div>
-<div class="flow-arrow">&#8594;</div>
-<div class="flow-item">Mining Colony (buy T1)</div>
-<div class="flow-arrow">&#8594;</div>
-<div class="flow-item">Refinery (T1 &#8594; T2)</div>
-<div class="flow-arrow">&#8594;</div>
-<div class="flow-item">Factory (T2 &#8594; T3)</div>
-<div class="flow-arrow">&#8594;</div>
-<div class="flow-item">Component Plant (T3 &#8594; T4)</div>
-<div class="flow-arrow">&#8594;</div>
-<div class="flow-item">Shipyard (T4 &#8594; T5)</div>
-</div>
-
-<p>Each hop in the chain is a trade opportunity. Haulers specialize in different legs of the chain based on their ship size, range, and risk tolerance.</p>
-
-<h3>Station Roles in the Chain</h3>
-<table>
-<tr><th>Station Type</th><th>Buys (inputs)</th><th>Sells (outputs)</th><th>Chain Position</th></tr>
-<tr><td>Mining Colony</td><td>T1 from miners</td><td>T1 to haulers</td><td>Source / T1 aggregator</td></tr>
-<tr><td>Refinery</td><td>T1 raw materials</td><td>T2 refined materials</td><td>T1 &#8594; T2</td></tr>
-<tr><td>Industrial Hub</td><td>T2 refined materials</td><td>T3 industrial materials</td><td>T2 &#8594; T3</td></tr>
-<tr><td>Component Factory</td><td>T3 industrial materials</td><td>T4 components</td><td>T3 &#8594; T4</td></tr>
-<tr><td>Shipyard</td><td>T4 components</td><td>T5 complex products</td><td>T4 &#8594; T5</td></tr>
-<tr><td>Trade Hub</td><td>Everything</td><td>Everything</td><td>Broker. Buys/sells all tiers.</td></tr>
-<tr><td>Frontier Outpost</td><td>T2-T4 (essentials)</td><td>T1 (rare local ores)</td><td>End consumer + rare source</td></tr>
-<tr><td>Military Base</td><td>T4-T5 (weapons, ships)</td><td>Security contracts</td><td>End consumer</td></tr>
-</table>
-
-<h2>Price Dynamics</h2>
-
-<h3>What Drives Prices</h3>
-<ul>
-<li><strong>Supply:</strong> Current inventory at a station. More stock = lower price.</li>
-<li><strong>Demand:</strong> Consumption rate (what the station uses per tick) plus unfilled buy orders.</li>
-<li><strong>Scarcity cascade:</strong> If a refinery runs out of T1 inputs, it stops producing T2. Downstream factories starve. T3/T4 prices spike.</li>
-<li><strong>Glut:</strong> Too many miners flooding ore into a colony crashes T1 prices at that location.</li>
-<li><strong>Distance premium:</strong> Remote stations pay more because fewer haulers serve them.</li>
-</ul>
-
-<h3>Why the Economy Self-Corrects (and Doesn't)</h3>
-<ul>
-<li><strong>Self-correcting:</strong> High prices attract more haulers. More supply arrives. Prices drop.</li>
-<li><strong>NOT self-correcting:</strong> If a chokepoint is blockaded, no amount of high prices will attract haulers who cannot get through. Scarcity persists until the blockade breaks.</li>
-<li><strong>Player opportunity:</strong> The gap between "self-correcting" and "stuck" is where you make money. You see what NPCs cannot, you take risks they avoid, you find routes they have not discovered.</li>
-</ul>
-
-<h2>Scale Targets</h2>
-
-<div class="card">
-<div class="card-title">Current State (Implemented)</div>
-<ul>
-<li>48 systems (12 core, 23 rim, 13 frontier), 58 stations</li>
-<li>70 NPC ships (50 traders in 5 risk classes, 20 miners in 3 risk classes)</li>
-<li>38 commodities across 5 tiers with full recipe chain</li>
-<li>Recipe-driven production (halt on input shortage)</li>
-<li>Safety-aware pathfinding (risk tolerance per ship class)</li>
-</ul>
-</div>
-
-<div class="card">
-<div class="card-title">Next Phase (Blueprints + Tech Levels)</div>
-<ul>
-<li>Blueprint system (recipes as discoverable/tradeable items)</li>
-<li>Tech levels 1-3 on T3-T5 products (rarer inputs, higher value)</li>
-<li>Weapons and fittings as equippable items (demand sink)</li>
-<li>100+ NPC ships as economy scales</li>
-</ul>
-</div>
-
-<div class="card">
-<div class="card-title">Long-term Vision</div>
-<ul>
-<li>Hundreds of systems</li>
-<li>Thousands of NPC ships</li>
-<li>50+ commodities, full recipe tree</li>
-<li>Tech levels 1-3 + prototypes</li>
-<li>Player-owned infrastructure participating in the chain</li>
-</ul>
-</div>
-
+<h2>Economic Mechanics</h2>
+<div class="note">
+<strong>Pricing:</strong> Supply/demand driven. Stations track pressure over time. Unfilled demand raises buy price. Oversupply lowers sell price. Prices update every 10 ticks.<br><br>
+<strong>Self-Limiting Production:</strong> Stations produce at a rate limited by available inputs. If supply drops, production smoothly slows rather than halting abruptly. As logistics improve, production automatically scales up.<br><br>
+<strong>Trade AI:</strong> NPC traders see all buy/sell opportunities across their entire cluster. They pick the most profitable route and haul goods accordingly. Dynamic pricing ensures resources flow where they're needed.<br><br>
+<strong>Mining:</strong> Mining colonies with asteroid fields passively generate ore. NPC miners also extract from belts and sell at local stations. Higher density fields produce faster.
 </div>
 </body>
 </html>
