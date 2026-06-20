@@ -24,277 +24,219 @@ A browser-based space economy simulation game. Currently single-player with plan
 
 ---
 
-## Current State (Phase 1 COMPLETE + Production Chain Economy + Phase 2 In Progress)
+## Architecture
 
-### Architecture
+### Data Architecture (IMPORTANT)
+- **ALL game data is in SQLite:** `data/game_data.db` (tracked in git, deploys with code)
+- **Python files contain ONLY dataclass definitions** (no hardcoded data)
+- **Runtime state** (inventories, ship positions, prices): `data/game.db` (on fly.io volume, NOT in git)
+- **CRUD API** at `/api/data/*` for editing game data
+- **To update game data:** Edit `game_data.db` directly or via CRUD API, then push. No Python changes needed for data.
+
+### Tech Stack
 - **Backend:** Python (Flask), always-on server on fly.io (shared-cpu-2x, 1GB)
 - **Frontend:** Vanilla JS + Three.js (3D star map + 3D system map) + HTML/CSS panels
 - **Economy Engine:** Real-time agent-based tick simulation (1 tick/sec, background thread)
-- **Database:** SQLite on persistent fly.io volume (`/app/data/game.db`), saves every 10 ticks
+- **Databases:**
+  - `data/game_data.db` - Static game data (items, ships, systems, factions). Source of truth. In git.
+  - `data/game.db` - Runtime simulation state. On fly.io volume. Nuked on reset.
 - **Deployment:** fly.io, auto-deploy via GitHub Actions on push to master
 - **Local dev:** `restart_server.ps1` runs Flask with debug=True on port 8000
 
-### What Exists
+---
 
-**Server (`server/`)**
-- `server/main.py` - Flask app, tick loop thread, API endpoints (including `/api/debug` with full production chain data)
-- `server/simulation.py` - Economy engine: recipe-driven production, NPC AI with safety-aware pathfinding, mining, intra-system travel
-- `server/models.py` - Dataclasses: Commodity (38 types, 5 tiers, recipes), Station (typed), System, SystemObject, NPCShip (risk_tolerance)
-- `server/universe.py` - 48-system universe seed data (3 clusters, connections, asteroid fields, intra-system objects)
-- `server/persistence.py` - SQLite save/load state, nuke/reset
+## Database Schema (game_data.db)
 
-**Frontend**
-- `game.html` - Main game UI with live 3D star map + inline system view window
-  - 48 star systems with CSS2D labels, billboarded ship sprites
-  - Ships visible on star map during inter-system travel
-  - Inline draggable/resizable system view window (ISM) opened via "View System Map" button
-  - ISM shows: radar-style schematic, orbital lines, planets with moons, gates, stations, belts
-  - ISM ships: deterministic linear interpolation, visible only when traveling or mining (not docked)
-  - Left panel: tabbed (Systems list / Ships list)
-  - Right panel: tabbed (System Info / Market)
-  - Bottom panel: ship schematic, activity feed, routes
-
-- `debug.html` - Comprehensive debug dashboard at /debug
-  - **Overview tab:** Sim stats, production health (active vs halted lines), economy inventory, recent events
-  - **Stations tab:** All production lines with input levels, halt status, output stock (sticky headers)
-  - **Ships tab:** Filterable ship list with drill-down (cargo, route, risk tolerance, capacity). Filters persist across refreshes.
-  - **Market tab:** Tabular format with commodity and system filter dropdowns (Commodity/Tier/System/Station/Price/Stock)
-  - **Systems tab:** Select any system to see station production, inventory, ships, asteroid fields
-  - All filter/dropdown state persists across 2-second auto-refresh
-  - Nuke button for simulation reset
-
-- `system_view.html` - Standalone system view (accessible via /system_view?id=<id>&debug=1)
-- `design.html` - Game design document
-- `universe.html` - Universe design document
-- `economy.html` - Economy design document (production chain tiers, commodities, recipes)
-- `docs.html` - Documentation hub linking to all design docs
-
-**Infrastructure**
-- `Dockerfile` - Python 3.12-slim, gunicorn
-- `fly.toml` - spaceeconomy app, iad, shared-cpu-2x/1GB, always-on, se_data volume
-- `.github/workflows/deploy.yml` - Auto-deploy on push to master
-- `restart_server.ps1` - Local dev server launcher (port 8000)
-
-### Production Chain Economy (IMPLEMENTED)
-
-**5-tier commodity chain (38 production + 6 trade goods = 44 commodities):**
-- **T1 Raw (10):** Iron Ore, Copper Ore, Titanium Ore, Platinum, Crystals, Ice, Helium-3, Organics, Rare Earths, Uranium
-- **T2 Refined (8):** Refined Iron, Refined Copper, Refined Titanium, Water, Hydrogen Fuel, Processed Food, Chemicals, Enriched Uranium
-- **T3 Industrial (8):** Steel Alloy, Titanium Alloy, Polymers, Composites, Superconductors, Pharmaceuticals, Ceramics, Glass
-- **T4 Components (8):** Electronics, Engine Parts, Hull Plating, Reactor Cores, Life Support Units, Weapon Systems, Mining Lasers, Navigation Arrays
-- **T5 Complex (6):** Ship Modules, Station Modules, Combat Drones, Mining Rigs, Medical Bays, Jump Drives
-- **Trade Goods (6):** Luxury Goods, Consumer Electronics, Gourmet Food, Exotic Textiles, Entertainment Media, Fine Spirits
-
-**Trade goods** are tier-0 (no recipe, no production chain). They exist purely to create end-use demand at stations. All station types consume various trade goods, creating constant demand-driven trade routes independent of the production chain.
-
-**Recipe-driven production:**
-- Each non-T1 commodity has a recipe (dict of input commodity: quantity needed)
-- Stations consume inputs per tick and produce outputs
-- If any input is missing, production halts (zero output that tick)
-- Scarcity cascades up the chain naturally
-
-**Station types:**
-- Mining Colony: buys T1 from miners, sells to haulers
-- Refinery: T1 -> T2
-- Industrial Hub: T2 -> T3
-- Component Factory: T3 -> T4
-- Shipyard: T4 -> T5
-- Trade Hub: produces nothing, buys/sells everything
-- Frontier Outpost: consumes essentials (food, fuel, meds, water)
-- Military Base: consumes weapons, combat drones, ship modules
-
-### 48-System Universe
-
-**3 Clusters:**
-- **Core (High-Sec, 12 systems):** Cygnus, Kepler, Tau Ceti, Procyon, Sirius, Deneb, Polaris, Fomalhaut, Sol, Haven, Vega Prime, Meridian
-- **Rim (Low/Med-Sec, 23 systems):** Arcturus, Vega, Altair, Barnard's Star, Antares, Capella, Betelgeuse, Castor, Achernar, Aldebaran, Regulus, Mira, Draconis, Lyra, Novus, Serpentis, Haven's Edge, Helios, Osiris, Corvus, Fornax, Hydra, Aquila
-- **Frontier (Null-Sec, 13 systems):** Wolf 359, Rigel, Pollux, Canopus, Spica, The Void, Terminus, Obsidian, Erebus, Phantom, The Abyss, Pyxis, Nyx
-
-**Chokepoints:** Procyon (core-to-rim), Castor (rim-to-frontier), Spica (frontier nexus)
-
-**Ore distribution rules:**
-- Common ores (Iron, Copper, Ice, Organics): Available in core systems, can coexist with local refineries
-- Moderate ores (Titanium, Helium-3): Rim systems, minimum 1 jump from processors
-- Rare ores (Platinum, Crystals, Rare Earths, Uranium): Frontier/null-sec only, minimum 2 jumps from any buyer, high danger
-
-**58 stations, 34 asteroid fields across 48 systems.**
-
-### NPC Fleet (70 ships)
-
-**50 Traders (5 classes, risk-based):**
-- Pinto Runner (120 cargo, risk 0.2) - safe routes only
-- Mule Freighter (180 cargo, risk 0.3) - mostly safe
-- Bison Mk.III (250 cargo, risk 0.5) - moderate risk
-- Ox Hauler (350 cargo, risk 0.7) - takes some risk
-- Clydesdale (500 cargo, risk 0.9) - goes almost anywhere
-
-**20 Miners (3 classes, risk-based):**
-- Prospect Skiff (80 cargo, risk 0.2) - safe belts only
-- Strip Miner (150 cargo, risk 0.5) - moderate danger
-- Deep Core Borer (250 cargo, risk 0.8) - goes to dangerous fields
-
-**Safety-aware pathfinding:** BFS skips systems exceeding the ship's risk tolerance. Ships will route around dangerous systems to find safe paths. If stuck, they pick the least dangerous exit.
-
-### Two-Layer Navigation Model
-- **Inter-system:** Ships travel between star systems (visible on 3D star map, ~50s transit at speed 1.0)
-- **Intra-system:** Ships travel between objects within a system (visible in ISM, ~35-40s transit at 0.2 AU/tick)
-- **Jump gates:** Located at outer ring of each system, one per connection. Ship must intra-travel to gate, then inter-system travel begins.
-- **Flow:** idle at station -> load -> intra-travel to gate -> inter-system travel -> arrive at gate -> intra-travel to destination station -> unload
-
-### Ship Movement (Deterministic)
-- **All ships:** speed=1.0 (inter-system LY/tick), intra_speed=0.2 (intra-system AU/tick)
-- **Server:** progress += speed_constant / distance per tick
-- **Client:** Same math per frame (speed / dist / 60), pure linear interpolation along known path
-- **API sends:** intra_from (polar), intra_to (polar), intra_dist, intra_speed for traveling ships
-
-### API Endpoints
-- `GET /` - Game UI
-- `GET /design` - Design document
-- `GET /universe` - Universe design document
-- `GET /economy` - Economy design document
-- `GET /docs` - Documentation hub
-- `GET /system_view` - Standalone system view
-- `GET /debug` - Debug dashboard (comprehensive monitoring)
-- `GET /health` - Health check (tick count)
-- `GET /api/state` - Full universe state (systems, stations, prices, inventories, objects)
-- `GET /api/ships` - All NPC ship positions, states, intra-system path data
-- `GET /api/system/<id>` - Detailed system view (objects + ships with intra coords)
-- `GET /api/debug` - Full debug data (systems with production health, ships with routes/risk, prices)
-- `POST /api/nuke` - Reset simulation to initial state
+| Table | Records | Description |
+|-------|---------|-------------|
+| commodities | 152 | All items (ores, materials, weapons, ammo, etc) |
+| recipes | ~300 | Production chain inputs per commodity |
+| systems | 48 | Star systems with positions, security, faction |
+| system_connections | ~140 | Jump gate connections |
+| stations | 58 | Stations with types and production rates |
+| station_produces | ~80 | What each station can manufacture |
+| asteroid_fields | 34 | Mining fields with density |
+| field_yields | ~100 | What ores each field produces |
+| system_objects | 620+ | Stars, planets, moons, gates, belts |
+| ship_types | 14 | Civilian ships (6 haulers, 5 miners, 3 military) |
+| military_ships | 42 | Warships across 6 factions |
+| factions | 6 | Major factions |
+| corporations | 24 | Sub-factions (4 per faction) |
+| fleet_targets | 42 | How many ships each faction maintains |
+| station_consumption | 38 | End-use demand per station type |
 
 ---
 
-## Known Issues
+## Server Files
 
-- **Frontend not updated for 48 systems:** The game.html star map still references the old 24-system layout. The 3D positions exist in the data but the frontend may need adjustment for the larger universe.
-- **Initial starvation period:** After a nuke, higher-tier stations (T3+) will be halted for a while as the supply chain bootstraps from raw ores upward. This is expected behavior.
-- **Trade clustering may still occur** in core systems since that's where most refineries and factories are. Monitoring needed.
+| File | Purpose |
+|------|---------|
+| `server/main.py` | Flask app, tick loop, ALL API endpoints, CRUD |
+| `server/simulation.py` | Economy engine, NPC AI, production, trading |
+| `server/warfare.py` | Faction battles, ship destruction/rebuilding |
+| `server/persistence.py` | Save/load runtime state (game.db) |
+| `server/game_data_db.py` | Schema definition for game_data.db |
+| `server/data_access.py` | Load functions (commodities, universe, ships, factions from DB) |
+| `server/migrate_to_db.py` | Migration script (seeds DB from legacy Python data) |
+| `server/update_data.py` | Live update script (pause, migrate, resume) |
+| `server/models.py` | Dataclass definitions ONLY (no data) |
+| `server/ship_types.py` | ShipType dataclass ONLY |
+| `server/military.py` | MilitaryShipClass dataclass ONLY |
+| `server/factions.py` | Faction/Corporation dataclass ONLY |
+| `server/ship_geometry.py` | 3D ship model geometry data for renderer |
 
 ---
 
-## Build Phases
+## Frontend Pages
 
-### Phase 1: Living Economy - COMPLETE
-- System/station data model
-- Commodity inventories with production/consumption per tick
-- Price engine (supply/demand/elasticity)
-- NPC hauler agents with trade AI
-- NPC miners working asteroid fields
-- BFS pathfinding for multi-hop routes
-- SQLite persistence
-- Frontend connected to live API
-- Intra-system navigation (gates, objects, two-layer travel)
-- Deterministic client-side ship movement
-- **5-tier production chain (38 commodities, recipes, halt-on-shortage)**
-- **48-system universe (3 clusters, ore distribution rules)**
-- **Safety-aware NPC pathfinding (risk tolerance per ship class)**
-- **Comprehensive debug dashboard**
+| URL | File | Purpose |
+|-----|------|---------|
+| `/` | `game.html` | Main game (3D star map, system view, market, activity feed) |
+| `/debug` | `debug.html` | Dashboard (simulation stats, stations, ships, market, systems) |
+| `/docs` | `docs.html` | Documentation hub |
+| `/design` | `design.html` | Game design document |
+| `/universe` | `universe.html` | Universe design |
+| `/economy` | `economy.html` | Economy overview hub |
+| `/resources` | `resources.html` | T1 harvesting guide |
+| `/materials` | `materials.html` | T2-T3 refining/manufacturing |
+| `/products` | `products.html` | T4-T5 components/products |
+| `/fitting` | `fitting.html` | Ship fitting design (slots, CPU/PG) |
+| `/factions` | `factions_doc.html` | Faction lore and corps |
+| `/items` | `items.html` | Items database (table per category, stats) |
+| `/ships_db` | `ships_db.html` | Ships database (civilian + military, build costs) |
+| `/chain` | `chain.html` | Production chain calculator (tree breakdown) |
+| `/ships` | `ships.html` | Ship 3D model viewer |
 
-### Phase 2: Player Can Trade (IN PROGRESS)
+---
 
-**Completed this session:**
-1. ~~Convert system_view from Canvas 2D to Three.js 3D~~
-2. ~~Star gradient sprites in system map~~
-3. ~~Render 3D ship models in system view and star map~~
-4. ~~Fix economy starvation (bootstrap seeding, sector-wide trade AI, dynamic pricing)~~
-5. ~~Order book UI in game market tab~~
-6. ~~Performance: throttled render loops, optimized API polling~~
-7. ~~All 48 systems rendered dynamically from API data~~
-8. ~~WASDQE navigation, selection reticle, label fading, ship LOD culling~~
+## Economy System
 
-**Economy overhaul implemented:**
-- 124 commodities (29 T1 ores, 20 T2 refined, 18 T3 manufactured, 22 T4 components, 29 T5 products, 6 trade goods)
-- Volume-based cargo (common ores 1-2m3, rare 4-6m3, exotic 8-20m3)
-- Logical recipe chains (steel=iron+carbon, electronics=silicon+copper+gold)
-- Bootstrap seeding: 1000 ticks of inputs, scaled by rarity
-- Mining colonies passively generate ore (asteroid fields)
-- Trade hubs/outposts passively generate trade goods
-- Sector-wide trade AI: traders see all opportunities in their cluster
-- Dynamic pricing pressure: unfilled demand raises price, oversupply lowers it
-- Self-limiting production: effective_rate smoothly adjusts to input availability
-- Prices recalculate every 10 ticks (not every tick)
-- Production rates: refineries 0.5-1.0, industrial 0.3-0.5, component 0.2-0.4, shipyard 0.1-0.2
+### 152 Commodities (in game_data.db)
+- 29 T1 raw ores (common 0.1m3, exotic 2.0m3)
+- 20 T2 refined materials
+- 18 T3 manufactured materials
+- 22 T4 components
+- 29 T5 products (weapons S/M/L, shields, engines, drones, mining)
+- 13 T5 ammunition (projectile, missiles, energy charges)
+- 6 T0 trade goods
 
-**Factions:**
-- 6 factions: Terran Federation, Nexus Collective, Merchants Guild, Frontier Alliance, Iron Compact, The Corsairs
-- 24 corporations across factions (4 per faction)
-- All 48 systems assigned to a faction
-- Ally/enemy relationships defined
-- NPC ships assigned to faction corps
+### Production Chain
+- Mining colonies passively generate ore (8.0*density/tick, cap 50K)
+- Refineries: T1 -> T2 (rate 0.3)
+- Industrial Hubs: T2 -> T3 (rate 0.15)
+- Component Factories: T3 -> T4 (rate 0.08)
+- Shipyards: T4 -> T5 (rate 0.04)
+- Self-limiting production: throttles based on ticks of supply remaining
 
-**API optimization:**
-- `/api/positions` (fetched once) - all system coords, connections
-- `/api/market/<system_id>` (every 5s, selected system only)
-- `/api/ships` (every 3s)
-- `/api/events` (every 8s, lightweight)
-- Removed polling of massive `/api/state` endpoint
+### Logistics
+- **Contract haulers:** 50 haulers assigned to specific stations, fetch needed inputs
+- **Miners:** 20 miners at asteroid fields
+- **Sector-wide visibility:** Haulers find nearest source across their cluster
+- **Travel:** Inter-system 3-15s, intra-system 30-90s, ship-class align times (2-15s)
 
-**Immediate next tasks:**
-1. Observe economy at 120x speed, tune production rates vs logistics throughput
-2. Order queue system (X4-style: stations post orders, traders claim them)
-3. Player can buy/sell commodities at current station
-4. Player can set destination, travel takes real time
+### Pricing
+- Supply/demand driven with dynamic pressure
+- Unfilled demand raises buy price over time
+- Oversupply lowers sell price
+- Prices recalculate every 10 ticks
 
-### Phase 3: Blueprints and Fittings
-- Blueprint system (recipes as discoverable/tradeable items)
-- Weapons and ship fittings as equippable items (not just trade commodities)
-- Ship loadout system (hardpoints, slots)
-- Fittings affect ship stats (speed, cargo, mining yield, survivability)
-- Damage/wear creates ongoing demand (replace broken modules)
+### Warfare
+- 3 active conflicts (Iron Compact vs Frontier Alliance, Corsairs vs others)
+- Skirmishes every 20 ticks (40% chance), 1-3 ships lost per side
+- Shipyards rebuild lost ships (consuming T5 products)
+- Creates demand sink for the economy
 
-### Phase 4: Tech Levels
-- Tech 1/2/3 quality multipliers on T3-T5 products
-- Higher tech requires rarer inputs (Platinum, Crystals, Rare Earths)
-- Prototype tier (unique anomaly materials, one-offs)
+---
 
-### Phase 5: Information and Risk
-- Price data staleness (only see prices from last visit)
-- Security zones with piracy risk (random cargo loss in low-sec)
-- Basic events (supply disruptions, price spikes, faction skirmishes)
-- Contracts and reputation
+## Factions (6)
 
-### Phase 6: Factions and Depth
-- Faction territories, diplomacy, warfare
-- Shifting borders that reshape trade routes
-- Smuggling mechanics in embargoed systems
-- Fleet ownership and infrastructure (late-game)
-- Multiplayer (shared persistent world)
+| Faction | Short | Territory | Philosophy |
+|---------|-------|-----------|------------|
+| Terran Federation | TFD | Core | Order, navy, regulation |
+| Nexus Collective | NXC | Core | Science, innovation |
+| Merchants Guild | MGD | Rim | Free trade, profit |
+| Frontier Alliance | FRA | Rim | Freedom, self-governance |
+| Iron Compact | IRC | Frontier | Military-industrial, expansion |
+| The Corsairs | CRS | Frontier | Piracy, smuggling |
+
+Each faction has 4 corporations and 7 military ship classes (fighter through dreadnought). Corsairs have 6 (no dreadnought).
+
+---
+
+## Military Ships (42 total)
+
+7 hull classes per major faction: Fighter, Frigate, Destroyer, Cruiser, Battlecruiser, Battleship, Dreadnought. Each with unique weapons loadout, stats, and build recipe.
+
+---
+
+## API Endpoints
+
+### Game
+- `GET /api/positions` - System positions/connections (fetched once)
+- `GET /api/ships` - All NPC ship states (polled every 3s)
+- `GET /api/market/<system_id>` - Market data for one system (polled every 5s)
+- `GET /api/events` - Recent events (polled every 8s)
+- `GET /api/system/<id>` - Intra-system detail (system view)
+- `GET /api/ship_model/<class_id>` - 3D geometry for ship renderer
+- `POST /api/nuke` - Reset simulation state
+- `GET/POST /api/speed` - Get/set simulation speed multiplier
+
+### CRUD (game data editing)
+- `GET /api/data/commodities` - All items
+- `GET/PUT /api/data/commodities/<id>` - Single item
+- `GET /api/data/systems` - All systems
+- `GET /api/data/military_ships` - All warships
+- `GET /api/data/factions` - All factions
+- `POST /api/reload_data` - Hot-reload without restart
+
+### Debug
+- `GET /api/state` - Full universe state (heavy, avoid polling)
+- `GET /api/debug` - Debug summary with production health
 
 ---
 
 ## Key Design Decisions
 
-- **Real-time, always-on.** Economy ticks 24/7, world persists whether player is online or not.
-- **Mining as safety net.** You can always mine. Slow money but guaranteed. No going broke.
-- **Progression as access, not power.** You gain access to more of the system, not raw strength.
-- **NOT a combat game.** Conflict is an economic hazard, not a gameplay mechanic.
-- **Two-layer navigation:** Inter-system (star map) + intra-system (system map). Space is big.
-- **Universe generated once, persists forever.** Not procedurally regenerated. Grows and evolves slowly on its own. MMO-first design.
-- **No tier restrictions on cargo.** Any ship can haul anything (volume permitting). Ship behavior is class-driven (risk tolerance), not commodity-restricted.
-- **Production halts on shortage.** No magic inputs. Every unit of steel requires iron ore that was mined and refined. Scarcity cascades naturally.
+- **All data in SQLite.** No hardcoded Python dicts. DB is source of truth.
+- **Real-time, always-on.** Economy ticks 24/7.
+- **Volume-based cargo.** Common ores 0.1m3 (bulk hauling easy), exotics 2.0m3 (scarce).
+- **Contract haulers.** Assigned to stations, not free-roaming arbitrage.
+- **Self-limiting production.** Stations throttle based on input availability.
+- **Warfare drives demand.** Ships get destroyed, need rebuilding, pulls entire chain.
+- **Recipes are logical.** Steel = iron + carbon. Electronics = silicon + copper + gold.
+- **Security tiers matter.** Common ores in high-sec, exotics only in null-sec.
 
 ---
 
-## Future Notes (Captured for Later)
+## Known Issues / Next Steps
 
-- **Blueprint system:** Recipes as discoverable/tradeable items. Player-owned production installs blueprints at facilities. Rare/prototype blueprints for high-value goods.
-- **Weapons and ship fittings:** T4/T5 products become equippable items, not just trade commodities. Ship loadout system with hardpoints. Fittings affect stats. Damage/wear creates demand sink.
-- **Tech levels:** Quality multiplier on T3-T5. Higher tech = rarer inputs + more value. Deferred until base chain is stable.
+### Economy
+- Production still halts at higher tiers (T3/T4) due to rare ore logistics gap
+- Need to fix: basic items (Shield Gen Mk.I) currently require null-sec exotics (Gold Ore) in recipe chain
+- Solution: redesign T3 recipes so Mk.I items use only high/med-sec inputs, Mk.II/III use rarer stuff
+- Mining colony generation (8/tick) may need tuning vs consumption rates
+- Warfare not yet consuming ammo properly (ships destroyed but no ammo deducted)
+
+### Player Integration (Next Phase)
+- Player can buy/sell at stations
+- Player travel and ship control
+- Ship fitting UI
+- Player mining
+- Fuel consumption
+
+### Future
+- Factions/corporations as joinable entities (Mount&Blade style)
+- Player-created factions
+- Territory control
+- Contract system (X4-style station orders)
+- Tech levels on items (Mk.I/II/III progression)
 
 ---
 
-## Tech Notes
+## Build/Deploy
 
-- Git credentials stored via `credential.helper=store` in `~/.git-credentials`
-- fly.io deploy token stored as GitHub Actions secret `FLY_API_TOKEN`
-- SQLite DB on fly.io volume `se_data` mounted at `/app/data`
-- `DATA_DIR` env var controls DB location (defaults to local `data/` dir)
-- Schema changes require a nuke (saved state won't have new fields)
-- Ship sprites use CanvasTexture on THREE.Sprite for billboarding
-- System view uses Canvas 2D with polar-to-cartesian coordinate mapping
-
----
-
-## Contact
-
-- Owner: Devlyn Napoli (devlynnapoli@protonmail.com)
+- Push to master triggers GitHub Actions deploy to fly.io
+- `data/game_data.db` deploys with code (in git)
+- `data/game.db` persists on fly.io volume (runtime state)
+- No manual fly.io steps needed for normal deploys
+- Nuke via debug page resets runtime state only (game_data.db untouched)

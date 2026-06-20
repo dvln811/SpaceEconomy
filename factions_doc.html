@@ -9,14 +9,12 @@
 body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:13px;}
 h1{font-family:'Orbitron',sans-serif;color:#4fc3f7;font-size:20px;letter-spacing:3px;margin-bottom:24px}
 h2{font-family:'Orbitron',sans-serif;font-size:14px;letter-spacing:2px;margin:32px 0 16px;border-bottom:1px solid #1a2844;padding-bottom:8px}
-h3{font-size:12px;margin:16px 0 8px}
 p{color:#8aa0b8;line-height:1.6;margin-bottom:12px}
 table{width:100%;border-collapse:collapse;margin:12px 0 24px}
 th{font-family:'Orbitron',sans-serif;font-size:9px;color:#8aa0b8;letter-spacing:1px;text-transform:uppercase;text-align:left;padding:8px;border-bottom:1px solid #1a2844}
 td{padding:6px 8px;border-bottom:1px solid #0f1a28;font-size:11px}
 a{color:#4fc3f7;text-decoration:none}
 a:hover{text-decoration:underline}
-.nav{margin-bottom:24px;font-size:11px}
 .note{background:#0a1020;border:1px solid #1a2844;border-radius:4px;padding:12px;margin:12px 0;font-size:11px;color:#8aa0b8}
 .faction{border:1px solid #1a2844;border-radius:6px;padding:20px;margin:16px 0;background:#0a0e18}
 .faction-name{font-family:'Orbitron',sans-serif;font-size:16px;letter-spacing:2px;margin-bottom:8px}
@@ -25,13 +23,13 @@ a:hover{text-decoration:underline}
 .corp-name{color:#e0e8f0;font-weight:500}
 .corp-focus{color:#8aa0b8;font-size:10px;text-transform:uppercase;letter-spacing:1px}
 .corp-desc{color:#8aa0b8;font-size:10px;margin-top:4px}
-.relations{display:flex;gap:16px;margin-top:8px;font-size:10px}
+.relations{display:flex;gap:16px;margin-top:8px;font-size:10px;flex-wrap:wrap}
 .ally{color:#66bb6a}
 .enemy{color:#ef5350}
-
 #docnav .dnl{font-size:10px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:'Orbitron',sans-serif;transition:all .15s}
 #docnav .dnl:hover{color:#4fc3f7;border-color:#4fc3f7;background:#0d1a2f}
 #docnav .dnl.active{color:#4fc3f7;border-color:#4fc3f7}
+.loading{color:#8aa0b8;padding:24px}
 </style>
 </head>
 <body>
@@ -39,99 +37,53 @@ a:hover{text-decoration:underline}
 <a href="/" class="dnl">Game</a>
 <a href="/docs" class="dnl">Hub</a>
 <span style="color:#1a2844">|</span>
-<a href="/design" class="dnl" id="dn-design">Design</a>
-<a href="/universe" class="dnl" id="dn-universe">Universe</a>
-<a href="/factions" class="dnl" id="dn-factions" class="dnl active">Factions</a>
-<a href="/ships" class="dnl" id="dn-ships">Ships</a>
-<a href="/fitting" class="dnl" id="dn-fitting">Fitting</a>
+<a href="/design" class="dnl">Design</a>
+<a href="/universe" class="dnl">Universe</a>
+<a href="/factions" class="dnl active">Factions</a>
+<a href="/ships" class="dnl">Ships</a>
+<a href="/fitting" class="dnl">Fitting</a>
 <span style="color:#1a2844">|</span>
-<a href="/economy" class="dnl" id="dn-economy">Economy</a>
-<a href="/resources" class="dnl" id="dn-resources">Resources</a>
-<a href="/materials" class="dnl" id="dn-materials">Materials</a>
-<a href="/products" class="dnl" id="dn-products">Products</a>
-<a href="/items" class="dnl" id="dn-items">Items DB</a><a href="/chain" class="dnl">Chain Calc</a>
+<a href="/economy" class="dnl">Economy</a>
+<a href="/resources" class="dnl">Resources</a>
+<a href="/materials" class="dnl">Materials</a>
+<a href="/products" class="dnl">Products</a>
+<a href="/items" class="dnl">Items DB</a><a href="/chain" class="dnl">Chain Calc</a>
 </div>
-<div style="max-width:1200px;margin:0 auto;padding:0 40px">
+<div style="max-width:1200px;margin:0 auto;padding:0 40px" id="main">
 <h1>Factions &amp; Corporations</h1>
 <p>The galaxy is divided among six major factions, each controlling sectors of space and pursuing their own agendas. Within each faction, corporations handle specific operations. NPC ships belong to these corps, and in the future, players will be able to join or create factions.</p>
-
 <div class="note">
 <strong>Future: Player Factions</strong><br>
 Players will eventually be able to create their own factions, recruit NPC corps, and compete for territory. Think Mount &amp; Blade II: NPCs with their own goals can be convinced to join your cause through reputation, money, or aligned interests.
 </div>
-
-<div class="faction">
-  <div class="faction-name" style="color:#4fc3f7">Terran Federation (TFD)</div>
-  <div class="faction-phil">"Order through unity. Central governance, regulated markets, strong navy."</div>
-  <p>The largest and most established faction. Controls core space with an iron fist wrapped in bureaucracy. Safe, stable, but restrictive. High taxes, strict trade regulations, but excellent infrastructure and protection.</p>
-  <div class="relations"><span>Territory: <strong>Core</strong></span><span class="ally">Allies: Nexus Collective</span><span class="enemy">Enemies: Frontier Alliance, Corsairs</span></div>
-  <div class="corp"><span class="corp-name">Federal Navy</span> <span class="corp-focus">Military</span><div class="corp-desc">Armed forces of the Federation. Patrols core space, enforces law, operates gate checkpoints.</div></div>
-  <div class="corp"><span class="corp-name">StellarCorp Industries</span> <span class="corp-focus">Manufacturing</span><div class="corp-desc">Largest manufacturer. Hull plating, engines, station modules. Government contracts.</div></div>
-  <div class="corp"><span class="corp-name">Aegis Defense Systems</span> <span class="corp-focus">Military</span><div class="corp-desc">Premier weapons and shield manufacturer. Military-only contracts, restricted sales.</div></div>
-  <div class="corp"><span class="corp-name">Federal Transit Authority</span> <span class="corp-focus">Trade</span><div class="corp-desc">Operates jump gates, regulates commerce, collects transit fees.</div></div>
+<div id="factions-list" class="loading">Loading factions...</div>
 </div>
+<script>
+async function init() {
+  const r = await fetch('/api/data/factions');
+  const factions = await r.json();
+  const el = document.getElementById('factions-list');
+  const nameMap = {};
+  for (const [fid, f] of Object.entries(factions)) nameMap[fid] = f.name;
 
-<div class="faction">
-  <div class="faction-name" style="color:#ab47bc">Nexus Collective (NXC)</div>
-  <div class="faction-phil">"Knowledge is power. Research, innovation, technological supremacy."</div>
-  <p>A technocracy driven by scientific advancement. Controls key research installations and produces the most advanced technology. Secretive, elitist, but their tech is the best in the sector.</p>
-  <div class="relations"><span>Territory: <strong>Core</strong></span><span class="ally">Allies: Terran Federation</span><span class="enemy">Enemies: Corsairs</span></div>
-  <div class="corp"><span class="corp-name">Nexus Research Labs</span> <span class="corp-focus">Research</span><div class="corp-desc">Cutting-edge R&D. Quantum filaments, exotic materials, prototype tech.</div></div>
-  <div class="corp"><span class="corp-name">Helix Biomedical</span> <span class="corp-focus">Research</span><div class="corp-desc">Pharmaceuticals, nanite paste, life support, cloning technology.</div></div>
-  <div class="corp"><span class="corp-name">QuantumCore Ltd</span> <span class="corp-focus">Manufacturing</span><div class="corp-desc">Superconductors, processors, AI cores, drone brains.</div></div>
-  <div class="corp"><span class="corp-name">Deep Space Cartography</span> <span class="corp-focus">Research</span><div class="corp-desc">System surveys, anomaly research, navigation data, exploration.</div></div>
-</div>
-
-<div class="faction">
-  <div class="faction-name" style="color:#ffd54f">Merchants Guild (MGD)</div>
-  <div class="faction-phil">"Profit is progress. Free markets, minimal regulation, trade above all."</div>
-  <p>A loose confederation of trading houses and corporations. They don't conquer territory, they buy it. Controls the rim's trade hubs and sets commodity prices across the sector.</p>
-  <div class="relations"><span>Territory: <strong>Rim</strong></span><span class="ally">Allies: Frontier Alliance</span><span class="enemy">Enemies: Terran Federation</span></div>
-  <div class="corp"><span class="corp-name">Galactic Exchange</span> <span class="corp-focus">Trade</span><div class="corp-desc">Operates the largest commodity markets. Sets baseline prices, market data.</div></div>
-  <div class="corp"><span class="corp-name">Voidway Logistics</span> <span class="corp-focus">Trade</span><div class="corp-desc">Bulk hauling, supply chain management, courier services across the sector.</div></div>
-  <div class="corp"><span class="corp-name">Aurelia Banking Consortium</span> <span class="corp-focus">Trade</span><div class="corp-desc">Financial services, insurance, contracts, escrow, loans.</div></div>
-  <div class="corp"><span class="corp-name">Smelter's Union</span> <span class="corp-focus">Mining</span><div class="corp-desc">Refinery operations across rim space. Bulk ore processing, fuel production.</div></div>
-</div>
-
-<div class="faction">
-  <div class="faction-name" style="color:#66bb6a">Frontier Alliance (FRA)</div>
-  <div class="faction-phil">"Freedom above all. Self-governance, personal liberty, no central authority."</div>
-  <p>A coalition of independent colonies, miners, and settlers who reject Federation control. Decentralized, scrappy, resourceful. They help each other but answer to no one.</p>
-  <div class="relations"><span>Territory: <strong>Rim</strong></span><span class="ally">Allies: Merchants Guild</span><span class="enemy">Enemies: Terran Federation</span></div>
-  <div class="corp"><span class="corp-name">Rockbreaker Collective</span> <span class="corp-focus">Mining</span><div class="corp-desc">Independent mining cooperatives. Deep core specialists, rare ore extraction.</div></div>
-  <div class="corp"><span class="corp-name">Frontier Militia</span> <span class="corp-focus">Military</span><div class="corp-desc">Volunteer defense force. Anti-pirate patrols, colony protection.</div></div>
-  <div class="corp"><span class="corp-name">Wraith Salvage</span> <span class="corp-focus">Mining</span><div class="corp-desc">Wreck recovery, decommissioning, scrap recycling, battlefield cleanup.</div></div>
-  <div class="corp"><span class="corp-name">Terraform Pioneers</span> <span class="corp-focus">Trade</span><div class="corp-desc">Colony establishment, bio-dome farming, frontier supply runs.</div></div>
-</div>
-
-<div class="faction">
-  <div class="faction-name" style="color:#ff8a65">Iron Compact (IRC)</div>
-  <div class="faction-phil">"Strength through industry. Military-industrial complex, expansion, conquest."</div>
-  <p>An authoritarian military state built on heavy industry. Expansionist, aggressive, well-organized. They build warships and use them. Currently consolidating frontier territory.</p>
-  <div class="relations"><span>Territory: <strong>Frontier</strong></span><span class="ally">Allies: None</span><span class="enemy">Enemies: Nexus Collective, Frontier Alliance</span></div>
-  <div class="corp"><span class="corp-name">Crucible Forge Works</span> <span class="corp-focus">Manufacturing</span><div class="corp-desc">Heavy weapons, capital ship components, orbital weapon platforms.</div></div>
-  <div class="corp"><span class="corp-name">Compact Armada</span> <span class="corp-focus">Military</span><div class="corp-desc">The war machine. Battlecruisers, carriers, conquest fleets.</div></div>
-  <div class="corp"><span class="corp-name">Deepvein Extraction</span> <span class="corp-focus">Mining</span><div class="corp-desc">Strip mining operations. Aggressive, no-holds-barred resource acquisition.</div></div>
-  <div class="corp"><span class="corp-name">Shadow Bureau</span> <span class="corp-focus">Military</span><div class="corp-desc">Intelligence, espionage, sabotage, black operations.</div></div>
-</div>
-
-<div class="faction">
-  <div class="faction-name" style="color:#ef5350">The Corsairs (CRS)</div>
-  <div class="faction-phil">"Take what you can. Piracy, smuggling, black markets, no rules."</div>
-  <p>Not a faction in the traditional sense. A loose network of pirates, smugglers, and criminals operating in lawless space. They prey on traders, fence stolen goods, and sell illegal modifications.</p>
-  <div class="relations"><span>Territory: <strong>Frontier (Null-sec)</strong></span><span class="ally">Allies: None</span><span class="enemy">Enemies: Terran Federation, Nexus Collective, Merchants Guild</span></div>
-  <div class="corp"><span class="corp-name">Blood Fangs</span> <span class="corp-focus">Military</span><div class="corp-desc">Pirate fleet. Ambushes, gate camps, hostage ransoms, territory raids.</div></div>
-  <div class="corp"><span class="corp-name">Black Bazaar</span> <span class="corp-focus">Trade</span><div class="corp-desc">Contraband markets, stolen goods fencing, illegal modifications.</div></div>
-  <div class="corp"><span class="corp-name">Shadow Runners</span> <span class="corp-focus">Trade</span><div class="corp-desc">Smuggling networks. Moves banned goods through blockades and checkpoints.</div></div>
-  <div class="corp"><span class="corp-name">Scrapyard Genius</span> <span class="corp-focus">Manufacturing</span><div class="corp-desc">Jury-rigged weapons, illegal mods, combat boosters, hacked drones.</div></div>
-</div>
-
-<h2>Territory Control</h2>
-<table>
-<tr><th>Cluster</th><th>Security</th><th>Primary Faction</th><th>Systems</th></tr>
-<tr><td>Core</td><td style="color:#66bb6a">High</td><td>Terran Federation / Nexus Collective</td><td>12 systems</td></tr>
-<tr><td>Rim</td><td style="color:#ffd54f">Medium-Low</td><td>Merchants Guild / Frontier Alliance</td><td>23 systems</td></tr>
-<tr><td>Frontier</td><td style="color:#ef5350">Low-None</td><td>Iron Compact / Corsairs</td><td>13 systems</td></tr>
-</table>
+  let html = '';
+  for (const [fid, f] of Object.entries(factions)) {
+    const allies = (f.allies || []).map(a => nameMap[a] || a).join(', ') || 'None';
+    const enemies = (f.enemies || []).map(e => nameMap[e] || e).join(', ') || 'None';
+    html += `<div class="faction">
+      <div class="faction-name" style="color:${f.color}">${f.name} (${f.short})</div>
+      <div class="faction-phil">"${f.philosophy}"</div>
+      <div class="relations">
+        <span>Territory: <strong>${f.home_cluster}</strong></span>
+        <span class="ally">Allies: ${allies}</span>
+        <span class="enemy">Enemies: ${enemies}</span>
+      </div>
+      ${f.corporations.map(c => `<div class="corp"><span class="corp-name">${c.name}</span> <span class="corp-focus">${c.focus}</span><div class="corp-desc">${c.description}</div></div>`).join('')}
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+init();
+</script>
 </body>
 </html>

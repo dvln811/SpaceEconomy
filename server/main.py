@@ -61,7 +61,7 @@ log.info(f"Economy loop started ({sim_speed['rate']}s/tick, {len(sim.ships)} NPC
 # ── Routes ─────────────────────────────────────────────────────────────────────
 def _build_order_book(st):
     """Generate buy/sell orders for a station."""
-    from server.models import COMMODITIES as COMS, STATION_CONSUMPTION
+    from server.simulation import COMMODITIES as COMS, STATION_CONSUMPTION
     sell_orders = []
     buy_orders = []
     for commodity_id, qty in st.inventory.items():
@@ -294,7 +294,7 @@ def api_ship_model(class_id):
 @app.route("/api/debug")
 def api_debug():
     """Debug summary for the monitor page."""
-    from server.models import COMMODITIES as COMS
+    from server.simulation import COMMODITIES as COMS
     summary = sim.get_state_summary()
     # Per-system station production details
     systems_detail = {}
@@ -529,6 +529,16 @@ def api_data_military():
     rows = conn.execute("SELECT * FROM military_ships ORDER BY faction_id, hull_class").fetchall()
     conn.close()
     return jsonify([{**dict(r), "weapons": json.loads(r["weapons"]), "modules": json.loads(r["modules"]), "build_cost": json.loads(r["build_cost"])} for r in rows])
+
+
+@app.route("/api/data/ship_types", methods=["GET"])
+def api_data_ship_types():
+    """List all civilian ship types from DB."""
+    from server.game_data_db import get_data_db
+    conn = get_data_db()
+    rows = conn.execute("SELECT * FROM ship_types ORDER BY role, tier").fetchall()
+    conn.close()
+    return jsonify([{**dict(r), "hardpoints": json.loads(r["hardpoints"]), "build_cost": json.loads(r["build_cost"])} for r in rows])
 
 
 @app.route("/api/data/factions", methods=["GET"])

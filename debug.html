@@ -358,7 +358,8 @@ document.getElementById('shipStateFilter').addEventListener('change', () => rend
 document.getElementById('shipRoleFilter').addEventListener('change', () => renderShips());
 
 // ── Market (tabular, filterable by commodity and system) ────────────────────
-const TIER_MAP = {}; // populated from data
+const TIER_MAP = {}; // populated from API
+fetch('/api/data/commodities').then(r=>r.json()).then(data=>{data.forEach(c=>{TIER_MAP[c.id]=c.tier;});});
 function renderMarket() {
   const prices = D.prices || {};
   const commodities = Object.keys(prices).sort();
@@ -422,9 +423,7 @@ function renderMarket() {
 }
 
 function getTier(commodity_id) {
-  // Infer tier from price ranges or just return ? if unknown
-  const tiers = {iron_ore:1,copper_ore:1,titanium_ore:1,platinum:1,crystals:1,ice:1,helium3:1,organics:1,rare_earths:1,uranium:1,refined_iron:2,refined_copper:2,refined_titanium:2,water:2,hydrogen_fuel:2,processed_food:2,chemicals:2,enriched_uranium:2,steel_alloy:3,titanium_alloy:3,polymers:3,composites:3,superconductors:3,pharmaceuticals:3,ceramics:3,glass:3,electronics:4,engine_parts:4,hull_plating:4,reactor_cores:4,life_support:4,weapon_systems:4,mining_lasers:4,nav_arrays:4,ship_modules:5,station_modules:5,combat_drones:5,mining_rigs:5,medical_bays:5,jump_drives:5,luxury_goods:0,consumer_electronics:0,gourmet_food:0,exotic_textiles:0,entertainment_media:0,fine_spirits:0};
-  return tiers[commodity_id] || '?';
+  return TIER_MAP[commodity_id] || '?';
 }
 
 document.getElementById('mktCommodityFilter').addEventListener('change', () => renderMarket());

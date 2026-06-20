@@ -57,6 +57,8 @@ def init_data_schema(conn: sqlite3.Connection):
         volume REAL DEFAULT 1.0,
         elasticity REAL DEFAULT 1.0,
         description TEXT DEFAULT '',
+        category TEXT DEFAULT '',
+        subcategory TEXT DEFAULT '',
         stats TEXT DEFAULT '{}'        -- JSON dict of fitting stats
     );
 
