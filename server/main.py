@@ -20,7 +20,7 @@ from server.data_access import is_db_ready
 # Ensure game_data.db exists (migrate from Python sources if needed)
 if not is_db_ready():
     log.info("game_data.db not found, running migration...")
-    from server.migrate_to_db import main as run_migration
+    from server.migrate_to_db import migrate as run_migration
     run_migration()
     log.info("Migration complete")
 

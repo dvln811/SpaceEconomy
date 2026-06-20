@@ -28,7 +28,7 @@ def main():
 
     # Step 2: Re-run migration to update game_data.db
     print("2. Re-migrating game_data.db from Python sources...")
-    from server.migrate_to_db import main as migrate
+    from server.migrate_to_db import migrate
     migrate()
     print("   Migration complete.")
 
