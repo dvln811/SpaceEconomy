@@ -30,7 +30,17 @@ a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
-<div class="nav"><a href="/docs">Docs</a> &gt; <a href="/economy">Economy</a> &gt; Resources</div>
+<div style="position:sticky;top:0;z-index:100;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:8px 24px;gap:12px;margin:-40px -40px 24px -40px;width:calc(100% + 80px)">
+  <a href="/" style="font-size:9px;color:#8aa0b8;text-decoration:none;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;font-family:Orbitron,sans-serif">Game</a>
+  <a href="/economy" style="font-size:9px;color:#4fc3f7;text-decoration:none;padding:4px 10px;border:1px solid #4fc3f7;border-radius:3px;letter-spacing:1px;font-family:Orbitron,sans-serif">Economy</a>
+  <a href="/resources" style="font-size:9px;color:#8aa0b8;text-decoration:none;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;font-family:Orbitron,sans-serif">Resources</a>
+  <a href="/materials" style="font-size:9px;color:#8aa0b8;text-decoration:none;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;font-family:Orbitron,sans-serif">Materials</a>
+  <a href="/products" style="font-size:9px;color:#8aa0b8;text-decoration:none;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;font-family:Orbitron,sans-serif">Products</a>
+  <a href="/items" style="font-size:9px;color:#8aa0b8;text-decoration:none;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;font-family:Orbitron,sans-serif">Items DB</a>
+  <a href="/fitting" style="font-size:9px;color:#8aa0b8;text-decoration:none;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;font-family:Orbitron,sans-serif">Fitting</a>
+  <a href="/factions" style="font-size:9px;color:#8aa0b8;text-decoration:none;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;font-family:Orbitron,sans-serif">Factions</a>
+  <a href="/docs" style="font-size:9px;color:#8aa0b8;text-decoration:none;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;font-family:Orbitron,sans-serif">All Docs</a>
+</div>
 <h1>T1: Harvestable Resources</h1>
 <p>All raw materials are extracted from asteroid fields by mining vessels. Every system can have asteroid fields. Within each field are various <strong>asteroid types</strong>, each yielding a specific ore when mined. Common asteroids appear everywhere; rarer types only spawn in dangerous space.</p>
 
@@ -40,50 +50,50 @@ a:hover{text-decoration:underline}
 <h3 class="common">Common Asteroids (All Fields, All Security)</h3>
 <table>
 <tr><th>Asteroid Type</th><th>Appearance</th><th>Yields</th><th>Vol/unit</th><th>Base Price</th></tr>
-<tr><td class="common">Veltoite</td><td>Dark gray, porous</td><td>Iron Ore</td><td class="vol">1 m3</td><td>8</td></tr>
-<tr><td class="common">Corsite</td><td>Green-tinged metallic</td><td>Copper Ore</td><td class="vol">1 m3</td><td>10</td></tr>
-<tr><td class="common">Calite</td><td>White chalky surface</td><td>Calciumite</td><td class="vol">1 m3</td><td>6</td></tr>
-<tr><td class="common">Carite</td><td>Black matte, dense</td><td>Carbonite</td><td class="vol">1 m3</td><td>7</td></tr>
-<tr><td class="common">Frostine</td><td>Translucent blue-white</td><td>Hydral Ice</td><td class="vol">2 m3</td><td>5</td></tr>
-<tr><td class="common">Silite</td><td>Glassy smooth surface</td><td>Silicon Ore</td><td class="vol">1 m3</td><td>9</td></tr>
+<tr><td class="common">Veltoite</td><td>Dark gray, porous</td><td>Iron Ore</td><td class="vol">0.1 m3</td><td>8</td></tr>
+<tr><td class="common">Corsite</td><td>Green-tinged metallic</td><td>Copper Ore</td><td class="vol">0.1 m3</td><td>10</td></tr>
+<tr><td class="common">Calite</td><td>White chalky surface</td><td>Calciumite</td><td class="vol">0.1 m3</td><td>6</td></tr>
+<tr><td class="common">Carite</td><td>Black matte, dense</td><td>Carbonite</td><td class="vol">0.1 m3</td><td>7</td></tr>
+<tr><td class="common">Frostine</td><td>Translucent blue-white</td><td>Hydral Ice</td><td class="vol">0.15 m3</td><td>5</td></tr>
+<tr><td class="common">Silite</td><td>Glassy smooth surface</td><td>Silicon Ore</td><td class="vol">0.1 m3</td><td>9</td></tr>
 </table>
 
 <h3 class="mid">Uncommon Asteroids (Med-Sec and below)</h3>
 <table>
 <tr><th>Asteroid Type</th><th>Appearance</th><th>Yields</th><th>Vol/unit</th><th>Base Price</th></tr>
-<tr><td class="mid">Ferranox</td><td>Rust-red, heavy</td><td>Cobalt Ore</td><td class="vol">2 m3</td><td>25</td></tr>
-<tr><td class="mid">Zincara</td><td>Pale blue metallic</td><td>Zinc Ore</td><td class="vol">2 m3</td><td>18</td></tr>
-<tr><td class="mid">Stannite</td><td>Silver-gray nodules</td><td>Tin Ore</td><td class="vol">2 m3</td><td>20</td></tr>
-<tr><td class="mid">Nitrine</td><td>Frosted yellow chunks</td><td>Nitrogen Ice</td><td class="vol">3 m3</td><td>14</td></tr>
-<tr><td class="mid">Methrix</td><td>Dark with orange veins</td><td>Methane Ice</td><td class="vol">3 m3</td><td>16</td></tr>
-<tr><td class="mid">Biovex</td><td>Green bioluminescent</td><td>Biomass</td><td class="vol">3 m3</td><td>30</td></tr>
-<tr><td class="mid">Nickeline</td><td>Silvery streaked</td><td>Nickel Ore</td><td class="vol">2 m3</td><td>22</td></tr>
+<tr><td class="mid">Ferranox</td><td>Rust-red, heavy</td><td>Cobalt Ore</td><td class="vol">0.2 m3</td><td>25</td></tr>
+<tr><td class="mid">Zincara</td><td>Pale blue metallic</td><td>Zinc Ore</td><td class="vol">0.2 m3</td><td>18</td></tr>
+<tr><td class="mid">Stannite</td><td>Silver-gray nodules</td><td>Tin Ore</td><td class="vol">0.2 m3</td><td>20</td></tr>
+<tr><td class="mid">Nitrine</td><td>Frosted yellow chunks</td><td>Nitrogen Ice</td><td class="vol">0.25 m3</td><td>14</td></tr>
+<tr><td class="mid">Methrix</td><td>Dark with orange veins</td><td>Methane Ice</td><td class="vol">0.25 m3</td><td>16</td></tr>
+<tr><td class="mid">Biovex</td><td>Green bioluminescent</td><td>Biomass</td><td class="vol">0.3 m3</td><td>30</td></tr>
+<tr><td class="mid">Nickeline</td><td>Silvery streaked</td><td>Nickel Ore</td><td class="vol">0.2 m3</td><td>22</td></tr>
 </table>
 
 <h3 class="rare">Rare Asteroids (Low-Sec and below)</h3>
 <table>
 <tr><th>Asteroid Type</th><th>Appearance</th><th>Yields</th><th>Vol/unit</th><th>Base Price</th></tr>
-<tr><td class="rare">Titanex</td><td>Iridescent blue-gray</td><td>Titanium Ore</td><td class="vol">4 m3</td><td>65</td></tr>
-<tr><td class="rare">Tungstine</td><td>Ultra-dense dark metal</td><td>Tungsten Ore</td><td class="vol">5 m3</td><td>80</td></tr>
-<tr><td class="rare">Chromax</td><td>Mirror-finish surface</td><td>Chromium Ore</td><td class="vol">4 m3</td><td>55</td></tr>
-<tr><td class="rare">Heliox</td><td>Shimmering gas pockets</td><td>Helium-3 Gas</td><td class="vol">6 m3</td><td>120</td></tr>
-<tr><td class="rare">Xenolith</td><td>Purple crystalline gas</td><td>Xenon Gas</td><td class="vol">6 m3</td><td>90</td></tr>
-<tr><td class="rare">Sporite</td><td>Pulsing organic mass</td><td>Spore Clusters</td><td class="vol">5 m3</td><td>50</td></tr>
-<tr><td class="rare">Aminox</td><td>Gel-filled translucent</td><td>Amino Gel</td><td class="vol">5 m3</td><td>70</td></tr>
+<tr><td class="rare">Titanex</td><td>Iridescent blue-gray</td><td>Titanium Ore</td><td class="vol">0.5 m3</td><td>65</td></tr>
+<tr><td class="rare">Tungstine</td><td>Ultra-dense dark metal</td><td>Tungsten Ore</td><td class="vol">0.5 m3</td><td>80</td></tr>
+<tr><td class="rare">Chromax</td><td>Mirror-finish surface</td><td>Chromium Ore</td><td class="vol">0.5 m3</td><td>55</td></tr>
+<tr><td class="rare">Heliox</td><td>Shimmering gas pockets</td><td>Helium-3 Gas</td><td class="vol">0.6 m3</td><td>120</td></tr>
+<tr><td class="rare">Xenolith</td><td>Purple crystalline gas</td><td>Xenon Gas</td><td class="vol">0.6 m3</td><td>90</td></tr>
+<tr><td class="rare">Sporite</td><td>Pulsing organic mass</td><td>Spore Clusters</td><td class="vol">0.5 m3</td><td>50</td></tr>
+<tr><td class="rare">Aminox</td><td>Gel-filled translucent</td><td>Amino Gel</td><td class="vol">0.5 m3</td><td>70</td></tr>
 </table>
 
 <h3 class="exotic">Exotic Asteroids (Null-Sec Only)</h3>
 <table>
 <tr><th>Asteroid Type</th><th>Appearance</th><th>Yields</th><th>Vol/unit</th><th>Base Price</th></tr>
-<tr><td class="exotic">Platinox</td><td>Brilliant white metallic</td><td>Platinum Ore</td><td class="vol">8 m3</td><td>350</td></tr>
-<tr><td class="exotic">Aurelite</td><td>Deep golden glow</td><td>Gold Ore</td><td class="vol">8 m3</td><td>300</td></tr>
-<tr><td class="exotic">Palladine</td><td>Pale silver shimmer</td><td>Palladium Ore</td><td class="vol">8 m3</td><td>400</td></tr>
-<tr><td class="exotic">Quartzion</td><td>Faceted prismatic</td><td>Quartz Crystal</td><td class="vol">10 m3</td><td>150</td></tr>
-<tr><td class="exotic">Lithex</td><td>Electric blue veins</td><td>Lithium Crystal</td><td class="vol">10 m3</td><td>200</td></tr>
-<tr><td class="exotic">Berylox</td><td>Transparent green prism</td><td>Beryllium Crystal</td><td class="vol">10 m3</td><td>280</td></tr>
-<tr><td class="exotic">Kraxolith</td><td>Unstable violet shimmer</td><td>Kraxolite</td><td class="vol">12 m3</td><td>1200</td></tr>
-<tr><td class="exotic">Voidstone</td><td>Light-absorbing black</td><td>Void Shard</td><td class="vol">15 m3</td><td>2000</td></tr>
-<tr><td class="exotic">Neutrite</td><td>Impossibly heavy flake</td><td>Neutronium Flake</td><td class="vol">20 m3</td><td>3500</td></tr>
+<tr><td class="exotic">Platinox</td><td>Brilliant white metallic</td><td>Platinum Ore</td><td class="vol">1.0 m3</td><td>350</td></tr>
+<tr><td class="exotic">Aurelite</td><td>Deep golden glow</td><td>Gold Ore</td><td class="vol">1.0 m3</td><td>300</td></tr>
+<tr><td class="exotic">Palladine</td><td>Pale silver shimmer</td><td>Palladium Ore</td><td class="vol">1.0 m3</td><td>400</td></tr>
+<tr><td class="exotic">Quartzion</td><td>Faceted prismatic</td><td>Quartz Crystal</td><td class="vol">1.2 m3</td><td>150</td></tr>
+<tr><td class="exotic">Lithex</td><td>Electric blue veins</td><td>Lithium Crystal</td><td class="vol">1.2 m3</td><td>200</td></tr>
+<tr><td class="exotic">Berylox</td><td>Transparent green prism</td><td>Beryllium Crystal</td><td class="vol">1.2 m3</td><td>280</td></tr>
+<tr><td class="exotic">Kraxolith</td><td>Unstable violet shimmer</td><td>Kraxolite</td><td class="vol">1.5 m3</td><td>1200</td></tr>
+<tr><td class="exotic">Voidstone</td><td>Light-absorbing black</td><td>Void Shard</td><td class="vol">2.0 m3</td><td>2000</td></tr>
+<tr><td class="exotic">Neutrite</td><td>Impossibly heavy flake</td><td>Neutronium Flake</td><td class="vol">2.0 m3</td><td>3500</td></tr>
 </table>
 
 <h2>Field Composition by Security</h2>
@@ -97,8 +107,8 @@ Every field always contains common asteroids. Richer fields have higher density 
 
 <h2>Volume Design Philosophy</h2>
 <div class="note">
-<strong>Common = Small Volume (1-2 m3):</strong> A small mining ship with 100 m3 cargo can haul 50-100 units of iron ore per trip. This means common ores flow freely through the economy. Stations consuming iron never starve because traders can carry massive amounts cheaply.<br><br>
-<strong>Rare = Large Volume (8-20 m3):</strong> That same 100 m3 ship can only carry 5-12 units of exotic ore. This naturally limits supply of rare materials, makes them genuinely scarce without artificial mechanics, and creates demand for larger hauler ships on dangerous routes.<br><br>
+<strong>Common = Small Volume (0.1-0.15 m3):</strong> A small mining ship with 100 m3 cargo can haul 650-1000 units of iron ore per trip. This means common ores flow freely through the economy. Stations consuming iron never starve because traders can carry massive amounts cheaply.<br><br>
+<strong>Rare = Large Volume (1.0-2.0 m3):</strong> That same 100 m3 ship can only carry 50-100 units of exotic ore. This naturally limits supply of rare materials, makes them genuinely scarce without artificial mechanics, and creates demand for larger hauler ships on dangerous routes.<br><br>
 <strong>Result:</strong> The economy self-balances. Common materials are abundant (cheap per unit, easy to move in bulk). Rare materials are genuinely scarce (expensive per unit AND hard to move). You need a big, slow, vulnerable ship to haul meaningful quantities of exotics through null-sec space.
 </div>
 
