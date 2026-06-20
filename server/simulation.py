@@ -3,10 +3,18 @@ import math
 import random
 import time
 from server.models import (
-    System, NPCShip, COMMODITIES, STATION_CONSUMPTION,
-    SECURITY_LEVEL, calculate_price
+    System, NPCShip, SECURITY_LEVEL, calculate_price, Commodity
 )
-from server.universe import build_universe
+from server.data_access import is_db_ready, load_commodities, load_station_consumption, load_universe
+
+# Load from DB if available, otherwise fall back to Python constants
+if is_db_ready():
+    COMMODITIES = load_commodities()
+    STATION_CONSUMPTION = load_station_consumption()
+    _build_universe = load_universe
+else:
+    from server.models import COMMODITIES, STATION_CONSUMPTION
+    from server.universe import build_universe as _build_universe
 
 NPC_TRADER_NAMES = [
     "Meridian Express", "Iron Vagrant", "Solar Wind", "Deep Haul", "Star Drifter",
@@ -37,7 +45,7 @@ MINING_TICKS = 5
 
 class Simulation:
     def __init__(self):
-        self.universe = build_universe()
+        self.universe = _build_universe()
         # Assign factions to systems
         from server.factions import get_system_faction
         for sid, sys in self.universe.items():

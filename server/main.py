@@ -2,7 +2,8 @@ import os
 import threading
 import time
 import logging
-from flask import Flask, send_from_directory, jsonify
+from flask import Flask, send_from_directory, jsonify, request
+import json
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 log = logging.getLogger("space_economy")
@@ -452,6 +453,89 @@ def api_speed():
         log.info(f"Sim speed set to {mult}x")
         return jsonify({"multiplier": mult})
     return jsonify({"multiplier": sim_speed["multiplier"]})
+
+
+# ── CRUD API for game data ────────────────────────────────────────────────────
+@app.route("/api/reload_data", methods=["POST"])
+def api_reload_data():
+    """Reload game data from database without restarting server."""
+    from server.data_access import is_db_ready, load_commodities, load_station_consumption
+    if is_db_ready():
+        import server.simulation as sim_mod
+        sim_mod.COMMODITIES = load_commodities()
+        sim_mod.STATION_CONSUMPTION = load_station_consumption()
+        return jsonify({"status": "reloaded", "commodities": len(sim_mod.COMMODITIES)})
+    return jsonify({"error": "database not ready"}), 500
+
+
+@app.route("/api/data/commodities", methods=["GET"])
+def api_data_commodities():
+    """List all commodities from DB."""
+    from server.game_data_db import get_data_db
+    conn = get_data_db()
+    rows = conn.execute("SELECT * FROM commodities ORDER BY tier, name").fetchall()
+    result = []
+    for r in rows:
+        recipes = conn.execute("SELECT input_id, quantity FROM recipes WHERE commodity_id=?", (r["id"],)).fetchall()
+        result.append({**dict(r), "stats": json.loads(r["stats"]), "recipe": {rec["input_id"]: rec["quantity"] for rec in recipes}})
+    conn.close()
+    return jsonify(result)
+
+
+@app.route("/api/data/commodities/<commodity_id>", methods=["GET", "PUT"])
+def api_data_commodity(commodity_id):
+    """Get or update a single commodity."""
+    from server.game_data_db import get_data_db
+    conn = get_data_db()
+    if request.method == "GET":
+        row = conn.execute("SELECT * FROM commodities WHERE id=?", (commodity_id,)).fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "not found"}), 404
+        recipes = conn.execute("SELECT input_id, quantity FROM recipes WHERE commodity_id=?", (commodity_id,)).fetchall()
+        conn.close()
+        return jsonify({**dict(row), "stats": json.loads(row["stats"]), "recipe": {r["input_id"]: r["quantity"] for r in recipes}})
+    else:
+        data = request.get_json(force=True)
+        conn.execute("""UPDATE commodities SET name=?, base_price=?, tier=?, volume=?, elasticity=?, description=?, stats=?
+                       WHERE id=?""",
+                    (data.get("name"), data.get("base_price"), data.get("tier"), data.get("volume"),
+                     data.get("elasticity", 1.0), data.get("description", ""), json.dumps(data.get("stats", {})), commodity_id))
+        # Update recipes
+        if "recipe" in data:
+            conn.execute("DELETE FROM recipes WHERE commodity_id=?", (commodity_id,))
+            for inp_id, qty in data["recipe"].items():
+                conn.execute("INSERT INTO recipes (commodity_id, input_id, quantity) VALUES (?,?,?)", (commodity_id, inp_id, qty))
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "updated", "id": commodity_id})
+
+
+@app.route("/api/data/systems", methods=["GET"])
+def api_data_systems():
+    """List all systems from DB."""
+    from server.game_data_db import get_data_db
+    conn = get_data_db()
+    rows = conn.execute("SELECT * FROM systems ORDER BY cluster, name").fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/data/military_ships", methods=["GET"])
+def api_data_military():
+    """List all military ships from DB."""
+    from server.game_data_db import get_data_db
+    conn = get_data_db()
+    rows = conn.execute("SELECT * FROM military_ships ORDER BY faction_id, hull_class").fetchall()
+    conn.close()
+    return jsonify([{**dict(r), "weapons": json.loads(r["weapons"]), "modules": json.loads(r["modules"]), "build_cost": json.loads(r["build_cost"])} for r in rows])
+
+
+@app.route("/api/data/factions", methods=["GET"])
+def api_data_factions():
+    """List all factions from DB."""
+    from server.data_access import load_factions
+    return jsonify(load_factions())
 
 
 if __name__ == "__main__":
