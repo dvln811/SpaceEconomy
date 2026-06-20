@@ -13,9 +13,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Always deploy the shipped game_data.db to DATA_DIR (volume may have stale copy)
 _data_dir = os.getenv("DATA_DIR", os.path.join(BASE_DIR, "data"))
 os.makedirs(_data_dir, exist_ok=True)
-_shipped_db = os.path.join(BASE_DIR, "data", "game_data.db")
+_shipped_db = os.path.join(BASE_DIR, "game_data_shipped.db")
 _live_db = os.path.join(_data_dir, "game_data.db")
-if _data_dir != os.path.join(BASE_DIR, "data") and os.path.exists(_shipped_db):
+if os.path.exists(_shipped_db):
     import shutil
     shutil.copy2(_shipped_db, _live_db)
     log.info("Deployed fresh game_data.db to volume")

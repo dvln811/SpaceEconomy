@@ -7,6 +7,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Preserve game_data.db outside the volume mount point so it survives mount
+RUN cp data/game_data.db /app/game_data_shipped.db
+
 ENV PYTHONUNBUFFERED=1
 ENV DATA_DIR=/app/data
 
