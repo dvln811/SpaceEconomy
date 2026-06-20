@@ -51,146 +51,170 @@ blockquote{border-left:3px solid #4fc3f7;padding:12px 16px;margin:16px 0;backgro
 <div class="content">
 <h2>Universe Structure</h2>
 
-<p>The accessible sector contains <strong>48 star systems</strong> organized into 3 clusters connected by jump nexus chokepoints. Each cluster has a distinct security profile and economic character. The universe is generated once and persists permanently, evolving slowly through economic activity.</p>
+<p>The galaxy contains <strong>~2,500 star systems</strong> organized into regions, constellations, and clusters. Most of the galaxy starts unclaimed and wild. Factions hold small core territories and expand outward over months and years of real-time simulation. Security levels evolve as factions build infrastructure and project force.</p>
 
-<blockquote>The universe is not procedurally regenerated. It is a fixed world that grows and changes through player and NPC activity. Think of it as a living place, not a random seed.</blockquote>
+<blockquote>The universe is persistent and evolves through NPC faction activity. Systems that are wild today may be civilized in six months. Systems that are safe today may fall to warfare. Think of it as a living place with a history that writes itself.</blockquote>
 
-<h3>Cluster Summary</h3>
+<h2>Scale and Distribution</h2>
+
+<h3>Target: ~2,500 Systems</h3>
 <table>
-<tr><th>Cluster</th><th>Security</th><th>Systems</th><th>Character</th></tr>
-<tr><td>Core</td><td><span class="tag tag-high">High</span></td><td>12</td><td>Safe, competitive, low margins. Refineries, factories, shipyards. Where new players start.</td></tr>
-<tr><td>Rim</td><td><span class="tag tag-medium">Medium</span> / <span class="tag tag-low">Low</span></td><td>23</td><td>Mixed. Mining colonies, industrial hubs, trade junctions. Moderate ores. The working frontier.</td></tr>
-<tr><td>Frontier</td><td><span class="tag tag-low">Low</span> / <span class="tag tag-none">None</span></td><td>13</td><td>Lawless, dangerous, hugely profitable. Rare ores, sparse infrastructure.</td></tr>
+<tr><th>Zone</th><th>Systems (approx)</th><th>% of Galaxy</th><th>Character</th></tr>
+<tr><td><span class="tag tag-high">High-Sec</span></td><td>~150 (at start)</td><td>6%</td><td>Faction homeworlds, fully developed, safe. Grows over time.</td></tr>
+<tr><td><span class="tag tag-medium">Medium-Sec</span></td><td>~250 (at start)</td><td>10%</td><td>Frontier of civilization. Some infrastructure, some risk.</td></tr>
+<tr><td><span class="tag tag-low">Low-Sec</span></td><td>~500 (at start)</td><td>20%</td><td>Contested, sparse stations, pirate activity. Good ore.</td></tr>
+<tr><td><span class="tag tag-none">Null-Sec / Wild</span></td><td>~1,600 (at start)</td><td>64%</td><td>Unclaimed, no infrastructure, rare resources. The frontier to conquer.</td></tr>
 </table>
 
-<h3>Chokepoints</h3>
+<p>Over time, faction expansion shifts these numbers. High-sec grows, null-sec shrinks. But warfare and Corsair activity push back, creating a dynamic equilibrium.</p>
+
+<h3>Faction Starting Territories</h3>
+<table>
+<tr><th>Faction</th><th>Homeworld Region</th><th>Starting Systems</th><th>Starting Stations</th></tr>
+<tr><td>Terran Federation</td><td>Core (center)</td><td>~40</td><td>~60 (heavily developed)</td></tr>
+<tr><td>Nexus Collective</td><td>Core (north)</td><td>~30</td><td>~40 (research-focused)</td></tr>
+<tr><td>Merchants Guild</td><td>Rim (east)</td><td>~35</td><td>~50 (trade hubs)</td></tr>
+<tr><td>Frontier Alliance</td><td>Rim (west)</td><td>~30</td><td>~35 (scattered colonies)</td></tr>
+<tr><td>Iron Compact</td><td>Outer (south)</td><td>~25</td><td>~30 (military-industrial)</td></tr>
+<tr><td>The Corsairs</td><td>Scattered (null-sec)</td><td>~15</td><td>~15 (hidden bases)</td></tr>
+</table>
+<p>Total claimed at start: ~175 systems. The remaining ~2,325 are unclaimed wilderness.</p>
+
+<h2>Security Level Progression</h2>
+
+<p>Security is not a fixed property of a system. It evolves based on faction activity:</p>
+
+<h3>How Security Rises</h3>
 <ul>
-<li><strong>Procyon</strong> (Core): Nexus connecting core to rim via Castor/Arcturus. Component factory here.</li>
-<li><strong>Castor</strong> (Rim): Major junction between rim and frontier. Gateway to Wolf 359, Rigel.</li>
-<li><strong>Spica</strong> (Frontier): Deep frontier nexus connecting Terminus, Obsidian, The Abyss.</li>
+<li><strong>Station construction</strong> - building a station begins civilizing a system</li>
+<li><strong>Military patrols</strong> - faction fleets patrolling raises security</li>
+<li><strong>Trade volume</strong> - sustained commerce indicates stability</li>
+<li><strong>Time</strong> - security rises slowly even with minimal activity (weeks per level)</li>
 </ul>
 
-<h2>Core Cluster (High-Sec, 12 Systems)</h2>
+<h3>How Security Falls</h3>
+<ul>
+<li><strong>Station destruction</strong> - warfare destroying infrastructure drops security</li>
+<li><strong>Pirate activity</strong> - Corsair raids degrade security</li>
+<li><strong>Abandonment</strong> - systems with no faction presence slowly regress</li>
+<li><strong>Blockades</strong> - cutting off supply lines starves stations</li>
+</ul>
 
-<div class="card">
-<div class="card-title">Core Systems</div>
+<h3>Progression Timeline (per system)</h3>
 <table>
-<tr><th>System</th><th>Type</th><th>Stations</th><th>Resources</th></tr>
-<tr><td>Cygnus</td><td>Industrial</td><td>Cygnus Refinery, Cygnus Trade Hub</td><td>Iron Belt (iron, copper)</td></tr>
-<tr><td>Kepler</td><td>Trade</td><td>Grand Exchange, Kepler Fuel Depot</td><td>Ice Ring</td></tr>
-<tr><td>Tau Ceti</td><td>Agricultural</td><td>Tau Ceti Agri-Hub</td><td>Bio-Rich Field (organics), Ice Band</td></tr>
-<tr><td>Procyon</td><td>Nexus</td><td>Procyon Component Works, Gateway Station</td><td>None</td></tr>
-<tr><td>Sirius</td><td>Shipyard</td><td>Sirius Dockyard, Supply Depot</td><td>None</td></tr>
-<tr><td>Deneb</td><td>Military</td><td>Fleet Command, Deneb Arms Factory</td><td>None</td></tr>
-<tr><td>Polaris</td><td>Industrial</td><td>Polaris Industrial Complex, Polaris Market</td><td>None</td></tr>
-<tr><td>Fomalhaut</td><td>Processing</td><td>Fomalhaut Refinery</td><td>Ore Belt (iron)</td></tr>
-<tr><td>Sol</td><td>Industrial</td><td>Earth Orbital Factory, Mars Trade Port</td><td>None</td></tr>
-<tr><td>Haven</td><td>Industrial</td><td>Haven Bioworks, Haven Life Systems</td><td>None</td></tr>
-<tr><td>Vega Prime</td><td>Mining</td><td>Vega Prime Mining Co., Vega Prime Smelter</td><td>Iron Belt (iron, copper)</td></tr>
-<tr><td>Meridian</td><td>Processing</td><td>Meridian Refinery</td><td>None</td></tr>
+<tr><th>Transition</th><th>Requirements</th><th>Real-Time</th></tr>
+<tr><td>Wild -> Low</td><td>First station built, basic patrols</td><td>~1 week</td></tr>
+<tr><td>Low -> Medium</td><td>2+ stations, regular trade, military presence</td><td>~2-3 weeks</td></tr>
+<tr><td>Medium -> High</td><td>Full infrastructure, sustained peace, high trade volume</td><td>~4-6 weeks</td></tr>
 </table>
-</div>
+<p>At ~1 system per week average advancement, civilizing the entire galaxy would take roughly <strong>3-5 years</strong> of continuous simulation (with setbacks from warfare slowing it further).</p>
 
-<h2>Rim Cluster (Mixed-Sec, 23 Systems)</h2>
+<h2>Faction Expansion Mechanics</h2>
 
-<div class="card">
-<div class="card-title">Rim Systems</div>
-<table>
-<tr><th>System</th><th>Sec</th><th>Type</th><th>Stations</th><th>Resources</th></tr>
-<tr><td>Arcturus</td><td><span class="tag tag-medium">Med</span></td><td>Processing</td><td>Gas Refinery</td><td>Gas Cloud (helium-3)</td></tr>
-<tr><td>Vega</td><td><span class="tag tag-medium">Med</span></td><td>Mining</td><td>Mining Colony</td><td>Rich Belt (iron, copper), Titanium Vein</td></tr>
-<tr><td>Altair</td><td><span class="tag tag-medium">Med</span></td><td>Trade</td><td>Junction Market</td><td>None</td></tr>
-<tr><td>Barnard's Star</td><td><span class="tag tag-medium">Med</span></td><td>Mining</td><td>Mining Outpost</td><td>Titanium Field</td></tr>
-<tr><td>Antares</td><td><span class="tag tag-medium">Med</span></td><td>Industrial</td><td>Antares Forge</td><td>None</td></tr>
-<tr><td>Capella</td><td><span class="tag tag-medium">Med</span></td><td>Trade</td><td>Free Market</td><td>None</td></tr>
-<tr><td>Betelgeuse</td><td><span class="tag tag-medium">Med</span></td><td>Shipyard</td><td>Drydock</td><td>Metallic Belt (iron, titanium)</td></tr>
-<tr><td>Castor</td><td><span class="tag tag-medium">Med</span></td><td>Nexus</td><td>Castor Relay</td><td>None</td></tr>
-<tr><td>Achernar</td><td><span class="tag tag-medium">Med</span></td><td>Military</td><td>Forward Base</td><td>None</td></tr>
-<tr><td>Aldebaran</td><td><span class="tag tag-medium">Med</span></td><td>Mining</td><td>Mining Hub</td><td>Dense Belt (iron, copper)</td></tr>
-<tr><td>Regulus</td><td><span class="tag tag-low">Low</span></td><td>Mining</td><td>Crystal Mine</td><td>Crystal Caverns (crystals)</td></tr>
-<tr><td>Mira</td><td><span class="tag tag-medium">Med</span></td><td>Industrial</td><td>Polymer Works</td><td>None</td></tr>
-<tr><td>Draconis</td><td><span class="tag tag-medium">Med</span></td><td>Industrial</td><td>Engine Works</td><td>None</td></tr>
-<tr><td>Lyra</td><td><span class="tag tag-medium">Med</span></td><td>Trade</td><td>Medical Station, Bazaar</td><td>None</td></tr>
-<tr><td>Novus</td><td><span class="tag tag-low">Low</span></td><td>Industrial</td><td>Alloy Works</td><td>None</td></tr>
-<tr><td>Serpentis</td><td><span class="tag tag-low">Low</span></td><td>Trade</td><td>Black Market</td><td>None</td></tr>
-<tr><td>Haven's Edge</td><td><span class="tag tag-low">Low</span></td><td>Frontier</td><td>Outpost</td><td>Ice Field</td></tr>
-<tr><td>Helios</td><td><span class="tag tag-medium">Med</span></td><td>Mining</td><td>Gas Platform</td><td>Gas Rings (helium-3), Ice Halo</td></tr>
-<tr><td>Osiris</td><td><span class="tag tag-medium">Med</span></td><td>Agricultural</td><td>Bio-Farm</td><td>Organic Cloud</td></tr>
-<tr><td>Corvus</td><td><span class="tag tag-medium">Med</span></td><td>Industrial</td><td>Assembly Plant</td><td>None</td></tr>
-<tr><td>Fornax</td><td><span class="tag tag-medium">Med</span></td><td>Processing</td><td>Titanium Refinery</td><td>None</td></tr>
-<tr><td>Hydra</td><td><span class="tag tag-medium">Med</span></td><td>Mining</td><td>Ice Works</td><td>Ice Shelf, Gas Pocket</td></tr>
-<tr><td>Aquila</td><td><span class="tag tag-low">Low</span></td><td>Industrial</td><td>Conductor Labs</td><td>None</td></tr>
-</table>
-</div>
+<h3>How Factions Grow</h3>
+<ul>
+<li>Factions target adjacent unclaimed systems for expansion</li>
+<li>They build stations (requires hauling construction materials)</li>
+<li>They assign patrol fleets to protect new territory</li>
+<li>They establish mining operations for local resources</li>
+<li>Expansion rate limited by economy (can't build stations without materials)</li>
+</ul>
 
-<h2>Frontier Cluster (Null-Sec, 13 Systems)</h2>
+<h3>Expansion Priorities (AI)</h3>
+<ul>
+<li><strong>Resource-rich systems</strong> - rare ore deposits attract colonization</li>
+<li><strong>Strategic chokepoints</strong> - control jump nexus systems for trade control</li>
+<li><strong>Buffer zones</strong> - expand toward enemies to create defensive depth</li>
+<li><strong>Trade routes</strong> - connect isolated colonies to the main economy</li>
+</ul>
 
-<div class="card">
-<div class="card-title">Frontier Systems</div>
-<table>
-<tr><th>System</th><th>Sec</th><th>Type</th><th>Stations</th><th>Resources (Rare)</th></tr>
-<tr><td>Wolf 359</td><td><span class="tag tag-low">Low</span></td><td>Frontier</td><td>Depot</td><td>Rare Earth Deposit</td></tr>
-<tr><td>Rigel</td><td><span class="tag tag-none">None</span></td><td>Frontier</td><td>Salvage Yard</td><td>Rare Belt (rare earths, titanium)</td></tr>
-<tr><td>Pollux</td><td><span class="tag tag-none">None</span></td><td>Frontier</td><td>Wildcat Mine</td><td>Platinum Vein</td></tr>
-<tr><td>Canopus</td><td><span class="tag tag-low">Low</span></td><td>Industrial</td><td>Rogue Foundry</td><td>Titanium Reef</td></tr>
-<tr><td>Spica</td><td><span class="tag tag-none">None</span></td><td>Nexus</td><td>Ghost Gate</td><td>None</td></tr>
-<tr><td>The Void</td><td><span class="tag tag-none">None</span></td><td>Frontier</td><td>Void Station</td><td>Deep Core (uranium, platinum)</td></tr>
-<tr><td>Terminus</td><td><span class="tag tag-none">None</span></td><td>Frontier</td><td>Outpost</td><td>Crystal Formation</td></tr>
-<tr><td>Obsidian</td><td><span class="tag tag-none">None</span></td><td>Frontier</td><td>Mining Colony</td><td>Rare Earth Deposit, Crystal Cave</td></tr>
-<tr><td>Erebus</td><td><span class="tag tag-none">None</span></td><td>Frontier</td><td>Deep Mine</td><td>Platinum Pocket, Radioactive Belt (uranium)</td></tr>
-<tr><td>Phantom</td><td><span class="tag tag-none">None</span></td><td>Frontier</td><td>Outpost</td><td>Anomaly (uranium, platinum, crystals)</td></tr>
-<tr><td>The Abyss</td><td><span class="tag tag-none">None</span></td><td>Frontier</td><td>Beacon</td><td>Uranium Trench, Crystal Rift</td></tr>
-<tr><td>Pyxis</td><td><span class="tag tag-low">Low</span></td><td>Mining</td><td>Fuel Cache</td><td>Gas Nebula (helium-3), Ice Drift</td></tr>
-<tr><td>Nyx</td><td><span class="tag tag-none">None</span></td><td>Industrial</td><td>Shadow Factory</td><td>None (produces weapons/drones)</td></tr>
-</table>
-</div>
+<h3>Conflict Over Territory</h3>
+<ul>
+<li>Two factions expanding toward the same system creates a flashpoint</li>
+<li>Warfare breaks out over contested systems</li>
+<li>Winner claims the system, loser's stations are destroyed or captured</li>
+<li>Border systems are perpetually contested (low-sec buffer zones)</li>
+</ul>
 
-<h2>Ore Distribution Rules</h2>
+<h2>Universe Generation (Planned)</h2>
 
-<blockquote>The rarer the ore, the further you have to go to find it, and the more dangerous the trip to sell it.</blockquote>
+<p>2,500 systems will be procedurally generated with constraints:</p>
 
-<table>
-<tr><th>Ore Category</th><th>Examples</th><th>Found In</th><th>Distance to Buyer</th></tr>
-<tr><td><strong>Common</strong></td><td>Iron Ore, Copper Ore, Ice, Organics</td><td>Core + Rim</td><td>0 jumps (local refineries OK)</td></tr>
-<tr><td><strong>Moderate</strong></td><td>Titanium Ore, Helium-3</td><td>Rim</td><td>1+ jumps to processor</td></tr>
-<tr><td><strong>Rare</strong></td><td>Platinum, Crystals, Rare Earths, Uranium</td><td>Frontier/Null-sec only</td><td>2+ jumps to any buyer</td></tr>
-</table>
+<h3>Generation Rules</h3>
+<ul>
+<li><strong>Faction homeworlds hand-placed</strong> at specific coordinates with pre-built infrastructure</li>
+<li><strong>Jump gate network</strong> connects systems (average 3-4 connections per system, some chokepoints with 1-2)</li>
+<li><strong>Ore distribution follows security gradient</strong> - common ores everywhere, rare ores only in deep null-sec</li>
+<li><strong>System types distributed logically</strong> - mining systems near ore, shipyards near faction capitals</li>
+<li><strong>Distance from faction center = danger</strong> - the further out, the less infrastructure, the more wild</li>
+</ul>
 
-<p>This creates natural trade routes: miners must haul rare ores through dangerous space to reach processors in safer systems. Larger, braver ships take the direct route. Smaller ships must find longer, safer paths.</p>
+<h3>System Contents</h3>
+<p>Each system contains:</p>
+<ul>
+<li>A central star (type varies: main sequence, red giant, binary, etc.)</li>
+<li>2-6 planets with moons</li>
+<li>0-4 asteroid belts (more in mining-rich systems)</li>
+<li>0-3 stations (in claimed systems, more in developed ones)</li>
+<li>Jump gates (one per connection, at outer ring)</li>
+</ul>
 
 <h2>Navigation Model</h2>
 
 <h3>Two-Layer Travel</h3>
 <ul>
-<li><strong>Inter-system:</strong> Ships travel between star systems via jump gates. ~50 seconds per hop at speed 1.0.</li>
-<li><strong>Intra-system:</strong> Ships travel between objects within a system (stations, belts, gates). ~35-40 seconds per trip at 0.2 AU/tick.</li>
-<li><strong>Jump gates:</strong> One per connection, placed at the outer ring (10-13 AU from star). Must intra-travel to gate before jumping.</li>
+<li><strong>Inter-system:</strong> Jump gates connect systems. Travel time varies by distance (30-120 seconds per hop).</li>
+<li><strong>Intra-system:</strong> Travel between objects within a system (stations, belts, gates). 30-90 seconds depending on distance and ship speed.</li>
+<li><strong>Align time:</strong> Ships take 2-15 seconds to align before warping intra-system (larger ships = slower).</li>
 </ul>
 
-<h3>System Objects</h3>
-<p>Each system contains: a central star, 2-4 planets (with moons), stations (mid ring 3-7 AU), asteroid belts (4-9 AU), jump gates (outer ring 10-13 AU). All positioned with polar coordinates (distance from star + angle).</p>
+<h3>Scale Implications</h3>
+<p>With 2,500 systems, crossing the galaxy takes many jumps. This means:</p>
+<ul>
+<li>Local economies are somewhat isolated (prices vary by region)</li>
+<li>Hauling rare ore from null-sec to core is a significant logistics operation</li>
+<li>Factions cannot instantly project force across their territory</li>
+<li>Chokepoint systems have enormous strategic value</li>
+</ul>
 
-<h2>NPC Fleet</h2>
+<h2>NPC Ship Simulation</h2>
 
-<p>70 NPC ships operate autonomously, making trade and mining decisions each tick. Ship class determines risk tolerance, which controls what systems the ship is willing to enter.</p>
+<p>At 2,500 systems, the NPC population scales to <strong>100,000+ ships</strong>. These are simulated abstractly:</p>
 
-<h3>Traders (50 ships, 5 classes)</h3>
+<h3>Performance Model</h3>
+<ul>
+<li>Each NPC is a state machine: <code style="color:#ffd54f">{system, destination, state, cargo, faction, ship_class}</code></li>
+<li>Ships only need detailed simulation when player is in the same system</li>
+<li>Aggregate behavior (trade volume, mining output) can be calculated per-system without individual tick processing</li>
+<li>Military fleets simulated as unit groups, not individual ships</li>
+<li>Target: simulate 100K+ ships at 1 tick/sec on shared-cpu-2x</li>
+</ul>
+
+<h3>Ship Distribution (target)</h3>
 <table>
-<tr><th>Class</th><th>Cargo</th><th>Risk Tolerance</th><th>Behavior</th></tr>
-<tr><td>Pinto Runner</td><td>~120</td><td>20% (safe only)</td><td>Short, safe routes in core</td></tr>
-<tr><td>Mule Freighter</td><td>~180</td><td>30%</td><td>Core + safe rim routes</td></tr>
-<tr><td>Bison Mk.III</td><td>~250</td><td>50%</td><td>Core + most rim routes</td></tr>
-<tr><td>Ox Hauler</td><td>~350</td><td>70%</td><td>Will enter low-sec for profit</td></tr>
-<tr><td>Clydesdale</td><td>~500</td><td>90%</td><td>Goes almost anywhere</td></tr>
+<tr><th>Role</th><th>Count</th><th>Behavior</th></tr>
+<tr><td>Haulers</td><td>~40,000</td><td>Move goods between stations along trade routes</td></tr>
+<tr><td>Miners</td><td>~20,000</td><td>Extract ore from asteroid fields, deliver to refineries</td></tr>
+<tr><td>Military (patrol)</td><td>~15,000</td><td>Patrol faction territory, raise security</td></tr>
+<tr><td>Military (fleet)</td><td>~10,000</td><td>Organized battle groups for warfare/expansion</td></tr>
+<tr><td>Corsairs/Pirates</td><td>~5,000</td><td>Raid trade routes, attack vulnerable systems</td></tr>
+<tr><td>Civilian/Other</td><td>~10,000</td><td>Station crew shuttles, exploration, misc</td></tr>
 </table>
 
-<h3>Miners (20 ships, 3 classes)</h3>
+<h2>Ore Distribution</h2>
+
+<blockquote>The rarer the ore, the further from civilization you must go to find it.</blockquote>
+
 <table>
-<tr><th>Class</th><th>Cargo</th><th>Risk Tolerance</th><th>Behavior</th></tr>
-<tr><td>Prospect Skiff</td><td>~80</td><td>20%</td><td>Safe belts in core/rim</td></tr>
-<tr><td>Strip Miner</td><td>~150</td><td>50%</td><td>Medium-risk belts</td></tr>
-<tr><td>Deep Core Borer</td><td>~250</td><td>80%</td><td>Ventures into dangerous frontier fields</td></tr>
+<tr><th>Ore Category</th><th>Examples</th><th>Found In</th><th>Volume per Unit</th></tr>
+<tr><td><strong>Common</strong></td><td>Iron, Copper, Carbonite, Hydral Ice, Silicon</td><td>Everywhere (high-sec included)</td><td>0.1 m3</td></tr>
+<tr><td><strong>Uncommon</strong></td><td>Cobalt, Zinc, Tin, Nickel, Nitrogen Ice, Biomass</td><td>Med-sec and below</td><td>0.2-0.3 m3</td></tr>
+<tr><td><strong>Rare</strong></td><td>Titanium, Tungsten, Chromium, Helium-3, Xenon</td><td>Low-sec and below</td><td>0.5-0.6 m3</td></tr>
+<tr><td><strong>Exotic</strong></td><td>Platinum, Gold, Palladium, Quartz/Lithium/Beryllium Crystal</td><td>Null-sec only</td><td>1.0-1.2 m3</td></tr>
+<tr><td><strong>Anomalous</strong></td><td>Kraxolite, Void Shard, Neutronium</td><td>Deep null-sec anomalies</td><td>1.5-2.0 m3</td></tr>
 </table>
+
+<p>This creates natural supply chain pressure: common materials are cheap and plentiful, but capital ship construction requires exotic materials from dangerous space, creating logistics challenges and trade opportunities.</p>
 
 </div>
 </body>

@@ -64,149 +64,110 @@ blockquote{border-left:3px solid #4fc3f7;padding:12px 16px;margin:16px 0;backgro
 <h2>Core Vision</h2>
 
 <blockquote>
-"I'm navigating a complex, living system that I can never fully master."
+"A living galaxy that runs whether I'm watching or not. I'm one actor in it, not the god of it. Can I build an economy simulation that actually works over years, solving the problems that killed X4, Dune Awakening, and Mount &amp; Blade economies?"
 </blockquote>
 
-<p>A browser-based space economy simulation. Single-player. You are one actor, a hauler and trader, in a functioning economy driven by autonomous NPC agents. The economy is the game: emergent, agent-based, and realistic. Knowing how it works does not trivialize it, because the system is complex enough that you are always making educated bets, never guaranteed plays.</p>
+<p>A persistent, always-online space economy simulation running 24/7 on a server. There is no expectation of human players beyond the designer/observer. The economy IS the product: an EVE-scale living world with M&amp;B-style delegation, where NPC factions mine, trade, build, expand, and wage war autonomously. The designer participates as one actor, flying a ship, building a faction, delegating to NPC governors and admirals, and watching emergent behavior unfold over months and years.</p>
 
 <div class="card">
 <div class="card-title">Design Pillars</div>
 <ul>
-<li><strong>Economy simulation IS the game</strong> - agent-based, emergent, realistic supply/demand</li>
-<li><strong>High-level decisions, not unit-level commands</strong> - you decide where to go and what to haul, not how to dodge bullets</li>
-<li><strong>Atmospheric "space trucker" vibe</strong> - Alien-era industrial space, working-class, not Star Trek polish</li>
-<li><strong>Imperfect information</strong> - you see prices where you have been recently, not omniscient market data</li>
-<li><strong>Emergent complexity</strong> - simple rules produce unpredictable outcomes</li>
+<li><strong>Living simulation, not a game to "beat"</strong> - the galaxy runs 24/7, evolves over years, no win state beyond emergent outcomes</li>
+<li><strong>EVE-scale economy</strong> - millions of units of ore, weeks to build capital ships, real scarcity and geographic friction</li>
+<li><strong>M&amp;B delegation model</strong> - appoint governors, fleet commanders, set policy. NPCs execute with their own competence.</li>
+<li><strong>Economy that doesn't collapse</strong> - solving the X4/Dune/M&amp;B problem where economies spiral into surplus or starvation</li>
+<li><strong>Warfare as demand sink</strong> - ships get destroyed, must be rebuilt. Perpetual cycle prevents economic stagnation.</li>
+<li><strong>Geographic friction matters</strong> - 2,500 systems means logistics is hard. Rare resources are far away and dangerous to reach.</li>
 </ul>
 </div>
 
-<h2>The Player Fantasy</h2>
+<h2>What You Actually Do</h2>
 
-<p>You are a scrappy independent operator making your way through a universe of shifting economics, faction politics, and calculated risk. You read the market, pick your routes, weigh danger against profit, and try to come out ahead. The universe does not revolve around you. It is indifferent to you. You succeed by being smart, not powerful.</p>
+<p>You are a participant in the galaxy, not the controller of it. You can fly a ship (up to a battleship or dreadnought), but direct combat piloting is not the point. The game is strategic, not twitch.</p>
 
-<h3>Inspirations</h3>
+<h3>Player Activities</h3>
 <ul>
-<li><em>Eve Online</em> - economy depth, market dynamics, information as power</li>
-<li><em>X4 Foundations</em> - trading loops, but less tedious micromanagement</li>
-<li><em>Stellaris</em> - grand scale, faction politics</li>
-<li><em>Alien (1979)</em> - aesthetic, working-class space, industrial grime</li>
-<li><em>Euro Truck Simulator</em> - the satisfaction of hauling, route planning</li>
+<li><strong>Fly your ship</strong> - trade, explore, haul cargo when you want hands-on gameplay</li>
+<li><strong>Set faction policy</strong> - expand toward these systems, prioritize these resources, build dreadnoughts not frigates</li>
+<li><strong>Appoint governors and admirals</strong> - NPCs with personalities and competence levels execute your strategy</li>
+<li><strong>Build your empire</strong> - establish stations, claim territory, raise security levels over time</li>
+<li><strong>Engage in battles (simulated)</strong> - when your fleet engages, you see a battle status window with outcomes unfolding. You can retreat, but you don't fly individual ships in combat.</li>
+<li><strong>Observe and tune</strong> - watch the economy, identify bottlenecks, make strategic corrections</li>
 </ul>
 
-<h2>Core Loop</h2>
+<h3>Combat Model</h3>
+<p>Combat is simulated, not flown. Think M&amp;B/Warhammer auto-resolve with visibility:</p>
+<ul>
+<li>When your fleet engages (or is engaged), a battle status window opens</li>
+<li>You see ship counts, damage, losses ticking in real-time</li>
+<li>You have a <strong>Retreat</strong> button to disengage (at cost of ships covering the retreat)</li>
+<li>Outcomes depend on ship classes, numbers, fittings, and admiral competence</li>
+<li>No direct piloting, no dodging, no aiming. It's a strategic game.</li>
+</ul>
 
-<div class="card">
-<div class="card-title">Moment-to-Moment Gameplay</div>
-<ol style="margin-left:20px;color:#a0b4c8">
-<li style="margin-bottom:8px"><strong>Read the market</strong> - check prices, identify opportunities, assess risk</li>
-<li style="margin-bottom:8px"><strong>Plan your route</strong> - buy low here, sell high there, factor in distance, fuel, danger</li>
-<li style="margin-bottom:8px"><strong>Execute the haul</strong> - travel through space, encounter events, make in-the-moment decisions</li>
-<li style="margin-bottom:8px"><strong>Sell and assess</strong> - did prices shift while you were in transit? Did you profit?</li>
-<li style="margin-bottom:8px"><strong>Reinvest</strong> - upgrade ship, expand range, take on bigger/riskier contracts</li>
-</ol>
-</div>
-
-<h2>Progression</h2>
-
-<h3>Progression as Access, Not Power</h3>
-<p>You do not become stronger in a traditional sense. You gain <strong>access to more of the system</strong>. Progression expands what you CAN engage with, not how easily you win.</p>
+<h2>Inspirations</h2>
 
 <table>
-<tr><th>Phase</th><th>Ship</th><th>Space</th><th>Economy</th><th>Risk</th></tr>
-<tr><td><span class="tag tag-green">Early</span></td><td>Small cargo shuttle</td><td>High-sec only</td><td>Safe, low-margin routes</td><td>Minimal</td></tr>
-<tr><td><span class="tag tag-cyan">Mid</span></td><td>Proper freighter</td><td>Low-sec accessible</td><td>Riskier goods, faction contracts</td><td>Moderate</td></tr>
-<tr><td><span class="tag tag-gold">Late</span></td><td>Specialized vessels</td><td>Null-sec, frontier</td><td>Rare goods, smuggling, infrastructure</td><td>High</td></tr>
-<tr><td><span class="tag tag-purple">Endgame</span></td><td>Fleet / flagship</td><td>Everywhere</td><td>Own stations, shape the economy</td><td>Strategic</td></tr>
+<tr><th>Source</th><th>What We Take</th><th>What We Reject</th></tr>
+<tr><td><em>EVE Online</em></td><td>Economy depth, scale (2500 systems), mineral quantities, market dynamics</td><td>Required player coordination, time-zone warfare, real-money pressure</td></tr>
+<tr><td><em>Mount &amp; Blade II</em></td><td>NPC lords with agency, delegation, faction building, simulated battles</td><td>Janky economy, lords doing stupid things, everything pausing when you're offline</td></tr>
+<tr><td><em>X4 Foundations</em></td><td>Trading loops, station building, watching your empire grow</td><td>Tedious micromanagement, broken economy at scale, busywork</td></tr>
+<tr><td><em>Stellaris</em></td><td>Grand scale, faction politics, watching AI empires interact</td><td>Abstract economy, late-game micro, snowball problem</td></tr>
 </table>
-
-<h3>What You Spend Money On</h3>
-<ul>
-<li><strong>Ships</strong> - bulk hauler, fast smuggler, long-range explorer, armored convoy</li>
-<li><strong>Upgrades</strong> - cargo capacity, fuel efficiency, scanner range, stealth systems</li>
-<li><strong>Reputation</strong> - faction standing unlocks contracts, docking rights, intel</li>
-<li><strong>Infrastructure</strong> - (late game) buy a warehouse, a refinery, a station</li>
-<li><strong>Information</strong> - buy market data, scout reports, faction intelligence</li>
-</ul>
 
 <h2>The Living Economy</h2>
 
-<h3>How It Works</h3>
-<p>Each star system has <strong>production rates</strong> and <strong>consumption rates</strong> per commodity. Prices follow supply/demand curves. NPC agents (haulers, miners, traders) operate autonomously, creating the baseline market activity that you participate in.</p>
-
-<div class="card">
-<div class="card-title">Price Formula</div>
-<p style="font-family:'JetBrains Mono';color:#ffd54f;margin:0">price = base_price * (demand / supply) ^ elasticity</p>
-</div>
-
-<h3>Key Properties</h3>
+<h3>EVE-Scale Resource Requirements</h3>
+<p>Ship construction requires millions of raw ore units for capital ships. This is intentional. It means:</p>
 <ul>
-<li><strong>Emergent</strong> - prices are not scripted, they result from agent behavior</li>
-<li><strong>Cascading</strong> - a disruption at one node ripples through supply chains</li>
-<li><strong>Imperfect information</strong> - price data goes stale; you only know what you have seen recently</li>
-<li><strong>Player impact</strong> - large trades move prices; you can manipulate small markets</li>
-<li><strong>NPC adaptation</strong> - NPC traders adjust routes based on profitability, creating competition</li>
+<li>A frigate takes hours to produce from raw materials</li>
+<li>A cruiser takes days</li>
+<li>A battleship takes a week or more</li>
+<li>A dreadnought takes 2-4 weeks of sustained production</li>
+<li>Every ship destroyed in warfare is FELT economically</li>
 </ul>
 
-<h3>Commodities</h3>
+<h3>Key Economic Properties</h3>
+<ul>
+<li><strong>Self-sustaining</strong> - the economy runs indefinitely without intervention. Production, consumption, and destruction balance.</li>
+<li><strong>Warfare-driven demand</strong> - ships get destroyed, creating perpetual demand for the entire production chain</li>
+<li><strong>Geographic scarcity</strong> - rare ores only exist in dangerous space. Long supply chains create meaningful logistics.</li>
+<li><strong>Self-limiting production</strong> - stations throttle based on input availability. No infinite surplus spiral.</li>
+<li><strong>Cascading disruptions</strong> - a blockade of rare ore disrupts the entire chain. One battle can crash a regional economy.</li>
+</ul>
+
+<h3>Commodity Tiers</h3>
 <table>
 <tr><th>Tier</th><th>Examples</th><th>Notes</th></tr>
-<tr><td><span class="tag tag-green">T1 Raw</span></td><td>Iron Ore, Copper Ore, Ice, Organics, Platinum, Uranium</td><td>Mined from asteroid fields. Foundation of all production.</td></tr>
-<tr><td><span class="tag tag-cyan">T2 Refined</span></td><td>Refined Iron, Hydrogen Fuel, Chemicals, Processed Food</td><td>Produced at refineries from T1. First value-add step.</td></tr>
-<tr><td><span class="tag tag-gold">T3 Industrial</span></td><td>Steel Alloy, Polymers, Superconductors, Glass</td><td>Produced at factories from T2. Building blocks.</td></tr>
-<tr><td><span class="tag tag-red">T4 Components</span></td><td>Electronics, Engine Parts, Reactor Cores, Weapon Systems</td><td>Produced at component factories from T3. Functional pieces.</td></tr>
-<tr><td><span class="tag tag-purple">T5 Complex</span></td><td>Ship Modules, Combat Drones, Jump Drives</td><td>Produced at shipyards from T4. End products.</td></tr>
-</table>
-<p>38 commodities total across 5 tiers. Each non-T1 commodity has a recipe defining its inputs. Production halts when inputs are unavailable, causing scarcity cascades up the chain.</p>
-
-<h2>Conflict and Opposition</h2>
-
-<p>This is not a combat game. You do not fight. But the universe is dangerous, and conflict shapes the economy you operate in.</p>
-
-<h3>Security Gradient</h3>
-<table>
-<tr><th>Zone</th><th>Risk</th><th>Reward</th><th>Character</th></tr>
-<tr><td><span class="tag tag-green">High-Sec</span></td><td>Minimal</td><td>Low margins</td><td>Patrolled, safe, crowded with NPC traders</td></tr>
-<tr><td><span class="tag tag-gold">Low-Sec</span></td><td>Moderate</td><td>Better margins</td><td>Less patrol, pirate activity, faction disputes</td></tr>
-<tr><td><span class="tag tag-red">Null-Sec</span></td><td>High</td><td>Rare goods, huge margins</td><td>Lawless, blockades, interdiction</td></tr>
-<tr><td><span class="tag tag-purple">Frontier</span></td><td>Unknown</td><td>Exploration, anomalies</td><td>Uncharted, mysteries, unique finds</td></tr>
+<tr><td><span class="tag tag-green">T1 Raw</span></td><td>Iron Ore, Copper Ore, Helium-3, Titanium Ore</td><td>Mined from asteroid fields. Millions of units flow through the economy.</td></tr>
+<tr><td><span class="tag tag-cyan">T2 Refined</span></td><td>Refined Iron, Hydrogen Fuel, Silicon Wafer</td><td>Produced at refineries. Volume compresses (ore to ingot).</td></tr>
+<tr><td><span class="tag tag-gold">T3 Manufactured</span></td><td>Steel Plate, Superconductor, Microprocessor</td><td>Produced at factories. High-value intermediates.</td></tr>
+<tr><td><span class="tag tag-red">T4 Components</span></td><td>Beam Emitter, Fusion Core, Shield Emitter</td><td>Complex assemblies. Multiple T3 inputs each.</td></tr>
+<tr><td><span class="tag tag-purple">T5 Products</span></td><td>Railgun Mk.III, Shield Generator, Jump Drive</td><td>Final equippable items. Installed on ships.</td></tr>
 </table>
 
-<h3>Sources of Conflict</h3>
+<h2>Faction Expansion and Security Evolution</h2>
+
+<p>The galaxy starts mostly wild. Factions hold small territories. Over months and years of real-time simulation:</p>
 <ul>
-<li><strong>Faction warfare</strong> - NPC factions fight over territory. Borders shift. Safe systems become warzones. Supply chains break overnight.</li>
-<li><strong>Blockades and interdiction</strong> - you don't fight pirates, you avoid them, pay them, or find alternate routes. Risk is a cost you price into decisions.</li>
-<li><strong>Choke points</strong> - certain jump routes are the only path between regions. Control of these means control of trade flow.</li>
-<li><strong>Economic warfare</strong> - factions embargo each other. Smuggling becomes viable. Prices spike in blockaded systems.</li>
-<li><strong>Piracy</strong> - not combat encounters, but economic hazards. Lose cargo, lose time, lose reputation with insurers.</li>
+<li>Factions build stations in adjacent unclaimed systems</li>
+<li>Infrastructure raises security level over time (none -> low -> medium -> high)</li>
+<li>Warfare pushes back: systems can regress if stations are destroyed</li>
+<li>The Corsairs and frontier conflicts actively resist civilization</li>
+<li>Full galaxy pacification (if it ever happens) takes years of real-time</li>
 </ul>
 
-<h3>Mystery and Intrigue</h3>
-<ul>
-<li>Anomalous signals, derelict ships, uncharted systems that appear temporarily</li>
-<li>Rare commodities with unknown or shifting sources</li>
-<li>Faction espionage: shady contracts, smuggling jobs, intel runs</li>
-<li>Events that reward paying attention to the simulation's state</li>
-<li>Things that cannot be wiki'd because they are emergent, not scripted</li>
-</ul>
+<p>This is the long game. One system might flip security level per week on average, with setbacks. The galaxy slowly civilizes, but it's a tug-of-war that may never fully resolve.</p>
 
-<h2>Time Model</h2>
+<h2>Progression Model</h2>
 
-<p><strong>Real-time, always-on.</strong> The economy runs 24/7/365 on the server. The world is persistent and keeps running whether you are online or not. When you log in, you see what happened while you were away. NPC agents continued trading, prices shifted, factions moved. You operate in a living universe, not a paused one.</p>
-
-<h2>Systems and Star Map</h2>
-
-<h3>System Types</h3>
 <table>
-<tr><th>Type</th><th>Produces</th><th>Consumes</th><th>Character</th></tr>
-<tr><td>Industrial Hub</td><td>Manufactured goods</td><td>Raw materials, fuel</td><td>High traffic, stable prices</td></tr>
-<tr><td>Mining Colony</td><td>Ore, raw materials</td><td>Food, meds, equipment</td><td>Remote, price spikes on essentials</td></tr>
-<tr><td>Trade Hub</td><td>Nothing (broker)</td><td>Everything (resells)</td><td>Best prices, highest competition</td></tr>
-<tr><td>Agricultural</td><td>Food, organics</td><td>Machinery, fuel</td><td>Steady supply, low drama</td></tr>
-<tr><td>Processing</td><td>Refined goods, fuel</td><td>Raw inputs</td><td>Transforms commodities, chain link</td></tr>
-<tr><td>Frontier</td><td>Rare finds</td><td>Everything</td><td>Desperate prices, high risk</td></tr>
-<tr><td>Jump Nexus</td><td>Nothing</td><td>Fuel</td><td>Chokepoint, strategic, contested</td></tr>
-<tr><td>Shipyard</td><td>Ships, upgrades</td><td>Alloys, electronics</td><td>Where you spend big</td></tr>
-<tr><td>Military</td><td>Security</td><td>Everything</td><td>Faction controlled, contracts</td></tr>
+<tr><th>Phase</th><th>What You Have</th><th>What You Do</th><th>Timeline</th></tr>
+<tr><td><span class="tag tag-green">Start</span></td><td>One small ship, no faction</td><td>Trade, mine, learn the systems</td><td>Days</td></tr>
+<tr><td><span class="tag tag-cyan">Early</span></td><td>Better ship, some reputation</td><td>Join a faction or operate independently</td><td>Weeks</td></tr>
+<tr><td><span class="tag tag-gold">Mid</span></td><td>Fleet of ships, faction rank</td><td>Delegate haulers/miners, set routes, expand territory</td><td>Months</td></tr>
+<tr><td><span class="tag tag-red">Late</span></td><td>Governor role, stations, fleet commanders</td><td>Strategic decisions, warfare, economy shaping</td><td>Months+</td></tr>
+<tr><td><span class="tag tag-purple">Endgame</span></td><td>Faction leader or independent power</td><td>Build dreadnoughts, contest sovereignty, shape the galaxy</td><td>Ongoing</td></tr>
 </table>
 
 <h2>Technical Direction</h2>
@@ -214,62 +175,57 @@ blockquote{border-left:3px solid #4fc3f7;padding:12px 16px;margin:16px 0;backgro
 <div class="card">
 <div class="card-title">Architecture</div>
 <ul>
-<li><strong>Backend:</strong> Python (Flask + asyncio), always-on server on fly.io</li>
-<li><strong>Frontend:</strong> Vanilla JS + Three.js (3D star map) + HTML/CSS panels (UI)</li>
-<li><strong>Economy Engine:</strong> Real-time agent-based tick simulation (Python, background thread)</li>
-<li><strong>Database:</strong> SQLite on persistent volume (fly.io)</li>
-<li><strong>Client-Server:</strong> WebSocket for live updates, REST for queries</li>
-<li><strong>Deployment:</strong> fly.io (shared-cpu-2x, 1GB), auto-deploy via GitHub Actions</li>
-<li><strong>Future:</strong> Free MMORPG, multiple players in shared persistent world</li>
+<li><strong>Backend:</strong> Python (Flask), always-on server on fly.io (~$3.50/month)</li>
+<li><strong>Frontend:</strong> Vanilla JS + Three.js (3D star map) + HTML/CSS panels</li>
+<li><strong>Economy Engine:</strong> Real-time agent-based tick simulation (1 tick/sec)</li>
+<li><strong>Scale:</strong> 2,500 star systems, 100,000+ NPC ships (simulated abstractly)</li>
+<li><strong>Database:</strong> SQLite (game_data.db for static data, game.db for runtime state)</li>
+<li><strong>Performance:</strong> NPCs simulated as state machines (system ID + state + cargo). Only rendered when player is in-system.</li>
+<li><strong>Deployment:</strong> fly.io, auto-deploy via GitHub Actions on push to master</li>
 </ul>
 </div>
 
-<h2>Build Phases</h2>
+<h2>Implementation Phases</h2>
 
-<h3>Phase 1: Living Economy - COMPLETE</h3>
+<h3>Phase 1: Economy Rescaling (Current)</h3>
 <ul>
-<li>48-system universe (3 clusters, chokepoints, ore distribution rules)</li>
-<li>38 commodities across 5 tiers with recipe-driven production</li>
-<li>Price engine: <code style="color:#ffd54f">price = base * (demand/supply)^elasticity</code></li>
-<li>70 NPC agents (50 traders, 20 miners) with safety-aware pathfinding</li>
-<li>SQLite persistence, auto-deploy via GitHub Actions</li>
-<li>Two-layer navigation (inter-system + intra-system)</li>
-<li>Comprehensive debug dashboard for monitoring</li>
+<li>Rescale all recipes to EVE-tier quantities (millions of raw ore for capitals)</li>
+<li>Balance mining rates, production rates, and construction times</li>
+<li>Target: frigate = hours, dreadnought = weeks</li>
+<li>Ensure warfare consumption balances production</li>
 </ul>
 
-<h3>Phase 2: Player Can Trade (NEXT)</h3>
+<h3>Phase 2: Faction Expansion AI</h3>
 <ul>
-<li>Player can buy/sell commodities at current station</li>
-<li>Player can set destination, travel takes real time (ticks)</li>
-<li>Fuel consumption during travel</li>
-<li>Balance and cargo tracking</li>
-<li>Ship upgrades (cargo capacity, fuel efficiency, speed)</li>
-<li>Player mining (mining laser hardpoint on asteroid fields)</li>
+<li>Factions build stations in unclaimed adjacent systems</li>
+<li>Territory claims and sovereignty mechanics</li>
+<li>Security level progression over time</li>
+<li>NPC governors with competence ratings</li>
 </ul>
 
-<h3>Phase 3: Blueprints and Fittings</h3>
+<h3>Phase 3: Universe Expansion to 2,500 Systems</h3>
 <ul>
-<li>Blueprint system (recipes as discoverable/tradeable items)</li>
-<li>Weapons and ship fittings as equippable items</li>
-<li>Ship loadout system (hardpoints, slots)</li>
-<li>Damage/wear creates ongoing demand</li>
+<li>Procedural generation with hand-placed faction homeworlds</li>
+<li>Proper cluster/security distribution</li>
+<li>Jump gate network with chokepoints</li>
+<li>Ore distribution following security gradient</li>
 </ul>
 
-<h3>Phase 4: Information and Risk</h3>
+<h3>Phase 4: Player Layer</h3>
 <ul>
-<li>Price data staleness (you only see prices from your last visit)</li>
-<li>Security zones with piracy risk (random cargo loss in low-sec)</li>
-<li>Basic events (supply disruptions, price spikes, faction skirmishes)</li>
-<li>Contracts and reputation</li>
+<li>Fly your ship (trade, explore, mine)</li>
+<li>Join or create a faction</li>
+<li>Delegation UI (appoint governors, admirals, set policy)</li>
+<li>Battle status window with retreat option</li>
+<li>Strategic map and empire overview</li>
 </ul>
 
-<h3>Phase 5: Factions and Depth</h3>
+<h3>Phase 5: Long-term Simulation</h3>
 <ul>
-<li>Faction territories, diplomacy, and warfare</li>
-<li>Shifting borders that reshape trade routes</li>
-<li>Smuggling mechanics in embargoed systems</li>
-<li>Fleet ownership and infrastructure (late-game)</li>
-<li>Multiplayer (shared persistent world)</li>
+<li>Run 24/7 for months/years</li>
+<li>Watch factions expand, clash, trade</li>
+<li>Observe if the economy self-sustains or needs tuning</li>
+<li>Add depth as needed (diplomacy, espionage, tech progression)</li>
 </ul>
 
 </div>
