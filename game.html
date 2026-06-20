@@ -364,7 +364,6 @@ let sysPositions = {};
 const systemIdToIndex={};
 const systemMeshes = [];
 const routes = [];
-const routeLines = [];
 
 async function initSystems(){
   const r=await fetch('/api/positions');
@@ -386,7 +385,7 @@ async function initSystems(){
     scene.add(sprite);
     systemMeshes.push(sprite);
   });
-  // Route lines from connections
+  // Route lines - store data, render only nearby ones dynamically
   const drawn=new Set();
   systems.forEach((s,i)=>{
     for(const connId of s.connections||[]){
@@ -394,11 +393,40 @@ async function initSystems(){
       const key=Math.min(i,j)+'-'+Math.max(i,j);
       if(drawn.has(key))continue;drawn.add(key);
       routes.push([i,j]);
-      const pts=[new THREE.Vector3(s.x,s.y,s.z),new THREE.Vector3(systems[j].x,systems[j].y,systems[j].z)];
-      const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.15}));
-      scene.add(line);routeLines.push(line);
     }
   });
+  // Single LineSegments object for all visible connections
+  const routeGeo=new THREE.BufferGeometry();
+  const routeMat=new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.2});
+  const routeMesh=new THREE.LineSegments(routeGeo,routeMat);
+  scene.add(routeMesh);
+
+  function updateRouteLines(){
+    const camPos=camera.position;
+    const showDist=250;
+    const sel=selectedSystem;
+    const connSet=new Set();
+    if(sel>=0){
+      (systems[sel].connections||[]).forEach(cid=>{const idx=systemIdToIndex[cid];if(idx!==undefined)connSet.add(Math.min(sel,idx)+'-'+Math.max(sel,idx));});
+    }
+    const verts=[];
+    for(const [i,j] of routes){
+      const key=Math.min(i,j)+'-'+Math.max(i,j);
+      const si=systems[i],sj=systems[j];
+      // Show if selected system's connections OR if both endpoints near camera
+      if(connSet.has(key)){
+        verts.push(si.x,si.y,si.z,sj.x,sj.y,sj.z);
+      }else{
+        const di=(si.x-camPos.x)**2+(si.y-camPos.y)**2+(si.z-camPos.z)**2;
+        const dj=(sj.x-camPos.x)**2+(sj.y-camPos.y)**2+(sj.z-camPos.z)**2;
+        if(di<showDist*showDist&&dj<showDist*showDist){
+          verts.push(si.x,si.y,si.z,sj.x,sj.y,sj.z);
+        }
+      }
+    }
+    routeGeo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+    routeGeo.computeBoundingSphere();
+  }
   // CSS2D labels (visibility managed per frame)
   const labelObjects=[];
   systems.forEach((s,i)=>{
@@ -428,7 +456,30 @@ async function initSystems(){
       const dx=lbl.position.x-camPos.x,dy=lbl.position.y-camPos.y,dz=lbl.position.z-camPos.z;
       lbl.visible=(dx*dx+dy*dy+dz*dz)<showRadius*showRadius;
     }
+    updateRouteLines();
   }
+
+  // Region labels (faction territory markers)
+  const regionLabels=[
+    {name:'Terran Federation',x:0,y:0,z:0,color:'#4fc3f7'},
+    {name:'Nexus Collective',x:300,y:200,z:50,color:'#ab47bc'},
+    {name:'Merchants Guild',x:-250,y:250,z:-30,color:'#ffd54f'},
+    {name:'Frontier Alliance',x:-300,y:-200,z:40,color:'#66bb6a'},
+    {name:'Iron Compact',x:200,y:-300,z:-50,color:'#ff8a65'},
+    {name:'The Corsairs',x:0,y:-400,z:0,color:'#ef5350'},
+    {name:'NULL-SEC',x:800,y:0,z:0,color:'#555'},
+    {name:'NULL-SEC',x:-800,y:0,z:0,color:'#555'},
+    {name:'NULL-SEC',x:0,y:800,z:0,color:'#555'},
+    {name:'NULL-SEC',x:0,y:-800,z:0,color:'#555'},
+  ];
+  regionLabels.forEach(r=>{
+    const div=document.createElement('div');
+    div.style.cssText=`font-family:Orbitron,sans-serif;font-size:12px;color:${r.color};letter-spacing:3px;text-transform:uppercase;opacity:0.6;pointer-events:none`;
+    div.textContent=r.name;
+    const label=new CSS2DObject(div);
+    label.position.set(r.x,r.y+20,r.z);
+    scene.add(label);
+  });
   // Build system list cards
   buildSystemCards();
 }
@@ -557,8 +608,8 @@ function animate(){
 
   // Ships rendered in system view only now
 
-  // Label visibility: show selected + connected + nearby camera
-  if(typeof updateLabelVisibility==='function')updateLabelVisibility();
+  // Label visibility: show selected + connected + nearby camera (throttled)
+  if(typeof updateLabelVisibility==='function'&&mainFrame%4===0)updateLabelVisibility();
 
   // Rotate player ring to face camera
   playerRing.lookAt(camera.position);
