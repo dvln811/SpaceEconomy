@@ -38,21 +38,28 @@ input:focus{border-color:#4fc3f7;outline:none}
 .cat-raw{color:#ffd54f}.cat-refined{color:#66bb6a}.cat-mfg{color:#ab47bc}.cat-comp{color:#ff8a65}
 .cat-wpn{color:#ef5350}.cat-def{color:#4fc3f7}.cat-prop{color:#ffd54f}.cat-drone{color:#ab47bc}
 .cat-mine{color:#ff8a65}.cat-ammo{color:#ef5350}.cat-equip{color:#4fc3f7}.cat-trade{color:#66bb6a}
+
+#docnav .dnl{font-size:10px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:'Orbitron',sans-serif;transition:all .15s}
+#docnav .dnl:hover{color:#4fc3f7;border-color:#4fc3f7;background:#0d1a2f}
+#docnav .dnl.active{color:#4fc3f7;border-color:#4fc3f7}
 </style>
 </head>
 <body>
-<div class="nav">
-  <h1>Items Database</h1>
-  <a href="/">Game</a>
-  <a href="/docs">Hub</a>
-  <a href="/design">Design</a>
-  <a href="/universe">Universe</a>
-  <a href="/factions">Factions</a>
-  <a href="/economy">Economy</a>
-  <a href="/resources">Resources</a>
-  <a href="/materials">Materials</a>
-  <a href="/products">Products</a>
-  <a href="/fitting">Fitting</a>
+<div id="docnav" style="position:sticky;top:0;z-index:100;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:0 24px;height:48px;gap:12px;flex-wrap:wrap">
+<a href="/" class="dnl">Game</a>
+<a href="/docs" class="dnl">Hub</a>
+<span style="color:#1a2844">|</span>
+<a href="/design" class="dnl" id="dn-design">Design</a>
+<a href="/universe" class="dnl" id="dn-universe">Universe</a>
+<a href="/factions" class="dnl" id="dn-factions">Factions</a>
+<a href="/ships" class="dnl" id="dn-ships">Ships</a>
+<a href="/fitting" class="dnl" id="dn-fitting">Fitting</a>
+<span style="color:#1a2844">|</span>
+<a href="/economy" class="dnl" id="dn-economy">Economy</a>
+<a href="/resources" class="dnl" id="dn-resources">Resources</a>
+<a href="/materials" class="dnl" id="dn-materials">Materials</a>
+<a href="/products" class="dnl" id="dn-products">Products</a>
+<a href="/items" class="dnl" id="dn-items" class="dnl active">Items DB</a>
 </div>
 <div class="main">
 <div class="sidebar" id="sidebar"></div>

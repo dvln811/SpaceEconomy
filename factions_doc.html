@@ -28,10 +28,29 @@ a:hover{text-decoration:underline}
 .relations{display:flex;gap:16px;margin-top:8px;font-size:10px}
 .ally{color:#66bb6a}
 .enemy{color:#ef5350}
+
+#docnav .dnl{font-size:10px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:'Orbitron',sans-serif;transition:all .15s}
+#docnav .dnl:hover{color:#4fc3f7;border-color:#4fc3f7;background:#0d1a2f}
+#docnav .dnl.active{color:#4fc3f7;border-color:#4fc3f7}
 </style>
 </head>
 <body>
-<div id="docnav" style="position:sticky;top:0;z-index:100;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:8px 16px;gap:8px;flex-wrap:wrap"><a href="/" style="font-size:9px;color:#8aa0b8;text-decoration:none;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;font-family:Orbitron,sans-serif">Game</a><a href="/docs" style="font-size:9px;color:#8aa0b8;text-decoration:none;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;font-family:Orbitron,sans-serif">Hub</a><span style="color:#1a2844">|</span><a href="/design" style="font-size:9px;color:#8aa0b8;text-decoration:none;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;font-family:Orbitron,sans-serif">Design</a><a href="/universe" style="font-size:9px;color:#8aa0b8;text-decoration:none;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;font-family:Orbitron,sans-serif">Universe</a><a href="/factions" style="font-size:9px;color:#8aa0b8;text-decoration:none;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;font-family:Orbitron,sans-serif">Factions</a><a href="/ships" style="font-size:9px;color:#8aa0b8;text-decoration:none;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;font-family:Orbitron,sans-serif">Ships</a><a href="/fitting" style="font-size:9px;color:#8aa0b8;text-decoration:none;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;font-family:Orbitron,sans-serif">Fitting</a><span style="color:#1a2844">|</span><a href="/economy" style="font-size:9px;color:#8aa0b8;text-decoration:none;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;font-family:Orbitron,sans-serif">Economy</a><a href="/resources" style="font-size:9px;color:#8aa0b8;text-decoration:none;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;font-family:Orbitron,sans-serif">Resources</a><a href="/materials" style="font-size:9px;color:#8aa0b8;text-decoration:none;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;font-family:Orbitron,sans-serif">Materials</a><a href="/products" style="font-size:9px;color:#8aa0b8;text-decoration:none;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;font-family:Orbitron,sans-serif">Products</a><a href="/items" style="font-size:9px;color:#8aa0b8;text-decoration:none;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;font-family:Orbitron,sans-serif">Items DB</a></div>
+<div id="docnav" style="position:sticky;top:0;z-index:100;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:0 24px;height:48px;gap:12px;flex-wrap:wrap">
+<a href="/" class="dnl">Game</a>
+<a href="/docs" class="dnl">Hub</a>
+<span style="color:#1a2844">|</span>
+<a href="/design" class="dnl" id="dn-design">Design</a>
+<a href="/universe" class="dnl" id="dn-universe">Universe</a>
+<a href="/factions" class="dnl" id="dn-factions" class="dnl active">Factions</a>
+<a href="/ships" class="dnl" id="dn-ships">Ships</a>
+<a href="/fitting" class="dnl" id="dn-fitting">Fitting</a>
+<span style="color:#1a2844">|</span>
+<a href="/economy" class="dnl" id="dn-economy">Economy</a>
+<a href="/resources" class="dnl" id="dn-resources">Resources</a>
+<a href="/materials" class="dnl" id="dn-materials">Materials</a>
+<a href="/products" class="dnl" id="dn-products">Products</a>
+<a href="/items" class="dnl" id="dn-items">Items DB</a>
+</div>
 <div style="max-width:1200px;margin:0 auto;padding:0 40px">
 <h1>Factions &amp; Corporations</h1>
 <p>The galaxy is divided among six major factions, each controlling sectors of space and pursuing their own agendas. Within each faction, corporations handle specific operations. NPC ships belong to these corps, and in the future, players will be able to join or create factions.</p>
