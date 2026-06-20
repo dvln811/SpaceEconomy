@@ -122,11 +122,12 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <!-- Market: static filter bar -->
   <div class="view" id="view-market">
     <div class="filter-bar">
+      <input class="filter-input" id="mktSearch" placeholder="Search items...">
       <select class="filter-select" id="mktCommodityFilter"><option value="">All commodities</option></select>
       <select class="filter-select" id="mktSystemFilter"><option value="">All systems</option></select>
-      <select class="filter-select" id="mktSortBy"><option value="commodity">Sort: Commodity</option><option value="price_asc">Sort: Price Low</option><option value="price_desc">Sort: Price High</option><option value="stock_desc">Sort: Stock High</option></select>
+      <select class="filter-select" id="mktSortBy"><option value="commodity">Sort: Name</option><option value="price_asc">Sort: Price Low</option><option value="price_desc">Sort: Price High</option><option value="stock_desc">Sort: Stock High</option></select>
     </div>
-    <div class="tbl-wrap" style="padding-right:8px"><table class="tbl" style="table-layout:fixed;width:100%"><thead><tr><th style="width:22%">Commodity</th><th style="width:8%">Tier</th><th style="width:20%">System</th><th style="width:22%">Station</th><th style="width:14%;text-align:right">Price</th><th style="width:14%;text-align:right">Stock</th></tr></thead><tbody id="mktBody"></tbody></table></div>
+    <div class="tbl-wrap" style="padding-right:8px"><table class="tbl" style="table-layout:fixed;width:100%"><thead><tr><th style="width:20%">Item</th><th style="width:16%">System</th><th style="width:18%">Station</th><th style="width:12%;text-align:right">Price</th><th style="width:10%;text-align:right">Stock</th><th style="width:12%;text-align:right">Buy Demand</th><th style="width:12%;text-align:right">Sell Supply</th></tr></thead><tbody id="mktBody"></tbody></table></div>
   </div>
   <!-- Systems: static dropdown -->
   <div class="view" id="view-systems">
@@ -350,16 +351,16 @@ const TIER_MAP = {}; // populated from data
 function renderMarket() {
   const prices = D.prices || {};
   const commodities = Object.keys(prices).sort();
+  const searchVal = (document.getElementById('mktSearch')?.value||'').toLowerCase();
 
-  // Populate commodity filter dropdown (once)
+  // Populate filters (once)
   if (!mktCommoditiesPopulated && commodities.length) {
     const sel = document.getElementById('mktCommodityFilter');
     for (const c of commodities) {
-      const opt = document.createElement('option'); opt.value = c; opt.textContent = c; sel.appendChild(opt);
+      const opt = document.createElement('option'); opt.value = c; opt.textContent = fmtName(c); sel.appendChild(opt);
     }
     mktCommoditiesPopulated = true;
   }
-  // Populate system filter dropdown (once)
   if (!mktSystemsPopulated) {
     const systemNames = new Set();
     for (const entries of Object.values(prices)) entries.forEach(e => systemNames.add(e.system));
@@ -379,20 +380,32 @@ function renderMarket() {
   let allEntries = [];
   for (const c of commodities) {
     if (comF && c !== comF) continue;
+    const name = fmtName(c);
+    if (searchVal && !name.toLowerCase().includes(searchVal)) continue;
     for (const e of prices[c]) {
       if (sysF && e.system !== sysF) continue;
-      allEntries.push({commodity: c, ...e});
+      // Find buy demand and sell supply from station data
+      let buyDemand = 0, sellSupply = 0;
+      const sysData = Object.values(D.systems||{}).find(s => s.name === e.system);
+      if (sysData) {
+        const st = sysData.stations.find(s => s.name === e.station);
+        if (st) {
+          const bo = (st.buy_orders||[]).find(b => b.commodity === c);
+          if (bo) buyDemand = bo.qty;
+          sellSupply = e.stock;
+        }
+      }
+      allEntries.push({commodity: c, name, buyDemand, sellSupply, ...e});
     }
   }
-  // Sort
   if (sortBy === 'price_asc') allEntries.sort((a,b) => a.price - b.price);
   else if (sortBy === 'price_desc') allEntries.sort((a,b) => b.price - a.price);
   else if (sortBy === 'stock_desc') allEntries.sort((a,b) => b.stock - a.stock);
-  else allEntries.sort((a,b) => a.commodity.localeCompare(b.commodity));
+  else allEntries.sort((a,b) => a.name.localeCompare(b.name));
 
   let rows = '';
   for (const e of allEntries) {
-    rows += `<tr><td style="color:#ffd54f">${fmtName(e.commodity)}</td><td style="color:#8aa0b8">T${getTier(e.commodity)}</td><td>${e.system}</td><td style="color:#8aa0b8">${e.station}</td><td style="color:#e0e8f0;text-align:right">${e.price.toFixed(0)}</td><td style="color:#4fc3f7;text-align:right">${Math.round(e.stock)}</td></tr>`;
+    rows += `<tr><td style="color:#ffd54f">${e.name}</td><td>${e.system}</td><td style="color:#8aa0b8">${e.station}</td><td style="color:#e0e8f0;text-align:right">${e.price.toFixed(0)}</td><td style="color:#4fc3f7;text-align:right">${Math.round(e.stock)}</td><td style="color:#ef5350;text-align:right">${Math.round(e.buyDemand)||'-'}</td><td style="color:#66bb6a;text-align:right">${Math.round(e.sellSupply)||'-'}</td></tr>`;
   }
   document.getElementById('mktBody').innerHTML = rows;
 }
@@ -405,6 +418,8 @@ function getTier(commodity_id) {
 
 document.getElementById('mktCommodityFilter').addEventListener('change', () => renderMarket());
 document.getElementById('mktSystemFilter').addEventListener('change', () => renderMarket());
+document.getElementById('mktSearch').addEventListener('input', () => renderMarket());
+document.getElementById('mktSortBy').addEventListener('change', () => renderMarket());
 document.getElementById('mktSortBy')?.addEventListener('change', () => renderMarket());
 
 // ── Systems ─────────────────────────────────────────────────────────────────
@@ -436,7 +451,7 @@ function renderSystems() {
       }).join('');
       return `<div class="stat-row"><span class="label" style="color:#ffd54f">${p.name}</span>${status}</div><div class="stat-row"><span class="label" style="padding-left:12px">Stock</span><span class="value">${p.stock}</span></div>${inputRows}`;
     }).join('');
-    const invRows = Object.entries(st.inventory).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([k,v])=>`<div class="stat-row"><span class="label">${k}</span><span class="value">${v}</span></div>`).join('');
+    const invRows = Object.entries(st.inventory).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([k,v])=>`<div class="stat-row"><span class="label">${fmtName(k)}</span><span class="value">${Math.round(v)}</span></div>`).join('');
     // Order book
     const sellRows = (st.sell_orders||[]).slice(0,5).map(o=>`<div class="stat-row"><span class="label" style="color:#66bb6a">${o.commodity}</span><span class="value">${Math.round(o.qty)} @ ${o.price.toFixed(0)}</span></div>`).join('');
     const buyRows = (st.buy_orders||[]).slice(0,5).map(o=>`<div class="stat-row"><span class="label" style="color:#ef5350">${o.commodity}</span><span class="value">${Math.round(o.qty)} @ ${o.price.toFixed(0)}</span></div>`).join('');
@@ -448,7 +463,7 @@ function renderSystems() {
 
   const shipsHere = (D.ships||[]).filter(s => s.location_id === selectedSystem);
   const shipList = shipsHere.map(s => `<div style="padding:2px 0;font-size:10px"><span class="badge" style="background:${s.role==='miner'?'#ab47bc22':'#4fc3f722'};color:${s.role==='miner'?'#ab47bc':'#4fc3f7'}">${s.role}</span> ${s.name} <span style="color:#8aa0b8">(${s.state})</span></div>`).join('');
-  const beltInfo = sys.belts.map(b => `<div class="stat-row"><span class="label">${b.name}</span><span class="value">${b.yields.join(', ')} (d:${b.density})</span></div>`).join('');
+  const beltInfo = sys.belts.map(b => `<div class="stat-row"><span class="label">${b.name}</span><span class="value">${b.yields.map(y=>fmtName(y)).join(', ')} (d:${b.density})</span></div>`).join('');
 
   document.getElementById('sysContent').innerHTML = `<div class="sys-panel"><div>${stationPanels}</div><div>
     <div class="panel"><div class="panel-title">System Info</div>

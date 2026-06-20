@@ -143,6 +143,16 @@ def fitting_page():
     return send_from_directory(BASE_DIR, "fitting.html")
 
 
+@app.route("/items")
+def items_page():
+    return send_from_directory(BASE_DIR, "items.html")
+
+
+@app.route("/factions")
+def factions_page():
+    return send_from_directory(BASE_DIR, "factions_doc.html")
+
+
 @app.route("/docs")
 def docs_page():
     return send_from_directory(BASE_DIR, "docs.html")
