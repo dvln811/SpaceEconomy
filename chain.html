@@ -6,6 +6,10 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Orbitron:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#0a0e18}
+::-webkit-scrollbar-thumb{background:#1a3050;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#2a4060}
 html,body{height:100%;overflow:hidden}
 body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:11px;display:flex;flex-direction:column}
 #docnav .dnl{font-size:10px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:'Orbitron',sans-serif;transition:all .15s}
@@ -30,7 +34,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .total-row .qty{color:#ffd54f;min-width:50px;text-align:right;margin-right:10px}
 .total-row .name{color:#c8d4e0}
 .chain-wrap{flex:1;overflow-y:auto;margin-top:12px;padding:12px;background:#0a0e18;border:1px solid #1a2844;border-radius:4px}
-.chain-title{font-family:'Orbitron',sans-serif;font-size:9px;color:#8aa0b8;letter-spacing:1px;margin-bottom:8px}
+.chain-title{font-family:'Orbitron',sans-serif;font-size:10px;color:#ffd54f;letter-spacing:1px;margin-bottom:8px;cursor:pointer;user-select:none}
 .chain-row{display:flex;align-items:center;padding:2px 0}
 .chain-qty{color:#ffd54f;min-width:40px;text-align:right;margin-right:8px}
 .chain-name{color:#e0e8f0}
@@ -116,16 +120,17 @@ function showChain(id) {
     <div class="item-title">${item.name}</div>
     <div class="totals">
       <div class="totals-title">Total Raw Materials Required</div>
-      ${sorted.map(([rid,qty]) => `<div class="total-row"><span class="qty">${qty}x</span><span class="name">${names[rid]||rid}</span></div>`).join('')}
+      ${sorted.map(([rid,qty]) => `<div class="total-row"><span class="qty">${qty}x</span><span class="name">${(names[rid]||rid).replace(/_/g,' ').replace(/\\b\\w/g,c=>c.toUpperCase())}</span></div>`).join('')}
     </div>
     <div class="chain-wrap">
-      <div class="chain-title">Production Chain</div>
+      <div class="chain-title" onclick="const c=this.nextElementSibling;c.style.display=c.style.display==='none'?'block':'none';this.textContent=c.style.display==='none'?'▶ Production Chain (click to expand)':'▼ Production Chain (click to collapse)'">▼ Production Chain (click to collapse)</div>
+      <div class="chain-content">
       ${tree.map(row => {
         const indent = row.depth * 16;
         const color = row.raw ? 'chain-raw' : 'chain-name';
-        const prefix = row.depth > 0 ? '└ ' : '';
-        return `<div class="chain-row" style="padding-left:${indent}px"><span class="chain-qty">${row.qty}x</span><span class="${color}">${prefix}${row.name}</span></div>`;
+        return `<div class="chain-row" style="padding-left:${indent}px"><span class="chain-qty">${row.qty}x</span><span class="${color}">${row.name.replace(/_/g,' ').replace(/\\b\\w/g,c=>c.toUpperCase())}</span></div>`;
       }).join('')}
+      </div>
     </div>`;
 }
 </script>
