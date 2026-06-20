@@ -78,7 +78,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .sparkline polyline{fill:none;stroke-width:1.2}
 
 /* 3D System Labels */
-.system-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:#ccc;pointer-events:none;white-space:nowrap}
+.system-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:#fff;pointer-events:none;white-space:nowrap}
 
 /* Ship list items */
 .ship-item{padding:6px 10px;border-radius:4px;margin-bottom:4px;border:1px solid transparent;font-size:11px;cursor:pointer;transition:all .15s}
@@ -397,7 +397,7 @@ async function initSystems(){
   });
   // Single LineSegments object for all visible connections
   const routeGeo=new THREE.BufferGeometry();
-  const routeMat=new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.2});
+  const routeMat=new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.7});
   const routeMesh=new THREE.LineSegments(routeGeo,routeMat);
   scene.add(routeMesh);
 
@@ -692,25 +692,9 @@ function focusSystem(index){
   selectedSystem=index;
   selectedShip=-1;
   const s=systems[index];
-  const target=new THREE.Vector3(s.x,s.y,s.z);
-  const offset=new THREE.Vector3(s.size*8,s.size*6,s.size*12);
-  const dest=target.clone().add(offset);
-  const startPos=camera.position.clone();
-  const startTarget=controls.target.clone();
-  const duration=800;
-  const t0=performance.now();
-  animating=true;
-  function step(){
-    const elapsed=performance.now()-t0;
-    const t=Math.min(elapsed/duration,1);
-    const ease=1-Math.pow(1-t,3);
-    camera.position.lerpVectors(startPos,dest,ease);
-    controls.target.lerpVectors(startTarget,target,ease);
-    controls.update();
-    if(t<1) requestAnimationFrame(step);
-    else animating=false;
-  }
-  step();
+  // Just set as orbit target, don't move camera
+  controls.target.set(s.x,s.y,s.z);
+  controls.update();
   document.querySelectorAll('.system-item').forEach(el=>el.classList.remove('active'));
   const item=document.querySelector(`.system-item[data-index="${index}"]`);
   if(item){item.classList.add('active');item.scrollIntoView({block:'nearest'});}
