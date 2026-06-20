@@ -84,6 +84,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     <option value="120">120x</option>
   </select>
   <a href="/">Game</a>
+  <a href="/docs">Docs</a>
   <button class="tab-btn nuke-btn" id="nukeBtn">Nuke</button>
 </div>
 <div class="main">
@@ -222,7 +223,7 @@ function renderOverview() {
     </div>
     <div class="panel">
       <div class="panel-title">Economy Inventory</div>
-      ${topInv.map(([k,v])=>`<div class="stat-row"><span class="label">${k}</span><span class="value">${Math.round(v)}</span></div>`).join('')}
+      ${topInv.map(([k,v])=>`<div class="stat-row"><span class="label">${fmtName(k)}</span><span class="value">${Math.round(v)}</span></div>`).join('')}
     </div>
     <div class="panel">
       <div class="panel-title">Demand / Supply Balance</div>
