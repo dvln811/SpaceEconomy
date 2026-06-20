@@ -78,7 +78,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .sparkline polyline{fill:none;stroke-width:1.2}
 
 /* 3D System Labels */
-.system-label{font-family:'Orbitron',sans-serif;font-size:9px;color:#8ab4d4;letter-spacing:1px;text-transform:uppercase;pointer-events:none;white-space:nowrap;text-shadow:0 0 4px #05080f,0 0 8px #05080f}
+.system-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:#ccc;pointer-events:none;white-space:nowrap}
 
 /* Ship list items */
 .ship-item{padding:6px 10px;border-radius:4px;margin-bottom:4px;border:1px solid transparent;font-size:11px;cursor:pointer;transition:all .15s}
@@ -403,9 +403,7 @@ async function initSystems(){
 
   function updateRouteLines(){
     const camPos=camera.position;
-    const camDist=camPos.length();
-    const showDist=Math.max(150,camDist*0.4);
-    const showDistSq=showDist*showDist;
+    const showDistSq=400*400;
     const sel=selectedSystem;
     const connSet=new Set();
     if(sel>=0){
@@ -418,9 +416,9 @@ async function initSystems(){
       if(connSet.has(key)){
         verts.push(si.x,si.y,si.z,sj.x,sj.y,sj.z);
       }else{
-        const di=(si.x-camPos.x)**2+(si.y-camPos.y)**2+(si.z-camPos.z)**2;
-        const dj=(sj.x-camPos.x)**2+(sj.y-camPos.y)**2+(sj.z-camPos.z)**2;
-        if(di<showDistSq&&dj<showDistSq){
+        const mx=(si.x+sj.x)/2,my=(si.y+sj.y)/2,mz=(si.z+sj.z)/2;
+        const dm=(mx-camPos.x)**2+(my-camPos.y)**2+(mz-camPos.z)**2;
+        if(dm<showDistSq){
           verts.push(si.x,si.y,si.z,sj.x,sj.y,sj.z);
         }
       }
@@ -442,8 +440,7 @@ async function initSystems(){
   // Label visibility update
   function updateLabelVisibility(){
     const camPos=camera.position;
-    const camDist=camPos.length();
-    const showRadius=Math.max(150,camDist*0.4);
+    const showRadiusSq=300*300;
     const sel=selectedSystem;
     const connSet=new Set();
     if(sel>=0&&systems[sel].connections){
@@ -455,8 +452,10 @@ async function initSystems(){
     for(const lbl of labelObjects){
       const i=lbl._sysIdx;
       if(i===sel||connSet.has(i)){lbl.visible=true;continue;}
+      // Always show faction systems
+      if(systems[i].faction){lbl.visible=true;continue;}
       const dx=lbl.position.x-camPos.x,dy=lbl.position.y-camPos.y,dz=lbl.position.z-camPos.z;
-      lbl.visible=(dx*dx+dy*dy+dz*dz)<showRadius*showRadius;
+      lbl.visible=(dx*dx+dy*dy+dz*dz)<showRadiusSq;
     }
     updateRouteLines();
   }

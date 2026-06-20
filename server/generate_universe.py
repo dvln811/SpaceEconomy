@@ -295,22 +295,41 @@ def generate_universe():
     target_total = 2500
     remaining = target_total - len(systems)
     
-    # Use a looser spacing for the wild systems - SPHERICAL distribution
-    radius_max = 1200
-    min_spacing = 40
+    # Spherical distribution with clustering (natural nebula-like groupings)
+    radius_max = 1500
+    min_spacing = 45
+    
+    # Generate cluster centers for natural grouping
+    num_clusters = 40
+    cluster_centers = []
+    for _ in range(num_clusters):
+        r = random.uniform(200, radius_max)
+        theta = random.uniform(0, 2 * math.pi)
+        phi = random.uniform(-0.7, 0.7)
+        cluster_centers.append((
+            r * math.cos(theta) * math.cos(phi),
+            r * math.sin(theta) * math.cos(phi),
+            r * math.sin(phi) * 0.5
+        ))
     
     null_positions = []
     attempts = 0
     while len(null_positions) < remaining and attempts < remaining * 50:
-        # Spherical distribution (slightly flattened)
-        r = random.uniform(100, radius_max) * (random.random() ** 0.33)  # cube root for uniform volume
-        theta = random.uniform(0, 2 * math.pi)
-        phi = random.uniform(-0.4, 0.4)  # flatten z
-        x = r * math.cos(theta) * math.cos(phi)
-        y = r * math.sin(theta) * math.cos(phi)
-        z = r * math.sin(phi) * 0.3  # extra flatten
+        # 70% cluster around centers, 30% scattered
+        if random.random() < 0.7:
+            cx, cy, cz = random.choice(cluster_centers)
+            x = cx + random.gauss(0, 60)
+            y = cy + random.gauss(0, 60)
+            z = cz + random.gauss(0, 40)
+        else:
+            r = radius_max * (random.random() ** 0.33)
+            theta = random.uniform(0, 2 * math.pi)
+            phi = random.uniform(-1, 1)
+            x = r * math.cos(theta) * math.sqrt(1 - phi*phi)
+            y = r * math.sin(theta) * math.sqrt(1 - phi*phi)
+            z = r * phi * 0.5
         
-        # Check against all existing
+        # Check min distance
         too_close = False
         for px, py, pz in existing_positions + null_positions:
             dist = math.sqrt((x - px)**2 + (y - py)**2 + (z - pz)**2)
@@ -318,7 +337,7 @@ def generate_universe():
                 too_close = True
                 break
         if not too_close:
-            null_positions.append((x, y, z))
+            null_positions.append((round(x,1), round(y,1), round(z,1)))
         attempts += 1
         
         if attempts % 10000 == 0:
@@ -370,7 +389,7 @@ def generate_universe():
     
     # Build connections
     print("Building jump gate network...")
-    connections = build_connections(systems, max_dist=100, max_connections=5, min_connections=2)
+    connections = build_connections(systems, max_dist=130, max_connections=5, min_connections=2)
     
     total_connections = sum(len(v) for v in connections.values()) // 2
     avg_connections = sum(len(v) for v in connections.values()) / len(systems)
