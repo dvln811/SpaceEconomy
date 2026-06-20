@@ -18,7 +18,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .side-item.active{background:#0d1a2f;color:#4fc3f7}
 .content{flex:1;overflow:auto;padding:12px}
 table{width:100%;border-collapse:collapse}
-th{font-family:'Orbitron',sans-serif;font-size:9px;color:#8aa0b8;letter-spacing:1px;text-align:left;padding:6px 8px;border-bottom:1px solid #1a2844;position:sticky;top:0;background:#0a0e18;z-index:2}
+th{font-family:'Orbitron',sans-serif;font-size:9px;color:#8aa0b8;letter-spacing:1px;text-align:left;padding:6px 8px;border-bottom:1px solid #1a2844;position:sticky;top:0;background:#05080f;z-index:2;box-shadow:0 1px 0 #1a2844}
 td{padding:8px;border-bottom:1px solid #0f1a28;vertical-align:top}
 tr:hover td{background:#0d1525}
 .recipe{color:#66bb6a;font-size:9px;line-height:1.5}
@@ -41,6 +41,7 @@ tr:hover td{background:#0d1525}
 <script>
 let items = [];
 let nameMap = {};
+let currentFilter = '';
 const categories = ['Weapons','Ammunition','Defense','Propulsion','Drones','Mining','Utility','Raw Materials','Refined Materials','Manufactured','Components','Trade Goods'];
 function tierToCategory(t){return {0:'Trade Goods',1:'Raw Materials',2:'Refined Materials',3:'Manufactured',4:'Components'}[t]||'Utility';}
 
@@ -56,6 +57,8 @@ async function init() {
       recipe: formatRecipe(c.recipe), stats: typeof c.stats === 'string' ? JSON.parse(c.stats) : (c.stats || {})
     }));
     buildSidebar();
+    document.getElementById('itemSearch').addEventListener('input', searchAll);
+    document.getElementById('itemSearch').addEventListener('search', searchAll);
   } catch(e) { document.getElementById('content').innerHTML = '<div class="loading">Error: '+e.message+'</div>'; }
 }
 
@@ -66,7 +69,7 @@ function formatRecipe(recipe) {
 
 function buildSidebar() {
   const sb = document.getElementById('sidebar');
-  sb.innerHTML = '';
+  sb.innerHTML = '<input type="search" id="itemSearch" placeholder="Search items..." style="width:calc(100% - 8px);margin:4px;background:#0a1020;border:1px solid #1a2844;color:#c8d4e0;padding:5px 8px;border-radius:3px;font:inherit;font-size:10px">';
   let first = true;
   categories.forEach(cat => {
     const catItems = items.filter(i => i.category === cat);
@@ -74,7 +77,7 @@ function buildSidebar() {
     const btn = document.createElement('button');
     btn.className = 'side-item' + (first ? ' active' : '');
     btn.textContent = cat + ' (' + catItems.length + ')';
-    btn.onclick = () => { showCat(cat); setActive(btn); };
+    btn.onclick = () => { currentFilter = ''; document.getElementById('itemSearch').value = ''; showCat(cat); setActive(btn); };
     sb.appendChild(btn);
     const subs = [...new Set(catItems.map(i => i.subcategory).filter(Boolean))];
     subs.forEach(sub => {
@@ -83,7 +86,7 @@ function buildSidebar() {
       sbtn.style.paddingLeft = '16px';
       sbtn.style.fontSize = '10px';
       sbtn.textContent = sub + ' (' + catItems.filter(i => i.subcategory === sub).length + ')';
-      sbtn.onclick = () => { showSub(cat, sub); setActive(sbtn); };
+      sbtn.onclick = () => { currentFilter = ''; document.getElementById('itemSearch').value = ''; showSub(cat, sub); setActive(sbtn); };
       sb.appendChild(sbtn);
     });
     if (first) { showCat(cat); first = false; }
@@ -91,8 +94,15 @@ function buildSidebar() {
 }
 
 function setActive(el) { document.querySelectorAll('.side-item').forEach(b => b.classList.remove('active')); el.classList.add('active'); }
-function showCat(cat) { render(items.filter(i => i.category === cat), cat); }
-function showSub(cat, sub) { render(items.filter(i => i.category === cat && i.subcategory === sub), cat); }
+function showCat(cat) { render(items.filter(i => i.category === cat && matchSearch(i)), cat); }
+function showSub(cat, sub) { render(items.filter(i => i.category === cat && i.subcategory === sub && matchSearch(i)), cat); }
+function matchSearch(i) { if (!currentFilter) return true; return i.name.toLowerCase().includes(currentFilter); }
+function searchAll() {
+  currentFilter = (document.getElementById('itemSearch').value || '').toLowerCase();
+  if (!currentFilter) { showCat('Weapons'); return; }
+  const matched = items.filter(i => matchSearch(i));
+  render(matched, matched[0]?.category || 'Raw Materials');
+}
 
 function render(filtered, cat) {
   const el = document.getElementById('content');
