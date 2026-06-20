@@ -131,16 +131,16 @@ function showChain(id) {
 function buildTreeHtml(id, qty, depth) {
   if (depth > 12) return '';
   const item = lookup[id];
-  if (!item) return `<div class="chain-row" style="padding-left:${depth*16}px"><span class="chain-qty">${qty}x</span><span class="chain-raw">${(names[id]||id).replace(/_/g,' ').replace(/\\b\\w/g,c=>c.toUpperCase())}</span></div>`;
+  if (!item) return `<div class="chain-row" style="padding-left:${depth*8}px"><span class="chain-qty">${qty}x</span><span class="chain-raw">${(names[id]||id).replace(/_/g,' ').replace(/\\b\\w/g,c=>c.toUpperCase())}</span></div>`;
   if (!item.recipe || Object.keys(item.recipe).length === 0) {
-    return `<div class="chain-row" style="padding-left:${depth*16}px"><span class="chain-qty">${qty}x</span><span class="chain-raw">${(names[id]||item.name).replace(/_/g,' ').replace(/\\b\\w/g,c=>c.toUpperCase())}</span></div>`;
+    return `<div class="chain-row" style="padding-left:${depth*8}px"><span class="chain-qty">${qty}x</span><span class="chain-raw">${(names[id]||item.name).replace(/_/g,' ').replace(/\\b\\w/g,c=>c.toUpperCase())}</span></div>`;
   }
   const name = (names[id]||item.name).replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
   let children = '';
   for (const [inp, inpQty] of Object.entries(item.recipe)) {
     children += buildTreeHtml(inp, inpQty * qty, depth + 1);
   }
-  return `<div style="padding-left:${depth*16}px">
+  return `<div style="padding-left:${depth*8}px">
     <div class="chain-row" style="cursor:pointer" onclick="const s=this.nextElementSibling;s.style.display=s.style.display==='none'?'block':'none';this.querySelector('.tog').textContent=s.style.display==='none'?'▶':'▼'">
       <span class="chain-qty">${qty}x</span><span class="tog" style="color:#8aa0b8;margin-right:4px">▼</span><span class="chain-name">${name}</span>
     </div>
