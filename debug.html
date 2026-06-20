@@ -36,6 +36,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .badge-low{background:#ffd54f22;color:#ffd54f}
 .badge-none{background:#ef535022;color:#ef5350}
 .overview-grid{display:grid;grid-template-columns:repeat(4, 1fr);gap:8px;align-items:start}
+.overview-grid .panel{max-height:280px;overflow-y:auto}
 @media(max-width:1400px){.overview-grid{grid-template-columns:repeat(3, 1fr)}}
 @media(max-width:1000px){.overview-grid{grid-template-columns:1fr 1fr}}
 /* Tables with sticky headers */
@@ -86,7 +87,6 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   </select>
   <a href="/">Game</a>
   <a href="/docs">Docs</a>
-  <a href="/ships_db">Ships DB</a>
   <button class="tab-btn nuke-btn" id="nukeBtn">Nuke</button>
 </div>
 <div class="main">
