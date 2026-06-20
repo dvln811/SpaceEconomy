@@ -23,11 +23,11 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .main{flex:1;overflow:hidden;position:relative}
 .view{display:none;height:100%;overflow-y:auto;padding:10px}
 .view.active{display:block}
-.panel{background:#0a0e18;border:1px solid #1a2844;border-radius:4px;padding:10px;margin-bottom:8px}
+.panel{background:#0a0e18;border:1px solid #1a2844;border-radius:4px;padding:10px}
 .panel-title{font-family:'Orbitron',sans-serif;font-size:9px;color:#8aa0b8;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #152238}
-.stat-row{display:flex;justify-content:space-between;padding:2px 0;gap:8px}
-.stat-row .label{color:#8aa0b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
-.stat-row .value{color:#4fc3f7;font-weight:500;text-align:right;white-space:nowrap}
+.stat-row{display:flex;justify-content:space-between;padding:2px 0}
+.stat-row .label{color:#8aa0b8;flex:1}
+.stat-row .value{color:#4fc3f7;font-weight:500;text-align:right;flex-shrink:0}
 .badge{display:inline-block;font-size:9px;padding:1px 5px;border-radius:2px;letter-spacing:0.5px}
 .badge-ok{background:#66bb6a22;color:#66bb6a}
 .badge-halt{background:#ef535022;color:#ef5350}
@@ -35,9 +35,8 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .badge-medium{background:#4fc3f722;color:#4fc3f7}
 .badge-low{background:#ffd54f22;color:#ffd54f}
 .badge-none{background:#ef535022;color:#ef5350}
-.overview-grid{display:grid;grid-template-columns:repeat(4, 1fr);gap:8px;align-items:start}
-.overview-grid .panel{max-height:280px;overflow-y:auto}
-@media(max-width:1400px){.overview-grid{grid-template-columns:repeat(3, 1fr)}}
+.overview-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:min-content;gap:8px}
+@media(max-width:1400px){.overview-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:1000px){.overview-grid{grid-template-columns:1fr 1fr}}
 /* Tables with sticky headers */
 .tbl-wrap{overflow:auto;max-height:calc(100vh - 120px)}
