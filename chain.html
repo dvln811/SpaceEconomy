@@ -123,15 +123,30 @@ function showChain(id) {
       ${sorted.map(([rid,qty]) => `<div class="total-row"><span class="qty">${qty}x</span><span class="name">${(names[rid]||rid).replace(/_/g,' ').replace(/\\b\\w/g,c=>c.toUpperCase())}</span></div>`).join('')}
     </div>
     <div class="chain-wrap">
-      <div class="chain-title" onclick="const c=this.nextElementSibling;c.style.display=c.style.display==='none'?'block':'none';this.textContent=c.style.display==='none'?'▶ Production Chain (click to expand)':'▼ Production Chain (click to collapse)'">▼ Production Chain (click to collapse)</div>
-      <div class="chain-content">
-      ${tree.map(row => {
-        const indent = row.depth * 16;
-        const color = row.raw ? 'chain-raw' : 'chain-name';
-        return `<div class="chain-row" style="padding-left:${indent}px"><span class="chain-qty">${row.qty}x</span><span class="${color}">${row.name.replace(/_/g,' ').replace(/\\b\\w/g,c=>c.toUpperCase())}</span></div>`;
-      }).join('')}
-      </div>
+      <div class="chain-title">Production Chain</div>
+      ${buildTreeHtml(id, 1, 0)}
     </div>`;
+}
+
+function buildTreeHtml(id, qty, depth) {
+  if (depth > 12) return '';
+  const item = lookup[id];
+  if (!item) return `<div class="chain-row" style="padding-left:${depth*16}px"><span class="chain-qty">${qty}x</span><span class="chain-raw">${(names[id]||id).replace(/_/g,' ').replace(/\\b\\w/g,c=>c.toUpperCase())}</span></div>`;
+  if (!item.recipe || Object.keys(item.recipe).length === 0) {
+    return `<div class="chain-row" style="padding-left:${depth*16}px"><span class="chain-qty">${qty}x</span><span class="chain-raw">${(names[id]||item.name).replace(/_/g,' ').replace(/\\b\\w/g,c=>c.toUpperCase())}</span></div>`;
+  }
+  const name = (names[id]||item.name).replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+  let children = '';
+  for (const [inp, inpQty] of Object.entries(item.recipe)) {
+    children += buildTreeHtml(inp, inpQty * qty, depth + 1);
+  }
+  return `<div style="padding-left:${depth*16}px">
+    <div class="chain-row" style="cursor:pointer" onclick="const s=this.nextElementSibling;s.style.display=s.style.display==='none'?'block':'none';this.querySelector('.tog').textContent=s.style.display==='none'?'▶':'▼'">
+      <span class="chain-qty">${qty}x</span><span class="tog" style="color:#8aa0b8;margin-right:4px">▼</span><span class="chain-name">${name}</span>
+    </div>
+    <div class="chain-children">${children}</div>
+  </div>`;
+}
 }
 </script>
 </body>
