@@ -102,7 +102,7 @@ function show(filter) {
       ships = military.filter(s => s.hull_class === cls);
     }
     el.innerHTML = `<table><thead><tr>
-      <th>Name</th><th>Class</th><th>Faction</th><th>Hull</th><th>Armor</th><th>Shield</th><th>Total HP</th><th>Crew</th><th>Weapons</th><th>Description</th>
+      <th>Name</th><th>Class</th><th>Faction</th><th>Hull</th><th>Armor</th><th>Shield</th><th>Total HP</th><th>Crew</th><th>Weapons</th><th>Build Cost</th><th>Description</th>
     </tr></thead><tbody>${ships.map(s => `<tr>
       <td style="color:#e0e8f0">${s.name}</td>
       <td>${s.hull_class}</td>
@@ -113,6 +113,7 @@ function show(filter) {
       <td style="color:#ffd54f">${s.hull_hp+s.armor_hp+s.shield_hp}</td>
       <td>${s.crew}</td>
       <td style="font-size:9px;line-height:1.6">${s.weapons.join('<br>')}</td>
+      <td style="font-size:9px;line-height:1.6;color:#66bb6a">${s.build_cost?Object.entries(s.build_cost).map(([k,v])=>v+'x '+k).join('<br>'):'-'}</td>
       <td class="desc">${s.description}</td>
     </tr>`).join('')}</tbody></table>`;
   }
