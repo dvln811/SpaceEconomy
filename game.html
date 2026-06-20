@@ -558,7 +558,7 @@ function animate(){
   // Ships rendered in system view only now
 
   // Label visibility: show selected + connected + nearby camera
-  updateLabelVisibility();
+  if(typeof updateLabelVisibility==='function')updateLabelVisibility();
 
   // Rotate player ring to face camera
   playerRing.lookAt(camera.position);
