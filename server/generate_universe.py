@@ -105,45 +105,59 @@ def poisson_disk_3d(count, radius, bounds, existing=None):
 
 
 def build_connections(systems, max_dist=120, max_connections=6, min_connections=2):
-    """Build jump gate network using distance-based connectivity."""
+    """Build jump gate network using distance-based connectivity.
+    Max 5 for claimed (high/med), max 3 for null-sec. Dead-ends allowed."""
     connections = {sid: [] for sid in systems}
     positions = {sid: (s['x'], s['y'], s['z']) for sid, s in systems.items()}
     
-    # Calculate all distances
+    def max_for(sid):
+        sec = systems[sid]['security']
+        if sec in ('high', 'medium'):
+            return 5
+        elif sec == 'low':
+            return 3
+        return 3  # null-sec
+    
+    # Calculate all distances and connect nearest within limits
     sids = list(systems.keys())
     for i, sid1 in enumerate(sids):
+        cap = max_for(sid1)
+        if len(connections[sid1]) >= cap:
+            continue
         distances = []
         for sid2 in sids:
             if sid1 == sid2:
                 continue
             p1, p2 = positions[sid1], positions[sid2]
             dist = math.sqrt(sum((a - b)**2 for a, b in zip(p1, p2)))
-            distances.append((dist, sid2))
+            if dist <= max_dist:
+                distances.append((dist, sid2))
         distances.sort()
         
-        # Connect to nearest neighbors within max_dist
-        for dist, sid2 in distances[:max_connections]:
-            if dist > max_dist:
+        for dist, sid2 in distances:
+            if len(connections[sid1]) >= cap:
                 break
-            if sid2 not in connections[sid1] and len(connections[sid1]) < max_connections:
+            if len(connections[sid2]) >= max_for(sid2):
+                continue
+            if sid2 not in connections[sid1]:
                 connections[sid1].append(sid2)
                 connections[sid2].append(sid1)
     
-    # Ensure minimum connectivity
+    # Ensure connectivity: every system has at least 1 connection (no islands)
     for sid in sids:
-        if len(connections[sid]) < min_connections:
+        if len(connections[sid]) == 0:
             distances = []
             for sid2 in sids:
-                if sid2 == sid or sid2 in connections[sid]:
+                if sid2 == sid:
                     continue
                 p1, p2 = positions[sid], positions[sid2]
                 dist = math.sqrt(sum((a - b)**2 for a, b in zip(p1, p2)))
                 distances.append((dist, sid2))
             distances.sort()
-            for dist, sid2 in distances[:min_connections]:
-                if sid2 not in connections[sid]:
-                    connections[sid].append(sid2)
-                    connections[sid2].append(sid1)
+            # Connect to nearest regardless of cap
+            sid2 = distances[0][1]
+            connections[sid].append(sid2)
+            connections[sid2].append(sid)
     
     return connections
 
