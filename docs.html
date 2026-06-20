@@ -32,24 +32,44 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 </head>
 <body>
 <div id="docnav" style="position:sticky;top:0;z-index:100;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:0 24px;height:48px;gap:12px;flex-wrap:wrap">
-<a href="/" class="dnl">Game</a>
-<a href="/docs" class="dnl">Hub</a>
-<span style="color:#1a2844">|</span>
-<a href="/design" class="dnl" id="dn-design">Design</a>
-<a href="/universe" class="dnl" id="dn-universe">Universe</a>
-<a href="/factions" class="dnl" id="dn-factions">Factions</a>
-<a href="/ships" class="dnl" id="dn-ships">Ships</a>
-<a href="/fitting" class="dnl" id="dn-fitting">Fitting</a>
-<span style="color:#1a2844">|</span>
-<a href="/economy" class="dnl" id="dn-economy">Economy</a>
-<a href="/resources" class="dnl" id="dn-resources">Resources</a>
-<a href="/materials" class="dnl" id="dn-materials">Materials</a>
-<a href="/products" class="dnl" id="dn-products">Products</a>
-<a href="/items" class="dnl" id="dn-items">Items DB</a><a href="/chain" class="dnl">Chain Calc</a>
+<a href="/" class="dnl">Game</a><a href="/docs" class="dnl active">Hub</a><span style="color:#1a2844">|</span>
+<a href="/items" class="dnl">Items DB</a><a href="/ships_db" class="dnl">Ships DB</a><a href="/chain" class="dnl">Chain Calc</a><a href="/factions" class="dnl">Factions</a><a href="/ships" class="dnl">Ships 3D</a><a href="/fitting" class="dnl">Fitting</a><span style="color:#1a2844">|</span>
+<a href="/design" class="dnl">Design</a><a href="/universe" class="dnl">Universe</a><a href="/economy" class="dnl">Economy</a><a href="/resources" class="dnl">Resources</a><a href="/materials" class="dnl">Materials</a><a href="/products" class="dnl">Products</a><span style="color:#1a2844">|</span>
+<a href="/debug" class="dnl">Debug</a>
 </div>
 <div class="content">
-<h2>Documentation</h2>
-<p>Design documents for Hauler's Almanac. These define what the game is, how the universe works, and how the economy functions.</p>
+<h2>Game Reference</h2>
+<p>In-game databases and tools for players.</p>
+
+<div class="doc-grid">
+  <a href="/items" class="doc-card">
+    <h3>Items Database</h3>
+    <p>All 152 items: searchable, sortable, filterable. Stats, recipes, and descriptions for everything in the economy.</p>
+  </a>
+  <a href="/ships_db" class="doc-card">
+    <h3>Ships Database</h3>
+    <p>Civilian and military ships. Hull stats, weapons loadouts, build costs, and faction variants.</p>
+  </a>
+  <a href="/chain" class="doc-card">
+    <h3>Chain Calculator</h3>
+    <p>Full production chain breakdown for any item. See total raw materials needed and every intermediate step.</p>
+  </a>
+  <a href="/factions" class="doc-card">
+    <h3>Factions</h3>
+    <p>Major factions, corporations, territories, allies, enemies, philosophies.</p>
+  </a>
+  <a href="/ships" class="doc-card">
+    <h3>Ships 3D</h3>
+    <p>Interactive 3D ship model viewer. Inspect hull geometry for all ship classes.</p>
+  </a>
+  <a href="/fitting" class="doc-card">
+    <h3>Ship Fitting</h3>
+    <p>Module slots, CPU/Power Grid, ship stats, slot layouts per hull class, fitting rules.</p>
+  </a>
+</div>
+
+<h2>Development Design</h2>
+<p>Internal design documents defining how the game works under the hood.</p>
 
 <div class="doc-grid">
   <a href="/design" class="doc-card">
@@ -76,22 +96,10 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     <h3>T4-T5: Products</h3>
     <p>Weapons, shields, engines, drones, mining gear, ammunition, and all equippable modules.</p>
   </a>
-  <a href="/fitting" class="doc-card">
-    <h3>Ship Fitting</h3>
-    <p>Module slots, CPU/Power Grid, ship stats, slot layouts per hull class, fitting rules.</p>
-  </a>
-  <a href="/items" class="doc-card">
-    <h3>Items Database</h3>
-    <p>All 124 items: searchable, sortable, filterable. Raw materials through final products.</p>
-  </a>
-  <a href="/factions" class="doc-card">
-    <h3>Factions</h3>
-    <p>Major factions, corporations, territories, allies, enemies, philosophies.</p>
-  </a>
-  <a href="/ships" class="doc-card">
-    <h3>Ship Designs</h3>
-    <p>Hull classes, technical schematics, specifications, hardpoint layouts, and role capabilities.</p>
-  </a>
+</div>
+
+<h2>Tools</h2>
+<div class="doc-grid">
   <a href="/debug" class="doc-card">
     <h3>Debug Monitor</h3>
     <p>Live simulation state, NPC ships, price monitor, event log, and reset controls.</p>
