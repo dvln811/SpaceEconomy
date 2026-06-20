@@ -88,7 +88,7 @@ function show(filter) {
       <td>${s.speed}x</td>
       <td>${s.hull_hp}</td>
       <td>${s.align}</td>
-      <td style="font-size:9px">${Object.entries(s.hardpoints).map(([k,v])=>v+'x '+k).join(', ')}</td>
+      <td style="font-size:9px;line-height:1.6">${Object.entries(s.hardpoints).map(([k,v])=>v+'x '+k).join('<br>')}</td>
       <td class="desc">${s.description}</td>
     </tr>`).join('')}</tbody></table>`;
   } else if (filter.startsWith('mil_') || filter === 'all_mil' || filter.startsWith('class_')) {
@@ -112,7 +112,7 @@ function show(filter) {
       <td>${s.shield_hp}</td>
       <td style="color:#ffd54f">${s.hull_hp+s.armor_hp+s.shield_hp}</td>
       <td>${s.crew}</td>
-      <td style="font-size:9px">${s.weapons.join(', ')}</td>
+      <td style="font-size:9px;line-height:1.6">${s.weapons.join('<br>')}</td>
       <td class="desc">${s.description}</td>
     </tr>`).join('')}</tbody></table>`;
   }
