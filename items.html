@@ -16,7 +16,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .side-item{display:block;padding:5px 8px;margin:1px 0;border-radius:3px;cursor:pointer;color:#8aa0b8;transition:all .1s;border:none;background:none;width:100%;text-align:left;font:inherit;font-size:11px}
 .side-item:hover{background:#111a2a;color:#c8d4e0}
 .side-item.active{background:#0d1a2f;color:#4fc3f7}
-.content{flex:1;overflow:auto;padding:12px}
+.content{flex:1;overflow:auto;padding:0 12px 12px}
 table{width:100%;border-collapse:collapse}
 th{font-family:'Orbitron',sans-serif;font-size:9px;color:#8aa0b8;letter-spacing:1px;text-align:left;padding:6px 8px;border-bottom:1px solid #1a2844;position:sticky;top:0;background:#05080f;z-index:2;box-shadow:0 1px 0 #1a2844}
 td{padding:8px;border-bottom:1px solid #0f1a28;vertical-align:top}
@@ -94,14 +94,13 @@ function buildSidebar() {
 }
 
 function setActive(el) { document.querySelectorAll('.side-item').forEach(b => b.classList.remove('active')); el.classList.add('active'); }
-function showCat(cat) { render(items.filter(i => i.category === cat && matchSearch(i)), cat); }
-function showSub(cat, sub) { render(items.filter(i => i.category === cat && i.subcategory === sub && matchSearch(i)), cat); }
-function matchSearch(i) { if (!currentFilter) return true; return i.name.toLowerCase().includes(currentFilter); }
+function showCat(cat) { render(items.filter(i => i.category === cat), cat); }
+function showSub(cat, sub) { render(items.filter(i => i.category === cat && i.subcategory === sub), cat); }
 function searchAll() {
-  currentFilter = (document.getElementById('itemSearch').value || '').toLowerCase();
-  if (!currentFilter) { showCat('Weapons'); return; }
-  const matched = items.filter(i => matchSearch(i));
-  render(matched, matched[0]?.category || 'Raw Materials');
+  const q = (document.getElementById('itemSearch').value || '').toLowerCase();
+  if (!q) { document.querySelector('.side-item.active')?.click(); return; }
+  const matched = items.filter(i => i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q) || i.subcategory.toLowerCase().includes(q) || i.recipe.toLowerCase().includes(q) || Object.keys(i.stats).some(k => String(i.stats[k]).toLowerCase().includes(q) || k.toLowerCase().includes(q)));
+  render(matched, matched.length > 0 ? (matched.find(i=>i.stats.dps) ? 'Weapons' : matched[0].category) : 'Raw Materials');
 }
 
 function render(filtered, cat) {
