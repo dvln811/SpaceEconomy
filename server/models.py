@@ -87,6 +87,9 @@ class NPCShip:
     risk_tolerance: float = 0.5
     faction: str = ""
     fitted_modules: list[str] = field(default_factory=list)
+    # Contract assignment (for haulers)
+    assigned_station: str = ""   # station name this hauler serves
+    assigned_system: str = ""    # system where the station is
 
 
 # ══════════════════════════════════════════════════════════════════════════════

@@ -53,7 +53,10 @@ class Simulation:
         self._update_all_prices()
 
     def _bootstrap_seed(self):
-        """Seed all producing stations with ~1000 ticks of input supply."""
+        """Demand-driven seeding: seed each station with enough inputs for 500 ticks
+        of production, plus seed mining colonies with raw ores scaled to demand."""
+        BUFFER = 500
+        # Seed producing stations with inputs
         for sys in self.universe.values():
             for station in sys.stations:
                 for prod_id in station.produces:
@@ -61,33 +64,76 @@ class Simulation:
                     if not commodity or not commodity.recipe:
                         continue
                     for input_id, qty_needed in commodity.recipe.items():
-                        need = qty_needed * station.production_rate * 1000
-                        current = station.inventory.get(input_id, 0)
-                        if current < need:
-                            station.inventory[input_id] = need
+                        need = qty_needed * station.production_rate * BUFFER
+                        station.inventory[input_id] = max(station.inventory.get(input_id, 0), need)
+                # Also seed some output stock
+                for prod_id in station.produces:
+                    station.inventory[prod_id] = max(station.inventory.get(prod_id, 0), station.production_rate * 100)
+
+        # Seed mining colonies with large ore stocks (based on what the economy needs)
+        # Common ores: 10000+, uncommon: 5000, rare: 1000, exotic: 200
+        ORE_SEEDS = {
+            'iron_ore': 15000, 'copper_ore': 12000, 'calcite': 5000, 'carbonite': 8000,
+            'hydral_ice': 20000, 'silicon_ore': 8000,
+            'cobalt_ore': 5000, 'zinc_ore': 3000, 'tin_ore': 3000,
+            'nitrogen_ice': 12000, 'methane_ice': 5000, 'biomass': 10000, 'nickel_ore': 3000,
+            'titanium_ore': 3000, 'tungsten_ore': 2000, 'chromium_ore': 2000,
+            'helium3': 1500, 'xenon_gas': 2000, 'spore_clusters': 1500, 'amino_gel': 1500,
+            'platinum_ore': 500, 'gold_ore': 500, 'palladium_ore': 300,
+            'quartz_crystal': 600, 'lithium_crystal': 800, 'beryllium_crystal': 400,
+            'kraxolite': 100, 'void_shard': 50, 'neutronium': 30,
+        }
+        for sys in self.universe.values():
+            for station in sys.stations:
+                if station.station_type == 'mining_colony':
+                    for ore_id, amount in ORE_SEEDS.items():
+                        # Only seed ores that this system's fields can produce
+                        field_yields = set()
+                        for f in sys.asteroid_fields:
+                            field_yields.update(f.yields)
+                        if ore_id in field_yields:
+                            station.inventory[ore_id] = max(station.inventory.get(ore_id, 0), amount)
+
+        # Seed trade hubs with trade goods
+        for sys in self.universe.values():
+            for station in sys.stations:
+                if station.station_type in ('trade_hub', 'frontier_outpost'):
+                    for tg in STATION_CONSUMPTION.get(station.station_type, []):
+                        station.inventory[tg] = max(station.inventory.get(tg, 0), 2000)
 
     def _spawn_traders(self, count: int):
         from server.ship_types import HAULER_SHIPS
         from server.factions import FACTIONS
-        system_ids = list(self.universe.keys())
         hauler_types = list(HAULER_SHIPS.values())
         trade_corps = ["Voidway Logistics", "Galactic Exchange", "Federal Transit Authority", "Smelter's Union", "Terraform Pioneers"]
         risk_by_tier = {1: 0.2, 2: 0.5, 3: 0.7, 4: 0.9}
-        for i in range(count):
-            st = hauler_types[i % len(hauler_types)]
-            faction = trade_corps[i % len(trade_corps)]
+
+        # Build list of producing stations that need haulers
+        producing_stations = []
+        for sid, sys in self.universe.items():
+            for station in sys.stations:
+                if station.produces:
+                    producing_stations.append((sid, station))
+
+        # Assign haulers round-robin to producing stations (2 per station)
+        i = 0
+        for idx in range(count):
+            station_idx = idx % len(producing_stations)
+            sys_id, station = producing_stations[station_idx]
+            st = hauler_types[idx % len(hauler_types)]
+            faction = trade_corps[idx % len(trade_corps)]
             registry = f"HLR-{random.randint(1000,9999)}"
-            loc = random.choice(system_ids)
             ship = NPCShip(
-                id=f"hauler_{i}", name=f"{st.name} {registry}",
+                id=f"hauler_{idx}", name=f"{st.name} {registry}",
                 cargo_capacity=st.cargo_capacity + random.randint(-20, 20),
-                fuel=float(st.fuel_capacity), location=loc,
+                fuel=float(st.fuel_capacity), location=sys_id,
                 speed=st.speed, state="idle",
                 role="hauler", ship_class=st.id, intra_speed=st.intra_speed,
                 risk_tolerance=risk_by_tier.get(st.tier, 0.5), faction=faction,
                 align_time=st.align_time,
+                assigned_station=station.name, assigned_system=sys_id,
             )
-            station_objs = [o for o in self.universe[loc].objects if o.obj_type == "station"]
+            station_objs = [o for o in self.universe[sys_id].objects if o.obj_type == "station"]
             if station_objs:
                 ship.intra_position = station_objs[0].id
             self.ships.append(ship)
@@ -225,8 +271,8 @@ class Simulation:
                     for field in sys.asteroid_fields:
                         for ore in field.yields:
                             current = station.inventory.get(ore, 0)
-                            if current < 2000:
-                                station.inventory[ore] = current + 1.5 * field.density
+                            if current < 50000:
+                                station.inventory[ore] = current + 8.0 * field.density
 
                 # ── Passive trade goods generation at hubs/outposts ──
                 if station.station_type in ("trade_hub", "frontier_outpost"):
@@ -246,13 +292,17 @@ class Simulation:
                         available = station.inventory.get(input_id, 0)
                         possible = available / qty_needed
                         can_produce = min(can_produce, possible)
-                    # Self-limit: smoothly adjust effective rate toward what's actually possible
-                    target_rate = min(can_produce, station.production_rate)
-                    # Ramp up fast (0.05), ramp down slow (0.005) - survives gaps between deliveries
-                    if target_rate > station.effective_rate:
-                        station.effective_rate += (target_rate - station.effective_rate) * 0.05
-                    else:
-                        station.effective_rate += (target_rate - station.effective_rate) * 0.005
+                    # Self-limit based on ticks of supply remaining
+                    # If we have less than 50 ticks of inputs, start throttling
+                    min_ticks_supply = float('inf')
+                    for input_id, qty_needed in commodity.recipe.items():
+                        available = station.inventory.get(input_id, 0)
+                        ticks_left = available / max(qty_needed * station.effective_rate, 0.001)
+                        min_ticks_supply = min(min_ticks_supply, ticks_left)
+                    # Throttle factor: 1.0 when 50+ ticks of supply, 0.0 when empty
+                    throttle = min(1.0, min_ticks_supply / 50.0)
+                    target_rate = min(can_produce, station.production_rate * throttle)
+                    station.effective_rate += (target_rate - station.effective_rate) * 0.02
                     station.effective_rate = max(0, min(station.effective_rate, station.production_rate))
                     actual = min(station.effective_rate, can_produce)
                     if actual < 0.01:
@@ -390,6 +440,7 @@ class Simulation:
                 self._trader_decision(ship)
 
     def _trader_decision(self, ship: NPCShip):
+        """Contract hauler: fetch inputs for assigned station from nearest source."""
         loc = self.universe[ship.location]
 
         # Navigate to a station if not at one
@@ -399,42 +450,78 @@ class Simulation:
             self._start_intra_travel(ship, station_objs[0].id)
             return
 
-        # Unload cargo
+        # If carrying cargo, deliver to assigned station
         if ship.cargo:
-            best_sell = self._find_best_sell(ship, loc)
-            if best_sell:
-                commodity, station, price = best_sell
-                qty = ship.cargo.pop(commodity)
-                station.inventory[commodity] = station.inventory.get(commodity, 0) + qty
-                self.trade_volume += 1
-                ship.state = "unloading"
-                ship.state_timer = UNLOADING_TICKS
-                self._log(f"{ship.name} unloading {qty:.0f}x {COMMODITIES[commodity].name} at {loc.name}")
-                return
+            if ship.location == ship.assigned_system:
+                target = next((st for st in loc.stations if st.name == ship.assigned_station), None)
+                if target:
+                    for commodity, qty in list(ship.cargo.items()):
+                        target.inventory[commodity] = target.inventory.get(commodity, 0) + qty
+                    ship.cargo.clear()
+                    ship.state = "unloading"
+                    ship.state_timer = UNLOADING_TICKS
+                    self.trade_volume += 1
+                    return
+            # Not home yet, travel there
+            self._send_ship(ship, ship.assigned_system)
+            return
 
-        # Find a profitable trade route
-        best_route = self._find_best_trade(ship, loc)
-        if best_route:
-            commodity, buy_station, dest_id, expected_profit = best_route
-            available = buy_station.inventory.get(commodity, 0)
-            qty = min(available, ship.cargo_capacity)
-            if qty > 0:
-                buy_station.inventory[commodity] -= qty
-                ship.cargo[commodity] = qty
-                ship.state = "loading"
-                ship.state_timer = LOADING_TICKS
-                ship.route_path = self._find_path(ship.location, dest_id, ship.risk_tolerance)
-                ship.destination = ship.route_path[0] if ship.route_path else dest_id
-                self._log(f"{ship.name} loading {qty:.0f}x {COMMODITIES[commodity].name}, dest: {self.universe[dest_id].name}")
-                return
+        # No cargo: figure out what station needs, go get it
+        home_sys = self.universe.get(ship.assigned_system)
+        if not home_sys:
+            return
+        target = next((st for st in home_sys.stations if st.name == ship.assigned_station), None)
+        if not target:
+            return
 
-        # Roam to a reachable neighbor
-        safe_neighbors = [n for n in loc.connections if self._system_danger(n) <= ship.risk_tolerance]
-        if safe_neighbors:
-            self._send_ship(ship, random.choice(safe_neighbors))
-        elif loc.connections:
-            # Stuck in dangerous space, pick least dangerous exit
-            self._send_ship(ship, min(loc.connections, key=lambda n: self._system_danger(n)))
+        # Find input with lowest stock
+        needed = None
+        lowest = float('inf')
+        for prod_id in target.produces:
+            c = COMMODITIES.get(prod_id)
+            if not c or not c.recipe:
+                continue
+            for inp_id, qty in c.recipe.items():
+                stock = target.inventory.get(inp_id, 0)
+                if stock < lowest:
+                    lowest = stock
+                    needed = inp_id
+
+        if not needed:
+            return
+
+        # Find nearest source with stock
+        best_src = None
+        best_hops = 999
+        for sid, sys in self.universe.items():
+            if self._system_danger(sid) > ship.risk_tolerance:
+                continue
+            for st in sys.stations:
+                if st.name == ship.assigned_station:
+                    continue
+                if st.inventory.get(needed, 0) > 10:
+                    hops = self._estimate_hops(ship.location, sid)
+                    if hops < best_hops:
+                        best_hops = hops
+                        best_src = (sid, st)
+
+        if best_src:
+            src_sys, src_station = best_src
+            if ship.location == src_sys:
+                # Buy here
+                available = src_station.inventory.get(needed, 0)
+                buy_qty = min(available * 0.5, ship.cargo_capacity)  # don't drain source
+                if buy_qty > 1:
+                    src_station.inventory[needed] -= buy_qty
+                    ship.cargo[needed] = buy_qty
+                    ship.state = "loading"
+                    ship.state_timer = LOADING_TICKS
+                    ship.route_path = self._find_path(ship.location, ship.assigned_system, ship.risk_tolerance)
+                    ship.destination = ship.route_path[0] if ship.route_path else ship.assigned_system
+                    return
+            else:
+                self._send_ship(ship, src_sys)
+                return
 
     def _miner_decision(self, ship: NPCShip):
         loc = self.universe[ship.location]
