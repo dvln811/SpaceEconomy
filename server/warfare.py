@@ -1,18 +1,16 @@
 """Warfare simulation: faction conflicts that consume ships/ammo and drive demand."""
 import random
 from server.military import MilitaryShipClass
-from server.data_access import is_db_ready, load_military_ships, load_fleet_targets, load_factions
+from server.data_access import load_military_ships, load_fleet_targets, load_factions
 
-if is_db_ready():
-    MILITARY_SHIPS = load_military_ships()
-    FLEET_TARGETS = load_fleet_targets()
-    _factions = load_factions()
-    class _FactionProxy:
-        def __init__(self, d): self.__dict__.update(d)
-    FACTIONS = {k: _FactionProxy(v) for k, v in _factions.items()}
-else:
-    from server.military import MILITARY_SHIPS, FLEET_TARGETS
-    from server.factions import FACTIONS
+MILITARY_SHIPS = load_military_ships()
+FLEET_TARGETS = load_fleet_targets()
+_factions_data = load_factions()
+
+class _FactionProxy:
+    def __init__(self, d):
+        self.__dict__.update(d)
+FACTIONS = {k: _FactionProxy(v) for k, v in _factions_data.items()}
 
 
 class WarfareSimulation:

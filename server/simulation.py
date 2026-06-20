@@ -2,19 +2,12 @@
 import math
 import random
 import time
-from server.models import (
-    System, NPCShip, SECURITY_LEVEL, calculate_price, Commodity
-)
-from server.data_access import is_db_ready, load_commodities, load_station_consumption, load_universe
+from server.models import System, NPCShip, SECURITY_LEVEL, calculate_price, Commodity
+from server.data_access import load_commodities, load_station_consumption, load_universe
 
-# Load from DB if available, otherwise fall back to Python constants
-if is_db_ready():
-    COMMODITIES = load_commodities()
-    STATION_CONSUMPTION = load_station_consumption()
-    _build_universe = load_universe
-else:
-    from server.models import COMMODITIES, STATION_CONSUMPTION
-    from server.universe import build_universe as _build_universe
+# All data loaded from game_data.db
+COMMODITIES = load_commodities()
+STATION_CONSUMPTION = load_station_consumption()
 
 NPC_TRADER_NAMES = [
     "Meridian Express", "Iron Vagrant", "Solar Wind", "Deep Haul", "Star Drifter",
@@ -45,11 +38,8 @@ MINING_TICKS = 5
 
 class Simulation:
     def __init__(self):
-        self.universe = _build_universe()
-        # Assign factions to systems
-        from server.factions import get_system_faction
-        for sid, sys in self.universe.items():
-            sys.faction = get_system_faction(sid)
+        self.universe = load_universe()
+        # Factions already assigned in DB data
         self.ships: list[NPCShip] = []
         self.tick_count = 0
         self.start_time = time.time()
@@ -113,9 +103,9 @@ class Simulation:
                         station.inventory[tg] = max(station.inventory.get(tg, 0), 2000)
 
     def _spawn_traders(self, count: int):
-        from server.ship_types import HAULER_SHIPS
-        from server.factions import FACTIONS
-        hauler_types = list(HAULER_SHIPS.values())
+        from server.data_access import load_ship_types
+        all_ships = load_ship_types()
+        hauler_types = [s for s in all_ships.values() if s.role == 'hauler']
         trade_corps = ["Voidway Logistics", "Galactic Exchange", "Federal Transit Authority", "Smelter's Union", "Terraform Pioneers"]
         risk_by_tier = {1: 0.2, 2: 0.5, 3: 0.7, 4: 0.9}
 
@@ -151,8 +141,9 @@ class Simulation:
 
     def _spawn_miners(self, count: int):
         mining_systems = [sid for sid, sys in self.universe.items() if sys.asteroid_fields]
-        from server.ship_types import MINER_SHIPS
-        miner_types = list(MINER_SHIPS.values())
+        from server.data_access import load_ship_types
+        all_ships = load_ship_types()
+        miner_types = [s for s in all_ships.values() if s.role == 'miner']
         miner_factions = ["Rockbreaker Collective", "Deepvein Extraction", "Smelter's Union"]
         risk_by_tier = {1: 0.2, 2: 0.5, 3: 0.8}
         for i in range(count):
@@ -674,7 +665,7 @@ class Simulation:
                     station.price_pressure[commodity_id] = pressure
 
                     supply = max(1, stock)
-                    base_price = calculate_price(commodity_id, supply, demand)
+                    base_price = calculate_price(commodity_id, supply, demand, COMMODITIES)
                     # Apply pressure as percentage modifier
                     new_price = round(base_price * (1 + pressure / 100), 2)
                     old_price = station.price_cache.get(commodity_id, new_price)

@@ -2,4 +2,8 @@
 __pycache__/
 *.pyc
 *.log
-data/
+data/game.db
+data/game.db-wal
+data/game.db-shm
+_sandbox*.html
+_ship_data.js
