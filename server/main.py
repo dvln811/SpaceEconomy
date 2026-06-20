@@ -73,7 +73,7 @@ def _build_order_book(st):
         if not com or not com.recipe:
             continue
         for inp_id, qty_needed in com.recipe.items():
-            want = qty_needed * st.production_rate * 50
+            want = qty_needed * st.production_rate * 200  # want 200 ticks of buffer
             have = st.inventory.get(inp_id, 0)
             deficit = want - have
             if deficit > 0:
