@@ -104,7 +104,7 @@ async function init() {
 
   lookup = {};
   items.forEach(i => lookup[i.id] = i);
-  categories = [...new Set(items.map(i => i.category))];
+  categories = ['Raw Materials','Refined Materials','Manufactured','Components','Weapons','Ammunition','Defense','Propulsion','Drones','Mining','Utility','Trade Goods','Ships','Military Ships'];
 
   document.getElementById('content').innerHTML = '<div style="color:#8aa0b8;margin-top:40px">Select an item from the left to see its full production chain breakdown.</div>';
   buildList('');
