@@ -148,6 +148,11 @@ def items_page():
     return send_from_directory(BASE_DIR, "items.html")
 
 
+@app.route("/ships_db")
+def ships_db_page():
+    return send_from_directory(BASE_DIR, "ships_db.html")
+
+
 @app.route("/factions")
 def factions_page():
     return send_from_directory(BASE_DIR, "factions_doc.html")
