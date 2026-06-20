@@ -240,6 +240,14 @@ function renderOverview() {
     </div>
   </div>
   <div class="panel" style="margin-top:8px">
+    <div class="panel-title">Warfare</div>
+    <div class="stat-row"><span class="label">Ships Destroyed</span><span class="value" style="color:#ef5350">${(D.warfare||{}).ships_destroyed||0}</span></div>
+    <div class="stat-row"><span class="label">Ships Built</span><span class="value" style="color:#66bb6a">${(D.warfare||{}).ships_built||0}</span></div>
+    <div class="stat-row"><span class="label">Ammo Consumed</span><span class="value">${(D.warfare||{}).ammo_consumed||0}</span></div>
+    ${(()=>{const w=D.warfare||{};const fs=w.fleet_strength||{};return Object.entries(fs).map(([f,s])=>`<div class="stat-row"><span class="label">${fmtName(f)}</span><span class="value">${s} ships</span></div>`).join('');})()}
+    ${(()=>{const battles=(D.warfare||{}).recent_battles||[];return battles.slice(-3).map(b=>`<div style="padding:2px 0;font-size:9px;border-bottom:1px solid #0a1420"><span style="color:#ef5350">${b.attacker}</span> vs <span style="color:#4fc3f7">${b.defender}</span>: ${b.a_losses}+${b.d_losses} lost</div>`).join('');})()}
+  </div>
+  <div class="panel" style="margin-top:8px">
     <div class="panel-title">Recent Events</div>
     ${events.map(e=>`<div style="padding:1px 0;font-size:10px;border-bottom:1px solid #0a1420"><span style="color:#5a8aaa;margin-right:6px">T${e.tick}</span>${e.msg}</div>`).join('')}
   </div>`;

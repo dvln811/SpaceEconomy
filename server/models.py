@@ -345,6 +345,110 @@ COMMODITIES = {
     "exotic_textiles": Commodity("Exotic Textiles", 500, tier=0, volume=0.4, description="Rare fabrics woven from bio-silk and synthetic fibers. Prized for fashion and environmental suits alike."),
     "entertainment":   Commodity("Entertainment Media", 300, tier=0, volume=0.2, description="Holographic films, neural-link games, and music crystals. Keeps crews sane on long deep-space deployments."),
     "fine_spirits":    Commodity("Fine Spirits", 350, tier=0, volume=0.8, description="Distilled beverages aged in zero-gravity barrels. Every pilot's reward after a successful haul."),
+
+    # ── T5: Sized Weapons (Medium & Large variants) ──────────────────────────
+    # Pulse Laser M/L
+    "pulse_laser_m":   Commodity("Pulse Laser Mk.II (M)", 24000, tier=5, volume=2.25,
+                                 description="Medium-frame pulse laser with doubled capacitor banks. Hits harder per shot with improved heat dissipation.",
+                                 recipe={"beam_emitter": 2, "power_cell": 2, "steel_plate": 2}),
+    "pulse_laser_l":   Commodity("Pulse Laser Mk.III (L)", 48000, tier=5, volume=3.75,
+                                 description="Capital-class pulse laser array delivering devastating burst fire. Requires dedicated power routing to sustain.",
+                                 recipe={"beam_emitter": 3, "power_cell": 3, "steel_plate": 3}),
+    # Beam Laser M/L
+    "beam_laser_m":    Commodity("Beam Laser Mk.II (M)", 36000, tier=5, volume=3.0,
+                                 description="Medium-bore sustained laser with extended focal range. Carves through cruiser-weight armor with ease.",
+                                 recipe={"beam_emitter": 2, "power_cell": 4, "optical_lens": 2}),
+    "beam_laser_l":    Commodity("Beam Laser Mk.III (L)", 72000, tier=5, volume=5.0,
+                                 description="Battleship-grade beam weapon that maintains a cutting lance across thousands of kilometers. Melts capital hulls.",
+                                 recipe={"beam_emitter": 3, "power_cell": 6, "optical_lens": 3}),
+    # Railgun M/L
+    "railgun_m":       Commodity("Railgun Mk.II (M)", 44000, tier=5, volume=3.75,
+                                 description="Medium-caliber electromagnetic accelerator with enhanced barrel length. Greater muzzle velocity means deeper penetration.",
+                                 recipe={"railgun_barrel": 2, "power_cell": 2, "nav_computer": 2}),
+    "railgun_l":       Commodity("Railgun Mk.III (L)", 88000, tier=5, volume=6.25,
+                                 description="Siege-class railgun capable of punching through station bulkheads. The sound of its capacitor charging terrifies crews.",
+                                 recipe={"railgun_barrel": 3, "power_cell": 3, "nav_computer": 3}),
+    # Plasma Cannon M/L
+    "plasma_cannon_m": Commodity("Plasma Cannon Mk.II (M)", 40000, tier=5, volume=3.0,
+                                 description="Medium plasma projector with dual containment chambers. Launches larger bolts that splash across hull surfaces.",
+                                 recipe={"plasma_chamber": 2, "power_cell": 2, "thruster_nozzle": 2}),
+    "plasma_cannon_l": Commodity("Plasma Cannon Mk.III (L)", 80000, tier=5, volume=5.0,
+                                 description="Capital-grade plasma siege weapon that fires building-sized bolts of stellar matter. Reduces battleships to slag.",
+                                 recipe={"plasma_chamber": 3, "power_cell": 3, "thruster_nozzle": 3}),
+    # Missile Launcher M/L
+    "missile_launcher_m": Commodity("Missile Launcher Mk.II (M)", 30000, tier=5, volume=3.0,
+                                    description="Medium missile battery with expanded magazine and multi-target lock capability. Fires salvos of guided ordnance.",
+                                    recipe={"missile_chassis": 2, "sensor_package": 2, "steel_plate": 2}),
+    "missile_launcher_l": Commodity("Missile Launcher Mk.III (L)", 60000, tier=5, volume=5.0,
+                                    description="Capital torpedo delivery system housing heavy anti-ship munitions. Each launch can cripple a battlecruiser.",
+                                    recipe={"missile_chassis": 3, "sensor_package": 3, "steel_plate": 3}),
+    # Autocannon M/L
+    "autocannon_m":    Commodity("Autocannon Mk.II (M)", 20000, tier=5, volume=2.25,
+                                 description="Twin-linked medium autocannon with belt-fed ammunition. Puts out a withering hail of kinetic projectiles.",
+                                 recipe={"railgun_barrel": 2, "steel_plate": 2, "maneuver_thruster": 2}),
+    "autocannon_l":    Commodity("Autocannon Mk.III (L)", 40000, tier=5, volume=3.75,
+                                 description="Heavy rotary cannon designed for capital ship broadsides. Chews through armor with sheer volume of fire.",
+                                 recipe={"railgun_barrel": 3, "steel_plate": 3, "maneuver_thruster": 3}),
+
+    # ── T5: Sized Shields & Armor (Medium & Large variants) ──────────────────
+    # Shield Generator M/L
+    "shield_gen_m":    Commodity("Shield Generator Mk.II (M)", 50000, tier=5, volume=3.75,
+                                 description="Medium-class shield projector with reinforced emitters. Provides cruiser-grade protection against sustained fire.",
+                                 recipe={"shield_emitter": 4, "power_cell": 2, "rad_shielding": 2}),
+    "shield_gen_l":    Commodity("Shield Generator Mk.III (L)", 100000, tier=5, volume=6.25,
+                                 description="Capital shield array projecting an immense energy barrier. Can absorb dreadnought-class bombardment before failing.",
+                                 recipe={"shield_emitter": 6, "power_cell": 3, "rad_shielding": 3}),
+    # Shield Booster M/L
+    "shield_booster_m": Commodity("Shield Booster Mk.II (M)", 30000, tier=5, volume=2.25,
+                                  description="Medium auxiliary shield amplifier with dedicated power feeds. Significantly extends barrier endurance under fire.",
+                                  recipe={"shield_emitter": 2, "power_cell": 4}),
+    "shield_booster_l": Commodity("Shield Booster Mk.III (L)", 60000, tier=5, volume=3.75,
+                                  description="Capital-grade shield reinforcement module. Adds enormous hit point reserves to existing shield arrays.",
+                                  recipe={"shield_emitter": 3, "power_cell": 6}),
+    # Armor Plates M/L
+    "armor_plates_m":  Commodity("Armor Plates Mk.II (M)", 24000, tier=5, volume=4.5,
+                                 description="Cruiser-weight composite armor panels with enhanced laminate layering. Shrugs off medium-caliber weapons fire.",
+                                 recipe={"armor_laminate": 4, "titanium_alloy": 2}),
+    "armor_plates_l":  Commodity("Armor Plates Mk.III (L)", 48000, tier=5, volume=7.5,
+                                 description="Battleship-grade armor plating meters thick. Requires structural reinforcement to mount but renders hulls nearly impervious.",
+                                 recipe={"armor_laminate": 6, "titanium_alloy": 3}),
+
+    # ── T5: Sized Ammo (Medium & Large variants) ─────────────────────────────
+    # Railgun Slugs M/L
+    "railgun_slugs_m": Commodity("Railgun Slugs (M)", 3000, tier=5, volume=0.75,
+                                 description="Medium-caliber tungsten penetrators with sabot casings. Designed for cruiser-class railgun bores.",
+                                 recipe={"tungsten_carbide": 2, "refined_iron": 2}),
+    "railgun_slugs_l": Commodity("Railgun Slugs (L)", 6000, tier=5, volume=1.25,
+                                 description="Massive armor-piercing darts for capital railguns. Each slug weighs as much as a small shuttle.",
+                                 recipe={"tungsten_carbide": 3, "refined_iron": 3}),
+    # Missiles S/M/L (S = existing light_missiles)
+    "missiles_m":      Commodity("Medium Missiles", 4000, tier=5, volume=1.2,
+                                 description="Cruiser-weight guided munitions with enlarged warheads and extended fuel reserves. Tracks targets across vast distances.",
+                                 recipe={"warhead_assembly": 2, "methane_fuel": 2, "microprocessor": 2}),
+    "missiles_l":      Commodity("Heavy Torpedoes", 8000, tier=5, volume=2.0,
+                                 description="Capital-class anti-ship torpedoes with massive explosive yield. Slow but devastating on impact with large targets.",
+                                 recipe={"warhead_assembly": 3, "methane_fuel": 3, "microprocessor": 3}),
+    # Autocannon Rounds M/L
+    "autocannon_rounds_m": Commodity("Autocannon Rounds (M)", 1600, tier=5, volume=0.6,
+                                     description="Medium-bore belted ammunition with hardened steel cores. Feeds twin-linked autocannon systems.",
+                                     recipe={"refined_iron": 2, "explosive_compound": 2}),
+    "autocannon_rounds_l": Commodity("Autocannon Rounds (L)", 3200, tier=5, volume=1.0,
+                                     description="Heavy rotary cannon shells the size of a fist. Punches through armor plating with brute kinetic force.",
+                                     recipe={"refined_iron": 3, "explosive_compound": 3}),
+    # Heavy Torpedoes (L-only, standalone)
+    "heavy_torpedoes": Commodity("Heavy Torpedoes (Siege)", 12000, tier=5, volume=2.5,
+                                 description="Siege-grade anti-capital torpedoes with shaped-charge warheads. Designed to crack station armor and dreadnought hulls.",
+                                 recipe={"warhead_assembly": 3, "explosive_compound": 2, "fusion_pellet": 1, "microprocessor": 1}),
+    # Plasma Charges S/M/L (new ammo type for plasma cannons)
+    "plasma_charges_s": Commodity("Plasma Charges (S)", 1200, tier=5, volume=0.4,
+                                  description="Compressed plasma cartridges pre-heated to ignition temperature. Feed small plasma cannons for rapid bolt discharge.",
+                                  recipe={"enriched_he3": 1, "ceramic_plate": 1}),
+    "plasma_charges_m": Commodity("Plasma Charges (M)", 2400, tier=5, volume=0.6,
+                                  description="Medium plasma fuel cells with magnetic containment. Powers cruiser-class plasma cannons for sustained engagements.",
+                                  recipe={"enriched_he3": 2, "ceramic_plate": 2}),
+    "plasma_charges_l": Commodity("Plasma Charges (L)", 4800, tier=5, volume=1.0,
+                                  description="Massive plasma fuel canisters for capital weapons. Each charge contains enough superheated matter to slag a frigate.",
+                                  recipe={"enriched_he3": 3, "ceramic_plate": 3}),
 }
 
 # Station type -> what tier it produces

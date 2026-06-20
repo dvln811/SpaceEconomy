@@ -377,6 +377,7 @@ def api_debug():
         v["ticks_remaining"] = round(v["total_supply"] / v["demand_per_tick"], 1) if v["demand_per_tick"] > 0 else 9999
         v["deficit"] = round(v["demand_per_tick"] * 100 - v["total_supply"], 1)  # shortfall for 100 ticks
     summary["demand"] = demand_data
+    summary["warfare"] = sim.warfare.get_status()
 
     return jsonify(summary)
 

@@ -904,8 +904,8 @@ async function fetchActivity(){
     const newEvents=d.events.filter(e=>e.tick>lastEventTick);
     for(const e of newEvents){
       const msg=e.msg;
-      // Only show price changes
-      if(!msg.includes('▲')&&!msg.includes('▼'))continue;
+      // Only show price changes and warfare events
+      if(!msg.includes('▲')&&!msg.includes('▼')&&!msg.includes('BATTLE')&&!msg.includes('BUILT'))continue;
       const div=document.createElement('div');
       div.className='activity-item';
       const color=msg.includes('▲')?'#66bb6a':'#ef5350';

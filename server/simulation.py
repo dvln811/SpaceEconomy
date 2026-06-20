@@ -51,6 +51,9 @@ class Simulation:
         self._spawn_miners(20)
         self._bootstrap_seed()
         self._update_all_prices()
+        # Warfare simulation
+        from server.warfare import WarfareSimulation
+        self.warfare = WarfareSimulation()
 
     def _bootstrap_seed(self):
         """Demand-driven seeding: seed each station with enough inputs for 500 ticks
@@ -259,6 +262,14 @@ class Simulation:
         self._npc_decisions()
         if self.tick_count % 10 == 0:
             self._update_all_prices()
+        # Warfare: skirmishes consume ships, shipyards rebuild
+        war_events = self.warfare.tick(self.tick_count, self.universe)
+        for e in war_events:
+            self._log(f"BATTLE: {e['attacker']} vs {e['defender']} ({e['a_losses']}+{e['d_losses']} ships lost)")
+        if self.tick_count % 50 == 0:
+            build_events = self.warfare.try_build_ships(self.universe)
+            for msg in build_events:
+                self._log(msg)
         if len(self.events) > 100:
             self.events = self.events[-100:]
 
