@@ -45,18 +45,21 @@ tr:hover td{background:#0d1525}
 let items = [];
 let nameMap = {};
 const categories = ['Weapons','Ammunition','Defense','Propulsion','Drones','Mining','Utility','Raw Materials','Refined Materials','Manufactured','Components','Trade Goods'];
+function tierToCategory(t){return {0:'Trade Goods',1:'Raw Materials',2:'Refined Materials',3:'Manufactured',4:'Components'}[t]||'Utility';}
 
 async function init() {
-  const r = await fetch('/api/data/commodities');
-  const raw = await r.json();
-  nameMap = {};
-  raw.forEach(c => { nameMap[c.id] = c.name; });
-  items = raw.map(c => ({
-    id: c.id, name: c.name, category: c.category, subcategory: c.subcategory,
-    price: c.base_price, volume: c.volume, description: c.description,
-    recipe: formatRecipe(c.recipe), stats: typeof c.stats === 'string' ? JSON.parse(c.stats) : c.stats
-  }));
-  buildSidebar();
+  try {
+    const r = await fetch('/api/data/commodities');
+    const raw = await r.json();
+    nameMap = {};
+    raw.forEach(c => { nameMap[c.id] = c.name; });
+    items = raw.map(c => ({
+      id: c.id, name: c.name, category: c.category || tierToCategory(c.tier), subcategory: c.subcategory || '',
+      price: c.base_price, volume: c.volume, description: c.description,
+      recipe: formatRecipe(c.recipe), stats: typeof c.stats === 'string' ? JSON.parse(c.stats) : (c.stats || {})
+    }));
+    buildSidebar();
+  } catch(e) { document.getElementById('content').innerHTML = '<div class="loading">Error: '+e.message+'</div>'; }
 }
 
 function formatRecipe(recipe) {

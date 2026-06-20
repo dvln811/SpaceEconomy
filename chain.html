@@ -79,9 +79,10 @@ async function init() {
   commodities.forEach(c => { names[c.id] = c.name; });
 
   // Map commodities to chain items
+  const tierCat = {0:'Trade Goods',1:'Raw Materials',2:'Refined Materials',3:'Manufactured',4:'Components',5:'Products'};
   items = commodities.map(c => ({
     id: c.id, name: c.name, type: 'commodity',
-    category: c.category, sub: c.subcategory || '',
+    category: c.category || tierCat[c.tier] || 'Other', sub: c.subcategory || '',
     recipe: c.recipe || {}
   }));
 
