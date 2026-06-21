@@ -398,7 +398,7 @@ async function initSystems(){
   });
   // Single LineSegments object for all visible connections
   const routeGeo=new THREE.BufferGeometry();
-  const routeMat=new THREE.LineBasicMaterial({color:0x66ccff});
+  const routeMat=new THREE.LineBasicMaterial({color:0x66ccff,transparent:true,opacity:0.5});
   const routeMesh=new THREE.LineSegments(routeGeo,routeMat);
   scene.add(routeMesh);
   console.log('Routes loaded:',routes.length);
@@ -437,7 +437,6 @@ async function initSystems(){
     for(const ld of labelDivs){
       const i=ld.idx;
       if(i===sel||connSet.has(i)){ld.div.style.display='';continue;}
-      if(systems[i].faction){ld.div.style.display='';continue;}
       const s=systems[i];
       const dx=s.x-camPos.x,dy=s.y-camPos.y,dz=s.z-camPos.z;
       ld.div.style.display=(dx*dx+dy*dy+dz*dz)<showRadiusSq?'':'none';
@@ -649,7 +648,7 @@ const keys={};
 document.addEventListener('keydown',e=>{if('wasdqe'.includes(e.key.toLowerCase()))keys[e.key.toLowerCase()]=true;});
 document.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 function applyKeyNav(){
-  const speed=5;
+  const speed=20;
   const forward=new THREE.Vector3();camera.getWorldDirection(forward);
   const right=new THREE.Vector3();right.crossVectors(forward,camera.up).normalize();
   if(keys['w']){controls.target.addScaledVector(forward,speed);camera.position.addScaledVector(forward,speed);}
@@ -787,23 +786,24 @@ function renderSystemList(query){
   let filtered;
   if(q){
     filtered=systems.map((s,i)=>({...s,_i:i})).filter(s=>s.name.toLowerCase().includes(q));
+  }else if(selectedSystem>=0){
+    // Show all systems in the same constellation as selected
+    const selCluster=systems[selectedSystem].cluster;
+    filtered=systems.map((s,i)=>({...s,_i:i})).filter(s=>s.cluster===selCluster);
   }else{
-    // Show faction systems only (claimed), plus selected + connected
-    filtered=systems.map((s,i)=>({...s,_i:i})).filter(s=>s.faction||s._i===selectedSystem);
-    if(selectedSystem>=0){
-      const conns=systems[selectedSystem].connections||[];
-      conns.forEach(cid=>{const idx=systemIdList.indexOf(cid);if(idx>=0&&!filtered.find(f=>f._i===idx))filtered.push({...systems[idx],_i:idx});});
-    }
+    // Default: show faction systems
+    filtered=systems.map((s,i)=>({...s,_i:i})).filter(s=>s.faction);
   }
-  filtered=filtered.slice(0,100);// Cap at 100 for performance
+  filtered=filtered.slice(0,150);
   systemList.innerHTML='';
   filtered.forEach(s=>{
     const div=document.createElement('div');
     div.className='system-item'+(s._i===selectedSystem?' active':'');
     div.dataset.index=s._i;
     const secColor=s.security==='high'?'#66bb6a':s.security==='medium'?'#ffd54f':s.security==='low'?'#ff8a65':'#ef5350';
-    div.innerHTML=`<span style="color:${secColor}">●</span> ${s.name} <span style="color:#8aa0b8;font-size:9px">${s.faction?'':'[null]'}</span>`;
+    div.innerHTML=`<span style="color:${secColor}">●</span> ${s.name}`;
     div.addEventListener('click',()=>focusSystem(s._i));
+    div.addEventListener('dblclick',()=>zoomToSystem(s._i));
     systemList.appendChild(div);
   });
 }
