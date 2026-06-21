@@ -470,33 +470,72 @@ async function initSystems(){
   window._updateLabels=updateLabelVisibility;
   window._updateRoutes=updateRouteLines;
 
-  // Region labels (faction territory markers)
-  // Region/constellation labels from system cluster data
-  const clusterCenters={};
+  // Compute constellation centers and adjacency
+  const constellationData={};
   systems.forEach(s=>{
     if(!s.cluster)return;
-    if(!clusterCenters[s.cluster])clusterCenters[s.cluster]={x:0,y:0,z:0,n:0,factions:{}};
-    clusterCenters[s.cluster].x+=s.x;
-    clusterCenters[s.cluster].y+=s.y;
-    clusterCenters[s.cluster].z+=s.z;
-    clusterCenters[s.cluster].n++;
-    if(s.faction)clusterCenters[s.cluster].factions[s.faction]=(clusterCenters[s.cluster].factions[s.faction]||0)+1;
+    if(!constellationData[s.cluster])constellationData[s.cluster]={x:0,y:0,z:0,n:0,factions:{},adjacent:new Set()};
+    constellationData[s.cluster].x+=s.x;
+    constellationData[s.cluster].y+=s.y;
+    constellationData[s.cluster].z+=s.z;
+    constellationData[s.cluster].n++;
+    if(s.faction)constellationData[s.cluster].factions[s.faction]=(constellationData[s.cluster].factions[s.faction]||0)+1;
   });
+  // Find adjacent constellations
+  for(const [i,j] of routes){
+    const ci=systems[i].cluster,cj=systems[j].cluster;
+    if(ci&&cj&&ci!==cj){
+      constellationData[ci].adjacent.add(cj);
+      constellationData[cj].adjacent.add(ci);
+    }
+  }
+  Object.values(constellationData).forEach(c=>{c.x/=c.n;c.y/=c.n;c.z/=c.n;});
+
+  // Constellation labels (show only selected + adjacent)
   const facColors2={terran_fed:'#4fc3f7',science_collective:'#ab47bc',merchants_guild:'#ffd54f',free_states:'#66bb6a',iron_compact:'#ff8a65',corsairs:'#ef5350'};
-  Object.entries(clusterCenters).forEach(([name,c])=>{
-    c.x/=c.n;c.y/=c.n;c.z/=c.n;
-    // Find dominant faction
+  const constLabels={};
+  Object.entries(constellationData).forEach(([name,c])=>{
     const topFaction=Object.entries(c.factions).sort((a,b)=>b[1]-a[1])[0];
     const fid=topFaction?topFaction[0]:'';
     const color=facColors2[fid]||'#8899aa';
-    const sz=fid?'20':'14';
     const div=document.createElement('div');
-    div.style.cssText=`font-family:'JetBrains Mono',monospace;font-size:${sz}px;color:${color};font-weight:bold;letter-spacing:3px;text-transform:uppercase;pointer-events:none;white-space:nowrap`;
+    div.className='system-label hidden';
+    div.style.cssText=`font-size:13px;color:${color};font-weight:bold;letter-spacing:2px;text-transform:uppercase;pointer-events:none;white-space:nowrap`;
     div.textContent=name;
     const label=new CSS2DObject(div);
-    label.position.set(c.x,c.y+30,c.z);
+    label.position.set(c.x,c.y+25,c.z);
+    scene.add(label);
+    constLabels[name]={div,fid};
+  });
+
+  // Empire labels (always visible at 60%)
+  const empirePositions={};
+  systems.forEach(s=>{
+    if(!s.faction||s.faction==='corsairs')return;
+    if(!empirePositions[s.faction])empirePositions[s.faction]={x:0,y:0,z:0,n:0};
+    empirePositions[s.faction].x+=s.x;empirePositions[s.faction].y+=s.y;empirePositions[s.faction].z+=s.z;empirePositions[s.faction].n++;
+  });
+  const factionNames={terran_fed:'Terran Federation',science_collective:'Nexus Collective',merchants_guild:'Merchants Guild',free_states:'Frontier Alliance',iron_compact:'Iron Compact'};
+  Object.entries(empirePositions).forEach(([fid,p])=>{
+    p.x/=p.n;p.y/=p.n;p.z/=p.n;
+    const div=document.createElement('div');
+    div.style.cssText=`font-size:18px;color:${facColors2[fid]};font-weight:bold;letter-spacing:4px;text-transform:uppercase;opacity:0.6;pointer-events:none;white-space:nowrap`;
+    div.textContent=factionNames[fid]||fid;
+    const label=new CSS2DObject(div);
+    label.position.set(p.x,p.y+50,p.z);
     scene.add(label);
   });
+
+  // Update constellation label visibility based on selection
+  function updateConstLabels(){
+    const selCluster=selectedSystem>=0?systems[selectedSystem].cluster:'';
+    const adjacent=selCluster&&constellationData[selCluster]?constellationData[selCluster].adjacent:new Set();
+    Object.entries(constLabels).forEach(([name,{div}])=>{
+      if(name===selCluster||adjacent.has(name))div.classList.remove('hidden');
+      else div.classList.add('hidden');
+    });
+  }
+  window._updateConstLabels=updateConstLabels;
   // Build system list cards
   buildSystemCards();
   updateRouteLines();
@@ -719,6 +758,7 @@ function focusSystem(index){
   renderSystemList(document.getElementById('sysSearch')?.value||'');
   updateSystemDetail(index);
   if(window._updateRoutes)window._updateRoutes();
+  if(window._updateConstLabels)window._updateConstLabels();
   fetchMarket();
 }
 function zoomToSystem(index){
