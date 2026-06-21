@@ -276,13 +276,26 @@ class Simulation:
         """Recipe-driven production: consume inputs, produce outputs. Halt on shortage."""
         for sys_id, sys in self.universe.items():
             for station in sys.stations:
-                # ── Passive ore generation based on security tier ──
-                if station.station_type == "mining_colony" and sys.asteroid_fields:
+                # ── Passive ore generation for stations in systems with asteroid fields ──
+                if sys.asteroid_fields and station.station_type in ('mining_colony', 'refinery', 'trade_hub'):
                     for field in sys.asteroid_fields:
                         for ore in field.yields:
                             current = station.inventory.get(ore, 0)
                             if current < 500000:
-                                station.inventory[ore] = current + 50.0 * field.density
+                                rate = 50.0 if station.station_type == 'mining_colony' else 20.0
+                                station.inventory[ore] = current + rate * field.density
+                
+                # ── Baseline T1/T2 input generation for producing stations (abstract local economy) ──
+                if station.produces and sys.faction:
+                    for prod_id in station.produces:
+                        com = COMMODITIES.get(prod_id)
+                        if not com or not com.recipe:
+                            continue
+                        for inp_id, qty in com.recipe.items():
+                            current = station.inventory.get(inp_id, 0)
+                            need = qty * station.production_rate * 200
+                            if current < need:
+                                station.inventory[inp_id] = current + qty * station.production_rate * 0.5
 
                 # ── Passive trade goods generation at hubs/outposts ──
                 if station.station_type in ("trade_hub", "frontier_outpost"):
@@ -500,16 +513,20 @@ class Simulation:
         if not needed:
             return
 
-        # Find nearest source with stock
+        # Find nearest source with stock (search same region first)
         best_src = None
         best_hops = 999
+        home_region = getattr(home_sys, 'region', '')
         for sid, sys in self.universe.items():
+            # Prefer same region, skip if too far
+            if getattr(sys, 'region', '') != home_region and best_src:
+                continue
             if self._system_danger(sid) > ship.risk_tolerance:
                 continue
             for st in sys.stations:
                 if st.name == ship.assigned_station:
                     continue
-                if st.inventory.get(needed, 0) > 10:
+                if st.inventory.get(needed, 0) > 100:
                     hops = self._estimate_hops(ship.location, sid)
                     if hops < best_hops:
                         best_hops = hops
