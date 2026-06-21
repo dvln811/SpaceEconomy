@@ -114,11 +114,15 @@ class Supervisor:
     def _tick_loop(self):
         from server.persistence import save_simulation
         while not self._stop:
+            t0 = time.time()
             for _ in range(self.multiplier):
                 self._do_tick()
             if self.sim.tick_count % 10 == 0:
                 save_simulation(self.sim)
-            time.sleep(self.tick_rate)
+            elapsed = time.time() - t0
+            sleep_time = max(0, self.tick_rate - elapsed)
+            if sleep_time > 0:
+                time.sleep(sleep_time)
 
     def _do_tick(self):
         self.sim.tick_count += 1
