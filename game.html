@@ -381,10 +381,10 @@ async function initSystems(){
     systemIdToIndex[sid]=idx;
     sysPositions[sid]={x:sys.x, y:sys.y, z:sys.z};
   }
-  // Build system sprites
+  // Build system sprites (single white texture, color via material)
+  const sharedTex=makeStarTexture(0xffffff);
   systems.forEach(s=>{
-    const tex=makeStarTexture(s.color);
-    const mat=new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false});
+    const mat=new THREE.SpriteMaterial({map:sharedTex,transparent:true,depthWrite:false,color:new THREE.Color(s.color)});
     const sprite=new THREE.Sprite(mat);
     sprite.scale.set(s.size*3,s.size*3,1);
     sprite.position.set(s.x,s.y,s.z);
