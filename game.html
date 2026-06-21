@@ -442,6 +442,7 @@ async function initSystems(){
       ld.div.style.display=(dx*dx+dy*dy+dz*dz)<showRadiusSq?'':'none';
     }
   }
+  window._updateLabels=updateLabelVisibility;
 
   // Region labels (faction territory markers)
   // Region/constellation labels from system cluster data
@@ -587,7 +588,7 @@ function animate(){
   // Ships rendered in system view only now
 
   // Label visibility: show selected + connected + nearby camera (throttled)
-  if(typeof updateLabelVisibility==='function'&&mainFrame%4===0)updateLabelVisibility();
+  if(window._updateLabels&&mainFrame%4===0)window._updateLabels();
 
   // Rotate player ring to face camera
   playerRing.lookAt(camera.position);
