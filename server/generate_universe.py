@@ -403,7 +403,7 @@ def generate_universe():
     print(f"  Total connections: {total_connections}")
     print(f"  Average connections per system: {avg_connections:.1f}")
     
-    # Assign constellations via BFS flood-fill (max 20-25 per constellation)
+    # Assign constellations via BFS flood-fill (10-22 per constellation)
     print("Assigning constellations...")
     CONSTELLATION_NAMES = [
         'Outer Reach', 'Void Expanse', 'Dark Nebula', 'Shattered Rim',
@@ -419,14 +419,33 @@ def generate_universe():
         'Torn Nebula', 'Fissure', 'Silt Basin', 'Crux Gate',
         'Brine Deep', 'Scorch Mark', 'Keen Edge', 'Rift Valley',
         'Pyre Arm', 'Iron Wake', 'Frost Vein', 'Gloom Reach',
+        'Pale Shore', 'Crag Hollow', 'Dim Passage', 'Sulfur Rim',
+        'Quake Belt', 'Slag Drift', 'Wreck Field', 'Shard Cluster',
+        'Gale Front', 'Dust Wake', 'Core Spur', 'Vent Reach',
+        'Low Arc', 'High Drift', 'Blind Spot', 'Dread Gate',
+        'Flux Point', 'Cold Forge', 'Red Veil', 'Blue Hollow',
+        'Green Rift', 'Gold Basin', 'Silver Wake', 'Iron Shore',
+        'Copper Trail', 'Stone Deep', 'Glass Arm', 'Salt Flat',
+        'Bone Yard', 'Crest Line', 'Fang Reach', 'Horn Gate',
+        'Maw Cluster', 'Talon Drift', 'Wing Span', 'Scale Rim',
+        'Coil Sector', 'Knot Field', 'Barb Point', 'Spike Hollow',
+        'Notch Belt', 'Ridge Walk', 'Peak Shadow', 'Vale Mist',
+        'Glen Deep', 'Moor Expanse', 'Heath Reach', 'Fen Cluster',
+        'Marsh Light', 'Brook Arm', 'Falls Gate', 'Spring Hollow',
+        'Tide Pool', 'Reef Line', 'Shoal Belt', 'Bay Drift',
+        'Cove Reach', 'Cape Cluster', 'Point Break', 'Strait Gate',
+        'Narrows', 'Channel Deep', 'Ford Light', 'Bridge Span',
+        'Arch Point', 'Crown Rim', 'Ring Sector', 'Loop Trail',
+        'Spiral Arm', 'Helix Gate', 'Twist Hollow', 'Curl Drift',
     ]
-    MAX_CONSTELLATION_SIZE = 22
-    unassigned = set(sid for sid, s in systems.items() if not s['cluster'])
+    MIN_CONSTELLATION_SIZE = 10
+    MAX_CONSTELLATION_SIZE = 18
+    unassigned = set(systems.keys())
+    constellation_groups = []  # list of (name, [sids])
     constellation_idx = 0
+    
     while unassigned:
-        # Pick a random unassigned system as seed
         seed = random.choice(list(unassigned))
-        # BFS to fill constellation
         queue = [seed]
         group = []
         while queue and len(group) < MAX_CONSTELLATION_SIZE:
@@ -435,18 +454,47 @@ def generate_universe():
                 continue
             unassigned.remove(node)
             group.append(node)
-            # Add connected unassigned neighbors
             for nb in connections.get(node, []):
                 if nb in unassigned and nb not in queue:
                     queue.append(nb)
-        # Assign constellation name
         cname = CONSTELLATION_NAMES[constellation_idx % len(CONSTELLATION_NAMES)]
         if constellation_idx >= len(CONSTELLATION_NAMES):
             cname += f' {constellation_idx // len(CONSTELLATION_NAMES) + 1}'
+        constellation_groups.append((cname, group))
+        constellation_idx += 1
+    
+    # Merge small constellations (<MIN) into adjacent ones (allow up to 25 on merge)
+    for _ in range(10):  # multiple passes
+        merged_any = False
+        for i, (name, group) in enumerate(constellation_groups):
+            if len(group) >= MIN_CONSTELLATION_SIZE or len(group) == 0:
+                continue
+            # Find adjacent constellation to merge into (prefer smallest valid target)
+            best_target = -1
+            best_size = 999
+            for sid in group:
+                for nb in connections.get(sid, []):
+                    for j, (name2, group2) in enumerate(constellation_groups):
+                        if j == i or len(group2) == 0:
+                            continue
+                        if nb in group2 and len(group2) + len(group) <= 25 and len(group2) < best_size:
+                            best_target = j
+                            best_size = len(group2)
+            if best_target >= 0:
+                constellation_groups[best_target] = (constellation_groups[best_target][0], constellation_groups[best_target][1] + group)
+                constellation_groups[i] = (name, [])
+                merged_any = True
+        if not merged_any:
+            break
+    
+    # Remove empty groups and assign
+    constellation_groups = [(n, g) for n, g in constellation_groups if g]
+    for cname, group in constellation_groups:
         for sid in group:
             systems[sid]['cluster'] = cname
-        constellation_idx += 1
-    print(f"  Assigned {constellation_idx} constellations (max {MAX_CONSTELLATION_SIZE} systems each)")
+    
+    sizes = [len(g) for _, g in constellation_groups]
+    print(f"  Assigned {len(constellation_groups)} constellations (min={min(sizes)}, max={max(sizes)}, avg={sum(sizes)/len(sizes):.1f})")
     
     # Corsairs are already scattered near other factions (no dedicated region)
 
