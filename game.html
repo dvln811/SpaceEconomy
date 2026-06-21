@@ -339,6 +339,7 @@ labelRenderer.setSize(container.clientWidth, container.clientHeight);
 labelRenderer.domElement.style.position='absolute';
 labelRenderer.domElement.style.top='0';
 labelRenderer.domElement.style.pointerEvents='none';
+labelRenderer.domElement.style.zIndex='0';
 container.appendChild(labelRenderer.domElement);
 // Remove old canvas
 const oldCanvas = document.getElementById('starmap');
@@ -400,31 +401,16 @@ async function initSystems(){
   const routeMat=new THREE.LineBasicMaterial({color:0x66ccff});
   const routeMesh=new THREE.LineSegments(routeGeo,routeMat);
   scene.add(routeMesh);
+  console.log('Routes loaded:',routes.length);
 
   function updateRouteLines(){
-    const camPos=camera.position;
-    const showDistSq=400*400;
     const sel=selectedSystem;
-    const connSet=new Set();
-    if(sel>=0){
-      (systems[sel].connections||[]).forEach(cid=>{const idx=systemIdToIndex[cid];if(idx!==undefined)connSet.add(Math.min(sel,idx)+'-'+Math.max(sel,idx));});
-    }
     const verts=[];
     for(const [i,j] of routes){
-      const key=Math.min(i,j)+'-'+Math.max(i,j);
       const si=systems[i],sj=systems[j];
-      if(connSet.has(key)){
-        verts.push(si.x,si.y,si.z,sj.x,sj.y,sj.z);
-      }else{
-        const mx=(si.x+sj.x)/2,my=(si.y+sj.y)/2,mz=(si.z+sj.z)/2;
-        const dm=(mx-camPos.x)**2+(my-camPos.y)**2+(mz-camPos.z)**2;
-        if(dm<showDistSq){
-          verts.push(si.x,si.y,si.z,sj.x,sj.y,sj.z);
-        }
-      }
+      verts.push(si.x,si.y,si.z,sj.x,sj.y,sj.z);
     }
     routeGeo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
-    routeGeo.computeBoundingSphere();
   }
   // CSS2D labels (visibility managed per frame via display style)
   const labelDivs=[];
@@ -456,7 +442,6 @@ async function initSystems(){
       const dx=s.x-camPos.x,dy=s.y-camPos.y,dz=s.z-camPos.z;
       ld.div.style.display=(dx*dx+dy*dy+dz*dz)<showRadiusSq?'':'none';
     }
-    updateRouteLines();
   }
 
   // Region labels (faction territory markers)
@@ -476,7 +461,7 @@ async function initSystems(){
     const color=facColors2[c.faction]||'#aabbcc';
     const sz=c.faction?'12':'9';
     const div=document.createElement('div');
-    div.style.cssText=`font-family:Orbitron,sans-serif;font-size:${sz}px;color:${color};letter-spacing:2px;text-transform:uppercase;opacity:0.9;pointer-events:none;white-space:nowrap`;
+    div.style.cssText=`font-family:'JetBrains Mono',monospace;font-size:${sz}px;color:${color};letter-spacing:2px;text-transform:uppercase;opacity:0.9;pointer-events:none;white-space:nowrap`;
     div.textContent=name;
     const label=new CSS2DObject(div);
     label.position.set(c.x,c.y+30,c.z);
@@ -484,6 +469,7 @@ async function initSystems(){
   });
   // Build system list cards
   buildSystemCards();
+  updateRouteLines();
   updateLabelVisibility();
 }
 
