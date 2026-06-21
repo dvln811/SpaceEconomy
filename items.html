@@ -42,7 +42,6 @@ tr:hover td{background:#0d1525}
 let items = [];
 let nameMap = {};
 let currentFilter = '';
-const categories = ['Weapons','Ammunition','Defense','Propulsion','Drones','Mining','Utility','Raw Materials','Refined Materials','Manufactured','Components','Trade Goods'];
 function tierToCategory(t){return {0:'Trade Goods',1:'Raw Materials',2:'Refined Materials',3:'Manufactured',4:'Components'}[t]||'Utility';}
 
 async function init() {
@@ -52,7 +51,10 @@ async function init() {
     nameMap = {};
     raw.forEach(c => { nameMap[c.id] = c.name; });
     items = raw.map(c => ({
-      id: c.id, name: c.name, category: c.category || tierToCategory(c.tier), subcategory: c.subcategory || '',
+      id: c.id, name: c.name,
+      category: c.category || tierToCategory(c.tier),
+      subcategory: c.subcategory || '',
+      group_name: c.group_name || '',
       price: c.base_price, volume: c.volume, description: c.description,
       recipe: formatRecipe(c.recipe), stats: typeof c.stats === 'string' ? JSON.parse(c.stats) : (c.stats || {})
     }));
@@ -70,32 +72,61 @@ function formatRecipe(recipe) {
 function buildSidebar() {
   const sb = document.getElementById('sidebar');
   sb.innerHTML = '<input type="search" id="itemSearch" placeholder="Search items..." style="width:calc(100% - 8px);margin:4px;background:#0a1020;border:1px solid #1a2844;color:#c8d4e0;padding:5px 8px;border-radius:3px;font:inherit;font-size:12px">';
+
+  // Build 3-level tree: category > subcategory > group_name
+  const tree = {};
+  for (const item of items) {
+    const cat = item.category;
+    const sub = item.subcategory || 'General';
+    const grp = item.group_name || '';
+    if (!tree[cat]) tree[cat] = {};
+    if (!tree[cat][sub]) tree[cat][sub] = new Set();
+    if (grp) tree[cat][sub].add(grp);
+  }
+
   let first = true;
-  categories.forEach(cat => {
+  for (const cat of Object.keys(tree).sort()) {
     const catItems = items.filter(i => i.category === cat);
-    if (!catItems.length) return;
+    // Category level
     const btn = document.createElement('button');
     btn.className = 'side-item' + (first ? ' active' : '');
     btn.textContent = cat + ' (' + catItems.length + ')';
     btn.onclick = () => { currentFilter = ''; document.getElementById('itemSearch').value = ''; showCat(cat); setActive(btn); };
     sb.appendChild(btn);
-    const subs = [...new Set(catItems.map(i => i.subcategory).filter(Boolean))];
-    subs.forEach(sub => {
+
+    // Subcategory level
+    for (const sub of Object.keys(tree[cat]).sort()) {
+      const subItems = catItems.filter(i => (i.subcategory || 'General') === sub);
       const sbtn = document.createElement('button');
       sbtn.className = 'side-item';
       sbtn.style.paddingLeft = '16px';
-      sbtn.style.fontSize = '10px';
-      sbtn.textContent = sub + ' (' + catItems.filter(i => i.subcategory === sub).length + ')';
+      sbtn.style.fontSize = '11px';
+      sbtn.textContent = sub + ' (' + subItems.length + ')';
       sbtn.onclick = () => { currentFilter = ''; document.getElementById('itemSearch').value = ''; showSub(cat, sub); setActive(sbtn); };
       sb.appendChild(sbtn);
-    });
+
+      // Group level
+      for (const grp of [...tree[cat][sub]].sort()) {
+        const grpItems = subItems.filter(i => i.group_name === grp);
+        const gbtn = document.createElement('button');
+        gbtn.className = 'side-item';
+        gbtn.style.paddingLeft = '28px';
+        gbtn.style.fontSize = '10px';
+        gbtn.style.color = '#6a8aaa';
+        gbtn.textContent = grp + ' (' + grpItems.length + ')';
+        gbtn.onclick = () => { currentFilter = ''; document.getElementById('itemSearch').value = ''; showGroup(cat, sub, grp); setActive(gbtn); };
+        sb.appendChild(gbtn);
+      }
+    }
+
     if (first) { showCat(cat); first = false; }
-  });
+  }
 }
 
 function setActive(el) { document.querySelectorAll('.side-item').forEach(b => b.classList.remove('active')); el.classList.add('active'); }
 function showCat(cat) { render(items.filter(i => i.category === cat), cat); }
-function showSub(cat, sub) { render(items.filter(i => i.category === cat && i.subcategory === sub), cat); }
+function showSub(cat, sub) { render(items.filter(i => i.category === cat && (i.subcategory || 'General') === sub), cat); }
+function showGroup(cat, sub, grp) { render(items.filter(i => i.category === cat && (i.subcategory || 'General') === sub && i.group_name === grp), cat); }
 function searchAll() {
   const q = (document.getElementById('itemSearch').value || '').toLowerCase();
   if (!q) { document.querySelector('.side-item.active')?.click(); return; }
@@ -107,26 +138,17 @@ function render(filtered, cat) {
   const el = document.getElementById('content');
   let cols = '', rowFn = null;
   if (cat === 'Weapons') {
-    cols = '<th>Name</th><th>Size</th><th>DPS</th><th>ROF</th><th>Range</th><th>Tracking</th><th>Dmg Type</th><th>CPU</th><th>PG</th><th>Price</th><th>Vol</th><th>Recipe</th><th>Description</th>';
-    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||'-'}</td><td class="stat">${i.stats.dps||'-'}</td><td>${i.stats.rof||'-'}s</td><td>${i.stats.range||'-'}km</td><td>${i.stats.tracking||'-'}</td><td>${i.stats.damage_type||'-'}</td><td>${i.stats.cpu||'-'}</td><td>${i.stats.pg||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td><td class="desc">${i.description}</td>`;
+    cols = '<th>Name</th><th>Size</th><th>Quality</th><th>DPS</th><th>Range</th><th>Dmg Type</th><th>Class</th><th>Price</th><th>Vol</th><th>Recipe</th>';
+    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||'-'}</td><td class="stat">${i.stats.quality||'-'}</td><td class="stat">${i.stats.dps||'-'}</td><td>${i.stats.range||'-'}</td><td>${i.stats.damage_type||'-'}</td><td>${i.stats.weapon_class||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td>`;
   } else if (cat === 'Ammunition') {
-    cols = '<th>Name</th><th>Size</th><th>Damage</th><th>Price</th><th>Vol</th><th>Recipe</th><th>Description</th>';
-    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||'-'}</td><td class="stat">${i.stats.damage||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td><td class="desc">${i.description}</td>`;
-  } else if (cat === 'Defense') {
-    cols = '<th>Name</th><th>Size</th><th>Shield HP</th><th>Armor HP</th><th>Regen/Rep</th><th>CPU</th><th>PG</th><th>Slot</th><th>Price</th><th>Vol</th><th>Recipe</th><th>Description</th>';
-    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||'-'}</td><td class="stat">${i.stats.shield_hp||'-'}</td><td class="stat">${i.stats.armor_hp||'-'}</td><td class="stat">${i.stats.regen||i.stats.repair_rate||'-'}</td><td>${i.stats.cpu||'-'}</td><td>${i.stats.pg||'-'}</td><td>${i.stats.slot||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td><td class="desc">${i.description}</td>`;
-  } else if (cat === 'Propulsion') {
-    cols = '<th>Name</th><th>Bonus</th><th>CPU</th><th>PG</th><th>Slot</th><th>Price</th><th>Vol</th><th>Recipe</th><th>Description</th>';
-    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.speed_bonus||'-'}</td><td>${i.stats.cpu||'-'}</td><td>${i.stats.pg||'-'}</td><td>${i.stats.slot||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td><td class="desc">${i.description}</td>`;
+    cols = '<th>Name</th><th>Size</th><th>Quality</th><th>Damage Type</th><th>For Weapon</th><th>Price</th><th>Vol</th><th>Recipe</th>';
+    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||'-'}</td><td class="stat">${i.stats.quality||'-'}</td><td>${i.stats.damage_type||'-'}</td><td>${i.stats.for_weapon||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td>`;
+  } else if (cat === 'Ship Equipment') {
+    cols = '<th>Name</th><th>Size</th><th>Quality</th><th>Slot</th><th>HP Bonus</th><th>Price</th><th>Vol</th><th>Recipe</th><th>Description</th>';
+    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||'-'}</td><td class="stat">${i.stats.quality||'-'}</td><td>${i.stats.slot||'-'}</td><td class="stat">${i.stats.hp_bonus||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td><td class="desc">${i.description}</td>`;
   } else if (cat === 'Drones') {
-    cols = '<th>Name</th><th>DPS</th><th>Mining</th><th>Repair</th><th>BW</th><th>CPU</th><th>Price</th><th>Vol</th><th>Recipe</th><th>Description</th>';
-    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.dps||'-'}</td><td class="stat">${i.stats.mining_yield||'-'}</td><td class="stat">${i.stats.repair_rate||'-'}</td><td>${i.stats.bandwidth||'-'}</td><td>${i.stats.cpu||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td><td class="desc">${i.description}</td>`;
-  } else if (cat === 'Mining') {
-    cols = '<th>Name</th><th>Yield</th><th>Cycle</th><th>CPU</th><th>PG</th><th>Slot</th><th>Price</th><th>Vol</th><th>Recipe</th><th>Description</th>';
-    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.mining_yield||'-'}</td><td>${i.stats.cycle_time||'-'}s</td><td>${i.stats.cpu||'-'}</td><td>${i.stats.pg||'-'}</td><td>${i.stats.slot||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td><td class="desc">${i.description}</td>`;
-  } else if (cat === 'Utility') {
-    cols = '<th>Name</th><th>CPU</th><th>PG</th><th>Slot</th><th>Price</th><th>Vol</th><th>Recipe</th><th>Description</th>';
-    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td>${i.stats.cpu||'-'}</td><td>${i.stats.pg||'-'}</td><td>${i.stats.slot||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td><td class="desc">${i.description}</td>`;
+    cols = '<th>Name</th><th>Size</th><th>Quality</th><th>Damage Type</th><th>Price</th><th>Vol</th><th>Recipe</th><th>Description</th>';
+    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||i.stats.drone_size||'-'}</td><td class="stat">${i.stats.quality||'-'}</td><td>${i.stats.damage_type||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td><td class="desc">${i.description}</td>`;
   } else {
     cols = '<th>Name</th><th>Price</th><th>Volume</th><th>Recipe</th><th>Description</th>';
     rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume} m3</td><td class="recipe">${i.recipe||'-'}</td><td class="desc">${i.description}</td>`;

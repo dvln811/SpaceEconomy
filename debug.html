@@ -153,14 +153,15 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <!-- Market: static filter bar -->
   <div class="view" id="view-market">
     <div style="display:flex;height:100%;overflow:hidden">
-    <div id="mktSidebar" style="width:160px;overflow-y:auto;border-right:1px solid #1a2844;padding:4px;flex-shrink:0"></div>
-    <div style="flex:1;overflow:auto;padding:4px">
+    <div id="mktSidebar" class="tree-panel" style="width:200px"></div>
+    <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;padding:4px">
       <div class="filter-bar" style="margin-bottom:4px">
         <input type="search" class="filter-input" id="mktSearch" placeholder="Search items...">
-        <select class="filter-select" id="mktSystemFilter"><option value="">All systems</option></select>
+        <select class="filter-select" id="mktRegionFilter"><option value="">All Regions</option></select>
+        <select class="filter-select" id="mktSystemFilter"><option value="">All Systems</option></select>
         <select class="filter-select" id="mktSortBy"><option value="commodity">Sort: Name</option><option value="price_asc">Sort: Price Low</option><option value="price_desc">Sort: Price High</option><option value="stock_desc">Sort: Stock High</option></select>
       </div>
-      <div class="tbl-wrap"><table class="tbl" style="table-layout:fixed;width:100%"><thead><tr><th style="width:22%">Item</th><th style="width:16%">System</th><th style="width:18%">Station</th><th style="width:12%;text-align:right">Price</th><th style="width:10%;text-align:right">Stock</th><th style="width:11%;text-align:right">Buy</th><th style="width:11%;text-align:right">Sell</th></tr></thead><tbody id="mktBody"></tbody></table></div>
+      <div class="tbl-wrap" style="flex:1"><table class="tbl" style="table-layout:fixed;width:100%"><thead><tr><th style="width:22%">Item</th><th style="width:14%">Region</th><th style="width:14%">System</th><th style="width:16%">Station</th><th style="width:10%;text-align:right">Price</th><th style="width:8%;text-align:right">Stock</th><th style="width:8%;text-align:right">Buy</th><th style="width:8%;text-align:right">Sell</th></tr></thead><tbody id="mktBody"></tbody></table></div>
     </div>
     </div>
   </div>
@@ -177,8 +178,6 @@ function fmtName(s){return s.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase(
 // ── Persistent UI state (survives re-renders) ───────────────────────────────
 let D = null;
 let selectedSystem = '';
-let mktCommoditiesPopulated = false;
-let mktSystemsPopulated = false;
 let sysOptionsPopulated = false;
 
 // ── Tabs ────────────────────────────────────────────────────────────────────
@@ -500,131 +499,129 @@ function renderCombat() {
 document.getElementById('combatFilter')?.addEventListener('input', () => renderCombat());
 document.getElementById('combatFactionFilter')?.addEventListener('change', () => renderCombat());
 
-// ── Market (categorized tree-view) ────────────────────────────────────────
-const TIER_MAP = {};
-const CAT_MAP = {};
-let mktCategories = [];
-fetch('/api/data/commodities').then(r=>r.json()).then(data=>{
-  data.forEach(c=>{TIER_MAP[c.id]=c.tier; CAT_MAP[c.id]=c.category||'Other';});
-  mktCategories=[...new Set(data.map(c=>c.category||'Other'))];
-  buildMktSidebar();
-});
+// ── Market (hierarchical tree-view) ───────────────────────────────────────
+let mktItemData = [];  // [{id, name, category, subcategory, group_name, tier, ...}]
+let mktTreeBuilt = false;
+let mktSelectedGroup = '';  // "category|subcategory|group" or partial
+let mktRegionsPopulated = false;
 
-let mktSelectedCat = '';
-let mktShipData = [];
-function buildMktSidebar(){
-  const sb=document.getElementById('mktSidebar');
-  if(!sb)return;
-  // Group categories by tier
-  const tierNames = {1:'T1 Raw Ores', 2:'T2 Refined', 3:'T3 Manufactured', 4:'T4 Components', 5:'T5 Products', 0:'Trade Goods'};
-  const tierCats = {};
-  for (const [id, tier] of Object.entries(TIER_MAP)) {
-    const cat = CAT_MAP[id] || 'Other';
-    if (!tierCats[tier]) tierCats[tier] = new Set();
-    tierCats[tier].add(cat);
+fetch('/api/data/commodities').then(r=>r.json()).then(data=>{
+  if (!Array.isArray(data)) return;
+  mktItemData = data;
+  buildMktTree();
+}).catch(()=>{});
+
+function buildMktTree() {
+  // Build hierarchy: category > subcategory > group_name
+  const tree = {};
+  for (const item of mktItemData) {
+    const cat = item.category || 'Other';
+    const sub = item.subcategory || 'General';
+    const grp = item.group_name || 'Uncategorized';
+    if (!tree[cat]) tree[cat] = {};
+    if (!tree[cat][sub]) tree[cat][sub] = {};
+    if (!tree[cat][sub][grp]) tree[cat][sub][grp] = 0;
+    tree[cat][sub][grp]++;
   }
-  let html = `<div class="mkt-cat${!mktSelectedCat?' active':''}" data-cat="" style="padding:3px 6px;margin:1px 0;border-radius:3px;cursor:pointer;font-size:11px;color:#66bb6a;font-weight:bold">All Items</div>`;
-  for (const tier of [0,1,2,3,4,5]) {
-    if (!tierCats[tier]) continue;
-    html += `<div style="padding:4px 6px 2px;color:#4fc3f7;font-size:10px;font-weight:bold;margin-top:4px;border-top:1px solid #152238">${tierNames[tier]||'T'+tier}</div>`;
-    for (const cat of [...tierCats[tier]].sort()) {
-      html += `<div class="mkt-cat${mktSelectedCat===cat?' active':''}" data-cat="${cat}" style="padding:2px 6px 2px 12px;margin:1px 0;border-radius:3px;cursor:pointer;font-size:11px;color:#c8d4e0">${cat}</div>`;
+
+  let html = '<div class="tree-region" data-sel="" style="color:#66bb6a;font-weight:bold">All Items</div>';
+  for (const cat of Object.keys(tree).sort()) {
+    const catCount = Object.values(tree[cat]).reduce((s, subs) => s + Object.values(subs).reduce((a, b) => a + b, 0), 0);
+    html += `<div class="tree-region" data-sel="${cat}" style="margin-top:4px">${cat} <span style="color:#5a7a9a">(${catCount})</span></div>`;
+    for (const sub of Object.keys(tree[cat]).sort()) {
+      const subCount = Object.values(tree[cat][sub]).reduce((a, b) => a + b, 0);
+      html += `<div class="tree-cluster" data-sel="${cat}|${sub}">${sub} <span style="color:#5a7a9a">(${subCount})</span></div>`;
+      for (const grp of Object.keys(tree[cat][sub]).sort()) {
+        html += `<div class="tree-system" data-sel="${cat}|${sub}|${grp}">${grp} (${tree[cat][sub][grp]})</div>`;
+      }
     }
   }
-  // Ships section
-  html += `<div style="padding:4px 6px 2px;color:#ffd54f;font-size:10px;font-weight:bold;margin-top:4px;border-top:1px solid #152238">Ships</div>`;
-  html += `<div class="mkt-cat${mktSelectedCat==='_haulers'?' active':''}" data-cat="_haulers" style="padding:2px 6px 2px 12px;margin:1px 0;border-radius:3px;cursor:pointer;font-size:11px;color:#c8d4e0">Haulers</div>`;
-  html += `<div class="mkt-cat${mktSelectedCat==='_miners'?' active':''}" data-cat="_miners" style="padding:2px 6px 2px 12px;margin:1px 0;border-radius:3px;cursor:pointer;font-size:11px;color:#c8d4e0">Miners</div>`;
-  html += `<div class="mkt-cat${mktSelectedCat==='_military'?' active':''}" data-cat="_military" style="padding:2px 6px 2px 12px;margin:1px 0;border-radius:3px;cursor:pointer;font-size:11px;color:#c8d4e0">Military</div>`;
 
-  sb.innerHTML=html;
-  sb.querySelectorAll('.mkt-cat').forEach(el=>el.addEventListener('click',()=>{
-    mktSelectedCat=el.dataset.cat;
-    sb.querySelectorAll('.mkt-cat').forEach(e=>e.classList.remove('active'));
+  const sb = document.getElementById('mktSidebar');
+  sb.innerHTML = html;
+  sb.querySelectorAll('[data-sel]').forEach(el => el.addEventListener('click', () => {
+    sb.querySelectorAll('[data-sel]').forEach(e => e.classList.remove('active'));
     el.classList.add('active');
+    mktSelectedGroup = el.dataset.sel;
     renderMarket();
   }));
+  mktTreeBuilt = true;
 }
-// Load ship data for market
-fetch('/api/data/ship_types').then(r=>r.json()).then(data=>{mktShipData=data;});
-let mktMilitaryData = [];
-fetch('/api/data/military_ships').then(r=>r.json()).then(data=>{mktMilitaryData=data;});
 
 function renderMarket() {
+  if (!D) return;
   const prices = D.prices || {};
-  const searchVal = (document.getElementById('mktSearch')?.value||'').toLowerCase();
-
-  if (!mktSystemsPopulated) {
-    const systemNames = new Set();
-    for (const entries of Object.values(prices)) entries.forEach(e => systemNames.add(e.system));
-    if (systemNames.size) {
-      const sel = document.getElementById('mktSystemFilter');
-      for (const name of [...systemNames].sort()) {
-        const opt = document.createElement('option'); opt.value = name; opt.textContent = name; sel.appendChild(opt);
-      }
-      mktSystemsPopulated = true;
-    }
-  }
-
-  // Ship categories show ship data instead
-  if (mktSelectedCat && mktSelectedCat.startsWith('_')) {
-    let shipRows = '';
-    if (mktSelectedCat === '_haulers' || mktSelectedCat === '_miners') {
-      const role = mktSelectedCat === '_haulers' ? 'hauler' : 'miner';
-      const filtered = mktShipData.filter(s => s.role === role && (!searchVal || s.name.toLowerCase().includes(searchVal)));
-      for (const s of filtered) {
-        shipRows += `<tr><td style="color:#ffd54f">${s.name}</td><td>T${s.tier}</td><td>${s.role}</td><td style="text-align:right">${s.cargo_capacity}</td><td style="text-align:right">${s.speed}</td><td style="text-align:right">${s.hull_hp}</td><td style="text-align:right">${s.fuel_capacity}</td></tr>`;
-      }
-    } else if (mktSelectedCat === '_military') {
-      const filtered = mktMilitaryData.filter(s => !searchVal || s.name.toLowerCase().includes(searchVal) || s.faction_id.toLowerCase().includes(searchVal));
-      for (const s of filtered) {
-        shipRows += `<tr><td style="color:#ffd54f">${s.name}</td><td>${s.hull_class}</td><td>${fmtName(s.faction_id)}</td><td style="text-align:right">${s.hull_hp}</td><td style="text-align:right">${s.shield_hp}</td><td style="text-align:right">${s.armor_hp}</td><td style="text-align:right">${s.crew}</td></tr>`;
-      }
-    }
-    document.getElementById('mktBody').innerHTML = shipRows || '<tr><td colspan="7" style="color:#8aa0b8;text-align:center;padding:20px">No ships</td></tr>';
-    return;
-  }
-
-  const sysF = document.getElementById('mktSystemFilter').value;
+  const systems = D.systems || {};
+  const searchVal = (document.getElementById('mktSearch')?.value || '').toLowerCase();
+  const regionF = document.getElementById('mktRegionFilter')?.value || '';
+  const sysF = document.getElementById('mktSystemFilter')?.value || '';
   const sortBy = document.getElementById('mktSortBy')?.value || 'commodity';
-  const commodities = Object.keys(prices).sort();
+
+  // Populate region filter once
+  if (!mktRegionsPopulated && Object.keys(systems).length) {
+    const regions = new Set();
+    for (const sys of Object.values(systems)) regions.add(sys.region || 'Unknown');
+    const sel = document.getElementById('mktRegionFilter');
+    for (const r of [...regions].sort()) {
+      const opt = document.createElement('option'); opt.value = r; opt.textContent = r; sel.appendChild(opt);
+    }
+    mktRegionsPopulated = true;
+  }
+
+  // Build item lookup from loaded data
+  const itemLookup = {};
+  for (const item of mktItemData) itemLookup[item.id] = item;
+
+  // Filter by tree selection
+  const selParts = mktSelectedGroup.split('|');
 
   let allEntries = [];
-  for (const c of commodities) {
-    if (mktSelectedCat && CAT_MAP[c] !== mktSelectedCat) continue;
-    const name = fmtName(c);
+  for (const [cid, entries] of Object.entries(prices)) {
+    const item = itemLookup[cid];
+    if (!item) continue;
+
+    // Tree filter
+    if (mktSelectedGroup) {
+      if (selParts[0] && item.category !== selParts[0]) continue;
+      if (selParts[1] && item.subcategory !== selParts[1]) continue;
+      if (selParts[2] && item.group_name !== selParts[2]) continue;
+    }
+
+    // Search filter
+    const name = item.name || fmtName(cid);
     if (searchVal && !name.toLowerCase().includes(searchVal)) continue;
-    for (const e of prices[c]) {
+
+    for (const e of entries) {
+      // Region/system filter
+      const sysd = systems[e.system_id];
+      const region = sysd ? (sysd.region || '') : '';
+      if (regionF && region !== regionF) continue;
       if (sysF && e.system !== sysF) continue;
-      let buyDemand = 0;
-      const sysData = Object.values(D.systems||{}).find(s => s.name === e.system);
-      if (sysData) {
-        const st = sysData.stations.find(s => s.name === e.station);
-        if (st) { const bo = (st.buy_orders||[]).find(b => b.commodity === c); if (bo) buyDemand = bo.qty; }
-      }
-      allEntries.push({commodity: c, name, category: CAT_MAP[c]||'', buyDemand, sellSupply: e.stock, ...e});
+
+      allEntries.push({id: cid, name, region, ...e});
     }
   }
-  if (sortBy === 'price_asc') allEntries.sort((a,b) => a.price - b.price);
-  else if (sortBy === 'price_desc') allEntries.sort((a,b) => b.price - a.price);
-  else if (sortBy === 'stock_desc') allEntries.sort((a,b) => b.stock - a.stock);
-  else allEntries.sort((a,b) => a.name.localeCompare(b.name));
 
+  if (sortBy === 'price_asc') allEntries.sort((a, b) => a.price - b.price);
+  else if (sortBy === 'price_desc') allEntries.sort((a, b) => b.price - a.price);
+  else if (sortBy === 'stock_desc') allEntries.sort((a, b) => b.stock - a.stock);
+  else allEntries.sort((a, b) => a.name.localeCompare(b.name));
+
+  // Limit display to avoid DOM bloat
+  const display = allEntries.slice(0, 500);
   let rows = '';
-  for (const e of allEntries) {
-    rows += `<tr><td style="color:#ffd54f">${e.name}</td><td>${e.system}</td><td style="color:#8aa0b8">${e.station}</td><td style="color:#e0e8f0;text-align:right">${e.price.toFixed(0)}</td><td style="color:#4fc3f7;text-align:right">${Math.round(e.stock)}</td><td style="color:#ef5350;text-align:right">${Math.round(e.buyDemand)||'-'}</td><td style="color:#66bb6a;text-align:right">${Math.round(e.sellSupply)||'-'}</td></tr>`;
+  for (const e of display) {
+    rows += `<tr><td style="color:#ffd54f">${e.name}</td><td style="color:#8aa0b8;font-size:11px">${e.region}</td><td>${e.system}</td><td style="color:#8aa0b8">${e.station}</td><td style="text-align:right">${e.price.toFixed(0)}</td><td style="color:#4fc3f7;text-align:right">${Math.round(e.stock)}</td><td style="color:#ef5350;text-align:right">-</td><td style="color:#66bb6a;text-align:right">${Math.round(e.stock)}</td></tr>`;
   }
-  document.getElementById('mktBody').innerHTML = rows || '<tr><td colspan="7" style="color:#8aa0b8;text-align:center;padding:20px">No market data for this category</td></tr>';
+  if (!rows) rows = '<tr><td colspan="8" style="color:#8aa0b8;text-align:center;padding:20px">No market data. Select a category or wait for price data to populate.</td></tr>';
+  else if (allEntries.length > 500) rows += `<tr><td colspan="8" style="color:#5a7a9a;text-align:center;padding:8px">Showing 500 of ${allEntries.length} entries</td></tr>`;
+  document.getElementById('mktBody').innerHTML = rows;
 }
 
-function getTier(commodity_id) {
-  return TIER_MAP[commodity_id] || '?';
-}
-
-document.getElementById('mktSystemFilter').addEventListener('change', () => renderMarket());
+document.getElementById('mktRegionFilter')?.addEventListener('change', () => renderMarket());
+document.getElementById('mktSystemFilter')?.addEventListener('change', () => renderMarket());
 document.getElementById('mktSearch').addEventListener('input', () => renderMarket());
 document.getElementById('mktSortBy').addEventListener('change', () => renderMarket());
-document.getElementById('mktSortBy')?.addEventListener('change', () => renderMarket());
 
 // ── Systems ─────────────────────────────────────────────────────────────────
 function renderSystems() {
