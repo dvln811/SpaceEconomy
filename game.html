@@ -181,6 +181,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
       <option value="default">Star Type</option>
       <option value="faction">Faction</option>
       <option value="security">Security</option>
+      <option value="region">Region</option>
     </select></div>
     <div class="map-zoom">
       <button>+</button>
@@ -513,12 +514,12 @@ document.getElementById('starColorMode').addEventListener('change',(e)=>{
     let col;
     if(mode==='faction')col=FACTION_COLORS_HEX[s.faction]||0x555555;
     else if(mode==='security')col=SEC_COLORS_HEX[s.security]||0x555555;
+    else if(mode==='region')col=regionColor(s.cluster);
     else col=s.color;
-    const tex=makeStarTexture(col);
-    systemMeshes[i].material.map=tex;
-    systemMeshes[i].material.needsUpdate=true;
+    systemMeshes[i].material.color.setHex(col);
   });
 });
+function regionColor(cluster){if(!cluster)return 0x555555;let h=0;for(let i=0;i<cluster.length;i++)h=cluster.charCodeAt(i)+((h<<5)-h);return(h&0xFFFFFF)|0x404040;}
 
 // No background stars - only generated system stars on the map
 

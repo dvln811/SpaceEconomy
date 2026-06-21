@@ -266,12 +266,22 @@ def generate_universe():
             else:
                 name = generate_null_sec_name()
             
-            # Scatter around faction center
-            angle = random.uniform(0, 2 * math.pi)
-            r = random.uniform(10, 150)
-            x = fx + r * math.cos(angle) + random.uniform(-20, 20)
-            y = fy + r * math.sin(angle) + random.uniform(-20, 20)
-            z = fz + random.uniform(-30, 30)
+            # Scatter around faction center (Corsairs scatter near other factions)
+            if fid == 'corsairs':
+                # Pick a random other faction's position and place on its edge
+                other_fid = random.choice([f for f in FACTIONS if f != 'corsairs'])
+                ox, oy, oz = FACTIONS[other_fid]['pos']
+                angle = random.uniform(0, 2 * math.pi)
+                r = random.uniform(120, 200)  # on the edge of their territory
+                x = ox + r * math.cos(angle) + random.uniform(-30, 30)
+                y = oy + r * math.sin(angle) + random.uniform(-30, 30)
+                z = oz + random.uniform(-40, 40)
+            else:
+                angle = random.uniform(0, 2 * math.pi)
+                r = random.uniform(10, 150)
+                x = fx + r * math.cos(angle) + random.uniform(-20, 20)
+                y = fy + r * math.sin(angle) + random.uniform(-20, 20)
+                z = fz + random.uniform(-30, 30)
             
             sid = name.lower().replace(' ', '_').replace("'", "").replace('-', '_')
             # Ensure unique
@@ -284,7 +294,7 @@ def generate_universe():
             systems[sid] = {
                 'name': name, 'x': round(x, 1), 'y': round(y, 1), 'z': round(z, 1),
                 'system_type': sys_type, 'security': security, 'faction_id': fid,
-                'cluster': fdata['name'],
+                'cluster': '',  # assigned by BFS after connections
             }
     
     print(f"  Generated {len(systems)} faction systems")
@@ -356,15 +366,7 @@ def generate_universe():
     
     print(f"  Generated {len(null_positions)} null-sec positions")
     
-    # Create null-sec system entries with constellation names
-    CONSTELLATIONS = [
-        'Outer Reach', 'Void Expanse', 'Dark Nebula', 'Shattered Rim',
-        'Ghost Sector', 'Iron Veil', 'Crimson Drift', 'Silent Deep',
-        'Ember Fields', 'Frozen Wake', 'Obsidian Cluster', 'Tempest Zone',
-        'Serpent Arm', 'Dead Light', 'Ashen Corridor', 'Wraith Nebula',
-        'Storm Front', 'Hollow Stars', 'Burning Edge', 'Pale Expanse',
-        'Shadow Reach', 'Broken Chain', 'Rust Belt', 'Nova Remnant',
-    ]
+    # Create null-sec system entries (constellations assigned after connections are built)
     used_names = set()
     for x, y, z in null_positions:
         name = generate_null_sec_name()
@@ -382,18 +384,12 @@ def generate_universe():
         else:
             security = 'none'
         
-        # Assign constellation based on angular sector
-        angle = math.atan2(y, x)
-        sector_idx = int((angle + math.pi) / (2 * math.pi) * len(CONSTELLATIONS))
-        sector_idx = min(sector_idx, len(CONSTELLATIONS) - 1)
-        constellation = CONSTELLATIONS[sector_idx]
-        
         sys_type = random.choice(SYSTEM_TYPES_WILD)
         
         systems[sid] = {
             'name': name, 'x': round(x, 1), 'y': round(y, 1), 'z': round(z, 1),
             'system_type': sys_type, 'security': security, 'faction_id': '',
-            'cluster': constellation,
+            'cluster': '',  # assigned later
         }
     
     print(f"Total systems: {len(systems)}")
@@ -407,6 +403,53 @@ def generate_universe():
     print(f"  Total connections: {total_connections}")
     print(f"  Average connections per system: {avg_connections:.1f}")
     
+    # Assign constellations via BFS flood-fill (max 20-25 per constellation)
+    print("Assigning constellations...")
+    CONSTELLATION_NAMES = [
+        'Outer Reach', 'Void Expanse', 'Dark Nebula', 'Shattered Rim',
+        'Ghost Sector', 'Iron Veil', 'Crimson Drift', 'Silent Deep',
+        'Ember Fields', 'Frozen Wake', 'Obsidian Cluster', 'Tempest Zone',
+        'Serpent Arm', 'Dead Light', 'Ashen Corridor', 'Wraith Nebula',
+        'Storm Front', 'Hollow Stars', 'Burning Edge', 'Pale Expanse',
+        'Shadow Reach', 'Broken Chain', 'Rust Belt', 'Nova Remnant',
+        'Void Walker', 'Nether Rim', 'Ash Cloud', 'Shear Zone',
+        'Dusk Veil', 'Fractured Sky', 'Null Point', 'Bleak Reach',
+        'Forge Remnant', 'Cinder Trail', 'Grave Tide', 'Warp Scar',
+        'Drift Hollow', 'Black Reef', 'Char Field', 'Spine Cluster',
+        'Torn Nebula', 'Fissure', 'Silt Basin', 'Crux Gate',
+        'Brine Deep', 'Scorch Mark', 'Keen Edge', 'Rift Valley',
+        'Pyre Arm', 'Iron Wake', 'Frost Vein', 'Gloom Reach',
+    ]
+    MAX_CONSTELLATION_SIZE = 22
+    unassigned = set(sid for sid, s in systems.items() if not s['cluster'])
+    constellation_idx = 0
+    while unassigned:
+        # Pick a random unassigned system as seed
+        seed = random.choice(list(unassigned))
+        # BFS to fill constellation
+        queue = [seed]
+        group = []
+        while queue and len(group) < MAX_CONSTELLATION_SIZE:
+            node = queue.pop(0)
+            if node not in unassigned:
+                continue
+            unassigned.remove(node)
+            group.append(node)
+            # Add connected unassigned neighbors
+            for nb in connections.get(node, []):
+                if nb in unassigned and nb not in queue:
+                    queue.append(nb)
+        # Assign constellation name
+        cname = CONSTELLATION_NAMES[constellation_idx % len(CONSTELLATION_NAMES)]
+        if constellation_idx >= len(CONSTELLATION_NAMES):
+            cname += f' {constellation_idx // len(CONSTELLATION_NAMES) + 1}'
+        for sid in group:
+            systems[sid]['cluster'] = cname
+        constellation_idx += 1
+    print(f"  Assigned {constellation_idx} constellations (max {MAX_CONSTELLATION_SIZE} systems each)")
+    
+    # Corsairs are already scattered near other factions (no dedicated region)
+
     # Generate asteroid fields
     print("Generating asteroid fields...")
     asteroid_fields = {}
