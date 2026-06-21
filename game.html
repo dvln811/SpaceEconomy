@@ -405,11 +405,13 @@ async function initSystems(){
   const routeGeo=new THREE.BufferGeometry();
   const routeMat=new THREE.LineBasicMaterial({color:0x66ccff,transparent:true,opacity:0.15});
   const routeMesh=new THREE.LineSegments(routeGeo,routeMat);
+  routeMesh.frustumCulled=false;
   scene.add(routeMesh);
   const hlGeo=new THREE.BufferGeometry();
   const hlMat=new THREE.LineBasicMaterial({color:0x88ddff,transparent:true,opacity:0.7,depthTest:false});
   const hlMesh=new THREE.LineSegments(hlGeo,hlMat);
   hlMesh.renderOrder=1;
+  hlMesh.frustumCulled=false;
   scene.add(hlMesh);
   console.log('Routes loaded:',routes.length);
 
