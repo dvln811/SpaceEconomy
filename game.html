@@ -441,7 +441,7 @@ async function initSystems(){
   systems.forEach((s,i)=>{
     const div=document.createElement('div');div.className='system-label hidden';div.textContent=s.name;
     const label=new CSS2DObject(div);
-    label.position.set(s.x,s.y+s.size*2+6,s.z);
+    label.position.set(s.x,s.y+s.size+3,s.z);
     scene.add(label);
     labelDivs.push({div,idx:i});
   });
