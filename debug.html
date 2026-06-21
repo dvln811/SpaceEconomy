@@ -77,6 +77,8 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .tree-system{padding:1px 6px 1px 26px;cursor:pointer;color:#6a8aaa;font-size:10px;border-radius:3px}
 .tree-system:hover{background:#111a2a}
 .tree-system.active{background:#0d1a2f;color:#4fc3f7}
+.tarr{display:inline-block;width:10px;font-size:9px;color:#5a7a9a}
+.tree-ch{margin-left:0}
 </style>
 </head>
 <body>
@@ -524,23 +526,43 @@ function buildMktTree() {
     tree[cat][sub][grp]++;
   }
 
-  let html = '<div class="tree-region" data-sel="" style="color:#66bb6a;font-weight:bold">All Items</div>';
+  const sb = document.getElementById('mktSidebar');
+  let html = '<div class="tree-region active" data-sel="" style="color:#66bb6a;font-weight:bold;cursor:pointer">All Items</div>';
   for (const cat of Object.keys(tree).sort()) {
     const catCount = Object.values(tree[cat]).reduce((s, subs) => s + Object.values(subs).reduce((a, b) => a + b, 0), 0);
-    html += `<div class="tree-region" data-sel="${cat}" style="margin-top:4px">${cat} <span style="color:#5a7a9a">(${catCount})</span></div>`;
+    html += `<div class="tree-cat" style="margin-top:4px">`;
+    html += `<div class="tree-region" data-sel="${cat}" data-toggle="cat_${cat.replace(/\s/g,'_')}" style="cursor:pointer"><span class="tarr">&#9654;</span> ${cat} <span style="color:#5a7a9a">(${catCount})</span></div>`;
+    html += `<div class="tree-ch" id="cat_${cat.replace(/\s/g,'_')}" style="display:none">`;
     for (const sub of Object.keys(tree[cat]).sort()) {
       const subCount = Object.values(tree[cat][sub]).reduce((a, b) => a + b, 0);
-      html += `<div class="tree-cluster" data-sel="${cat}|${sub}">${sub} <span style="color:#5a7a9a">(${subCount})</span></div>`;
+      const subId = `sub_${cat.replace(/\s/g,'_')}_${sub.replace(/\s/g,'_')}`;
+      html += `<div class="tree-cluster" data-sel="${cat}|${sub}" data-toggle="${subId}" style="cursor:pointer"><span class="tarr" style="font-size:8px">&#9654;</span> ${sub} <span style="color:#5a7a9a">(${subCount})</span></div>`;
+      html += `<div class="tree-ch" id="${subId}" style="display:none">`;
       for (const grp of Object.keys(tree[cat][sub]).sort()) {
-        html += `<div class="tree-system" data-sel="${cat}|${sub}|${grp}">${grp} (${tree[cat][sub][grp]})</div>`;
+        html += `<div class="tree-system" data-sel="${cat}|${sub}|${grp}" style="cursor:pointer">${grp} (${tree[cat][sub][grp]})</div>`;
       }
+      html += `</div>`;
     }
+    html += `</div></div>`;
   }
 
-  const sb = document.getElementById('mktSidebar');
   sb.innerHTML = html;
-  sb.querySelectorAll('[data-sel]').forEach(el => el.addEventListener('click', () => {
-    sb.querySelectorAll('[data-sel]').forEach(e => e.classList.remove('active'));
+  // Click handlers
+  sb.querySelectorAll('[data-sel]').forEach(el => el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    // Toggle children if this has a toggle target
+    const toggleId = el.dataset.toggle;
+    if (toggleId) {
+      const ch = document.getElementById(toggleId);
+      if (ch) {
+        const open = ch.style.display !== 'none';
+        ch.style.display = open ? 'none' : 'block';
+        const arr = el.querySelector('.tarr');
+        if (arr) arr.innerHTML = open ? '&#9654;' : '&#9660;';
+      }
+    }
+    // Set active and filter
+    sb.querySelectorAll('[data-sel]').forEach(x => x.classList.remove('active'));
     el.classList.add('active');
     mktSelectedGroup = el.dataset.sel;
     renderMarket();

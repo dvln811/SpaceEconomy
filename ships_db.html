@@ -117,10 +117,10 @@ function show(filter, btn) {
     const milMatched = military.filter(match);
     let html = '';
     if (civMatched.length) {
-      html += `<table><colgroup><col style="width:110px"><col style="width:60px"><col style="width:35px"><col style="width:65px"><col style="width:40px"><col style="width:50px"><col style="width:55px"><col style="width:55px"><col style="width:120px"><col style="width:200px"><col style="width:250px"></colgroup><thead><tr><th>Name</th><th>Role</th><th>Tier</th><th>Cargo (m3)</th><th>Fuel</th><th>Speed</th><th>Hull HP</th><th>Align (s)</th><th>Hardpoints</th><th>Build Cost</th><th>Description</th></tr></thead><tbody>${civMatched.map(s => `<tr><td style="color:#e0e8f0">${s.name}</td><td>${s.role}</td><td>T${s.tier}</td><td style="color:#ffd54f">${s.cargo_capacity}</td><td>${s.fuel_capacity}</td><td>${s.speed}x</td><td>${s.hull_hp}</td><td>${s.align_time}</td><td style="font-size:12px;line-height:1.6">${Object.entries(s.hardpoints).map(([k,v])=>v+'x '+k).join('<br>')}</td><td style="font-size:12px;line-height:1.6;color:#66bb6a">${Object.entries(s.build_cost).map(([k,v])=>v+'x '+n(k)).join('<br>')}</td><td class="desc">${s.description}</td></tr>`).join('')}</tbody></table>`;
+      html += `<table><thead><tr><th>Name</th><th>Role</th><th>Tier</th><th>Cargo</th><th>Fuel</th><th>Speed</th><th>Hull HP</th><th>Align</th><th>Hardpoints</th><th>Build Cost</th><th>Build Time</th><th>Description</th></tr></thead><tbody>${civMatched.map(s => `<tr><td style="color:#e0e8f0">${s.name}</td><td>${s.role}</td><td>T${s.tier}</td><td style="color:#ffd54f">${s.cargo_capacity}</td><td>${s.fuel_capacity}</td><td>${s.speed}x</td><td>${s.hull_hp}</td><td>${s.align_time}</td><td style="font-size:12px;line-height:1.6">${Object.entries(s.hardpoints).map(([k,v])=>v+'x '+k).join('<br>')}</td><td style="font-size:12px;line-height:1.6;color:#66bb6a">${Object.entries(s.build_cost).map(([k,v])=>v+'x '+n(k)).join('<br>')}</td><td>${s.build_time?Math.round(s.build_time/60)+'m':'-'}</td><td class="desc">${s.description}</td></tr>`).join('')}</tbody></table>`;
     }
     if (milMatched.length) {
-      html += `<table style="margin-top:12px"><colgroup><col style="width:100px"><col style="width:95px"><col style="width:120px"><col style="width:45px"><col style="width:45px"><col style="width:45px"><col style="width:55px"><col style="width:35px"><col style="width:170px"><col style="width:180px"><col style="width:250px"></colgroup><thead><tr><th>Name</th><th>Class</th><th>Faction</th><th>Hull</th><th>Armor</th><th>Shield</th><th>Total HP</th><th>Crew</th><th>Weapons</th><th>Build Cost</th><th>Description</th></tr></thead><tbody>${milMatched.map(s => {const fname=factions[s.faction_id]?factions[s.faction_id].name:s.faction_id;return `<tr><td style="color:#e0e8f0">${s.name}</td><td>${s.hull_class}</td><td class="${factionColors[s.faction_id]||''}">${fname}</td><td>${s.hull_hp}</td><td>${s.armor_hp}</td><td>${s.shield_hp}</td><td style="color:#ffd54f">${s.hull_hp+s.armor_hp+s.shield_hp}</td><td>${s.crew}</td><td style="font-size:12px;line-height:1.6">${s.weapons.map(w=>n(w)).join('<br>')}</td><td style="font-size:12px;line-height:1.6;color:#66bb6a">${Object.entries(s.build_cost).map(([k,v])=>v+'x '+n(k)).join('<br>')}</td><td class="desc">${s.description}</td></tr>`;}).join('')}</tbody></table>`;
+      html += `<table style="margin-top:12px"><thead><tr><th>Name</th><th>Class</th><th>Faction</th><th>Hull</th><th>Armor</th><th>Shield</th><th>Total HP</th><th>Crew</th><th>Weapons</th><th>Build Cost</th><th>Build Time</th><th>Description</th></tr></thead><tbody>${milMatched.map(s => {const fname=factions[s.faction_id]?factions[s.faction_id].name:s.faction_id;return `<tr><td style="color:#e0e8f0">${s.name}</td><td>${s.hull_class}</td><td class="${factionColors[s.faction_id]||''}">${fname}</td><td>${s.hull_hp}</td><td>${s.armor_hp}</td><td>${s.shield_hp}</td><td style="color:#ffd54f">${s.hull_hp+s.armor_hp+s.shield_hp}</td><td>${s.crew}</td><td style="font-size:12px;line-height:1.6">${s.weapons.map(w=>n(w)).join('<br>')}</td><td style="font-size:12px;line-height:1.6;color:#66bb6a">${Object.entries(s.build_cost).map(([k,v])=>v+'x '+n(k)).join('<br>')}</td><td>${s.build_time?Math.round(s.build_time/60)+'m':'-'}</td><td class="desc">${s.description}</td></tr>`;}).join('')}</tbody></table>`;
     }
     if (!html) html = '<div style="color:#8aa0b8;padding:24px">No matches</div>';
     el.innerHTML = html;
@@ -133,7 +133,7 @@ function show(filter, btn) {
     if (filter === 'miners') ships = civilian.filter(s => s.role === 'miner');
     ships = ships.filter(match);
     el.innerHTML = `<table><colgroup><col style="width:110px"><col style="width:60px"><col style="width:35px"><col style="width:65px"><col style="width:40px"><col style="width:50px"><col style="width:55px"><col style="width:55px"><col style="width:120px"><col style="width:200px"><col style="width:250px"></colgroup><thead><tr>
-      <th>Name</th><th>Role</th><th>Tier</th><th>Cargo (m3)</th><th>Fuel</th><th>Speed</th><th>Hull HP</th><th>Align (s)</th><th>Hardpoints</th><th>Build Cost</th><th>Description</th>
+      <th>Name</th><th>Role</th><th>Tier</th><th>Cargo (m3)</th><th>Fuel</th><th>Speed</th><th>Hull HP</th><th>Align (s)</th><th>Hardpoints</th><th>Build Cost</th><th>Build Time</th><th>Description</th>
     </tr></thead><tbody>${ships.map(s => `<tr>
       <td style="color:#e0e8f0">${s.name}</td>
       <td>${s.role}</td>
@@ -145,6 +145,7 @@ function show(filter, btn) {
       <td>${s.align_time}</td>
       <td style="font-size:12px;line-height:1.6">${Object.entries(s.hardpoints).map(([k,v])=>v+'x '+k).join('<br>')}</td>
       <td style="font-size:12px;line-height:1.6;color:#66bb6a">${Object.entries(s.build_cost).map(([k,v])=>v+'x '+n(k)).join('<br>')}</td>
+      <td>${s.build_time?Math.round(s.build_time/60)+'m':'-'}</td>
       <td class="desc">${s.description}</td>
     </tr>`).join('')}</tbody></table>`;
   } else {
@@ -153,7 +154,7 @@ function show(filter, btn) {
     if (filter.startsWith('class_')) ships = military.filter(s => s.hull_class === filter.replace('class_',''));
     ships = ships.filter(match);
     el.innerHTML = `<table><colgroup><col style="width:100px"><col style="width:95px"><col style="width:120px"><col style="width:45px"><col style="width:45px"><col style="width:45px"><col style="width:55px"><col style="width:35px"><col style="width:170px"><col style="width:180px"><col style="width:250px"></colgroup><thead><tr>
-      <th>Name</th><th>Class</th><th>Faction</th><th>Hull</th><th>Armor</th><th>Shield</th><th>Total HP</th><th>Crew</th><th>Weapons</th><th>Build Cost</th><th>Description</th>
+      <th>Name</th><th>Class</th><th>Faction</th><th>Hull</th><th>Armor</th><th>Shield</th><th>Total HP</th><th>Crew</th><th>Weapons</th><th>Build Cost</th><th>Build Time</th><th>Description</th>
     </tr></thead><tbody>${ships.map(s => {
       const fname = factions[s.faction_id] ? factions[s.faction_id].name : s.faction_id;
       return `<tr>
@@ -167,6 +168,7 @@ function show(filter, btn) {
       <td>${s.crew}</td>
       <td style="font-size:12px;line-height:1.6">${s.weapons.map(w=>n(w)).join('<br>')}</td>
       <td style="font-size:12px;line-height:1.6;color:#66bb6a">${Object.entries(s.build_cost).map(([k,v])=>v+'x '+n(k)).join('<br>')}</td>
+      <td>${s.build_time?Math.round(s.build_time/60)+'m':'-'}</td>
       <td class="desc">${s.description}</td>
     </tr>`;}).join('')}</tbody></table>`;
   }

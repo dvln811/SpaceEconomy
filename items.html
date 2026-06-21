@@ -16,6 +16,8 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .side-item{display:block;padding:5px 8px;margin:1px 0;border-radius:3px;cursor:pointer;color:#8aa0b8;transition:all .1s;border:none;background:none;width:100%;text-align:left;font:inherit;font-size:12px}
 .side-item:hover{background:#111a2a;color:#c8d4e0}
 .side-item.active{background:#0d1a2f;color:#4fc3f7}
+.tree-arrow{display:inline-block;width:10px;font-size:9px;color:#5a7a9a;transition:transform .1s}
+.tree-children{margin-left:0}
 .content{flex:1;overflow:auto;padding:0 12px 12px}
 table{width:100%;border-collapse:collapse}
 th{font-family:'JetBrains Mono',monospace;font-size:12px;color:#8aa0b8;letter-spacing:1px;text-align:left;padding:6px 8px;border-bottom:1px solid #1a2844;position:sticky;top:0;background:#05080f;z-index:2;box-shadow:0 1px 0 #1a2844}
@@ -56,6 +58,7 @@ async function init() {
       subcategory: c.subcategory || '',
       group_name: c.group_name || '',
       price: c.base_price, volume: c.volume, description: c.description,
+      build_time: c.build_time || 0,
       recipe: formatRecipe(c.recipe), stats: typeof c.stats === 'string' ? JSON.parse(c.stats) : (c.stats || {})
     }));
     buildSidebar();
@@ -87,39 +90,67 @@ function buildSidebar() {
   let first = true;
   for (const cat of Object.keys(tree).sort()) {
     const catItems = items.filter(i => i.category === cat);
-    // Category level
+    // Category level (collapsible)
+    const catDiv = document.createElement('div');
+    catDiv.style.cssText = 'margin-top:4px;';
     const btn = document.createElement('button');
     btn.className = 'side-item' + (first ? ' active' : '');
-    btn.textContent = cat + ' (' + catItems.length + ')';
-    btn.onclick = () => { currentFilter = ''; document.getElementById('itemSearch').value = ''; showCat(cat); setActive(btn); };
-    sb.appendChild(btn);
+    btn.innerHTML = `<span class="tree-arrow">&#9654;</span> ${cat} (${catItems.length})`;
+    const childContainer = document.createElement('div');
+    childContainer.className = 'tree-children';
+    childContainer.style.display = first ? 'block' : 'none';
+    btn.onclick = () => {
+      const open = childContainer.style.display !== 'none';
+      childContainer.style.display = open ? 'none' : 'block';
+      btn.querySelector('.tree-arrow').innerHTML = open ? '&#9654;' : '&#9660;';
+      currentFilter = ''; document.getElementById('itemSearch').value = '';
+      showCat(cat); setActive(btn);
+    };
+    catDiv.appendChild(btn);
 
     // Subcategory level
     for (const sub of Object.keys(tree[cat]).sort()) {
       const subItems = catItems.filter(i => (i.subcategory || 'General') === sub);
+      const subDiv = document.createElement('div');
       const sbtn = document.createElement('button');
       sbtn.className = 'side-item';
       sbtn.style.paddingLeft = '16px';
       sbtn.style.fontSize = '11px';
-      sbtn.textContent = sub + ' (' + subItems.length + ')';
-      sbtn.onclick = () => { currentFilter = ''; document.getElementById('itemSearch').value = ''; showSub(cat, sub); setActive(sbtn); };
-      sb.appendChild(sbtn);
-
-      // Group level
-      for (const grp of [...tree[cat][sub]].sort()) {
-        const grpItems = subItems.filter(i => i.group_name === grp);
-        const gbtn = document.createElement('button');
-        gbtn.className = 'side-item';
-        gbtn.style.paddingLeft = '28px';
-        gbtn.style.fontSize = '10px';
-        gbtn.style.color = '#6a8aaa';
-        gbtn.textContent = grp + ' (' + grpItems.length + ')';
-        gbtn.onclick = () => { currentFilter = ''; document.getElementById('itemSearch').value = ''; showGroup(cat, sub, grp); setActive(gbtn); };
-        sb.appendChild(gbtn);
+      const groups = [...tree[cat][sub]].sort();
+      if (groups.length > 0) {
+        sbtn.innerHTML = `<span class="tree-arrow" style="font-size:8px">&#9654;</span> ${sub} (${subItems.length})`;
+        const grpContainer = document.createElement('div');
+        grpContainer.className = 'tree-children';
+        grpContainer.style.display = 'none';
+        sbtn.onclick = () => {
+          const open = grpContainer.style.display !== 'none';
+          grpContainer.style.display = open ? 'none' : 'block';
+          sbtn.querySelector('.tree-arrow').innerHTML = open ? '&#9654;' : '&#9660;';
+          currentFilter = ''; document.getElementById('itemSearch').value = '';
+          showSub(cat, sub); setActive(sbtn);
+        };
+        for (const grp of groups) {
+          const grpItems = subItems.filter(i => i.group_name === grp);
+          const gbtn = document.createElement('button');
+          gbtn.className = 'side-item';
+          gbtn.style.cssText = 'padding-left:28px;font-size:10px;color:#6a8aaa;';
+          gbtn.textContent = `${grp} (${grpItems.length})`;
+          gbtn.onclick = (e) => { e.stopPropagation(); currentFilter=''; document.getElementById('itemSearch').value=''; showGroup(cat,sub,grp); setActive(gbtn); };
+          grpContainer.appendChild(gbtn);
+        }
+        subDiv.appendChild(sbtn);
+        subDiv.appendChild(grpContainer);
+      } else {
+        sbtn.textContent = `${sub} (${subItems.length})`;
+        sbtn.onclick = () => { currentFilter=''; document.getElementById('itemSearch').value=''; showSub(cat,sub); setActive(sbtn); };
+        subDiv.appendChild(sbtn);
       }
+      childContainer.appendChild(subDiv);
     }
 
-    if (first) { showCat(cat); first = false; }
+    catDiv.appendChild(childContainer);
+    sb.appendChild(catDiv);
+    if (first) { showCat(cat); first = false; btn.querySelector('.tree-arrow').innerHTML = '&#9660;'; }
   }
 }
 
@@ -134,24 +165,26 @@ function searchAll() {
   render(matched, matched.length > 0 ? (matched.find(i=>i.stats.dps) ? 'Weapons' : matched[0].category) : 'Raw Materials');
 }
 
+function fmtTime(s){if(!s)return'-';if(s>=3600)return(s/3600).toFixed(1)+'h';if(s>=60)return Math.round(s/60)+'m';return s+'s';}
+
 function render(filtered, cat) {
   const el = document.getElementById('content');
   let cols = '', rowFn = null;
   if (cat === 'Weapons') {
-    cols = '<th>Name</th><th>Size</th><th>Quality</th><th>DPS</th><th>Range</th><th>Dmg Type</th><th>Class</th><th>Price</th><th>Vol</th><th>Recipe</th>';
-    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||'-'}</td><td class="stat">${i.stats.quality||'-'}</td><td class="stat">${i.stats.dps||'-'}</td><td>${i.stats.range||'-'}</td><td>${i.stats.damage_type||'-'}</td><td>${i.stats.weapon_class||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td>`;
+    cols = '<th>Name</th><th>Size</th><th>Quality</th><th>DPS</th><th>Range</th><th>Dmg Type</th><th>Class</th><th>Price</th><th>Vol</th><th>Recipe</th><th>Build</th>';
+    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||'-'}</td><td class="stat">${i.stats.quality||'-'}</td><td class="stat">${i.stats.dps||'-'}</td><td>${i.stats.range||'-'}</td><td>${i.stats.damage_type||'-'}</td><td>${i.stats.weapon_class||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td><td>${fmtTime(i.build_time)}</td>`;
   } else if (cat === 'Ammunition') {
-    cols = '<th>Name</th><th>Size</th><th>Quality</th><th>Damage Type</th><th>For Weapon</th><th>Price</th><th>Vol</th><th>Recipe</th>';
-    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||'-'}</td><td class="stat">${i.stats.quality||'-'}</td><td>${i.stats.damage_type||'-'}</td><td>${i.stats.for_weapon||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td>`;
+    cols = '<th>Name</th><th>Size</th><th>Quality</th><th>Damage Type</th><th>For Weapon</th><th>Price</th><th>Vol</th><th>Recipe</th><th>Build</th>';
+    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||'-'}</td><td class="stat">${i.stats.quality||'-'}</td><td>${i.stats.damage_type||'-'}</td><td>${i.stats.for_weapon||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td><td>${fmtTime(i.build_time)}</td>`;
   } else if (cat === 'Ship Equipment') {
-    cols = '<th>Name</th><th>Size</th><th>Quality</th><th>Slot</th><th>HP Bonus</th><th>Price</th><th>Vol</th><th>Recipe</th><th>Description</th>';
-    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||'-'}</td><td class="stat">${i.stats.quality||'-'}</td><td>${i.stats.slot||'-'}</td><td class="stat">${i.stats.hp_bonus||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td><td class="desc">${i.description}</td>`;
+    cols = '<th>Name</th><th>Size</th><th>Quality</th><th>Slot</th><th>HP Bonus</th><th>Price</th><th>Vol</th><th>Recipe</th><th>Build</th><th>Description</th>';
+    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||'-'}</td><td class="stat">${i.stats.quality||'-'}</td><td>${i.stats.slot||'-'}</td><td class="stat">${i.stats.hp_bonus||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td><td>${fmtTime(i.build_time)}</td><td class="desc">${i.description}</td>`;
   } else if (cat === 'Drones') {
-    cols = '<th>Name</th><th>Size</th><th>Quality</th><th>Damage Type</th><th>Price</th><th>Vol</th><th>Recipe</th><th>Description</th>';
-    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||i.stats.drone_size||'-'}</td><td class="stat">${i.stats.quality||'-'}</td><td>${i.stats.damage_type||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td><td class="desc">${i.description}</td>`;
+    cols = '<th>Name</th><th>Size</th><th>Quality</th><th>Damage Type</th><th>Price</th><th>Vol</th><th>Recipe</th><th>Build</th><th>Description</th>';
+    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||i.stats.drone_size||'-'}</td><td class="stat">${i.stats.quality||'-'}</td><td>${i.stats.damage_type||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td><td>${fmtTime(i.build_time)}</td><td class="desc">${i.description}</td>`;
   } else {
-    cols = '<th>Name</th><th>Price</th><th>Volume</th><th>Recipe</th><th>Description</th>';
-    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume} m3</td><td class="recipe">${i.recipe||'-'}</td><td class="desc">${i.description}</td>`;
+    cols = '<th>Name</th><th>Price</th><th>Volume</th><th>Recipe</th><th>Build</th><th>Description</th>';
+    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume} m3</td><td class="recipe">${i.recipe||'-'}</td><td>${fmtTime(i.build_time)}</td><td class="desc">${i.description}</td>`;
   }
   el.innerHTML = `<table><thead><tr>${cols}</tr></thead><tbody>${filtered.map(i => '<tr>' + rowFn(i) + '</tr>').join('')}</tbody></table>`;
 }
