@@ -417,11 +417,9 @@ class Simulation:
                         ship.destination = next_dest
                         ship.state = "traveling"
                         ship.progress = 0.0
-                    self._log(f"{ship.name} transiting {self.universe[ship.location].name}")
                 else:
                     ship.destination = ""
                     ship.state = "idle"
-                    self._log(f"{ship.name} arrived at {self.universe[ship.location].name}")
 
     def _move_ships_intra(self):
         for ship in self.ships:
@@ -446,7 +444,6 @@ class Simulation:
                 if obj and obj.obj_type == "gate" and ship.destination and obj.connects_to == ship.destination:
                     ship.state = "traveling"
                     ship.progress = 0.0
-                    self._log(f"{ship.name} jumping to {self.universe[ship.destination].name}")
                 else:
                     ship.state = "idle"
 
@@ -512,16 +509,19 @@ class Simulation:
         if not needed:
             return
 
-        # Find nearest source with stock (search same region first)
+        # Find nearest source with stock (search same region only, max 50 systems checked)
         best_src = None
         best_hops = 999
         home_region = getattr(home_sys, 'region', '')
+        checked = 0
         for sid, sys in self.universe.items():
-            # Prefer same region, skip if too far
-            if getattr(sys, 'region', '') != home_region and best_src:
+            if checked > 50:
+                break
+            if getattr(sys, 'region', '') != home_region:
                 continue
             if self._system_danger(sid) > ship.risk_tolerance:
                 continue
+            checked += 1
             for st in sys.stations:
                 if st.name == ship.assigned_station:
                     continue
@@ -633,21 +633,15 @@ class Simulation:
         return best
 
     def _estimate_hops(self, from_id: str, to_id: str) -> int:
-        """BFS hop count estimate."""
+        """Fast distance estimate (Euclidean, no pathfinding)."""
         if from_id == to_id:
             return 0
-        visited = {from_id}
-        queue = [(from_id, 0)]
-        while queue:
-            current, depth = queue.pop(0)
-            if depth > 6:
-                return 7
-            for neighbor in self.universe[current].connections:
-                if neighbor == to_id:
-                    return depth + 1
-                if neighbor not in visited:
-                    visited.add(neighbor)
-                    queue.append((neighbor, depth + 1))
+        a = self.universe.get(from_id)
+        b = self.universe.get(to_id)
+        if not a or not b:
+            return 99
+        dist = ((a.x-b.x)**2 + (a.y-b.y)**2 + (a.z-b.z)**2) ** 0.5
+        return int(dist / 80) + 1  # ~80 units per hop
         return 7
 
     def _update_all_prices(self):
