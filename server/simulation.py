@@ -269,6 +269,9 @@ class Simulation:
             build_events = self.warfare.try_build_ships(self.universe)
             for msg in build_events:
                 self._log(msg)
+        # Faction-level summary events every 200 ticks
+        if self.tick_count % 200 == 0:
+            self._generate_faction_events()
         if len(self.events) > 100:
             self.events = self.events[-100:]
 
@@ -349,15 +352,12 @@ class Simulation:
                             gate_id = self._get_gate_for(ship.location, ship.route_path[0] if ship.route_path else ship.destination)
                             if gate_id and ship.intra_position != gate_id:
                                 self._start_intra_travel(ship, gate_id)
-                                self._log(f"{ship.name} heading to gate in {self.universe[ship.location].name}")
                             else:
                                 ship.state = "traveling"
-                                self._log(f"{ship.name} departed {self.universe[ship.location].name}")
                         else:
                             ship.state = "idle"
                     elif ship.state == "unloading":
                         ship.state = "idle"
-                        self._log(f"{ship.name} finished unloading at {self.universe[ship.location].name}")
                     elif ship.state == "mining":
                         self._complete_mining(ship)
 
@@ -374,7 +374,6 @@ class Simulation:
         amount = min(ship.cargo_capacity - sum(ship.cargo.values()), 100 * field.density)
         if amount > 0:
             ship.cargo[commodity] = ship.cargo.get(commodity, 0) + amount
-            self._log(f"{ship.name} mined {amount:.0f}x {COMMODITIES[commodity].name} at {loc.name}")
         if sum(ship.cargo.values()) >= ship.cargo_capacity * 0.8:
             ship.state = "idle"
         else:
@@ -697,6 +696,44 @@ class Simulation:
 
     def _log(self, msg: str):
         self.events.append({"tick": self.tick_count, "time": time.time(), "msg": msg})
+
+    def _generate_faction_events(self):
+        """Generate meaningful faction-level events."""
+        # Production health by faction
+        faction_prod = {}
+        faction_halted = {}
+        for sid, sys in self.universe.items():
+            if not sys.faction:
+                continue
+            for st in sys.stations:
+                for prod_id in st.produces:
+                    com = COMMODITIES.get(prod_id)
+                    if not com or not com.recipe:
+                        continue
+                    faction_prod[sys.faction] = faction_prod.get(sys.faction, 0) + 1
+                    can = all(st.inventory.get(inp, 0) >= qty for inp, qty in com.recipe.items())
+                    if not can:
+                        faction_halted[sys.faction] = faction_halted.get(sys.faction, 0) + 1
+
+        fnames = {'terran_fed': 'Federation', 'science_collective': 'Nexus', 'merchants_guild': 'Guild', 'free_states': 'Alliance', 'iron_compact': 'Compact'}
+        for fid, total in faction_prod.items():
+            halted = faction_halted.get(fid, 0)
+            fname = fnames.get(fid, fid)
+            if halted > total * 0.5:
+                self._log(f"ECONOMY: {fname} production crisis - {halted}/{total} lines halted")
+            elif halted == 0:
+                self._log(f"ECONOMY: {fname} all production lines operational")
+
+        # Trade activity
+        if self.trade_volume > 0:
+            self._log(f"TRADE: {self.trade_volume} deliveries completed this cycle")
+
+        # Fleet strength
+        status = self.warfare.get_status()
+        for fid, strength in status.get('fleet_strength', {}).items():
+            fname = fnames.get(fid, fid)
+            if strength < 10:
+                self._log(f"MILITARY: {fname} fleet critically low ({strength} ships)")
 
     def get_state_summary(self) -> dict:
         ships_by_state = {}
