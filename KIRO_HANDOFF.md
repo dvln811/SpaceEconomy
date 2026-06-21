@@ -36,12 +36,24 @@ A browser-based space economy simulation game. Currently single-player with plan
 ### Tech Stack
 - **Backend:** Python (Flask), always-on server on fly.io (shared-cpu-2x, 1GB)
 - **Frontend:** Vanilla JS + Three.js (3D star map + 3D system map) + HTML/CSS panels
-- **Economy Engine:** Real-time agent-based tick simulation (1 tick/sec, background thread)
+- **Simulation:** Multi-threaded Supervisor + 6 Worker architecture (see docs/ARCHITECTURE_THREADS.md)
 - **Databases:**
   - `data/game_data.db` - Static game data (items, ships, systems, factions). Source of truth. In git.
   - `data/game.db` - Runtime simulation state. On fly.io volume. Nuked on reset.
 - **Deployment:** fly.io, auto-deploy via GitHub Actions on push to master
 - **Local dev:** `restart_server.ps1` runs Flask with debug=True on port 8000
+
+### Simulation Architecture (NEW)
+- **Supervisor thread** owns tick clock (1/sec), distributes state snapshots to workers, merges intents
+- **Economy worker** - production, consumption, ore gen, price updates (every tick)
+- **NPC Decision worker** - hauler/miner AI, batched 50 ships/tick, uses region inventory cache
+- **Faction Strategy worker** - goals, expansion, diplomacy (every 200 ticks)
+- **Battle Sim worker** - fleet combat, ship destruction/building (every 20 ticks)
+- **Corsair/Spawn worker** - pirate AI, NPC spawning (every 50 ticks)
+- **Dashboard worker** - cached JSON for API endpoints (every 5 ticks)
+- Workers produce typed **intents** (dataclasses), Supervisor applies them atomically between ticks
+- **Region inventory cache** rebuilt every 10 ticks for O(1) NPC trade lookups
+- **20 regions** (~125 systems each) define NPC market search boundaries
 
 ---
 
@@ -71,19 +83,26 @@ A browser-based space economy simulation game. Currently single-player with plan
 
 | File | Purpose |
 |------|---------|
-| `server/main.py` | Flask app, tick loop, ALL API endpoints, CRUD |
-| `server/simulation.py` | Economy engine, NPC AI, production, trading |
-| `server/warfare.py` | Faction battles, ship destruction/rebuilding |
+| `server/main.py` | Flask app, API endpoints, CRUD, supervisor startup |
+| `server/supervisor.py` | Tick clock, snapshot distribution, intent merge, worker lifecycle |
+| `server/intents.py` | Typed intent/event dataclasses for inter-thread communication |
+| `server/simulation.py` | Simulation class (universe init, ship spawn, bootstrap) |
+| `server/workers/economy.py` | Production, consumption, ore generation, price updates |
+| `server/workers/npc_decisions.py` | Hauler/miner AI with region cache lookups (batched) |
+| `server/workers/faction_strategy.py` | War declarations, expansion, diplomacy |
+| `server/workers/battle_sim.py` | Fleet combat resolution, ship building |
+| `server/workers/corsair_spawn.py` | Pirate AI, universe assessment, NPC spawning |
+| `server/workers/dashboard.py` | Cached JSON state preparation for API endpoints |
+| `server/warfare.py` | (Legacy) Faction battles, ship destruction/rebuilding |
 | `server/persistence.py` | Save/load runtime state (game.db) |
 | `server/game_data_db.py` | Schema definition for game_data.db |
 | `server/data_access.py` | Load functions (commodities, universe, ships, factions from DB) |
-| `server/migrate_to_db.py` | Migration script (seeds DB from legacy Python data) |
-| `server/update_data.py` | Live update script (pause, migrate, resume) |
 | `server/models.py` | Dataclass definitions ONLY (no data) |
 | `server/ship_types.py` | ShipType dataclass ONLY |
 | `server/military.py` | MilitaryShipClass dataclass ONLY |
 | `server/factions.py` | Faction/Corporation dataclass ONLY |
 | `server/ship_geometry.py` | 3D ship model geometry data for renderer |
+| `server/assign_regions_v2.py` | Assigns 20 balanced regions via priority-queue BFS |
 
 ---
 
@@ -210,13 +229,26 @@ Each faction has 4 corporations and 7 military ship classes (fighter through dre
 
 ## Known Issues / Next Steps
 
-### IMMEDIATE TODO (from last session)
-- [ ] **Market page tree-view** - Categorized like Items DB (by tier/category), include ships (military/civilian). Currently a flat table in Dashboard.
-- [ ] **Battle detail click-through** - Battle rows in Dashboard should be clickable, opening tick-by-tick status for that battle. Needs API changes (store battle tick history in warfare.py) + frontend modal/panel.
-- [ ] **Ships page overhaul** - Current ship list in Dashboard is basic cards. Needs rethinking: group by faction? by role? by state? Include fleet strength summary, production queue visibility.
-- [ ] **Weapon/module variants and pricing** - Need multiple variants per weapon type at each size (like EVE). Small weapons ~2,500 ISK, Large ~150K, T2 ~10M. More ammo types.
+### RESOLVED: Simulation Performance
+- Migrated from single-threaded tick loop to multi-threaded Supervisor+Workers architecture
+- NPC decisions now batched (50/tick round-robin) with O(1) region cache lookups
+- Region inventory cache rebuilt every 10 ticks (eliminates per-hauler system scanning)
+- 20 regions (9-237 systems each) serve as market visibility boundary
+- Intent-queue pattern: workers never mutate shared state directly
+- Path to 100K+ ships: increase batch size, move to multiprocessing (same architecture)
+- Movement (O(ships) linear scan) stays in supervisor as it's already fast
 
-### Economy
+### IMMEDIATE TODO (from last session)
+- [x] **Simulation performance architecture** - DONE. Multi-threaded Supervisor+Workers with intent queues, region cache, batched NPC decisions. See docs/ARCHITECTURE_THREADS.md.
+- [ ] **Weapon/module variants and pricing** - Need multiple variants per weapon type at each size. Small ~2,500, Large ~150K, T2 ~10M.
+- [ ] **Further market/ships/battle UI polish** based on user feedback after checking current deploy
+
+### Economy Status
+- Economy is functional: 645 active / 80 halted production lines at tick 2000
+- Baseline input generation prevents total starvation (abstracts local mining)
+- Haulers limited to same-region search (50 system cap)
+- Ore generation: 50/tick*density at mining colonies, 20/tick at refineries with belts
+- Baseline T1/T2 inputs auto-generated at 0.5x production rate for all producing stations
 - Production still halts at higher tiers (T3/T4) due to rare ore logistics gap
 - Need to fix: basic items (Shield Gen Mk.I) currently require null-sec exotics (Gold Ore) in recipe chain
 - Solution: redesign T3 recipes so Mk.I items use only high/med-sec inputs, Mk.II/III use rarer stuff

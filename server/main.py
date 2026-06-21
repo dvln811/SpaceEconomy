@@ -33,7 +33,6 @@ if load_simulation(sim):
 else:
     log.info("No saved state found, starting fresh")
 
-SAVE_INTERVAL = 10  # save every N ticks
 sim_speed = {"rate": float(os.getenv("TICK_RATE", "1.0")), "multiplier": 1}
 
 # Backfill risk_tolerance for ships loaded from old saves
@@ -53,19 +52,37 @@ for _i, _s in enumerate(sim.ships):
         prefix = "HLR" if _s.role != "miner" else "MNR"
         _s.name = f"{_s.ship_class} {prefix}-{_rnd.randint(1000,9999)}"
 
+# ── Multi-threaded Supervisor Architecture ─────────────────────────────────────
+from server.supervisor import Supervisor
+from server.workers.economy import EconomyWorker
+from server.workers.npc_decisions import NPCDecisionWorker
+from server.workers.faction_strategy import FactionStrategyWorker
+from server.workers.battle_sim import BattleSimWorker
+from server.workers.corsair_spawn import CorsairSpawnWorker
+from server.workers.dashboard import DashboardWorker
+from server.simulation import COMMODITIES, STATION_CONSUMPTION
 
-def economy_loop():
-    while True:
-        mult = sim_speed["multiplier"]
-        for _ in range(mult):
-            sim.tick()
-        if sim.tick_count % SAVE_INTERVAL == 0:
-            save_simulation(sim)
-        time.sleep(sim_speed["rate"])
+supervisor = Supervisor(sim)
+supervisor.tick_rate = sim_speed["rate"]
+supervisor.multiplier = sim_speed["multiplier"]
 
+# Create workers
+economy_worker = EconomyWorker(COMMODITIES, STATION_CONSUMPTION)
+npc_worker = NPCDecisionWorker(COMMODITIES)
+faction_worker = FactionStrategyWorker({})
+battle_worker = BattleSimWorker()
+corsair_worker = CorsairSpawnWorker()
+dashboard_worker = DashboardWorker(COMMODITIES, STATION_CONSUMPTION)
 
-threading.Thread(target=economy_loop, daemon=True).start()
-log.info(f"Economy loop started ({sim_speed['rate']}s/tick, {len(sim.ships)} NPCs)")
+supervisor.add_worker(economy_worker)
+supervisor.add_worker(npc_worker)
+supervisor.add_worker(faction_worker)
+supervisor.add_worker(battle_worker)
+supervisor.add_worker(corsair_worker)
+supervisor.add_worker(dashboard_worker)
+
+supervisor.start()
+log.info(f"Supervisor started ({sim_speed['rate']}s/tick, {len(sim.ships)} NPCs, 6 workers)")
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
@@ -275,14 +292,19 @@ def api_ships():
         }
         # Include travel rate for client prediction
         if s.state == "traveling" and s.destination and s.location in sim.universe and s.destination in sim.universe:
-            ship_data["travel_rate"] = round(sim._inter_travel_rate(s.location, s.destination, s.speed), 4)
+            import math as _m
+            _a = sim.universe[s.location]
+            _b = sim.universe[s.destination]
+            _dist = _m.sqrt((_a.x-_b.x)**2+(_a.y-_b.y)**2+(_a.z-_b.z)**2)
+            _tt = max(3, min(15, _dist/70))
+            ship_data["travel_rate"] = round(s.speed / _tt, 4)
         # Include origin/dest coordinates for client-side interpolation
         if s.state == "intra_traveling" and s.intra_position and s.intra_destination:
             from_obj = next((o for o in sim.universe[s.location].objects if o.id == s.intra_position), None)
             to_obj = next((o for o in sim.universe[s.location].objects if o.id == s.intra_destination), None)
             if from_obj and to_obj:
                 import math
-                dist = sim._intra_distance(s.location, s.intra_position, s.intra_destination)
+                dist = supervisor._intra_distance(s.location, s.intra_position, s.intra_destination)
                 ship_data["intra_from"] = {"d": from_obj.distance, "a": round(from_obj.angle, 4)}
                 ship_data["intra_to"] = {"d": to_obj.distance, "a": round(to_obj.angle, 4)}
                 ship_data["intra_dist"] = round(dist, 3)
@@ -400,7 +422,7 @@ def api_debug():
         v["ticks_remaining"] = round(v["total_supply"] / v["demand_per_tick"], 1) if v["demand_per_tick"] > 0 else 9999
         v["deficit"] = round(v["demand_per_tick"] * 100 - v["total_supply"], 1)  # shortfall for 100 ticks
     summary["demand"] = demand_data
-    summary["warfare"] = sim.warfare.get_status()
+    summary["warfare"] = battle_worker.get_status()
 
     return jsonify(summary)
 
@@ -426,7 +448,7 @@ def api_system(system_id):
                 from_obj = next((o for o in sys_obj.objects if o.id == s.intra_position), None)
                 to_obj = next((o for o in sys_obj.objects if o.id == s.intra_destination), None)
                 if from_obj and to_obj:
-                    dist = sim._intra_distance(system_id, s.intra_position, s.intra_destination)
+                    dist = supervisor._intra_distance(system_id, s.intra_position, s.intra_destination)
                     ship_data["intra_from"] = {"d": from_obj.distance, "a": round(from_obj.angle, 4)}
                     ship_data["intra_to"] = {"d": to_obj.distance, "a": round(to_obj.angle, 4)}
                     ship_data["intra_dist"] = round(dist, 3)
@@ -441,9 +463,20 @@ def api_system(system_id):
 @app.route("/api/nuke", methods=["POST"])
 def api_nuke():
     """Reset simulation to initial state."""
-    global sim
+    global sim, supervisor
+    supervisor.stop()
     clear_db()
     sim = Simulation()
+    supervisor = Supervisor(sim)
+    supervisor.tick_rate = sim_speed["rate"]
+    supervisor.multiplier = 1
+    supervisor.add_worker(EconomyWorker(COMMODITIES, STATION_CONSUMPTION))
+    supervisor.add_worker(NPCDecisionWorker(COMMODITIES))
+    supervisor.add_worker(FactionStrategyWorker({}))
+    supervisor.add_worker(BattleSimWorker())
+    supervisor.add_worker(CorsairSpawnWorker())
+    supervisor.add_worker(DashboardWorker(COMMODITIES, STATION_CONSUMPTION))
+    supervisor.start()
     log.info("NUKE: Simulation reset to initial state")
     return jsonify({"status": "reset", "tick": sim.tick_count})
 
@@ -461,10 +494,10 @@ def api_speed():
     if request.method == "POST":
         data = request.get_json(force=True)
         mult = max(1, min(120, int(data.get("multiplier", 1))))
-        sim_speed["multiplier"] = mult
+        supervisor.multiplier = mult
         log.info(f"Sim speed set to {mult}x")
         return jsonify({"multiplier": mult})
-    return jsonify({"multiplier": sim_speed["multiplier"]})
+    return jsonify({"multiplier": supervisor.multiplier})
 
 
 # ── CRUD API for game data ────────────────────────────────────────────────────
