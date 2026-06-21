@@ -45,8 +45,8 @@ class Simulation:
         self.start_time = time.time()
         self.events: list[dict] = []
         self.trade_volume = 0
-        self._spawn_traders(50)
-        self._spawn_miners(20)
+        self._spawn_traders(200)
+        self._spawn_miners(80)
         self._bootstrap_seed()
         self._update_all_prices()
         # Warfare simulation
@@ -281,8 +281,8 @@ class Simulation:
                     for field in sys.asteroid_fields:
                         for ore in field.yields:
                             current = station.inventory.get(ore, 0)
-                            if current < 50000:
-                                station.inventory[ore] = current + 8.0 * field.density
+                            if current < 500000:
+                                station.inventory[ore] = current + 50.0 * field.density
 
                 # ── Passive trade goods generation at hubs/outposts ──
                 if station.station_type in ("trade_hub", "frontier_outpost"):
@@ -358,7 +358,7 @@ class Simulation:
             ship.state = "idle"
             return
         commodity = random.choice(field.yields)
-        amount = min(ship.cargo_capacity - sum(ship.cargo.values()), 15 * field.density)
+        amount = min(ship.cargo_capacity - sum(ship.cargo.values()), 100 * field.density)
         if amount > 0:
             ship.cargo[commodity] = ship.cargo.get(commodity, 0) + amount
             self._log(f"{ship.name} mined {amount:.0f}x {COMMODITIES[commodity].name} at {loc.name}")
