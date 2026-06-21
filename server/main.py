@@ -22,37 +22,9 @@ if os.path.exists(_shipped_db):
 
 app = Flask(__name__, static_folder=None)
 
-# ── Simulation ─────────────────────────────────────────────────────────────────
-from server.simulation import Simulation
+# ── Simulation (deferred init for fast startup) ────────────────────────────────
+from server.simulation import Simulation, COMMODITIES, STATION_CONSUMPTION
 from server.persistence import init_db, save_simulation, load_simulation, clear_db
-
-init_db()
-sim = Simulation()
-if load_simulation(sim):
-    log.info(f"Loaded saved state at tick {sim.tick_count}")
-else:
-    log.info("No saved state found, starting fresh")
-
-sim_speed = {"rate": float(os.getenv("TICK_RATE", "1.0")), "multiplier": 1}
-
-# Backfill risk_tolerance for ships loaded from old saves
-_trader_factions = ["Trade Guild", "Free Traders", "Industrial Corp", "Agrarian League", "Frontier Logistics"]
-_miner_factions = ["Miners Union", "Deep Rock Corp", "Frontier Logistics"]
-for _i, _s in enumerate(sim.ships):
-    if not hasattr(_s, 'risk_tolerance') or _s.risk_tolerance == 0:
-        _s.risk_tolerance = 0.5
-    if not _s.faction:
-        if _s.role == "miner":
-            _s.faction = _miner_factions[_i % len(_miner_factions)]
-        else:
-            _s.faction = _trader_factions[_i % len(_trader_factions)]
-    # Backfill registry-style name if ship has old-style name
-    if _s.name and not any(c.isdigit() for c in _s.name):
-        import random as _rnd
-        prefix = "HLR" if _s.role != "miner" else "MNR"
-        _s.name = f"{_s.ship_class} {prefix}-{_rnd.randint(1000,9999)}"
-
-# ── Multi-threaded Supervisor Architecture ─────────────────────────────────────
 from server.supervisor import Supervisor
 from server.workers.economy import EconomyWorker
 from server.workers.npc_decisions import NPCDecisionWorker
@@ -60,29 +32,55 @@ from server.workers.faction_strategy import FactionStrategyWorker
 from server.workers.battle_sim import BattleSimWorker
 from server.workers.corsair_spawn import CorsairSpawnWorker
 from server.workers.dashboard import DashboardWorker
-from server.simulation import COMMODITIES, STATION_CONSUMPTION
 
-supervisor = Supervisor(sim)
-supervisor.tick_rate = sim_speed["rate"]
-supervisor.multiplier = sim_speed["multiplier"]
+sim = None
+supervisor = None
+sim_speed = {"rate": float(os.getenv("TICK_RATE", "1.0")), "multiplier": 1}
+_sim_ready = threading.Event()
 
-# Create workers
-economy_worker = EconomyWorker(COMMODITIES, STATION_CONSUMPTION)
-npc_worker = NPCDecisionWorker(COMMODITIES)
-faction_worker = FactionStrategyWorker({})
-battle_worker = BattleSimWorker()
-corsair_worker = CorsairSpawnWorker()
-dashboard_worker = DashboardWorker(COMMODITIES, STATION_CONSUMPTION)
 
-supervisor.add_worker(economy_worker)
-supervisor.add_worker(npc_worker)
-supervisor.add_worker(faction_worker)
-supervisor.add_worker(battle_worker)
-supervisor.add_worker(corsair_worker)
-supervisor.add_worker(dashboard_worker)
+def _init_simulation():
+    """Background init: loads universe, spawns ships, starts supervisor."""
+    global sim, supervisor
+    init_db()
+    sim = Simulation()
+    if load_simulation(sim):
+        log.info(f"Loaded saved state at tick {sim.tick_count}")
+    else:
+        log.info("No saved state found, starting fresh")
 
-supervisor.start()
-log.info(f"Supervisor started ({sim_speed['rate']}s/tick, {len(sim.ships)} NPCs, 6 workers)")
+    # Backfill risk_tolerance for ships loaded from old saves
+    _trader_factions = ["Trade Guild", "Free Traders", "Industrial Corp", "Agrarian League", "Frontier Logistics"]
+    _miner_factions = ["Miners Union", "Deep Rock Corp", "Frontier Logistics"]
+    for _i, _s in enumerate(sim.ships):
+        if not hasattr(_s, 'risk_tolerance') or _s.risk_tolerance == 0:
+            _s.risk_tolerance = 0.5
+        if not _s.faction:
+            if _s.role == "miner":
+                _s.faction = _miner_factions[_i % len(_miner_factions)]
+            else:
+                _s.faction = _trader_factions[_i % len(_trader_factions)]
+        if _s.name and not any(c.isdigit() for c in _s.name):
+            import random as _rnd
+            prefix = "HLR" if _s.role != "miner" else "MNR"
+            _s.name = f"{_s.ship_class} {prefix}-{_rnd.randint(1000,9999)}"
+
+    # Start supervisor with workers
+    supervisor = Supervisor(sim)
+    supervisor.tick_rate = sim_speed["rate"]
+    supervisor.multiplier = sim_speed["multiplier"]
+    supervisor.add_worker(EconomyWorker(COMMODITIES, STATION_CONSUMPTION))
+    supervisor.add_worker(NPCDecisionWorker(COMMODITIES))
+    supervisor.add_worker(FactionStrategyWorker({}))
+    supervisor.add_worker(BattleSimWorker())
+    supervisor.add_worker(CorsairSpawnWorker())
+    supervisor.add_worker(DashboardWorker(COMMODITIES, STATION_CONSUMPTION))
+    supervisor.start()
+    log.info(f"Supervisor started ({sim_speed['rate']}s/tick, {len(sim.ships)} NPCs, 6 workers)")
+    _sim_ready.set()
+
+
+threading.Thread(target=_init_simulation, daemon=True).start()
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
@@ -208,10 +206,20 @@ def system_view_page():
 
 @app.route("/health")
 def health():
+    if not _sim_ready.is_set():
+        return {"status": "starting", "tick": 0}
     return {"status": "ok", "tick": sim.tick_count}
 
 
 # ── API ────────────────────────────────────────────────────────────────────────
+
+@app.before_request
+def _check_sim_ready():
+    """Return 503 for API calls if simulation hasn't finished loading."""
+    if request.path.startswith('/api/') and not _sim_ready.is_set():
+        return jsonify({"error": "Simulation loading, please wait..."}), 503
+
+
 @app.route("/api/positions")
 def api_positions():
     """Static system data: positions, connections, metadata. Fetched once by client."""
@@ -422,7 +430,14 @@ def api_debug():
         v["ticks_remaining"] = round(v["total_supply"] / v["demand_per_tick"], 1) if v["demand_per_tick"] > 0 else 9999
         v["deficit"] = round(v["demand_per_tick"] * 100 - v["total_supply"], 1)  # shortfall for 100 ticks
     summary["demand"] = demand_data
-    summary["warfare"] = battle_worker.get_status()
+    # Get warfare status from battle worker
+    warfare_status = {"fleet_strength": {}, "ships_destroyed": 0, "ships_built": 0}
+    if supervisor:
+        for w in supervisor.workers:
+            if w.name == "battle_sim":
+                warfare_status = w.get_status()
+                break
+    summary["warfare"] = warfare_status
 
     return jsonify(summary)
 
