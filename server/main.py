@@ -342,6 +342,7 @@ def api_debug():
         ships_in_sys = sum(1 for s in sim.ships if s.location == sid)
         systems_detail[sid] = {
             "name": sys_obj.name, "cluster": sys_obj.cluster, "security": sys_obj.security,
+            "faction": sys_obj.faction, "region": getattr(sys_obj, 'region', ''),
             "type": sys_obj.system_type, "stations": stations_info, "ships_count": ships_in_sys,
             "connections": sys_obj.connections,
             "belts": [{"name": b.name, "yields": b.yields, "density": b.density} for b in sys_obj.asteroid_fields],

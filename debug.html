@@ -97,6 +97,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
       <input type="search" class="filter-input" id="stFilter" placeholder="Filter stations...">
       <select class="filter-select" id="stStatusFilter"><option value="">All</option><option value="active">Active</option><option value="halted">Halted</option></select>
       <select class="filter-select" id="stSortBy"><option value="system">Sort: System</option><option value="station">Sort: Station</option><option value="status">Sort: Status</option></select>
+      <select class="filter-select" id="stGroupBy"><option value="none">Group: None</option><option value="faction">Group: Faction</option><option value="region">Group: Region</option><option value="type">Group: Type</option></select>
     </div>
     <div class="tbl-wrap"><table class="tbl"><thead id="stHead"><tr><th>System</th><th>Station</th><th>Sec</th><th>Production Lines</th><th>Buy Orders</th></tr></thead><tbody id="stBody"></tbody></table></div>
   </div>
@@ -260,36 +261,44 @@ function renderStations() {
   const stFilter = (document.getElementById('stFilter')?.value || '').toLowerCase();
   const stStatus = document.getElementById('stStatusFilter')?.value || '';
   const stSort = document.getElementById('stSortBy')?.value || 'system';
+  const stGroup = document.getElementById('stGroupBy')?.value || 'none';
 
   let allRows = [];
   for (const [sid, sys] of Object.entries(D.systems || {})) {
     for (const st of sys.stations) {
       if (!st.production.length) continue;
-      allRows.push({sys: sys.name, station: st.name, security: sys.security, production: st.production, buyOrders: st.buy_orders || []});
+      allRows.push({sys: sys.name, station: st.name, security: sys.security, faction: sys.faction||'unclaimed', region: sys.region||'', type: st.type||'', production: st.production, buyOrders: st.buy_orders || []});
     }
   }
-  // Filter
-  if (stFilter) allRows = allRows.filter(r => r.sys.toLowerCase().includes(stFilter) || r.station.toLowerCase().includes(stFilter) || r.production.some(p=>p.name.toLowerCase().includes(stFilter)));
+  if (stFilter) allRows = allRows.filter(r => r.sys.toLowerCase().includes(stFilter) || r.station.toLowerCase().includes(stFilter) || r.faction.toLowerCase().includes(stFilter) || r.production.some(p=>p.name.toLowerCase().includes(stFilter)));
   if (stStatus === 'active') allRows = allRows.filter(r => r.production.some(p=>!p.halted));
   if (stStatus === 'halted') allRows = allRows.filter(r => r.production.every(p=>p.halted));
-  // Sort
   if (stSort === 'station') allRows.sort((a,b) => a.station.localeCompare(b.station));
   else if (stSort === 'status') allRows.sort((a,b) => {const aH=a.production.filter(p=>p.halted).length; const bH=b.production.filter(p=>p.halted).length; return bH-aH;});
   else allRows.sort((a,b) => a.sys.localeCompare(b.sys));
 
+  // Group
+  let groups = {'': allRows};
+  if (stGroup === 'faction') { groups = {}; allRows.forEach(r => { const k=r.faction; if(!groups[k])groups[k]=[]; groups[k].push(r); }); }
+  else if (stGroup === 'region') { groups = {}; allRows.forEach(r => { const k=r.region||'Unknown'; if(!groups[k])groups[k]=[]; groups[k].push(r); }); }
+  else if (stGroup === 'type') { groups = {}; allRows.forEach(r => { const k=r.type||'unknown'; if(!groups[k])groups[k]=[]; groups[k].push(r); }); }
+
   let rows = '';
-  for (const r of allRows) {
-    const prodLines = r.production.map(p => {
-      const status = p.halted ? '<span class="badge badge-halt">HALT</span>' : `<span class="badge badge-ok">${p.actual.toFixed(1)}/t</span>`;
-      const inputs = p.inputs.map(i => {
-        const pct = Math.min(100, (i.have / Math.max(i.need, 0.1)) * 100);
-        const col = pct > 50 ? '#66bb6a' : pct > 10 ? '#ffd54f' : '#ef5350';
-        return `<span style="color:${col}" title="${i.name}: ${i.have}/${i.need}">${i.name.split(' ')[0]}:${Math.round(i.have)}</span>`;
-      }).join(' ');
-      return `<div style="padding:2px 0;border-bottom:1px solid #0a1420"><span style="color:#ffd54f">${p.name}</span> ${status} <span style="color:#4fc3f7;margin:0 6px">stk:${Math.round(p.stock)}</span><span style="font-size:12px">${inputs}</span></div>`;
-    }).join('');
-    const buys = r.buyOrders.slice(0,4).map(b => `<div style="font-size:12px;padding:1px 0"><span style="color:#ef5350">${fmtName(b.commodity)}</span> ${Math.round(b.qty)} @${b.price.toFixed(0)}</div>`).join('');
-    rows += `<tr><td>${r.sys}</td><td>${r.station}</td><td><span class="badge badge-${r.security}">${r.security}</span></td><td style="vertical-align:top">${prodLines}</td><td style="vertical-align:top">${buys||'-'}</td></tr>`;
+  for (const [groupName, items] of Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0]))) {
+    if (stGroup !== 'none') rows += `<tr><td colspan="5" style="background:#0a1828;color:#4fc3f7;font-weight:bold;padding:8px;text-transform:uppercase;letter-spacing:1px">${groupName} (${items.length})</td></tr>`;
+    for (const r of items) {
+      const prodLines = r.production.map(p => {
+        const status = p.halted ? '<span class="badge badge-halt">HALT</span>' : `<span class="badge badge-ok">${p.actual.toFixed(1)}/t</span>`;
+        const inputs = p.inputs.map(i => {
+          const pct = Math.min(100, (i.have / Math.max(i.need, 0.1)) * 100);
+          const col = pct > 50 ? '#66bb6a' : pct > 10 ? '#ffd54f' : '#ef5350';
+          return `<span style="color:${col}" title="${i.name}: ${i.have}/${i.need}">${i.name.split(' ')[0]}:${Math.round(i.have)}</span>`;
+        }).join(' ');
+        return `<div style="padding:2px 0;border-bottom:1px solid #0a1420"><span style="color:#ffd54f">${p.name}</span> ${status} <span style="color:#4fc3f7;margin:0 6px">stk:${Math.round(p.stock)}</span><span style="font-size:12px">${inputs}</span></div>`;
+      }).join('');
+      const buys = r.buyOrders.slice(0,4).map(b => `<div style="font-size:12px;padding:1px 0"><span style="color:#ef5350">${fmtName(b.commodity)}</span> ${Math.round(b.qty)} @${b.price.toFixed(0)}</div>`).join('');
+      rows += `<tr><td>${r.sys}</td><td>${r.station}</td><td><span class="badge badge-${r.security}">${r.security}</span></td><td style="vertical-align:top">${prodLines}</td><td style="vertical-align:top">${buys||'-'}</td></tr>`;
+    }
   }
   document.getElementById('stBody').innerHTML = rows;
 }
@@ -297,6 +306,7 @@ function renderStations() {
 document.getElementById('stFilter')?.addEventListener('input', () => renderStations());
 document.getElementById('stStatusFilter')?.addEventListener('change', () => renderStations());
 document.getElementById('stSortBy')?.addEventListener('change', () => renderStations());
+document.getElementById('stGroupBy')?.addEventListener('change', () => renderStations());
 
 // ── Ships (only updates shipList div, filter bar is static) ─────────────────
 function renderShips() {
