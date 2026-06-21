@@ -397,7 +397,7 @@ async function initSystems(){
   });
   // Single LineSegments object for all visible connections
   const routeGeo=new THREE.BufferGeometry();
-  const routeMat=new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.7});
+  const routeMat=new THREE.LineBasicMaterial({color:0x66ccff});
   const routeMesh=new THREE.LineSegments(routeGeo,routeMat);
   scene.add(routeMesh);
 
@@ -474,10 +474,10 @@ async function initSystems(){
   const facColors2={terran_fed:'#4fc3f7',science_collective:'#ab47bc',merchants_guild:'#ffd54f',free_states:'#66bb6a',iron_compact:'#ff8a65',corsairs:'#ef5350'};
   Object.entries(clusterCenters).forEach(([name,c])=>{
     c.x/=c.n;c.y/=c.n;c.z/=c.n;
-    const color=facColors2[c.faction]||'#445566';
-    const sz=c.faction?'11':'9';
+    const color=facColors2[c.faction]||'#aabbcc';
+    const sz=c.faction?'12':'9';
     const div=document.createElement('div');
-    div.style.cssText=`font-family:Orbitron,sans-serif;font-size:${sz}px;color:${color};letter-spacing:2px;text-transform:uppercase;opacity:0.5;pointer-events:none;white-space:nowrap`;
+    div.style.cssText=`font-family:Orbitron,sans-serif;font-size:${sz}px;color:${color};letter-spacing:2px;text-transform:uppercase;opacity:0.9;pointer-events:none;white-space:nowrap`;
     div.textContent=name;
     const label=new CSS2DObject(div);
     label.position.set(c.x,c.y+30,c.z);
@@ -691,13 +691,31 @@ let animating=false;
 function focusSystem(index){
   selectedSystem=index;
   selectedShip=-1;
-  const s=systems[index];
-  // Just set as orbit target, don't move camera
-  controls.target.set(s.x,s.y,s.z);
-  controls.update();
   document.querySelectorAll('.system-item').forEach(el=>el.classList.remove('active'));
   const item=document.querySelector(`.system-item[data-index="${index}"]`);
   if(item){item.classList.add('active');item.scrollIntoView({block:'nearest'});}
+  renderSystemList(document.getElementById('sysSearch')?.value||'');
+  fetchMarket();
+}
+function zoomToSystem(index){
+  const s=systems[index];
+  const target=new THREE.Vector3(s.x,s.y,s.z);
+  const offset=new THREE.Vector3(30,20,50);
+  const dest=target.clone().add(offset);
+  const startPos=camera.position.clone();
+  const startTarget=controls.target.clone();
+  const duration=600;
+  const t0=performance.now();
+  function step(){
+    const elapsed=performance.now()-t0;
+    const t=Math.min(elapsed/duration,1);
+    const ease=1-Math.pow(1-t,3);
+    camera.position.lerpVectors(startPos,dest,ease);
+    controls.target.lerpVectors(startTarget,target,ease);
+    controls.update();
+    if(t<1) requestAnimationFrame(step);
+  }
+  step();
   updateSystemDetail(index);
   updateLiveShipList();
   fetchMarket();
@@ -756,7 +774,6 @@ renderer.domElement.addEventListener('click',(e)=>{
   mouse.x=((e.clientX-rect.left)/rect.width)*2-1;
   mouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
   raycaster.setFromCamera(mouse,camera);
-  // Check ships first (smaller targets)
   const shipHits=raycaster.intersectObjects(shipMeshes);
   if(shipHits.length>0){
     const idx=shipMeshes.indexOf(shipHits[0].object);
@@ -766,6 +783,17 @@ renderer.domElement.addEventListener('click',(e)=>{
   if(hits.length>0){
     const idx=systemMeshes.indexOf(hits[0].object);
     if(idx>=0) focusSystem(idx);
+  }
+});
+renderer.domElement.addEventListener('dblclick',(e)=>{
+  const rect=renderer.domElement.getBoundingClientRect();
+  mouse.x=((e.clientX-rect.left)/rect.width)*2-1;
+  mouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
+  raycaster.setFromCamera(mouse,camera);
+  const hits=raycaster.intersectObjects(systemMeshes);
+  if(hits.length>0){
+    const idx=systemMeshes.indexOf(hits[0].object);
+    if(idx>=0){focusSystem(idx);zoomToSystem(idx);}
   }
 });
 
