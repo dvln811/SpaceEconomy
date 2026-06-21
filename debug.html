@@ -64,6 +64,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .filter-bar{display:flex;gap:8px;margin-bottom:8px;align-items:center;flex-shrink:0;position:sticky;top:0;z-index:5;background:#0a0e18;padding:8px 0}
 .filter-input{background:#0a1020;border:1px solid #1a3050;color:#c8d4e0;font-size:12px;padding:4px 8px;border-radius:3px;font-family:inherit;width:200px}
 .filter-select{background:#0a1020;border:1px solid #1a3050;color:#c8d4e0;font-size:12px;padding:4px 8px;border-radius:3px;font-family:inherit}
+.mkt-cat{transition:all .1s}.mkt-cat:hover{background:#111a2a}.mkt-cat.active{background:#0d1a2f;color:#4fc3f7 !important}
 </style>
 </head>
 <body>
@@ -125,13 +126,17 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   </div>
   <!-- Market: static filter bar -->
   <div class="view" id="view-market">
-    <div class="filter-bar">
-      <input type="search" class="filter-input" id="mktSearch" placeholder="Search items...">
-      <select class="filter-select" id="mktCommodityFilter"><option value="">All commodities</option></select>
-      <select class="filter-select" id="mktSystemFilter"><option value="">All systems</option></select>
-      <select class="filter-select" id="mktSortBy"><option value="commodity">Sort: Name</option><option value="price_asc">Sort: Price Low</option><option value="price_desc">Sort: Price High</option><option value="stock_desc">Sort: Stock High</option></select>
+    <div style="display:flex;height:100%;overflow:hidden">
+    <div id="mktSidebar" style="width:160px;overflow-y:auto;border-right:1px solid #1a2844;padding:4px;flex-shrink:0"></div>
+    <div style="flex:1;overflow:auto;padding:4px">
+      <div class="filter-bar" style="margin-bottom:4px">
+        <input type="search" class="filter-input" id="mktSearch" placeholder="Search items...">
+        <select class="filter-select" id="mktSystemFilter"><option value="">All systems</option></select>
+        <select class="filter-select" id="mktSortBy"><option value="commodity">Sort: Name</option><option value="price_asc">Sort: Price Low</option><option value="price_desc">Sort: Price High</option><option value="stock_desc">Sort: Stock High</option></select>
+      </div>
+      <div class="tbl-wrap"><table class="tbl" style="table-layout:fixed;width:100%"><thead><tr><th style="width:22%">Item</th><th style="width:16%">System</th><th style="width:18%">Station</th><th style="width:12%;text-align:right">Price</th><th style="width:10%;text-align:right">Stock</th><th style="width:11%;text-align:right">Buy</th><th style="width:11%;text-align:right">Sell</th></tr></thead><tbody id="mktBody"></tbody></table></div>
     </div>
-    <div class="tbl-wrap" style="padding-right:8px"><table class="tbl" style="table-layout:fixed;width:100%"><thead><tr><th style="width:20%">Item</th><th style="width:16%">System</th><th style="width:18%">Station</th><th style="width:12%;text-align:right">Price</th><th style="width:10%;text-align:right">Stock</th><th style="width:12%;text-align:right">Buy Demand</th><th style="width:12%;text-align:right">Sell Supply</th></tr></thead><tbody id="mktBody"></tbody></table></div>
+    </div>
   </div>
   <!-- Systems: static dropdown -->
   <div class="view" id="view-systems">
@@ -248,7 +253,7 @@ function renderOverview() {
     </div>
     <div class="panel">
       <div class="panel-title">Battles</div>
-      ${(()=>{const battles=(D.warfare||{}).recent_battles||[];return battles.slice(-5).map(b=>`<div style="padding:2px 0;font-size:12px;border-bottom:1px solid #0a1420"><span style="color:#ef5350">${b.attacker}</span> vs <span style="color:#4fc3f7">${b.defender}</span> ${b.a_losses}+${b.d_losses}</div>`).join('')||'<div style="color:#8aa0b8">No battles yet</div>';})()}
+      ${(()=>{const battles=(D.warfare||{}).recent_battles||[];return battles.slice(-8).reverse().map((b,i)=>`<div style="padding:4px 0;border-bottom:1px solid #0a1420;cursor:pointer" onclick="this.querySelector('.bd').style.display=this.querySelector('.bd').style.display==='none'?'block':'none'"><div style="font-size:12px"><span style="color:#ef5350">${b.attacker}</span> vs <span style="color:#4fc3f7">${b.defender}</span> <span style="color:#ffd54f;font-size:11px">T${b.tick}</span> <span style="color:#8aa0b8">${b.a_losses}+${b.d_losses} lost</span></div><div class="bd" style="display:none;padding:4px 8px;font-size:11px;background:#0a0e18;border-radius:3px;margin-top:2px">${Object.entries(b.a_detail||{}).map(([k,v])=>`<div style="color:#ef5350">${b.attacker}: -${v}x ${fmtName(k)}</div>`).join('')}${Object.entries(b.d_detail||{}).map(([k,v])=>`<div style="color:#4fc3f7">${b.defender}: -${v}x ${fmtName(k)}</div>`).join('')}</div></div>`).join('')||'<div style="color:#8aa0b8">No battles yet</div>';})()}
     </div>
     <div class="panel">
       <div class="panel-title">Events</div>
@@ -309,7 +314,7 @@ document.getElementById('stStatusFilter')?.addEventListener('change', () => rend
 document.getElementById('stSortBy')?.addEventListener('change', () => renderStations());
 document.getElementById('stGroupBy')?.addEventListener('change', () => renderStations());
 
-// ── Ships (only updates shipList div, filter bar is static) ─────────────────
+// ── Ships (grouped by faction with fleet summary) ─────────────────
 function renderShips() {
   const ships = D.ships || [];
   const stateColors = {idle:'#66bb6a',traveling:'#4fc3f7',intra_traveling:'#4fc3f7',loading:'#ffd54f',unloading:'#ff8a65',mining:'#ab47bc'};
@@ -317,40 +322,59 @@ function renderShips() {
   const stateF = document.getElementById('shipStateFilter').value;
   const roleF = document.getElementById('shipRoleFilter').value;
 
-  let html = '';
-  for (const s of ships) {
-    // Apply filters
-    if (textF && !s.name.toLowerCase().includes(textF) && !s.location.toLowerCase().includes(textF)) continue;
-    if (stateF && s.state !== stateF) continue;
-    if (roleF && s.role !== roleF) continue;
+  // Filter
+  let filtered = ships.filter(s => {
+    if (textF && !s.name.toLowerCase().includes(textF) && !s.location.toLowerCase().includes(textF) && !s.faction.toLowerCase().includes(textF)) return false;
+    if (stateF && s.state !== stateF) return false;
+    if (roleF && s.role !== roleF) return false;
+    return true;
+  });
 
-    const isSelected = selectedShip === s.id;
-    const cargoPct = s.cargo_capacity > 0 ? (s.cargo_used / s.cargo_capacity * 100) : 0;
-    const cargoStr = Object.entries(s.cargo).map(([k,v]) => `${Math.round(v)} ${k}`).join(', ') || 'empty';
-    const col = stateColors[s.state] || '#8aa0b8';
+  // Group by faction
+  const groups = {};
+  filtered.forEach(s => { const f = s.faction || 'Independent'; if(!groups[f])groups[f]=[]; groups[f].push(s); });
 
-    let detail = '';
-    if (isSelected) {
-      detail = `<div class="ship-detail">
-        <div class="row"><span class="k">State</span><span class="v" style="color:${col}">${s.state}${s.timer ? ' ('+s.timer+'t)' : ''}</span></div>
-        <div class="row"><span class="k">Location</span><span class="v">${s.location}</span></div>
-        <div class="row"><span class="k">Destination</span><span class="v">${s.destination || '-'}</span></div>
-        <div class="row"><span class="k">Route</span><span class="v">${s.route_path.length ? s.route_path.join(' > ') : '-'}</span></div>
-        <div class="row"><span class="k">Risk</span><span class="v">${(s.risk_tolerance*100).toFixed(0)}%</span></div>
-        <div class="row"><span class="k">Cargo</span><span class="v">${cargoStr}</span></div>
-        <div class="cargo-bar"><div class="cargo-fill" style="width:${cargoPct}%"></div></div>
-        <div style="font-size:12px;color:#8aa0b8;margin-top:2px">${Math.round(s.cargo_used)}/${s.cargo_capacity} capacity</div>
+  // Fleet summary at top
+  const stateCounts = {};
+  filtered.forEach(s => { stateCounts[s.state] = (stateCounts[s.state]||0)+1; });
+  let html = `<div style="display:flex;gap:12px;padding:6px 0;border-bottom:1px solid #1a2844;margin-bottom:6px;flex-wrap:wrap">
+    <span style="color:#8aa0b8">${filtered.length} ships</span>
+    ${Object.entries(stateCounts).map(([st,c])=>`<span style="color:${stateColors[st]||'#888'}">${st}: ${c}</span>`).join('')}
+  </div>`;
+
+  // Render grouped
+  for (const [faction, fships] of Object.entries(groups).sort((a,b)=>b[1].length-a[1].length)) {
+    const roleCounts = {};
+    fships.forEach(s => { roleCounts[s.role]=(roleCounts[s.role]||0)+1; });
+    html += `<div style="padding:4px 0;margin-top:6px;border-bottom:1px solid #1a2844">
+      <span style="color:#4fc3f7;font-weight:bold;font-size:12px">${faction}</span>
+      <span style="color:#8aa0b8;margin-left:8px;font-size:11px">${fships.length} ships (${Object.entries(roleCounts).map(([r,c])=>`${c} ${r}`).join(', ')})</span>
+    </div>`;
+    for (const s of fships) {
+      const isSelected = selectedShip === s.id;
+      const col = stateColors[s.state] || '#8aa0b8';
+      const cargoPct = s.cargo_capacity > 0 ? (s.cargo_used / s.cargo_capacity * 100) : 0;
+      let detail = '';
+      if (isSelected) {
+        const cargoStr = Object.entries(s.cargo).map(([k,v]) => `${Math.round(v)} ${fmtName(k)}`).join(', ') || 'empty';
+        detail = `<div class="ship-detail">
+          <div class="row"><span class="k">State</span><span class="v" style="color:${col}">${s.state}${s.timer ? ' ('+s.timer+'t)' : ''}</span></div>
+          <div class="row"><span class="k">Location</span><span class="v">${s.location}</span></div>
+          <div class="row"><span class="k">Destination</span><span class="v">${s.destination || '-'}</span></div>
+          <div class="row"><span class="k">Cargo</span><span class="v">${cargoStr}</span></div>
+          <div class="cargo-bar"><div class="cargo-fill" style="width:${cargoPct}%"></div></div>
+          <div style="font-size:11px;color:#8aa0b8">${Math.round(s.cargo_used)}/${s.cargo_capacity}</div>
+        </div>`;
+      }
+      html += `<div class="ship-card ${isSelected?'selected':''}" data-id="${s.id}">
+        <div class="ship-header">
+          <span class="badge" style="background:${col}22;color:${col};font-size:10px">${s.state}</span>
+          <span class="ship-name" style="font-size:11px">${s.name}</span>
+          <span class="ship-class" style="font-size:10px;color:#8aa0b8">${s.ship_class}</span>
+          <span style="margin-left:auto;color:#8aa0b8;font-size:10px">${s.location}</span>
+        </div>${detail}
       </div>`;
     }
-    html += `<div class="ship-card ${isSelected?'selected':''}" data-id="${s.id}">
-      <div class="ship-header">
-        <span class="badge" style="background:${col}22;color:${col}">${s.state}</span>
-        <span class="badge" style="background:#1a284422;color:#8aa0b8">${s.role}</span>
-        <span class="ship-name">${s.name}</span>
-        <span class="ship-class">${s.ship_class}</span>
-        <span style="margin-left:auto;color:#8aa0b8;font-size:12px">${s.location}</span>
-      </div>${detail}
-    </div>`;
   }
   document.getElementById('shipList').innerHTML = html;
 }
@@ -368,22 +392,35 @@ document.getElementById('shipFilter').addEventListener('input', () => renderShip
 document.getElementById('shipStateFilter').addEventListener('change', () => renderShips());
 document.getElementById('shipRoleFilter').addEventListener('change', () => renderShips());
 
-// ── Market (tabular, filterable by commodity and system) ────────────────────
-const TIER_MAP = {}; // populated from API
-fetch('/api/data/commodities').then(r=>r.json()).then(data=>{data.forEach(c=>{TIER_MAP[c.id]=c.tier;});});
+// ── Market (categorized tree-view) ────────────────────────────────────────
+const TIER_MAP = {};
+const CAT_MAP = {};
+let mktCategories = [];
+fetch('/api/data/commodities').then(r=>r.json()).then(data=>{
+  data.forEach(c=>{TIER_MAP[c.id]=c.tier; CAT_MAP[c.id]=c.category||'Other';});
+  mktCategories=[...new Set(data.map(c=>c.category||'Other'))];
+  buildMktSidebar();
+});
+
+let mktSelectedCat = '';
+function buildMktSidebar(){
+  const sb=document.getElementById('mktSidebar');
+  if(!sb)return;
+  const cats=['All',...mktCategories];
+  sb.innerHTML=cats.map(c=>`<div class="mkt-cat${c===mktSelectedCat||(!mktSelectedCat&&c==='All')?' active':''}" data-cat="${c}" style="padding:3px 6px;margin:1px 0;border-radius:3px;cursor:pointer;font-size:11px;color:${c==='All'?'#4fc3f7':'#c8d4e0'}">${c}</div>`).join('');
+  sb.querySelectorAll('.mkt-cat').forEach(el=>el.addEventListener('click',()=>{
+    mktSelectedCat=el.dataset.cat==='All'?'':el.dataset.cat;
+    sb.querySelectorAll('.mkt-cat').forEach(e=>e.classList.remove('active'));
+    el.classList.add('active');
+    renderMarket();
+  }));
+}
+
 function renderMarket() {
   const prices = D.prices || {};
   const commodities = Object.keys(prices).sort();
   const searchVal = (document.getElementById('mktSearch')?.value||'').toLowerCase();
 
-  // Populate filters (once)
-  if (!mktCommoditiesPopulated && commodities.length) {
-    const sel = document.getElementById('mktCommodityFilter');
-    for (const c of commodities) {
-      const opt = document.createElement('option'); opt.value = c; opt.textContent = fmtName(c); sel.appendChild(opt);
-    }
-    mktCommoditiesPopulated = true;
-  }
   if (!mktSystemsPopulated) {
     const systemNames = new Set();
     for (const entries of Object.values(prices)) entries.forEach(e => systemNames.add(e.system));
@@ -396,29 +433,23 @@ function renderMarket() {
     }
   }
 
-  const comF = document.getElementById('mktCommodityFilter').value;
   const sysF = document.getElementById('mktSystemFilter').value;
   const sortBy = document.getElementById('mktSortBy')?.value || 'commodity';
 
   let allEntries = [];
   for (const c of commodities) {
-    if (comF && c !== comF) continue;
+    if (mktSelectedCat && CAT_MAP[c] !== mktSelectedCat) continue;
     const name = fmtName(c);
     if (searchVal && !name.toLowerCase().includes(searchVal)) continue;
     for (const e of prices[c]) {
       if (sysF && e.system !== sysF) continue;
-      // Find buy demand and sell supply from station data
-      let buyDemand = 0, sellSupply = 0;
+      let buyDemand = 0;
       const sysData = Object.values(D.systems||{}).find(s => s.name === e.system);
       if (sysData) {
         const st = sysData.stations.find(s => s.name === e.station);
-        if (st) {
-          const bo = (st.buy_orders||[]).find(b => b.commodity === c);
-          if (bo) buyDemand = bo.qty;
-          sellSupply = e.stock;
-        }
+        if (st) { const bo = (st.buy_orders||[]).find(b => b.commodity === c); if (bo) buyDemand = bo.qty; }
       }
-      allEntries.push({commodity: c, name, buyDemand, sellSupply, ...e});
+      allEntries.push({commodity: c, name, category: CAT_MAP[c]||'', buyDemand, sellSupply: e.stock, ...e});
     }
   }
   if (sortBy === 'price_asc') allEntries.sort((a,b) => a.price - b.price);
@@ -430,14 +461,13 @@ function renderMarket() {
   for (const e of allEntries) {
     rows += `<tr><td style="color:#ffd54f">${e.name}</td><td>${e.system}</td><td style="color:#8aa0b8">${e.station}</td><td style="color:#e0e8f0;text-align:right">${e.price.toFixed(0)}</td><td style="color:#4fc3f7;text-align:right">${Math.round(e.stock)}</td><td style="color:#ef5350;text-align:right">${Math.round(e.buyDemand)||'-'}</td><td style="color:#66bb6a;text-align:right">${Math.round(e.sellSupply)||'-'}</td></tr>`;
   }
-  document.getElementById('mktBody').innerHTML = rows;
+  document.getElementById('mktBody').innerHTML = rows || '<tr><td colspan="7" style="color:#8aa0b8;text-align:center;padding:20px">No market data for this category</td></tr>';
 }
 
 function getTier(commodity_id) {
   return TIER_MAP[commodity_id] || '?';
 }
 
-document.getElementById('mktCommodityFilter').addEventListener('change', () => renderMarket());
 document.getElementById('mktSystemFilter').addEventListener('change', () => renderMarket());
 document.getElementById('mktSearch').addEventListener('input', () => renderMarket());
 document.getElementById('mktSortBy').addEventListener('change', () => renderMarket());
