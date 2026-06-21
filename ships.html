@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Space Economy - Ship Designs</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Orbitron:wght@400;600;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:14px;line-height:1.7}
@@ -11,11 +11,11 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 ::-webkit-scrollbar-track{background:#0a0e18}
 ::-webkit-scrollbar-thumb{background:#1a3050;border-radius:3px}
 .nav{position:sticky;top:0;z-index:100;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:0 24px;height:48px;gap:20px}
-.nav h1{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:#4fc3f7;letter-spacing:3px;text-transform:uppercase}
-.nav a{font-size:11px;color:#8aa0b8;text-decoration:none;padding:6px 14px;border:1px solid #1a2844;border-radius:3px;transition:all .15s;letter-spacing:1px;text-transform:uppercase;font-family:'Orbitron',sans-serif}
+.nav h1{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#4fc3f7;letter-spacing:3px;text-transform:uppercase}
+.nav a{font-size:11px;color:#8aa0b8;text-decoration:none;padding:6px 14px;border:1px solid #1a2844;border-radius:3px;transition:all .15s;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
 .nav a:hover{color:#4fc3f7;border-color:#4fc3f7}
 .content{max-width:1100px;margin:0 auto;padding:32px 24px 96px}
-h2{font-family:'Orbitron',sans-serif;font-size:16px;color:#4fc3f7;letter-spacing:2px;text-transform:uppercase;margin:32px 0 16px}
+h2{font-family:'JetBrains Mono',monospace;font-size:16px;color:#4fc3f7;letter-spacing:2px;text-transform:uppercase;margin:32px 0 16px}
 .ship-grid{display:grid;grid-template-columns:200px 1fr;gap:16px;height:calc(100vh - 120px)}
 .ship-list{overflow-y:auto;display:flex;flex-direction:column;gap:4px}
 .ship-btn{display:block;width:100%;padding:10px 12px;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;color:#8aa0b8;font-family:inherit;font-size:11px;cursor:pointer;text-align:left;transition:all .15s}
@@ -26,7 +26,7 @@ h2{font-family:'Orbitron',sans-serif;font-size:16px;color:#4fc3f7;letter-spacing
 .viewer-area{display:flex;flex-direction:column;gap:12px}
 .viewer-3d{flex:1;background:#060a12;border:1px solid #1a2844;border-radius:6px;min-height:350px}
 .ship-stats{background:#0a0e18;border:1px solid #1a2844;border-radius:6px;padding:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-.stat-group h3{font-family:'Orbitron',sans-serif;font-size:9px;color:#6a9ab8;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.stat-group h3{font-family:'JetBrains Mono',monospace;font-size:9px;color:#6a9ab8;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
 .stat-row{display:flex;justify-content:space-between;padding:2px 0;font-size:11px}
 .stat-row .label{color:#6a8aaa}
 .stat-row .val{color:#e0e8f0}
@@ -38,7 +38,7 @@ h2{font-family:'Orbitron',sans-serif;font-size:16px;color:#4fc3f7;letter-spacing
 .hp-weapon{background:#ef535022;color:#ef5350;border:1px solid #ef535044}
 .hp-shield{background:#66bb6a22;color:#66bb6a;border:1px solid #66bb6a44}
 
-#docnav .dnl{font-size:10px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:'Orbitron',sans-serif;transition:all .15s}
+#docnav .dnl{font-size:10px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;transition:all .15s}
 #docnav .dnl:hover{color:#4fc3f7;border-color:#4fc3f7;background:#0d1a2f}
 #docnav .dnl.active{color:#4fc3f7;border-color:#4fc3f7}
 </style>
@@ -83,7 +83,7 @@ async function init() {
   for (const [role, ships] of Object.entries(roles)) {
     if (!ships.length) continue;
     const header = document.createElement('div');
-    header.style.cssText = 'font-family:Orbitron;font-size:8px;color:#ffd54f;letter-spacing:1px;text-transform:uppercase;padding:8px 0 4px';
+    header.style.cssText = 'font-family:'JetBrains Mono',monospace;font-size:8px;color:#ffd54f;letter-spacing:1px;text-transform:uppercase;padding:8px 0 4px';
     header.textContent = role + 's';
     list.appendChild(header);
     for (const [id, data] of ships) {
