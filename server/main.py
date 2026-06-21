@@ -439,6 +439,10 @@ def api_debug():
                 break
     summary["warfare"] = warfare_status
 
+    # Performance metrics from supervisor
+    if supervisor:
+        summary["performance"] = supervisor.metrics
+
     return jsonify(summary)
 
 

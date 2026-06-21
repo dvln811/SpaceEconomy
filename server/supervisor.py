@@ -95,6 +95,17 @@ class Supervisor:
         self._region_cache = {}  # {region: {commodity: [(system_id, station_name, qty)]}}
         self._ship_index = {}  # {ship_id: ship}
         self._rebuild_indices()
+        # Performance metrics
+        self.metrics = {
+            'ticks_per_sec': 0.0,
+            'tick_ms': 0.0,
+            'movement_ms': 0.0,
+            'workers_ms': 0.0,
+            'merge_ms': 0.0,
+            'worker_times': {},  # {name: ms}
+            'intents_per_tick': 0,
+        }
+        self._tick_times = []  # last 10 tick timestamps for ticks/sec calc
 
     def add_worker(self, worker: WorkerThread):
         self.workers.append(worker)
@@ -127,11 +138,13 @@ class Supervisor:
     def _do_tick(self):
         self.sim.tick_count += 1
         tick = self.sim.tick_count
+        t_start = time.time()
 
         # Movement (stays in supervisor, fast and needs direct state mutation)
         self._process_timers()
         self._move_ships()
         self._move_ships_intra()
+        t_move = time.time()
 
         # Build snapshot for workers
         snapshot = {
@@ -147,18 +160,40 @@ class Supervisor:
             w.signal_tick(tick, snapshot)
 
         # Wait for completion (with timeout to avoid deadlock)
+        worker_times = {}
         for w in self.workers:
+            wt0 = time.time()
             if not w.wait_done(timeout=5.0):
                 log.warning(f"Worker {w.name} timed out on tick {tick}")
+            worker_times[w.name] = (time.time() - wt0) * 1000
+        t_workers = time.time()
 
         # Collect and apply intents
+        intent_count = 0
         for w in self.workers:
             for intent in w.drain_intents():
                 self._apply_intent(intent, tick)
+                intent_count += 1
+        t_merge = time.time()
 
         # Rebuild indices periodically
         if tick % 10 == 0:
             self._rebuild_indices()
+
+        # Update metrics
+        now = time.time()
+        self._tick_times.append(now)
+        if len(self._tick_times) > 10:
+            self._tick_times = self._tick_times[-10:]
+        if len(self._tick_times) >= 2:
+            span = self._tick_times[-1] - self._tick_times[0]
+            self.metrics['ticks_per_sec'] = round((len(self._tick_times) - 1) / span, 2) if span > 0 else 0
+        self.metrics['tick_ms'] = round((now - t_start) * 1000, 1)
+        self.metrics['movement_ms'] = round((t_move - t_start) * 1000, 1)
+        self.metrics['workers_ms'] = round((t_workers - t_move) * 1000, 1)
+        self.metrics['merge_ms'] = round((t_merge - t_workers) * 1000, 1)
+        self.metrics['worker_times'] = {k: round(v, 1) for k, v in worker_times.items()}
+        self.metrics['intents_per_tick'] = intent_count
 
         # Trim events
         if len(self.sim.events) > 100:

@@ -213,6 +213,7 @@ function renderOverview() {
       <div class="panel-title">Simulation</div>
       <div class="stat-row"><span class="label">Tick</span><span class="value">${D.tick}</span></div>
       <div class="stat-row"><span class="label">Uptime</span><span class="value">${h}h ${m}m ${sec}s</span></div>
+      <div class="stat-row"><span class="label">Ticks/sec</span><span class="value" style="color:${(D.performance||{}).ticks_per_sec>=0.95?'#66bb6a':'#ef5350'}">${(D.performance||{}).ticks_per_sec||'?'}</span></div>
       <div class="stat-row"><span class="label">Systems</span><span class="value">${Object.keys(D.systems||{}).length}</span></div>
       <div class="stat-row"><span class="label">Ships</span><span class="value">${D.npc_ships}</span></div>
       <div class="stat-row"><span class="label">Trades</span><span class="value">${D.trade_volume}</span></div>
@@ -220,6 +221,18 @@ function renderOverview() {
       <div class="stat-row"><span class="label">Traveling</span><span class="value">${(s.traveling||0)+(s.intra_traveling||0)}</span></div>
       <div class="stat-row"><span class="label">Loading</span><span class="value">${(s.loading||0)+(s.unloading||0)}</span></div>
       <div class="stat-row"><span class="label">Mining</span><span class="value">${s.mining||0}</span></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Performance</div>
+      ${(()=>{const p=D.performance||{};const wt=p.worker_times||{};return `
+      <div class="stat-row"><span class="label">Tick total</span><span class="value">${p.tick_ms||0} ms</span></div>
+      <div class="stat-row"><span class="label">Movement</span><span class="value">${p.movement_ms||0} ms</span></div>
+      <div class="stat-row"><span class="label">Workers</span><span class="value">${p.workers_ms||0} ms</span></div>
+      <div class="stat-row"><span class="label">Merge</span><span class="value">${p.merge_ms||0} ms</span></div>
+      <div class="stat-row"><span class="label">Intents/tick</span><span class="value">${p.intents_per_tick||0}</span></div>
+      <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:11px;color:#5a7a9a">Worker breakdown:</div>
+      ${Object.entries(wt).map(([n,ms])=>`<div class="stat-row"><span class="label" style="font-size:11px">${n}</span><span class="value" style="font-size:11px;color:${ms>200?'#ef5350':ms>50?'#ffa726':'#66bb6a'}">${ms} ms</span></div>`).join('')}
+      `;})()}
     </div>
     <div class="panel">
       <div class="panel-title">Production</div>
