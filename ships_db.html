@@ -156,9 +156,10 @@ function show(filter, btn) {
     if (filter.startsWith('class_')) ships = military.filter(s => s.hull_class === filter.replace('class_',''));
     ships = ships.filter(match);
     el.innerHTML = `<table><thead><tr>
-      <th>Name</th><th>Class</th><th>Faction</th><th>Hull</th><th>Armor</th><th>Shield</th><th>Total HP</th><th>Crew</th><th>Weapons</th><th>Recipe</th><th>Build Time</th><th style="width:120px">Description</th>
+      <th>Name</th><th>Class</th><th>Faction</th><th>Hull</th><th>Armor</th><th>Shield</th><th>Total HP</th><th>Crew</th><th>Hardpoints</th><th>Weapons</th><th>Recipe</th><th>Build Time</th><th>Description</th>
     </tr></thead><tbody>${ships.map(s => {
       const fname = factions[s.faction_id] ? factions[s.faction_id].name : s.faction_id;
+      const hp = typeof s.hardpoints === 'string' ? JSON.parse(s.hardpoints) : (s.hardpoints||{});
       return `<tr>
       <td style="color:#e0e8f0">${s.name}</td>
       <td>${s.hull_class}</td>
@@ -168,6 +169,7 @@ function show(filter, btn) {
       <td>${s.shield_hp}</td>
       <td style="color:#ffd54f">${s.hull_hp+s.armor_hp+s.shield_hp}</td>
       <td>${s.crew}</td>
+      <td style="font-size:11px">${hp.weapon_mounts||0}W / ${hp.utility_bays||0}U / ${hp.core_slots||0}C</td>
       <td style="font-size:11px">${s.weapons.map(w=>n(w)).join('<br>')}</td>
       <td style="font-size:11px;color:#66bb6a">${Object.entries(s.build_cost).map(([k,v])=>v+'x '+n(k)).join('<br>')}</td>
       <td>${s.build_time?fmtTime(s.build_time):'-'}</td>
