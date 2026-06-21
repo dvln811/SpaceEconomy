@@ -203,6 +203,7 @@ def api_positions():
         systems[sid] = {
             "name": sys.name, "type": sys.system_type, "cluster": sys.cluster,
             "security": sys.security, "faction": sys.faction,
+            "region": getattr(sys, 'region', ''),
             "x": sys.x, "y": sys.y, "z": sys.z,
             "connections": sys.connections,
             "station_count": len(sys.stations),

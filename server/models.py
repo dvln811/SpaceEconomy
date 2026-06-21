@@ -54,6 +54,7 @@ class System:
     cluster: str
     security: str
     faction: str = ""
+    region: str = ""
     x: float = 0.0
     y: float = 0.0
     z: float = 0.0

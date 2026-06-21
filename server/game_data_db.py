@@ -76,6 +76,7 @@ def init_data_schema(conn: sqlite3.Connection):
         name TEXT NOT NULL,
         system_type TEXT DEFAULT '',
         cluster TEXT DEFAULT '',
+        region TEXT DEFAULT '',
         security TEXT DEFAULT 'high',
         faction_id TEXT DEFAULT '' REFERENCES factions(id),
         x REAL DEFAULT 0,

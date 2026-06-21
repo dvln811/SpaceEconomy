@@ -135,6 +135,7 @@ def load_universe(conn=None) -> dict:
             id=sid, name=sys_row["name"], system_type=sys_row["system_type"],
             cluster=sys_row["cluster"], security=sys_row["security"],
             faction=sys_row["faction_id"],
+            region=sys_row["region"] if "region" in sys_row.keys() else "",
             x=sys_row["x"], y=sys_row["y"], z=sys_row["z"],
             stations=stations, asteroid_fields=fields,
             connections=connections, objects=objects,

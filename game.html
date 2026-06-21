@@ -376,7 +376,7 @@ async function initSystems(){
   const data=await r.json();
   for(const [sid,sys] of Object.entries(data.systems)){
     const idx=systems.length;
-    systems.push({id:sid, name:sys.name, x:sys.x, y:sys.y, z:sys.z, size:TYPE_SIZES[sys.type]||5, color:TYPE_COLORS[sys.type]||0x5a7a9a, type:sys.type, cluster:sys.cluster, security:sys.security, faction:sys.faction, connections:sys.connections, station_count:sys.station_count, has_asteroids:sys.has_asteroids});
+    systems.push({id:sid, name:sys.name, x:sys.x, y:sys.y, z:sys.z, size:TYPE_SIZES[sys.type]||5, color:TYPE_COLORS[sys.type]||0x5a7a9a, type:sys.type, cluster:sys.cluster, security:sys.security, faction:sys.faction, region:sys.region||'', connections:sys.connections, station_count:sys.station_count, has_asteroids:sys.has_asteroids});
     systemIdList.push(sid);
     systemIdToIndex[sid]=idx;
     sysPositions[sid]={x:sys.x, y:sys.y, z:sys.z};
@@ -526,6 +526,25 @@ async function initSystems(){
     scene.add(label);
   });
 
+  // Region labels (always visible, large)
+  const regionPositions={};
+  systems.forEach(s=>{
+    if(!s.region)return;
+    if(!regionPositions[s.region])regionPositions[s.region]={x:0,y:0,z:0,n:0};
+    regionPositions[s.region].x+=s.x;regionPositions[s.region].y+=s.y;regionPositions[s.region].z+=s.z;regionPositions[s.region].n++;
+  });
+  Object.entries(regionPositions).forEach(([name,p])=>{
+    p.x/=p.n;p.y/=p.n;p.z/=p.n;
+    const ri=REGION_NAMES_LIST.indexOf(name);
+    const color=ri>=0?('#'+REGION_COLORS[ri].toString(16).padStart(6,'0')):'#888';
+    const div=document.createElement('div');
+    div.style.cssText=`font-size:15px;color:${color};font-weight:bold;letter-spacing:3px;text-transform:uppercase;opacity:0.8;pointer-events:none;white-space:nowrap`;
+    div.textContent=name;
+    const label=new CSS2DObject(div);
+    label.position.set(p.x,p.y+40,p.z);
+    scene.add(label);
+  });
+
   // Update constellation label visibility based on selection
   function updateConstLabels(){
     const selCluster=selectedSystem>=0?systems[selectedSystem].cluster:'';
@@ -545,15 +564,17 @@ async function initSystems(){
 initSystems();
 
 // Star color mode
-const FACTION_COLORS_HEX={terran_fed:0x4fc3f7,science_collective:0xab47bc,merchants_guild:0xffd54f,free_states:0x66bb6a,iron_compact:0xff8a65,corsairs:0xef5350};
+const FACTION_COLORS_HEX={terran_fed:0x4fc3f7,science_collective:0xab47bc,merchants_guild:0xffd54f,free_states:0x66bb6a,iron_compact:0xff8a65,corsairs:0x888888};
 const SEC_COLORS_HEX={high:0x66bb6a,medium:0xffd54f,low:0xff8a65,none:0xef5350};
+const REGION_COLORS=[0x4fc3f7,0xab47bc,0xffd54f,0x66bb6a,0xff8a65,0xef5350,0x29b6f6,0xce93d8,0xffb74d,0x81c784,0xe57373,0x4dd0e1];
+const REGION_NAMES_LIST=['The Forge','Genesis','Domain','Citadel','Outer Ring','Syndicate','Pure Blind','Detorid','Wicked Creek','Scalding Pass','Great Wildlands','Stain'];
 document.getElementById('starColorMode').addEventListener('change',(e)=>{
   const mode=e.target.value;
   systems.forEach((s,i)=>{
     let col;
     if(mode==='faction')col=FACTION_COLORS_HEX[s.faction]||0x555555;
-    else if(mode==='security')col=SEC_COLORS_HEX[s.security]||0x555555;
-    else if(mode==='region')col=regionColor(s.cluster);
+    else if(mode==='security')col=SEC_COLORS_HEX[s.security]||0xef5350;
+    else if(mode==='region'){const ri=REGION_NAMES_LIST.indexOf(s.region);col=ri>=0?REGION_COLORS[ri]:0x555555;}
     else col=s.color;
     systemMeshes[i].material.color.setHex(col);
   });
@@ -876,35 +897,71 @@ function buildSystemCards(){
 }
 function renderSystemList(query){
   const q=query.toLowerCase();
-  let filtered;
-  if(q){
-    filtered=systems.map((s,i)=>({...s,_i:i})).filter(s=>s.name.toLowerCase().includes(q)||s.cluster.toLowerCase().includes(q));
-  }else if(selectedSystem>=0){
-    const selCluster=systems[selectedSystem].cluster;
-    filtered=systems.map((s,i)=>({...s,_i:i})).filter(s=>s.cluster===selCluster);
-  }else{
-    filtered=systems.map((s,i)=>({...s,_i:i})).filter(s=>s.faction);
-  }
-  filtered=filtered.slice(0,150);
-  // Group by cluster
-  const groups={};
-  filtered.forEach(s=>{const c=s.cluster||'Unknown';if(!groups[c])groups[c]=[];groups[c].push(s);});
+  let selRegion='',selCluster='';
+  if(selectedSystem>=0){selRegion=systems[selectedSystem].region;selCluster=systems[selectedSystem].cluster;}
+  
   systemList.innerHTML='';
-  Object.entries(groups).forEach(([cluster,items])=>{
-    const hdr=document.createElement('div');
-    hdr.style.cssText='font-size:12px;color:#4fc3f7;padding:6px 8px 2px;letter-spacing:1px;text-transform:uppercase;font-weight:bold;border-bottom:1px solid #1a2844;margin-top:4px';
-    hdr.textContent=cluster+' ('+items.length+')';
-    systemList.appendChild(hdr);
-    items.forEach(s=>{
-      const div=document.createElement('div');
-      div.className='system-item'+(s._i===selectedSystem?' active':'');
+  
+  if(q){
+    // Search: flat list of matches
+    const matched=systems.map((s,i)=>({...s,_i:i})).filter(s=>s.name.toLowerCase().includes(q)||s.cluster.toLowerCase().includes(q)||s.region.toLowerCase().includes(q)).slice(0,100);
+    matched.forEach(s=>{
+      const div=document.createElement('div');div.className='system-item'+(s._i===selectedSystem?' active':'');
       div.dataset.index=s._i;
       const secColor=s.security==='high'?'#66bb6a':s.security==='medium'?'#ffd54f':s.security==='low'?'#ff8a65':'#ef5350';
-      div.innerHTML=`<span style="color:${secColor}">●</span> ${s.name}`;
+      div.innerHTML=`<span style="color:${secColor}">●</span> ${s.name} <span style="color:#556;font-size:10px">${s.cluster}</span>`;
       div.addEventListener('click',()=>focusSystem(s._i));
       div.addEventListener('dblclick',()=>zoomToSystem(s._i));
       systemList.appendChild(div);
     });
+    return;
+  }
+  
+  // Tree: Region > Constellation > Stars (only expand selected constellation)
+  const regions={};
+  systems.forEach((s,i)=>{
+    const r=s.region||'Unknown';
+    if(!regions[r])regions[r]={};
+    const c=s.cluster||'Unknown';
+    if(!regions[r][c])regions[r][c]=[];
+    regions[r][c].push({...s,_i:i});
+  });
+  
+  // Show selected region expanded, others collapsed
+  Object.entries(regions).forEach(([regionName,consts])=>{
+    const isSelRegion=regionName===selRegion;
+    const rHdr=document.createElement('div');
+    rHdr.style.cssText=`font-size:12px;color:#4fc3f7;padding:6px 8px 2px;letter-spacing:1px;text-transform:uppercase;font-weight:bold;border-bottom:1px solid #1a2844;margin-top:6px;cursor:pointer`;
+    const constCount=Object.keys(consts).length;
+    rHdr.textContent=`${isSelRegion?'▼':'▶'} ${regionName} (${constCount})`;
+    rHdr.onclick=()=>{rHdr.nextElementSibling.style.display=rHdr.nextElementSibling.style.display==='none'?'':'none';};
+    systemList.appendChild(rHdr);
+    
+    const rBody=document.createElement('div');
+    rBody.style.display=isSelRegion?'':'none';
+    
+    Object.entries(consts).forEach(([constName,stars])=>{
+      const isSelConst=constName===selCluster;
+      const cHdr=document.createElement('div');
+      cHdr.style.cssText='font-size:11px;color:#8899aa;padding:4px 8px 2px 16px;cursor:pointer';
+      cHdr.textContent=`${isSelConst?'▼':'▶'} ${constName} (${stars.length})`;
+      cHdr.onclick=()=>{cHdr.nextElementSibling.style.display=cHdr.nextElementSibling.style.display==='none'?'':'none';};
+      rBody.appendChild(cHdr);
+      
+      const cBody=document.createElement('div');
+      cBody.style.display=isSelConst?'':'none';
+      stars.forEach(s=>{
+        const div=document.createElement('div');div.className='system-item'+(s._i===selectedSystem?' active':'');
+        div.dataset.index=s._i;
+        const secColor=s.security==='high'?'#66bb6a':s.security==='medium'?'#ffd54f':s.security==='low'?'#ff8a65':'#ef5350';
+        div.innerHTML=`<span style="color:${secColor}">●</span> ${s.name}`;
+        div.addEventListener('click',()=>focusSystem(s._i));
+        div.addEventListener('dblclick',()=>zoomToSystem(s._i));
+        cBody.appendChild(div);
+      });
+      rBody.appendChild(cBody);
+    });
+    systemList.appendChild(rBody);
   });
 }
 
