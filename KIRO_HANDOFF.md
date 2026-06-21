@@ -210,6 +210,12 @@ Each faction has 4 corporations and 7 military ship classes (fighter through dre
 
 ## Known Issues / Next Steps
 
+### IMMEDIATE TODO (from last session)
+- [ ] **Market page tree-view** - Categorized like Items DB (by tier/category), include ships (military/civilian). Currently a flat table in Dashboard.
+- [ ] **Battle detail click-through** - Battle rows in Dashboard should be clickable, opening tick-by-tick status for that battle. Needs API changes (store battle tick history in warfare.py) + frontend modal/panel.
+- [ ] **Ships page overhaul** - Current ship list in Dashboard is basic cards. Needs rethinking: group by faction? by role? by state? Include fleet strength summary, production queue visibility.
+- [ ] **Weapon/module variants and pricing** - Need multiple variants per weapon type at each size (like EVE). Small weapons ~2,500 ISK, Large ~150K, T2 ~10M. More ammo types.
+
 ### Economy
 - Production still halts at higher tiers (T3/T4) due to rare ore logistics gap
 - Need to fix: basic items (Shield Gen Mk.I) currently require null-sec exotics (Gold Ore) in recipe chain
