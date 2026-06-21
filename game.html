@@ -426,16 +426,15 @@ async function initSystems(){
     routeGeo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
     routeGeo.computeBoundingSphere();
   }
-  // CSS2D labels (visibility managed per frame)
-  const labelObjects=[];
+  // CSS2D labels (visibility managed per frame via display style)
+  const labelDivs=[];
   systems.forEach((s,i)=>{
     const div=document.createElement('div');div.className='system-label';div.textContent=s.name;
+    div.style.display='none';
     const label=new CSS2DObject(div);
     label.position.set(s.x,s.y+s.size*2+6,s.z);
-    label.visible=false;
-    label._sysIdx=i;
     scene.add(label);
-    labelObjects.push(label);
+    labelDivs.push({div,idx:i});
   });
   // Label visibility update
   function updateLabelVisibility(){
@@ -449,13 +448,13 @@ async function initSystems(){
         if(idx>=0)connSet.add(idx);
       });
     }
-    for(const lbl of labelObjects){
-      const i=lbl._sysIdx;
-      if(i===sel||connSet.has(i)){lbl.visible=true;continue;}
-      // Always show faction systems
-      if(systems[i].faction){lbl.visible=true;continue;}
-      const dx=lbl.position.x-camPos.x,dy=lbl.position.y-camPos.y,dz=lbl.position.z-camPos.z;
-      lbl.visible=(dx*dx+dy*dy+dz*dz)<showRadiusSq;
+    for(const ld of labelDivs){
+      const i=ld.idx;
+      if(i===sel||connSet.has(i)){ld.div.style.display='';continue;}
+      if(systems[i].faction){ld.div.style.display='';continue;}
+      const s=systems[i];
+      const dx=s.x-camPos.x,dy=s.y-camPos.y,dz=s.z-camPos.z;
+      ld.div.style.display=(dx*dx+dy*dy+dz*dz)<showRadiusSq?'':'none';
     }
     updateRouteLines();
   }
@@ -485,21 +484,12 @@ async function initSystems(){
   });
   // Build system list cards
   buildSystemCards();
+  updateLabelVisibility();
 }
 
 initSystems();
 
-// Background stars
-const starGeo = new THREE.BufferGeometry();
-const starVerts = new Float32Array(2000*3);
-for(let i=0;i<2000;i++){
-  starVerts[i*3]=(Math.random()-0.5)*3000;
-  starVerts[i*3+1]=(Math.random()-0.5)*3000;
-  starVerts[i*3+2]=(Math.random()-0.5)*3000;
-}
-starGeo.setAttribute('position',new THREE.BufferAttribute(starVerts,3));
-const starMat = new THREE.PointsMaterial({color:0xb4c8dc,size:1.5,sizeAttenuation:true,transparent:true,opacity:0.5});
-scene.add(new THREE.Points(starGeo,starMat));
+// No background stars - only generated system stars on the map
 
 // Star texture generator for system nodes
 function makeStarTexture(color){
