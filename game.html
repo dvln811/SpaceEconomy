@@ -1228,6 +1228,19 @@ function makeDotTexture(color, size){
   cx.fillStyle=color; cx.fill();
   const t=new THREE.CanvasTexture(c); return t;
 }
+function makeRockTexture(){
+  const s=64,c=document.createElement('canvas');c.width=s;c.height=s;
+  const cx=c.getContext('2d'),cx2=s/2,cy2=s/2;
+  // Random jagged polygon
+  const verts=[];const n=_rng(5,8)|0;
+  for(let i=0;i<n;i++){const a=Math.PI*2*i/n+_rng(-0.3,0.3);const r=_rng(12,26);verts.push([cx2+Math.cos(a)*r,cy2+Math.sin(a)*r]);}
+  cx.beginPath();cx.moveTo(verts[0][0],verts[0][1]);
+  for(let i=1;i<verts.length;i++)cx.lineTo(verts[i][0],verts[i][1]);
+  cx.closePath();
+  cx.fillStyle='rgba(170,136,68,0.3)';cx.fill();
+  cx.strokeStyle='rgba(220,180,100,0.8)';cx.lineWidth=2;cx.stroke();
+  return new THREE.CanvasTexture(c);
+}
 function makeDiamondTexture(color, size){
   const c=document.createElement('canvas'); c.width=size; c.height=size;
   const cx=c.getContext('2d'), r=size/2;
@@ -1398,7 +1411,7 @@ function svBuildScene(){
       bLine.computeLineDistances();
       svObjectsGroup.add(bLine);
       // Scatter a few small dots along the arc for "rocks" look
-      for(let i=0;i<6;i++){const a=obj.angle-0.4+0.8*Math.random();const rr=r+_rng(-3,3);const dot=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDotTexture('#aa8844',32),transparent:true,opacity:0.6}));dot.position.set(Math.cos(a)*rr,wp.y+_rng(-2,2),Math.sin(a)*rr);dot.scale.set(3,3,1);svObjectsGroup.add(dot);}
+      for(let i=0;i<6;i++){const a=obj.angle-0.4+0.8*Math.random();const rr=r+_rng(-3,3);const dot=new THREE.Sprite(new THREE.SpriteMaterial({map:makeRockTexture(),transparent:true}));dot.position.set(Math.cos(a)*rr,wp.y+_rng(-2,2),Math.sin(a)*rr);dot.scale.set(_rng(3,6),_rng(3,6),1);dot.material.rotation=_rng(0,6.28);svObjectsGroup.add(dot);}
     }else if(obj.type==='asteroid_belt'){
       // Arc for belt
       const r=obj.distance*40;
