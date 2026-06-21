@@ -10,7 +10,7 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden}
-body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:13px}
+body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:15px}
 
 /* Scrollbar theming (Chromium/Edge) */
 ::-webkit-scrollbar{width:6px;height:6px}
@@ -33,8 +33,8 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 
 /* Header */
 .header{grid-column:1/-1;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:0 20px;gap:20px}
-.header h1{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#4fc3f7;letter-spacing:3px;text-transform:uppercase}
-.header .clock{margin-left:auto;color:#8aa0b8;font-size:11px}
+.header h1{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#4fc3f7;letter-spacing:3px;text-transform:uppercase}
+.header .clock{margin-left:auto;color:#8aa0b8;font-size:12px}
 .header .credits{color:#ffd54f;font-size:12px;margin-left:20px}
 .header .credits span{color:#fff;font-weight:600}
 .header .rep{color:#66bb6a;font-size:12px;margin-left:16px}
@@ -42,70 +42,70 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 /* Left Panel - Systems */
 .left-panel{background:#0a0e18;overflow-y:auto;padding:12px;border-right:1px solid #1a2844;display:flex;flex-direction:column}
 .panel-tabs{display:flex;gap:2px;margin-bottom:10px}
-.panel-tab{flex:1;padding:6px 0;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#8aa0b8;background:#0f1520;border:1px solid #1a2844;border-radius:3px;cursor:pointer;transition:all .15s}
+.panel-tab{flex:1;padding:6px 0;text-align:center;font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#8aa0b8;background:#0f1520;border:1px solid #1a2844;border-radius:3px;cursor:pointer;transition:all .15s}
 .panel-tab.active{color:#4fc3f7;border-color:#4fc3f7;background:#0d1a2f}
 .tab-content{display:none;overflow-y:auto;flex:1}
 .tab-content.active{display:block}
-.panel-title{font-family:'JetBrains Mono',monospace;font-size:10px;color:#7a9ab8;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #152238}
+.panel-title{font-family:'JetBrains Mono',monospace;font-size:12px;color:#7a9ab8;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #152238}
 .system-item{padding:8px 10px;border-radius:4px;margin-bottom:4px;cursor:pointer;border:1px solid transparent;transition:all .15s}
 .system-item:hover{background:#111a2a;border-color:#1a3050}
 .system-item.active{background:#0d1a2f;border-color:#4fc3f7;box-shadow:0 0 8px #4fc3f710}
 .system-name{font-size:12px;font-weight:500;color:#e0e8f0}
-.system-type{font-size:10px;color:#8aa0b8;margin-top:2px}
+.system-type{font-size:12px;color:#8aa0b8;margin-top:2px}
 .system-prices{display:flex;gap:8px;margin-top:4px}
-.price-up{color:#66bb6a;font-size:10px}
-.price-down{color:#ef5350;font-size:10px}
-.price-neutral{color:#8aa0b8;font-size:10px}
+.price-up{color:#66bb6a;font-size:12px}
+.price-down{color:#ef5350;font-size:12px}
+.price-neutral{color:#8aa0b8;font-size:12px}
 
 /* Main - Star Map */
 .main{background:#05080f;position:relative;overflow:hidden}
 .main canvas{position:absolute;inset:0;width:100%!important;height:100%!important}
-.map-label{position:absolute;bottom:12px;left:12px;font-size:10px;color:#8aa0b8;letter-spacing:1px;text-transform:uppercase}
+.map-label{position:absolute;bottom:12px;left:12px;font-size:12px;color:#8aa0b8;letter-spacing:1px;text-transform:uppercase}
 .map-zoom{position:absolute;bottom:12px;right:12px;display:flex;flex-direction:column;gap:4px}
-.map-zoom button{width:28px;height:28px;background:#0a1020;border:1px solid #1a3050;color:#4fc3f7;border-radius:3px;cursor:pointer;font-size:14px}
+.map-zoom button{width:28px;height:28px;background:#0a1020;border:1px solid #1a3050;color:#4fc3f7;border-radius:3px;cursor:pointer;font-size:15px}
 
 /* Right Panel - Market */
 .right-panel{background:#0a0e18;overflow-y:auto;padding:12px;border-left:1px solid #1a2844;display:flex;flex-direction:column}
 .commodity-row{display:flex;align-items:center;padding:4px 8px;border-bottom:1px solid #0f1a28;transition:background .15s;gap:8px}
 .commodity-row:hover{background:#111a28}
-.commodity-name{font-size:11px;color:#b0c4d8;flex:1;text-transform:capitalize}
-.commodity-price{font-size:11px;font-weight:600;color:#ffd54f;width:55px;text-align:right}
-.commodity-change{font-size:10px;width:50px;text-align:right}
+.commodity-name{font-size:12px;color:#b0c4d8;flex:1;text-transform:capitalize}
+.commodity-price{font-size:12px;font-weight:600;color:#ffd54f;width:55px;text-align:right}
+.commodity-change{font-size:12px;width:50px;text-align:right}
 .commodity-change.up{color:#66bb6a}
 .commodity-change.down{color:#ef5350}
-.commodity-vol{font-size:10px;color:#b0c4d8;text-align:right;width:50px}
+.commodity-vol{font-size:12px;color:#b0c4d8;text-align:right;width:50px}
 .sparkline{width:60px;height:20px}
 .sparkline polyline{fill:none;stroke-width:1.2}
 
 /* 3D System Labels */
-.system-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:#fff;pointer-events:none;white-space:nowrap}
+.system-label{font-family:'JetBrains Mono',monospace;font-size:12px;color:#fff;pointer-events:none;white-space:nowrap}
 .system-label.hidden{visibility:hidden}
 
 /* Ship list items */
-.ship-item{padding:6px 10px;border-radius:4px;margin-bottom:4px;border:1px solid transparent;font-size:11px;cursor:pointer;transition:all .15s}
+.ship-item{padding:6px 10px;border-radius:4px;margin-bottom:4px;border:1px solid transparent;font-size:12px;cursor:pointer;transition:all .15s}
 .ship-item:hover{background:#111a2a;border-color:#1a3050}
 .ship-item.active{background:#0d1a2f;border-color:#4fc3f7;box-shadow:0 0 8px #4fc3f710}
 .ship-item.player{border-left:2px solid #4fc3f7}
 .ship-item .ship-name{color:#e0e8f0;font-weight:500}
-.ship-item .ship-detail{font-size:10px;color:#8aa0b8;margin-top:2px}
-.ship-item .ship-route{font-size:9px;color:#4fc3f7;margin-top:2px}
-.ship-item .ship-stats{margin-top:4px;font-size:10px;color:#8aa0b8}
+.ship-item .ship-detail{font-size:12px;color:#8aa0b8;margin-top:2px}
+.ship-item .ship-route{font-size:12px;color:#4fc3f7;margin-top:2px}
+.ship-item .ship-stats{margin-top:4px;font-size:12px;color:#8aa0b8}
 .ship-item .ship-stats div{padding:1px 0}
 
 /* System detail card */
-.system-detail{margin-top:8px;padding:8px;background:#0a1020;border:1px solid #1a2844;border-radius:4px;font-size:10px}
+.system-detail{margin-top:8px;padding:8px;background:#0a1020;border:1px solid #1a2844;border-radius:4px;font-size:12px}
 .system-detail .detail-row{display:flex;justify-content:space-between;padding:2px 0;color:#8aa0b8}
 .system-detail .detail-row .val{color:#e0e8f0}
 .system-detail .detail-section{margin-top:6px;padding-top:4px;border-top:1px solid #152238}
-.system-detail .detail-section-title{font-family:'JetBrains Mono',monospace;font-size:8px;color:#8aa0b8;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
+.system-detail .detail-section-title{font-family:'JetBrains Mono',monospace;font-size:12px;color:#8aa0b8;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
 .system-detail .planet-item{color:#8ab4d4;padding:1px 0}
 .system-detail .station-item{color:#ffd54f;padding:1px 0}
 
 /* Hover tooltip */
-.map-tooltip{position:absolute;pointer-events:none;background:#0a0f1aee;border:1px solid #4fc3f7;border-radius:4px;padding:8px 12px;font-size:11px;color:#e0e8f0;z-index:100;max-width:220px;box-shadow:0 0 12px #4fc3f720,0 4px 8px #00000060;opacity:0;transition:opacity .15s}
+.map-tooltip{position:absolute;pointer-events:none;background:#0a0f1aee;border:1px solid #4fc3f7;border-radius:4px;padding:8px 12px;font-size:12px;color:#e0e8f0;z-index:100;max-width:220px;box-shadow:0 0 12px #4fc3f720,0 4px 8px #00000060;opacity:0;transition:opacity .15s}
 .map-tooltip.visible{opacity:1}
-.map-tooltip .tt-title{font-family:'JetBrains Mono',monospace;font-size:10px;color:#4fc3f7;letter-spacing:1px;margin-bottom:4px}
-.map-tooltip .tt-row{font-size:10px;color:#8aa0b8;padding:1px 0}
+.map-tooltip .tt-title{font-family:'JetBrains Mono',monospace;font-size:12px;color:#4fc3f7;letter-spacing:1px;margin-bottom:4px}
+.map-tooltip .tt-row{font-size:12px;color:#8aa0b8;padding:1px 0}
 .map-tooltip .tt-row .tt-val{color:#e0e8f0;float:right}
 
 /* Bottom Panel - Ship/Activity */
@@ -114,9 +114,9 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .bottom-section .panel-title{flex-shrink:0}
 .bottom-scroll{overflow-y:auto;flex:1}
 .ship-stat{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #0f1a28}
-.ship-stat .label{color:#8aa0b8;font-size:10px}
-.ship-stat .value{color:#e0e8f0;font-size:11px}
-.activity-item{padding:4px 0;font-size:10px;color:#8aa0b8;border-bottom:1px solid #0a1420}
+.ship-stat .label{color:#8aa0b8;font-size:12px}
+.ship-stat .value{color:#e0e8f0;font-size:12px}
+.activity-item{padding:4px 0;font-size:12px;color:#8aa0b8;border-bottom:1px solid #0a1420}
 .activity-item .time{color:#6a9ab8;margin-right:8px}
 .activity-item .highlight{color:#4fc3f7}
 .activity-item .profit{color:#66bb6a}
@@ -125,27 +125,27 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .route-dot{width:6px;height:6px;border-radius:50%;background:#4fc3f7;box-shadow:0 0 4px #4fc3f7}
 .route-dot.warning{background:#ffd54f;box-shadow:0 0 4px #ffd54f}
 .route-dot.danger{background:#ef5350;box-shadow:0 0 4px #ef5350}
-.route-info{font-size:10px;color:#8aa0b8}
-.route-profit{margin-left:auto;font-size:11px;color:#66bb6a}
+.route-info{font-size:12px;color:#8aa0b8}
+.route-profit{margin-left:auto;font-size:12px;color:#66bb6a}
 
 /* Inline System View Window */
 .sysview-window{position:fixed;top:60px;left:300px;width:800px;height:600px;background:#0a0e18;border:1px solid #1a2844;border-radius:6px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.7);z-index:200;resize:both;min-width:500px;min-height:350px}
 .sysview-window.open{display:flex}
 .sysview-titlebar{display:flex;align-items:center;padding:0 12px;height:30px;background:#0a0f1a;border-bottom:1px solid #1a2844;cursor:move;flex-shrink:0;user-select:none}
-.sysview-titlebar h2{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;color:#4fc3f7;letter-spacing:2px;text-transform:uppercase}
-.sysview-titlebar .sv-meta{margin-left:10px;font-size:9px;color:#8aa0b8}
-.sysview-titlebar .sv-close{margin-left:auto;width:18px;height:18px;border:none;background:none;color:#8aa0b8;cursor:pointer;font-size:13px;border-radius:3px}
+.sysview-titlebar h2{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:#4fc3f7;letter-spacing:2px;text-transform:uppercase}
+.sysview-titlebar .sv-meta{margin-left:10px;font-size:12px;color:#8aa0b8}
+.sysview-titlebar .sv-close{margin-left:auto;width:18px;height:18px;border:none;background:none;color:#8aa0b8;cursor:pointer;font-size:15px;border-radius:3px}
 .sysview-titlebar .sv-close:hover{background:#1a0a0a;color:#ef5350}
 .sysview-body{flex:1;position:relative;overflow:hidden}
-.sysview-tooltip{position:absolute;pointer-events:none;background:#0a0f1a;border:1px solid #1a2844;border-radius:4px;padding:6px 10px;font-size:10px;max-width:180px;box-shadow:0 4px 12px rgba(0,0,0,0.5);opacity:0;transition:opacity .12s;z-index:10}
+.sysview-tooltip{position:absolute;pointer-events:none;background:#0a0f1a;border:1px solid #1a2844;border-radius:4px;padding:6px 10px;font-size:12px;max-width:180px;box-shadow:0 4px 12px rgba(0,0,0,0.5);opacity:0;transition:opacity .12s;z-index:10}
 .sysview-tooltip.visible{opacity:1}
 .sysview-tooltip .tt-name{color:#e0e8f0;font-weight:500;margin-bottom:2px}
-.sysview-tooltip .tt-type{color:#4fc3f7;font-size:9px;text-transform:uppercase;letter-spacing:1px}
+.sysview-tooltip .tt-type{color:#4fc3f7;font-size:12px;text-transform:uppercase;letter-spacing:1px}
 .sysview-tooltip .tt-detail{color:#8aa0b8;margin-top:3px}
 .sysview-zoom{position:absolute;bottom:6px;right:6px;display:flex;flex-direction:column;gap:2px}
-.sysview-zoom button{width:22px;height:22px;background:#0a1020;border:1px solid #1a3050;color:#4fc3f7;border-radius:3px;cursor:pointer;font-size:11px}
+.sysview-zoom button{width:22px;height:22px;background:#0a1020;border:1px solid #1a3050;color:#4fc3f7;border-radius:3px;cursor:pointer;font-size:12px}
 .sysview-zoom button:hover{background:#1a2844}
-.sv-open-btn{margin-top:8px;width:100%;padding:5px;background:#0a1020;border:1px solid #1a3050;color:#4fc3f7;border-radius:3px;cursor:pointer;font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;transition:all .15s}
+.sv-open-btn{margin-top:8px;width:100%;padding:5px;background:#0a1020;border:1px solid #1a3050;color:#4fc3f7;border-radius:3px;cursor:pointer;font-size:12px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;transition:all .15s}
 .sv-open-btn:hover{background:#1a2844;border-color:#4fc3f7}
 </style>
 </head>
@@ -154,8 +154,8 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <!-- Header -->
   <div class="header">
     <h1>Hauler's Almanac</h1>
-    <a href="/docs" style="font-size:10px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;transition:all .15s" onmouseover="this.style.color='#4fc3f7';this.style.borderColor='#4fc3f7'" onmouseout="this.style.color='#8aa0b8';this.style.borderColor='#1a2844'">Docs</a>
-    <a href="/debug" style="font-size:10px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;transition:all .15s" onmouseover="this.style.color='#ef5350';this.style.borderColor='#ef5350'" onmouseout="this.style.color='#8aa0b8';this.style.borderColor='#1a2844'">Debug</a>
+    <a href="/docs" style="font-size:12px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;transition:all .15s" onmouseover="this.style.color='#4fc3f7';this.style.borderColor='#4fc3f7'" onmouseout="this.style.color='#8aa0b8';this.style.borderColor='#1a2844'">Docs</a>
+    <a href="/debug" style="font-size:12px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;transition:all .15s" onmouseover="this.style.color='#ef5350';this.style.borderColor='#ef5350'" onmouseout="this.style.color='#8aa0b8';this.style.borderColor='#1a2844'">Debug</a>
     <div class="credits">Balance: <span>₡ 847,320</span></div>
     <div class="clock" id="gameClock">Cycle 0 | 00:00 GST</div>
   </div>
@@ -166,7 +166,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
       <div class="panel-tab active" data-tab="systems">Systems</div>
     </div>
     <div class="tab-content active" id="tab-systems">
-    <input type="search" id="sysSearch" placeholder="Search systems..." style="width:calc(100% - 16px);margin:4px 8px;background:#0a1020;border:1px solid #1a2844;color:#c8d4e0;padding:5px 8px;border-radius:3px;font:inherit;font-size:10px">
+    <input type="search" id="sysSearch" placeholder="Search systems..." style="width:calc(100% - 16px);margin:4px 8px;background:#0a1020;border:1px solid #1a2844;color:#c8d4e0;padding:5px 8px;border-radius:3px;font:inherit;font-size:12px">
     <div id="system-list" style="overflow-y:auto;max-height:calc(100% - 60px)"></div>
     </div>
   </div>
@@ -177,7 +177,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <!-- Main: Star Map -->
   <div class="main">
     <div class="map-tooltip" id="map-tooltip"></div>
-    <div class="map-label"><select id="starColorMode" style="background:#0a1020;border:1px solid #1a2844;color:#c8d4e0;padding:3px 6px;border-radius:3px;font:inherit;font-size:10px">
+    <div class="map-label"><select id="starColorMode" style="background:#0a1020;border:1px solid #1a2844;color:#c8d4e0;padding:3px 6px;border-radius:3px;font:inherit;font-size:12px">
       <option value="default">Star Type</option>
       <option value="faction">Faction</option>
       <option value="security">Security</option>
@@ -199,7 +199,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
       <div class="panel-tab" data-tab="r-market">Market</div>
     </div>
     <div class="tab-content active" id="tab-r-info">
-      <div id="system-info-content"><div style="color:#8aa0b8;font-size:10px">Select a system to view info</div></div>
+      <div id="system-info-content"><div style="color:#8aa0b8;font-size:12px">Select a system to view info</div></div>
     </div>
     <div class="tab-content" id="tab-r-market">
       <div class="panel-title">Order Book</div>
@@ -246,8 +246,8 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     <button class="sv-close" id="svClose">&times;</button>
   </div>
   <div style="flex:1;display:flex;flex-direction:row;overflow:hidden">
-  <div id="svInfoPanel" style="width:200px;overflow-y:auto;background:#0a0e18;border-right:1px solid #1a2844;padding:10px;font-size:10px;flex-shrink:0">
-    <div id="svSelInfo"><div style="color:#8aa0b8;font-size:9px">Click an object or ship to view details</div></div>
+  <div id="svInfoPanel" style="width:200px;overflow-y:auto;background:#0a0e18;border-right:1px solid #1a2844;padding:10px;font-size:12px;flex-shrink:0">
+    <div id="svSelInfo"><div style="color:#8aa0b8;font-size:12px">Click an object or ship to view details</div></div>
   </div>
   <div class="sysview-body" id="sysviewBody">
     <div id="svRenderer" style="position:absolute;inset:0;overflow:hidden;cursor:grab"></div>
@@ -261,10 +261,10 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
       <button id="svZoomOut">&minus;</button>
     </div>
   </div>
-  <div id="svSidebar" style="width:180px;overflow-y:auto;background:#0a0e18;border-left:1px solid #1a2844;padding:8px;font-size:10px;flex-shrink:0;display:flex;flex-direction:column">
-    <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:#8aa0b8;letter-spacing:1px;margin-bottom:4px">SOLAR BODIES</div>
+  <div id="svSidebar" style="width:180px;overflow-y:auto;background:#0a0e18;border-left:1px solid #1a2844;padding:8px;font-size:12px;flex-shrink:0;display:flex;flex-direction:column">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#8aa0b8;letter-spacing:1px;margin-bottom:4px">SOLAR BODIES</div>
     <div id="svBodiesList" style="max-height:45%;overflow-y:auto;margin-bottom:6px;border-bottom:1px solid #1a2844;padding-bottom:6px"></div>
-    <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:#8aa0b8;letter-spacing:1px;margin-bottom:4px">SHIPS</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#8aa0b8;letter-spacing:1px;margin-bottom:4px">SHIPS</div>
     <div id="svShipList" style="flex:1;overflow-y:auto"></div>
   </div>
   </div>
@@ -852,7 +852,7 @@ function renderSystemList(query){
   systemList.innerHTML='';
   Object.entries(groups).forEach(([cluster,items])=>{
     const hdr=document.createElement('div');
-    hdr.style.cssText='font-size:9px;color:#4fc3f7;padding:6px 8px 2px;letter-spacing:1px;text-transform:uppercase;font-weight:bold;border-bottom:1px solid #1a2844;margin-top:4px';
+    hdr.style.cssText='font-size:12px;color:#4fc3f7;padding:6px 8px 2px;letter-spacing:1px;text-transform:uppercase;font-weight:bold;border-bottom:1px solid #1a2844;margin-top:4px';
     hdr.textContent=cluster+' ('+items.length+')';
     systemList.appendChild(hdr);
     items.forEach(s=>{
@@ -919,13 +919,13 @@ async function fetchLiveData(){
 function updateLiveMarket(marketData){
   if(!marketData) return;
   const market=document.getElementById('live-market');
-  let html=`<div style="font-size:10px;color:#8aa0b8;margin-bottom:6px">${marketData.name}</div>`;
+  let html=`<div style="font-size:12px;color:#8aa0b8;margin-bottom:6px">${marketData.name}</div>`;
   for(const station of marketData.stations){
-    html+=`<div style="font-size:9px;color:#4fc3f7;margin:8px 0 4px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace">${station.name}</div>`;
+    html+=`<div style="font-size:12px;color:#4fc3f7;margin:8px 0 4px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace">${station.name}</div>`;
     // Sell orders (asks)
     if(station.sell_orders&&station.sell_orders.length){
-      html+=`<div style="font-size:8px;color:#ef5350;margin:4px 0 2px;letter-spacing:1px">SELL ORDERS</div>`;
-      html+=`<div class="commodity-row" style="border-bottom:1px solid #1a2844;padding-bottom:2px;margin-bottom:2px"><div class="commodity-name" style="color:#8aa0b8;font-size:9px">Item</div><div class="commodity-vol" style="color:#8aa0b8;font-size:9px">Qty</div><div class="commodity-price" style="color:#8aa0b8;font-size:9px">Price</div></div>`;
+      html+=`<div style="font-size:12px;color:#ef5350;margin:4px 0 2px;letter-spacing:1px">SELL ORDERS</div>`;
+      html+=`<div class="commodity-row" style="border-bottom:1px solid #1a2844;padding-bottom:2px;margin-bottom:2px"><div class="commodity-name" style="color:#8aa0b8;font-size:12px">Item</div><div class="commodity-vol" style="color:#8aa0b8;font-size:12px">Qty</div><div class="commodity-price" style="color:#8aa0b8;font-size:12px">Price</div></div>`;
       for(const o of station.sell_orders.slice(0,6)){
         const name=o.commodity.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
         html+=`<div class="commodity-row"><div class="commodity-name">${name}</div><div class="commodity-vol">${Math.round(o.qty)}</div><div class="commodity-price">${Math.round(o.price)}</div></div>`;
@@ -933,8 +933,8 @@ function updateLiveMarket(marketData){
     }
     // Buy orders (bids)
     if(station.buy_orders&&station.buy_orders.length){
-      html+=`<div style="font-size:8px;color:#66bb6a;margin:4px 0 2px;letter-spacing:1px">BUY ORDERS</div>`;
-      html+=`<div class="commodity-row" style="border-bottom:1px solid #1a2844;padding-bottom:2px;margin-bottom:2px"><div class="commodity-name" style="color:#8aa0b8;font-size:9px">Item</div><div class="commodity-vol" style="color:#8aa0b8;font-size:9px">Qty</div><div class="commodity-price" style="color:#8aa0b8;font-size:9px">Price</div></div>`;
+      html+=`<div style="font-size:12px;color:#66bb6a;margin:4px 0 2px;letter-spacing:1px">BUY ORDERS</div>`;
+      html+=`<div class="commodity-row" style="border-bottom:1px solid #1a2844;padding-bottom:2px;margin-bottom:2px"><div class="commodity-name" style="color:#8aa0b8;font-size:12px">Item</div><div class="commodity-vol" style="color:#8aa0b8;font-size:12px">Qty</div><div class="commodity-price" style="color:#8aa0b8;font-size:12px">Price</div></div>`;
       for(const o of station.buy_orders.slice(0,6)){
         const name=o.commodity.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
         html+=`<div class="commodity-row"><div class="commodity-name">${name}</div><div class="commodity-vol">${Math.round(o.qty)}</div><div class="commodity-price" style="color:#66bb6a">${Math.round(o.price)}</div></div>`;
@@ -959,7 +959,7 @@ function updateLiveShipList(){
     const div=document.createElement('div');
     const isSel=svSelectedShip===ship.name;
     div.style.cssText=`padding:4px 6px;margin:1px 0;border-radius:3px;cursor:pointer;user-select:none;${isSel?'background:#0d1a2f;border:1px solid #1a3050':'border:1px solid transparent'}`;
-    div.innerHTML=`<div style="color:${isSel?'#4fc3f7':'#e0e8f0'};font-size:10px">${ship.name}</div>${ship.faction?`<div style="color:#8aa0b8;font-size:9px">${ship.faction}</div>`:''}`;
+    div.innerHTML=`<div style="color:${isSel?'#4fc3f7':'#e0e8f0'};font-size:12px">${ship.name}</div>${ship.faction?`<div style="color:#8aa0b8;font-size:12px">${ship.faction}</div>`:''}`;
     div.addEventListener('click',()=>{svSelectedShip=ship.name;window._svShowShipInfo&&window._svShowShipInfo(ship);updateLiveShipList();});
     div.addEventListener('dblclick',()=>{window._svZoomToShip&&window._svZoomToShip(ship.name);});
     el.appendChild(div);
@@ -1355,67 +1355,67 @@ function svShowObjectInfo(obj){
   // Generate deterministic stats from name hash
   let h=0;for(let i=0;i<obj.name.length;i++)h=(h*31+obj.name.charCodeAt(i))|0;
   const abs=Math.abs;
-  let html=`<div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:${col};margin-bottom:6px">${obj.name.replace(' Star','')}</div>`;
-  html+=`<div style="color:#8aa0b8;font-size:9px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-family:JetBrains Mono,monospace">${obj.type.replace('_',' ')}</div>`;
-  if(obj.distance)html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Orbit: ${obj.distance.toFixed(2)} AU</div>`;
+  let html=`<div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:${col};margin-bottom:6px">${obj.name.replace(' Star','')}</div>`;
+  html+=`<div style="color:#8aa0b8;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-family:JetBrains Mono,monospace">${obj.type.replace('_',' ')}</div>`;
+  if(obj.distance)html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Orbit: ${obj.distance.toFixed(2)} AU</div>`;
   if(obj.type==='planet'){
     const radius=3000+abs(h%12000);const temp=-50+abs((h>>4)%400);
-    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Radius: ${radius} km</div>`;
-    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Surface Temp: ${temp}°C</div>`;
-    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Atmosphere: ${temp>0&&temp<100?'Breathable':'Hostile'}</div>`;
-    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Gravity: ${(0.3+abs((h>>8)%15)/10).toFixed(1)}g</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Radius: ${radius} km</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Surface Temp: ${temp}°C</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Atmosphere: ${temp>0&&temp<100?'Breathable':'Hostile'}</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Gravity: ${(0.3+abs((h>>8)%15)/10).toFixed(1)}g</div>`;
   }else if(obj.type==='star'){
     const classes=['M','K','G','F','A','B','O'];const cls=classes[abs(h%7)];
-    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Class: ${cls}-type</div>`;
-    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Luminosity: ${(0.5+abs((h>>4)%30)/10).toFixed(1)} L☉</div>`;
-    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Mass: ${(0.4+abs((h>>8)%20)/10).toFixed(1)} M☉</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Class: ${cls}-type</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Luminosity: ${(0.5+abs((h>>4)%30)/10).toFixed(1)} L☉</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Mass: ${(0.4+abs((h>>8)%20)/10).toFixed(1)} M☉</div>`;
   }else if(obj.type==='gate'){
-    html+=`<div style="color:#ab47bc;font-size:9px;font-family:JetBrains Mono,monospace">Destination: ${obj.connects_to||'Unknown'}</div>`;
-    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Status: Online</div>`;
-    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Clearance: Open</div>`;
+    html+=`<div style="color:#ab47bc;font-size:12px;font-family:JetBrains Mono,monospace">Destination: ${obj.connects_to||'Unknown'}</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Status: Online</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Clearance: Open</div>`;
   }else if(obj.type==='station'){
-    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Services: Dock, Trade, Repair</div>`;
-    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Population: ${(10+abs(h%990))}K</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Services: Dock, Trade, Repair</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Population: ${(10+abs(h%990))}K</div>`;
   }else if(obj.type==='asteroid_belt'){
-    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Density: ${['Sparse','Moderate','Dense','Rich'][abs(h%4)]}</div>`;
-    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Hazard: ${['Low','Moderate','High'][abs(h%3)]}</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Density: ${['Sparse','Moderate','Dense','Rich'][abs(h%4)]}</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Hazard: ${['Low','Moderate','High'][abs(h%3)]}</div>`;
   }else if(obj.type==='moon'){
-    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Radius: ${200+abs(h%2000)} km</div>`;
-    html+=`<div style="color:#8aa0b8;font-size:9px;font-family:JetBrains Mono,monospace">Tidally Locked: ${abs(h%2)?'Yes':'No'}</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Radius: ${200+abs(h%2000)} km</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Tidally Locked: ${abs(h%2)?'Yes':'No'}</div>`;
   }
   // Ships at this location
   if(svData&&svData.ships){
     const here=svData.ships.filter(s=>s.intra_position===obj.id);
     if(here.length){
-      html+=`<div style="color:#8aa0b8;font-size:8px;margin-top:8px;letter-spacing:1px;font-family:JetBrains Mono,monospace">SHIPS (${here.length}):</div>`;
-      for(const s of here.slice(0,8))html+=`<div style="color:#b0c4d8;font-size:9px;padding:1px 0;font-family:JetBrains Mono,monospace">${s.name}</div>`;
+      html+=`<div style="color:#8aa0b8;font-size:12px;margin-top:8px;letter-spacing:1px;font-family:JetBrains Mono,monospace">SHIPS (${here.length}):</div>`;
+      for(const s of here.slice(0,8))html+=`<div style="color:#b0c4d8;font-size:12px;padding:1px 0;font-family:JetBrains Mono,monospace">${s.name}</div>`;
     }
   }
   el.innerHTML=html;
 }
 window._svShowShipInfo=function(ship){
   const el=document.getElementById('svSelInfo');
-  let html=`<div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#4fc3f7;margin-bottom:6px">${ship.name}</div>`;
-  html+=`<div style="color:#ffd54f;font-size:10px;margin-bottom:4px">${ship.ship_class||'Unknown Class'}</div>`;
-  html+=`<div style="color:#8aa0b8;font-size:9px">Role: ${ship.role}</div>`;
-  html+=`<div style="color:#8aa0b8;font-size:9px">State: ${ship.state}</div>`;
-  if(ship.faction)html+=`<div style="color:#8aa0b8;font-size:9px">Faction: ${ship.faction}</div>`;
+  let html=`<div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#4fc3f7;margin-bottom:6px">${ship.name}</div>`;
+  html+=`<div style="color:#ffd54f;font-size:12px;margin-bottom:4px">${ship.ship_class||'Unknown Class'}</div>`;
+  html+=`<div style="color:#8aa0b8;font-size:12px">Role: ${ship.role}</div>`;
+  html+=`<div style="color:#8aa0b8;font-size:12px">State: ${ship.state}</div>`;
+  if(ship.faction)html+=`<div style="color:#8aa0b8;font-size:12px">Faction: ${ship.faction}</div>`;
   if(ship.destination){
     const destIdx=systemIdToIndex[ship.destination];
-    html+=`<div style="color:#8aa0b8;font-size:9px">Dest: ${destIdx!==undefined?systems[destIdx].name:ship.destination}</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:12px">Dest: ${destIdx!==undefined?systems[destIdx].name:ship.destination}</div>`;
   }
   if(ship.intra_position){
     const atObj=svData?svData.objects.find(o=>o.id===ship.intra_position):null;
-    html+=`<div style="color:#8aa0b8;font-size:9px">At: ${atObj?atObj.name:ship.intra_position}</div>`;
+    html+=`<div style="color:#8aa0b8;font-size:12px">At: ${atObj?atObj.name:ship.intra_position}</div>`;
   }
   if(ship.intra_destination){
     const toObj=svData?svData.objects.find(o=>o.id===ship.intra_destination):null;
-    if(toObj)html+=`<div style="color:#8aa0b8;font-size:9px">Heading: ${toObj.name}</div>`;
+    if(toObj)html+=`<div style="color:#8aa0b8;font-size:12px">Heading: ${toObj.name}</div>`;
   }
   const cargoVol=ship.cargo?Object.values(ship.cargo).reduce((a,b)=>a+b,0):0;
-  html+=`<div style="color:#8aa0b8;font-size:9px;margin-top:4px">Cargo: ${Math.round(cargoVol)} units</div>`;
+  html+=`<div style="color:#8aa0b8;font-size:12px;margin-top:4px">Cargo: ${Math.round(cargoVol)} units</div>`;
   if(ship.cargo&&Object.keys(ship.cargo).length){
-    for(const [k,v] of Object.entries(ship.cargo))html+=`<div style="color:#8aa0b8;font-size:9px;padding-left:8px">${k.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}: ${Math.round(v)}</div>`;
+    for(const [k,v] of Object.entries(ship.cargo))html+=`<div style="color:#8aa0b8;font-size:12px;padding-left:8px">${k.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}: ${Math.round(v)}</div>`;
   }
   el.innerHTML=html;
 };
@@ -1495,7 +1495,7 @@ function svUpdateShipMeshes(){
 
 // Selected ship label
 const svShipLabelDiv=document.createElement('div');
-svShipLabelDiv.style.cssText='font-size:9px;color:#4fc3f7;background:rgba(10,14,24,0.8);padding:2px 6px;border-radius:3px;font-family:JetBrains Mono,monospace';
+svShipLabelDiv.style.cssText='font-size:12px;color:#4fc3f7;background:rgba(10,14,24,0.8);padding:2px 6px;border-radius:3px;font-family:JetBrains Mono,monospace';
 const svShipLabel=new CSS2DObject(svShipLabelDiv);
 svShipLabel.visible=false;svScene.add(svShipLabel);
 

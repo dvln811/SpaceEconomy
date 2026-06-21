@@ -11,35 +11,35 @@
 ::-webkit-scrollbar-thumb{background:#1a3050;border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:#2a4060}
 html,body{height:100%;overflow:hidden}
-body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:11px;display:flex;flex-direction:column}
-#docnav .dnl{font-size:10px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;transition:all .15s}
+body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:12px;display:flex;flex-direction:column}
+#docnav .dnl{font-size:12px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;transition:all .15s}
 #docnav .dnl:hover{color:#4fc3f7;border-color:#4fc3f7;background:#0d1a2f}
 #docnav .dnl.active{color:#4fc3f7;border-color:#4fc3f7}
 .main{display:flex;flex:1;overflow:hidden}
 .sidebar{width:220px;background:#0a0e18;border-right:1px solid #1a2844;display:flex;flex-direction:column;flex-shrink:0}
-.sidebar input{width:calc(100% - 16px);margin:8px;background:#0a1020;border:1px solid #1a2844;color:#c8d4e0;padding:6px 8px;border-radius:3px;font:inherit;font-size:11px}
+.sidebar input{width:calc(100% - 16px);margin:8px;background:#0a1020;border:1px solid #1a2844;color:#c8d4e0;padding:6px 8px;border-radius:3px;font:inherit;font-size:12px}
 .sidebar input:focus{border-color:#4fc3f7;outline:none}
 .side-list{flex:1;overflow-y:auto;padding:0 8px 8px}
-.side-cat{font-family:'JetBrains Mono',monospace;font-size:10px;color:#c8d4e0;font-weight:600;letter-spacing:1px;padding:8px 4px 3px;text-transform:uppercase;cursor:pointer;user-select:none}
+.side-cat{font-family:'JetBrains Mono',monospace;font-size:12px;color:#c8d4e0;font-weight:600;letter-spacing:1px;padding:8px 4px 3px;text-transform:uppercase;cursor:pointer;user-select:none}
 .side-cat:hover{color:#4fc3f7}
 .side-items{display:none}
 .side-cat.open+.side-items{display:block}
-.side-item{display:block;padding:3px 8px 3px 12px;margin:1px 0;border-radius:3px;cursor:pointer;color:#8aa0b8;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side-item{display:block;padding:3px 8px 3px 12px;margin:1px 0;border-radius:3px;cursor:pointer;color:#8aa0b8;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .side-item:hover{background:#111a2a;color:#c8d4e0}
 .side-item.active{background:#0d1a2f;color:#4fc3f7}
 .content{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:16px}
 .totals{padding:12px;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;flex-shrink:0;max-height:40%;overflow-y:auto}
-.totals-title{font-family:'JetBrains Mono',monospace;font-size:10px;color:#ffd54f;letter-spacing:1px;margin-bottom:8px}
+.totals-title{font-family:'JetBrains Mono',monospace;font-size:12px;color:#ffd54f;letter-spacing:1px;margin-bottom:8px}
 .total-row{display:flex;padding:2px 0}
 .total-row .qty{color:#ffd54f;min-width:50px;text-align:right;margin-right:10px}
 .total-row .name{color:#c8d4e0}
 .chain-wrap{flex:1;overflow-y:auto;margin-top:12px;padding:12px;background:#0a0e18;border:1px solid #1a2844;border-radius:4px}
-.chain-title{font-family:'JetBrains Mono',monospace;font-size:10px;color:#ffd54f;letter-spacing:1px;margin-bottom:8px}
+.chain-title{font-family:'JetBrains Mono',monospace;font-size:12px;color:#ffd54f;letter-spacing:1px;margin-bottom:8px}
 .chain-row{display:flex;align-items:center;padding:2px 0}
 .chain-qty{color:#ffd54f;min-width:40px;text-align:right;margin-right:8px}
 .chain-name{color:#e0e8f0}
 .chain-raw{color:#66bb6a}
-.item-title{font-family:'JetBrains Mono',monospace;font-size:14px;color:#4fc3f7;margin-bottom:12px;flex-shrink:0}
+.item-title{font-family:'JetBrains Mono',monospace;font-size:15px;color:#4fc3f7;margin-bottom:12px;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -121,7 +121,7 @@ function buildList(filter) {
     if (subs.length > 0) {
       for (const sub of subs) {
         const subItems = catItems.filter(i => i.sub === sub);
-        html += `<div class="side-cat${f ? ' open' : ''}" style="padding-left:8px;font-size:9px" onclick="event.stopPropagation();this.classList.toggle('open')">${sub} (${subItems.length})</div><div class="side-items">`;
+        html += `<div class="side-cat${f ? ' open' : ''}" style="padding-left:8px;font-size:12px" onclick="event.stopPropagation();this.classList.toggle('open')">${sub} (${subItems.length})</div><div class="side-items">`;
         for (const i of subItems) html += `<div class="side-item" onclick="showChain('${i.id}');document.querySelectorAll('.side-item').forEach(b=>b.classList.remove('active'));this.classList.add('active')">${i.name}</div>`;
         html += '</div>';
       }
