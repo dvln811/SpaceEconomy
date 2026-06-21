@@ -83,6 +83,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     <option value="30">30x</option>
     <option value="60">60x</option>
     <option value="120">120x</option>
+    <option value="120">120x</option>
   </select>
   <a href="/">Game</a>
   <a href="/docs">Docs</a>
@@ -527,7 +528,9 @@ document.getElementById('nukeBtn').addEventListener('click', async () => {
 // Sim speed control
 const simSpeedSelect = document.getElementById('simSpeed');
 simSpeedSelect.addEventListener('change', async () => {
-  await fetch('/api/speed', {method: 'POST', body: JSON.stringify({multiplier: parseInt(simSpeedSelect.value)})});
+  const r = await fetch('/api/speed', {method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({multiplier: parseInt(simSpeedSelect.value)})});
+  const d = await r.json();
+  console.log('Speed set to:', d.multiplier);
 });
 // Load current speed
 fetch('/api/speed').then(r=>r.json()).then(d=>{simSpeedSelect.value=d.multiplier;});
