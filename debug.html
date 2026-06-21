@@ -576,9 +576,9 @@ function renderMarket() {
         shipRows += `<tr><td style="color:#ffd54f">${s.name}</td><td>T${s.tier}</td><td>${s.role}</td><td style="text-align:right">${s.cargo_capacity}</td><td style="text-align:right">${s.speed}</td><td style="text-align:right">${s.hull_hp}</td><td style="text-align:right">${s.fuel_capacity}</td></tr>`;
       }
     } else if (mktSelectedCat === '_military') {
-      const filtered = mktMilitaryData.filter(s => !searchVal || s.name.toLowerCase().includes(searchVal) || s.faction.toLowerCase().includes(searchVal));
+      const filtered = mktMilitaryData.filter(s => !searchVal || s.name.toLowerCase().includes(searchVal) || s.faction_id.toLowerCase().includes(searchVal));
       for (const s of filtered) {
-        shipRows += `<tr><td style="color:#ffd54f">${s.name}</td><td>${s.hull_class}</td><td>${fmtName(s.faction)}</td><td style="text-align:right">${s.hull_hp}</td><td style="text-align:right">${s.shield_hp}</td><td style="text-align:right">${s.armor_hp}</td><td style="text-align:right">${s.crew}</td></tr>`;
+        shipRows += `<tr><td style="color:#ffd54f">${s.name}</td><td>${s.hull_class}</td><td>${fmtName(s.faction_id)}</td><td style="text-align:right">${s.hull_hp}</td><td style="text-align:right">${s.shield_hp}</td><td style="text-align:right">${s.armor_hp}</td><td style="text-align:right">${s.crew}</td></tr>`;
       }
     }
     document.getElementById('mktBody').innerHTML = shipRows || '<tr><td colspan="7" style="color:#8aa0b8;text-align:center;padding:20px">No ships</td></tr>';
