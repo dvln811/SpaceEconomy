@@ -1357,6 +1357,7 @@ function svAdvanceShips(){
 }
 
 // Build scene objects from data
+function _rng(a,b){return a+(b-a)*Math.random();}
 function svBuildScene(){
   svOrbitsGroup.clear(); svObjectsGroup.clear(); svLabelsGroup.clear(); svRadarGroup.clear();
   svObjPositions=[];
@@ -1389,7 +1390,16 @@ function svBuildScene(){
     const colInt=SV_COLORS[obj.type]||0x5a7a9a;
     svObjPositions.push({obj,x:wp.x,y:wp.y,z:wp.z});
 
-    if(obj.type==='asteroid_belt'){
+    if(obj.type==='belt'){
+      // Dashed arc for asteroid belt
+      const r=obj.distance*40;
+      const pts=[];for(let i=0;i<=24;i++){const a=obj.angle-0.5+1.0*i/24;pts.push(new THREE.Vector3(Math.cos(a)*r,wp.y,Math.sin(a)*r));}
+      const bLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineDashedMaterial({color:0xccaa55,dashSize:4,gapSize:2,transparent:true,opacity:0.7}));
+      bLine.computeLineDistances();
+      svObjectsGroup.add(bLine);
+      // Scatter a few small dots along the arc for "rocks" look
+      for(let i=0;i<6;i++){const a=obj.angle-0.4+0.8*Math.random();const rr=r+_rng(-3,3);const dot=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDotTexture('#aa8844',32),transparent:true,opacity:0.6}));dot.position.set(Math.cos(a)*rr,wp.y+_rng(-2,2),Math.sin(a)*rr);dot.scale.set(3,3,1);svObjectsGroup.add(dot);}
+    }else if(obj.type==='asteroid_belt'){
       // Arc for belt
       const r=obj.distance*40;
       const pts=[];for(let i=0;i<=12;i++){const a=obj.angle-0.25+0.5*i/12;pts.push(new THREE.Vector3(Math.cos(a)*r,wp.y,Math.sin(a)*r));}
