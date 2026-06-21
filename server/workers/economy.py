@@ -86,7 +86,21 @@ class EconomyWorker(WorkerThread):
     def _update_prices(self, universe, tick):
         for sys_id, sys in universe.items():
             for station in sys.stations:
-                for commodity_id in self.commodities:
+                # Only price commodities relevant to this station:
+                # items in inventory, items needed as inputs, items consumed
+                relevant = set(station.inventory.keys())
+                for prod_id in station.produces:
+                    recipe = self.commodities.get(prod_id)
+                    if recipe and recipe.recipe:
+                        relevant.update(recipe.recipe.keys())
+                relevant.update(self.station_consumption.get(station.station_type, []))
+
+                if not hasattr(station, 'price_pressure'):
+                    station.price_pressure = {}
+
+                for commodity_id in relevant:
+                    if commodity_id not in self.commodities:
+                        continue
                     stock = station.inventory.get(commodity_id, 0)
                     demand = 5.0
                     for prod_id in station.produces:
@@ -96,8 +110,6 @@ class EconomyWorker(WorkerThread):
                     if commodity_id in self.station_consumption.get(station.station_type, []):
                         demand += 20
 
-                    if not hasattr(station, 'price_pressure'):
-                        station.price_pressure = {}
                     pressure = station.price_pressure.get(commodity_id, 0)
                     if demand > 10 and stock < demand:
                         pressure = min(pressure + 0.5, 50)
@@ -117,7 +129,6 @@ class EconomyWorker(WorkerThread):
                             system_id=sys_id, station_name=station.name,
                             commodity_id=commodity_id, new_price=new_price
                         ))
-                        # Log significant changes
                         if old_price > 0 and stock > 1:
                             pct = (new_price - old_price) / old_price * 100
                             if abs(pct) > 10:
