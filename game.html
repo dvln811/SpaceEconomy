@@ -47,7 +47,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .tab-content{display:none;overflow-y:auto;flex:1}
 .tab-content.active{display:block}
 .panel-title{font-family:'JetBrains Mono',monospace;font-size:12px;color:#7a9ab8;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #152238}
-.system-item{padding:8px 10px;border-radius:4px;margin-bottom:4px;cursor:pointer;border:1px solid transparent;transition:all .15s}
+.system-item{padding:3px 10px;border-radius:3px;margin-bottom:1px;cursor:pointer;border:1px solid transparent;transition:all .15s;font-size:11px}
 .system-item:hover{background:#111a2a;border-color:#1a3050}
 .system-item.active{background:#0d1a2f;border-color:#4fc3f7;box-shadow:0 0 8px #4fc3f710}
 .system-name{font-size:12px;font-weight:500;color:#e0e8f0}
@@ -407,8 +407,9 @@ async function initSystems(){
   const routeMesh=new THREE.LineSegments(routeGeo,routeMat);
   scene.add(routeMesh);
   const hlGeo=new THREE.BufferGeometry();
-  const hlMat=new THREE.LineBasicMaterial({color:0x66ccff,transparent:true,opacity:0.5});
+  const hlMat=new THREE.LineBasicMaterial({color:0x88ddff,transparent:true,opacity:0.7,depthTest:false});
   const hlMesh=new THREE.LineSegments(hlGeo,hlMat);
+  hlMesh.renderOrder=1;
   scene.add(hlMesh);
   console.log('Routes loaded:',routes.length);
 
@@ -565,16 +566,17 @@ initSystems();
 
 // Star color mode
 const FACTION_COLORS_HEX={terran_fed:0x4fc3f7,science_collective:0xab47bc,merchants_guild:0xffd54f,free_states:0x66bb6a,iron_compact:0xff8a65,corsairs:0x888888};
-const SEC_COLORS_HEX={high:0x66bb6a,medium:0xffd54f,low:0xff8a65,none:0xef5350};
+const SEC_COLORS_HEX={high:0x00cc44,medium:0xccaa00,low:0xee6600,none:0xcc0000};
 const REGION_COLORS=[0x4fc3f7,0xab47bc,0xffd54f,0x66bb6a,0xff8a65,0xef5350,0x29b6f6,0xce93d8,0xffb74d,0x81c784,0xe57373,0x4dd0e1];
 const REGION_NAMES_LIST=['The Forge','Genesis','Domain','Citadel','Outer Ring','Syndicate','Pure Blind','Detorid','Wicked Creek','Scalding Pass','Great Wildlands','Stain'];
+const REGION_COLOR_MAP={};REGION_NAMES_LIST.forEach((n,i)=>REGION_COLOR_MAP[n]=REGION_COLORS[i]);
 document.getElementById('starColorMode').addEventListener('change',(e)=>{
   const mode=e.target.value;
   systems.forEach((s,i)=>{
     let col;
     if(mode==='faction')col=FACTION_COLORS_HEX[s.faction]||0x555555;
     else if(mode==='security')col=SEC_COLORS_HEX[s.security]||0xef5350;
-    else if(mode==='region'){const ri=REGION_NAMES_LIST.indexOf(s.region);col=ri>=0?REGION_COLORS[ri]:0x555555;}
+    else if(mode==='region'){col=REGION_COLOR_MAP[s.region]||0x555555;}
     else col=s.color;
     systemMeshes[i].material.color.setHex(col);
   });
@@ -836,13 +838,18 @@ function updateSystemDetail(index){
   const infoPanel=document.getElementById('system-info-content');
   const s=systems[index];
   if(!s){infoPanel.innerHTML='';return;}
-  const secColor=s.security==='high'?'#66bb6a':s.security==='medium'?'#ffd54f':s.security==='low'?'#ff8a65':'#ef5350';
+  const secColor=s.security==='high'?'#00cc44':s.security==='medium'?'#ccaa00':s.security==='low'?'#ee6600':'#cc0000';
+  const factionNames2={terran_fed:'Terran Federation',science_collective:'Nexus Collective',merchants_guild:'Merchants Guild',free_states:'Frontier Alliance',iron_compact:'Iron Compact',corsairs:'The Corsairs'};
+  const facName=s.faction?factionNames2[s.faction]||s.faction:'Unclaimed';
+  const facColor=s.faction?{terran_fed:'#4fc3f7',science_collective:'#ab47bc',merchants_guild:'#ffd54f',free_states:'#66bb6a',iron_compact:'#ff8a65',corsairs:'#ef5350'}[s.faction]||'#888':'#888';
   infoPanel.innerHTML=`
     <div class="panel-title">${s.name}</div>
     <div class="system-detail">
-      <div class="detail-row"><span>Type</span><span class="val">${typeLabels[s.type]||s.type}</span></div>
-      <div class="detail-row"><span>Cluster</span><span class="val">${s.cluster}</span></div>
+      <div class="detail-row"><span>Region</span><span class="val">${s.region}</span></div>
+      <div class="detail-row"><span>Constellation</span><span class="val">${s.cluster}</span></div>
       <div class="detail-row"><span>Security</span><span class="val" style="color:${secColor}">${s.security}</span></div>
+      <div class="detail-row"><span>Faction</span><span class="val" style="color:${facColor}">${facName}</span></div>
+      <div class="detail-row"><span>Type</span><span class="val">${typeLabels[s.type]||s.type}</span></div>
       <div class="detail-row"><span>Stations</span><span class="val">${s.station_count}</span></div>
       <div class="detail-row"><span>Asteroids</span><span class="val">${s.has_asteroids?'Yes':'None'}</span></div>
       <div class="detail-row"><span>Connections</span><span class="val">${(s.connections||[]).length}</span></div>
@@ -943,7 +950,7 @@ function renderSystemList(query){
     Object.entries(consts).forEach(([constName,stars])=>{
       const isSelConst=constName===selCluster;
       const cHdr=document.createElement('div');
-      cHdr.style.cssText='font-size:11px;color:#8899aa;padding:4px 8px 2px 16px;cursor:pointer';
+      cHdr.style.cssText='font-size:12px;color:#8899aa;padding:4px 8px 2px 16px;cursor:pointer;font-weight:bold';
       cHdr.textContent=`${isSelConst?'▼':'▶'} ${constName} (${stars.length})`;
       cHdr.onclick=()=>{cHdr.nextElementSibling.style.display=cHdr.nextElementSibling.style.display==='none'?'':'none';};
       rBody.appendChild(cHdr);
