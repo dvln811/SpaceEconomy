@@ -48,7 +48,6 @@ class Simulation:
         self._spawn_traders(200)
         self._spawn_miners(80)
         self._bootstrap_seed()
-        self._update_all_prices()
         # Warfare simulation
         from server.warfare import WarfareSimulation
         self.warfare = WarfareSimulation()
