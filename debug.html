@@ -21,8 +21,10 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .nuke-btn:hover{background:#ef5350!important;color:#fff!important}
 .tick-info{color:#8aa0b8;font-size:12px;margin-left:auto;margin-right:8px}
 .main{flex:1;overflow:hidden;position:relative}
-.view{display:none;height:100%;overflow-y:auto;padding:10px}
+.view{display:none;height:100%;overflow:hidden}
 .view.active{display:block}
+#view-overview{overflow-y:auto;padding:10px}
+#view-systems{overflow-y:auto;padding:10px}
 .panel{background:#0a0e18;border:1px solid #1a2844;border-radius:4px;padding:10px}
 .panel-title{font-family:'JetBrains Mono',monospace;font-size:12px;color:#8aa0b8;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #152238}
 .stat-row{display:flex;justify-content:space-between;padding:2px 0}
@@ -105,7 +107,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <!-- Overview -->
   <div class="view active" id="view-overview"><div id="overviewContent"></div></div>
   <!-- Stations: tree + table layout -->
-  <div class="view" id="view-stations" style="display:none;height:100%;overflow:hidden">
+  <div class="view" id="view-stations">
     <div style="display:flex;height:100%;overflow:hidden">
       <div id="stTree" class="tree-panel"></div>
       <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
@@ -118,7 +120,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     </div>
   </div>
   <!-- Ships: tree + table layout -->
-  <div class="view" id="view-ships" style="display:none;height:100%;overflow:hidden">
+  <div class="view" id="view-ships">
     <div style="display:flex;height:100%;overflow:hidden">
       <div id="shipTree" class="tree-panel"></div>
       <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
@@ -136,7 +138,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     </div>
   </div>
   <!-- Combat Ships -->
-  <div class="view" id="view-combat" style="display:none;height:100%;overflow:hidden">
+  <div class="view" id="view-combat">
     <div style="display:flex;height:100%;overflow:hidden">
       <div id="combatTree" class="tree-panel"></div>
       <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
@@ -509,22 +511,47 @@ fetch('/api/data/commodities').then(r=>r.json()).then(data=>{
 });
 
 let mktSelectedCat = '';
+let mktShipData = [];
 function buildMktSidebar(){
   const sb=document.getElementById('mktSidebar');
   if(!sb)return;
-  const cats=['All',...mktCategories];
-  sb.innerHTML=cats.map(c=>`<div class="mkt-cat${c===mktSelectedCat||(!mktSelectedCat&&c==='All')?' active':''}" data-cat="${c}" style="padding:3px 6px;margin:1px 0;border-radius:3px;cursor:pointer;font-size:11px;color:${c==='All'?'#4fc3f7':'#c8d4e0'}">${c}</div>`).join('');
+  // Group categories by tier
+  const tierNames = {1:'T1 Raw Ores', 2:'T2 Refined', 3:'T3 Manufactured', 4:'T4 Components', 5:'T5 Products', 0:'Trade Goods'};
+  const tierCats = {};
+  for (const [id, tier] of Object.entries(TIER_MAP)) {
+    const cat = CAT_MAP[id] || 'Other';
+    if (!tierCats[tier]) tierCats[tier] = new Set();
+    tierCats[tier].add(cat);
+  }
+  let html = `<div class="mkt-cat${!mktSelectedCat?' active':''}" data-cat="" style="padding:3px 6px;margin:1px 0;border-radius:3px;cursor:pointer;font-size:11px;color:#66bb6a;font-weight:bold">All Items</div>`;
+  for (const tier of [0,1,2,3,4,5]) {
+    if (!tierCats[tier]) continue;
+    html += `<div style="padding:4px 6px 2px;color:#4fc3f7;font-size:10px;font-weight:bold;margin-top:4px;border-top:1px solid #152238">${tierNames[tier]||'T'+tier}</div>`;
+    for (const cat of [...tierCats[tier]].sort()) {
+      html += `<div class="mkt-cat${mktSelectedCat===cat?' active':''}" data-cat="${cat}" style="padding:2px 6px 2px 12px;margin:1px 0;border-radius:3px;cursor:pointer;font-size:11px;color:#c8d4e0">${cat}</div>`;
+    }
+  }
+  // Ships section
+  html += `<div style="padding:4px 6px 2px;color:#ffd54f;font-size:10px;font-weight:bold;margin-top:4px;border-top:1px solid #152238">Ships</div>`;
+  html += `<div class="mkt-cat${mktSelectedCat==='_haulers'?' active':''}" data-cat="_haulers" style="padding:2px 6px 2px 12px;margin:1px 0;border-radius:3px;cursor:pointer;font-size:11px;color:#c8d4e0">Haulers</div>`;
+  html += `<div class="mkt-cat${mktSelectedCat==='_miners'?' active':''}" data-cat="_miners" style="padding:2px 6px 2px 12px;margin:1px 0;border-radius:3px;cursor:pointer;font-size:11px;color:#c8d4e0">Miners</div>`;
+  html += `<div class="mkt-cat${mktSelectedCat==='_military'?' active':''}" data-cat="_military" style="padding:2px 6px 2px 12px;margin:1px 0;border-radius:3px;cursor:pointer;font-size:11px;color:#c8d4e0">Military</div>`;
+
+  sb.innerHTML=html;
   sb.querySelectorAll('.mkt-cat').forEach(el=>el.addEventListener('click',()=>{
-    mktSelectedCat=el.dataset.cat==='All'?'':el.dataset.cat;
+    mktSelectedCat=el.dataset.cat;
     sb.querySelectorAll('.mkt-cat').forEach(e=>e.classList.remove('active'));
     el.classList.add('active');
     renderMarket();
   }));
 }
+// Load ship data for market
+fetch('/api/data/ship_types').then(r=>r.json()).then(data=>{mktShipData=data;});
+let mktMilitaryData = [];
+fetch('/api/data/military_ships').then(r=>r.json()).then(data=>{mktMilitaryData=data;});
 
 function renderMarket() {
   const prices = D.prices || {};
-  const commodities = Object.keys(prices).sort();
   const searchVal = (document.getElementById('mktSearch')?.value||'').toLowerCase();
 
   if (!mktSystemsPopulated) {
@@ -539,8 +566,28 @@ function renderMarket() {
     }
   }
 
+  // Ship categories show ship data instead
+  if (mktSelectedCat && mktSelectedCat.startsWith('_')) {
+    let shipRows = '';
+    if (mktSelectedCat === '_haulers' || mktSelectedCat === '_miners') {
+      const role = mktSelectedCat === '_haulers' ? 'hauler' : 'miner';
+      const filtered = mktShipData.filter(s => s.role === role && (!searchVal || s.name.toLowerCase().includes(searchVal)));
+      for (const s of filtered) {
+        shipRows += `<tr><td style="color:#ffd54f">${s.name}</td><td>T${s.tier}</td><td>${s.role}</td><td style="text-align:right">${s.cargo_capacity}</td><td style="text-align:right">${s.speed}</td><td style="text-align:right">${s.hull_hp}</td><td style="text-align:right">${s.fuel_capacity}</td></tr>`;
+      }
+    } else if (mktSelectedCat === '_military') {
+      const filtered = mktMilitaryData.filter(s => !searchVal || s.name.toLowerCase().includes(searchVal) || s.faction.toLowerCase().includes(searchVal));
+      for (const s of filtered) {
+        shipRows += `<tr><td style="color:#ffd54f">${s.name}</td><td>${s.hull_class}</td><td>${fmtName(s.faction)}</td><td style="text-align:right">${s.hull_hp}</td><td style="text-align:right">${s.shield_hp}</td><td style="text-align:right">${s.armor_hp}</td><td style="text-align:right">${s.crew}</td></tr>`;
+      }
+    }
+    document.getElementById('mktBody').innerHTML = shipRows || '<tr><td colspan="7" style="color:#8aa0b8;text-align:center;padding:20px">No ships</td></tr>';
+    return;
+  }
+
   const sysF = document.getElementById('mktSystemFilter').value;
   const sortBy = document.getElementById('mktSortBy')?.value || 'commodity';
+  const commodities = Object.keys(prices).sort();
 
   let allEntries = [];
   for (const c of commodities) {
