@@ -1362,14 +1362,6 @@ function svBuildScene(){
   svObjPositions=[];
   if(!svData)return;
 
-  // Radar grid lines
-  const radarMat=new THREE.LineBasicMaterial({color:0x1a2844,transparent:true,opacity:0.25});
-  for(let i=0;i<8;i++){
-    const a=Math.PI*2*i/8;
-    const pts=[new THREE.Vector3(0,0,0),new THREE.Vector3(Math.cos(a)*600,0,Math.sin(a)*600)];
-    svRadarGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),radarMat));
-  }
-
   // Orbital rings (skip if no objects)
   if(svData.objects&&svData.objects.length>0)
   for(const obj of svData.objects){
