@@ -658,11 +658,16 @@ function getOrCreate3DShip(ship,idx){
 }
 
 // Player indicator at Cygnus
-const playerRing = new THREE.Mesh(
-  new THREE.RingGeometry(12,14,32),
-  new THREE.MeshBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.7,side:THREE.DoubleSide})
-);
+// Player location marker (brackets style)
+const playerRing = new THREE.Group();
+const pMat=new THREE.LineBasicMaterial({color:0x66ff66,transparent:true,opacity:0.8});
+[0,Math.PI/2,Math.PI,Math.PI*1.5].forEach(a=>{
+  const pts=[];const r1=10,r2=14;
+  for(let i=0;i<=4;i++){const t=a+i*0.15;pts.push(new THREE.Vector3(Math.cos(t)*r2,0,Math.sin(t)*r2));}
+  playerRing.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),pMat));
+});
 playerRing.position.set(0,0,0);
+playerRing.visible=false;
 scene.add(playerRing);
 
 // Selected ship label
@@ -674,10 +679,17 @@ const shipLabel=new CSS2DObject(shipLabelDiv);
 shipLabel.visible=false;
 scene.add(shipLabel);
 
-// Selection reticle
-const reticleGeo=new THREE.RingGeometry(14,16,32);
-const reticleMat=new THREE.MeshBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.7,side:THREE.DoubleSide});
-const reticle=new THREE.Mesh(reticleGeo,reticleMat);
+// Selection reticle (rotating corner brackets)
+const reticle=new THREE.Group();
+const rMat=new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.9});
+[0,Math.PI/2,Math.PI,Math.PI*1.5].forEach(a=>{
+  const pts=[];const r1=16,r2=20;
+  for(let i=0;i<=5;i++){const t=a+i*0.12;pts.push(new THREE.Vector3(Math.cos(t)*r2,0,Math.sin(t)*r2));}
+  reticle.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),rMat));
+  // Inner tick
+  const ip=[new THREE.Vector3(Math.cos(a+0.06)*r1,0,Math.sin(a+0.06)*r1),new THREE.Vector3(Math.cos(a+0.06)*r2,0,Math.sin(a+0.06)*r2)];
+  reticle.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(ip),rMat));
+});
 reticle.visible=false;
 scene.add(reticle);
 let reticleAngle=0;
@@ -702,18 +714,18 @@ function animate(){
 
   // Rotate player ring to face camera
   playerRing.lookAt(camera.position);
+  playerRing.rotateY(0.005);
 
   // Selection reticle
-  reticleAngle+=0.02;
-  reticle.rotation.z=reticleAngle;
+  reticleAngle+=0.015;
   if(selectedSystem>=0&&selectedSystem<systems.length){
     const s=systems[selectedSystem];
     reticle.position.set(s.x,s.y,s.z);
-    reticle.lookAt(camera.position);
+    reticle.rotation.y=reticleAngle;
     reticle.visible=true;
   }else if(selectedShip>=0&&selectedShip<shipMeshes.length&&shipMeshes[selectedShip].position){
     reticle.position.copy(shipMeshes[selectedShip].position);
-    reticle.lookAt(camera.position);
+    reticle.rotation.y=reticleAngle;
     reticle.scale.set(0.5,0.5,0.5);
     reticle.visible=true;
   }else{
