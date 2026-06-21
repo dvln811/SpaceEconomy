@@ -65,6 +65,16 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .filter-input{background:#0a1020;border:1px solid #1a3050;color:#c8d4e0;font-size:12px;padding:4px 8px;border-radius:3px;font-family:inherit;width:200px}
 .filter-select{background:#0a1020;border:1px solid #1a3050;color:#c8d4e0;font-size:12px;padding:4px 8px;border-radius:3px;font-family:inherit}
 .mkt-cat{transition:all .1s}.mkt-cat:hover{background:#111a2a}.mkt-cat.active{background:#0d1a2f;color:#4fc3f7 !important}
+.tree-panel{width:200px;overflow-y:auto;border-right:1px solid #1a2844;padding:4px;flex-shrink:0;font-size:11px}
+.tree-region{padding:3px 6px;cursor:pointer;color:#4fc3f7;font-weight:bold;border-radius:3px}
+.tree-region:hover{background:#111a2a}
+.tree-region.active{background:#0d1a2f}
+.tree-cluster{padding:2px 6px 2px 16px;cursor:pointer;color:#8aa0b8;border-radius:3px}
+.tree-cluster:hover{background:#111a2a}
+.tree-cluster.active{background:#0d1a2f;color:#4fc3f7}
+.tree-system{padding:1px 6px 1px 26px;cursor:pointer;color:#6a8aaa;font-size:10px;border-radius:3px}
+.tree-system:hover{background:#111a2a}
+.tree-system.active{background:#0d1a2f;color:#4fc3f7}
 </style>
 </head>
 <body>
@@ -74,6 +84,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <button class="tab-btn active" data-tab="overview">Overview</button>
   <button class="tab-btn" data-tab="stations">Stations</button>
   <button class="tab-btn" data-tab="ships">Ships</button>
+  <button class="tab-btn" data-tab="combat">Combat</button>
   <button class="tab-btn" data-tab="market">Market</button>
   <button class="tab-btn" data-tab="systems">Systems</button>
   <span class="tick-info" id="tickInfo">T0</span>
@@ -93,36 +104,49 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 <div class="main">
   <!-- Overview -->
   <div class="view active" id="view-overview"><div id="overviewContent"></div></div>
-  <!-- Stations: filter bar is static, only data area updates -->
-  <div class="view" id="view-stations">
-    <div class="filter-bar">
-      <input type="search" class="filter-input" id="stFilter" placeholder="Filter stations...">
-      <select class="filter-select" id="stStatusFilter"><option value="">All</option><option value="active">Active</option><option value="halted">Halted</option></select>
-      <select class="filter-select" id="stSortBy"><option value="system">Sort: System</option><option value="station">Sort: Station</option><option value="status">Sort: Status</option></select>
-      <select class="filter-select" id="stGroupBy"><option value="none">Group: None</option><option value="faction">Group: Faction</option><option value="region">Group: Region</option><option value="type">Group: Type</option></select>
+  <!-- Stations: tree + table layout -->
+  <div class="view" id="view-stations" style="display:none;height:100%;overflow:hidden">
+    <div style="display:flex;height:100%;overflow:hidden">
+      <div id="stTree" class="tree-panel"></div>
+      <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+        <div class="filter-bar">
+          <input type="search" class="filter-input" id="stFilter" placeholder="Filter stations...">
+          <select class="filter-select" id="stStatusFilter"><option value="">All</option><option value="active">Active</option><option value="halted">Halted</option></select>
+        </div>
+        <div class="tbl-wrap" style="flex:1"><table class="tbl"><thead><tr><th>Station</th><th>Type</th><th>System</th><th>Sec</th><th>Lines</th><th>Active</th><th>Halted</th><th>Eff%</th><th>Top Output</th><th>Stock</th></tr></thead><tbody id="stBody"></tbody></table></div>
+      </div>
     </div>
-    <div class="tbl-wrap"><table class="tbl"><thead id="stHead"><tr><th>System</th><th>Station</th><th>Sec</th><th>Production Lines</th><th>Buy Orders</th></tr></thead><tbody id="stBody"></tbody></table></div>
   </div>
-  <!-- Ships: static filter bar -->
-  <div class="view" id="view-ships">
-    <div class="filter-bar">
-      <input type="search" class="filter-input" id="shipFilter" placeholder="Filter ships...">
-      <select class="filter-select" id="shipStateFilter">
-        <option value="">All states</option>
-        <option value="idle">Idle</option>
-        <option value="traveling">Traveling</option>
-        <option value="intra_traveling">Intra-travel</option>
-        <option value="loading">Loading</option>
-        <option value="unloading">Unloading</option>
-        <option value="mining">Mining</option>
-      </select>
-      <select class="filter-select" id="shipRoleFilter">
-        <option value="">All roles</option>
-        <option value="hauler">Traders</option>
-        <option value="miner">Miners</option>
-      </select>
+  <!-- Ships: tree + table layout -->
+  <div class="view" id="view-ships" style="display:none;height:100%;overflow:hidden">
+    <div style="display:flex;height:100%;overflow:hidden">
+      <div id="shipTree" class="tree-panel"></div>
+      <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+        <div class="filter-bar">
+          <input type="search" class="filter-input" id="shipFilter" placeholder="Filter ships...">
+          <select class="filter-select" id="shipStateFilter">
+            <option value="">All states</option><option value="idle">Idle</option><option value="traveling">Traveling</option>
+            <option value="intra_traveling">Intra-travel</option><option value="loading">Loading</option>
+            <option value="unloading">Unloading</option><option value="mining">Mining</option>
+          </select>
+          <select class="filter-select" id="shipRoleFilter"><option value="">All roles</option><option value="hauler">Traders</option><option value="miner">Miners</option></select>
+        </div>
+        <div class="tbl-wrap" style="flex:1"><table class="tbl"><thead><tr><th>Name</th><th>Class</th><th>Role</th><th>State</th><th>Location</th><th>Destination</th><th>Cargo</th><th>Faction</th></tr></thead><tbody id="shipBody"></tbody></table></div>
+      </div>
     </div>
-    <div id="shipList"></div>
+  </div>
+  <!-- Combat Ships -->
+  <div class="view" id="view-combat" style="display:none;height:100%;overflow:hidden">
+    <div style="display:flex;height:100%;overflow:hidden">
+      <div id="combatTree" class="tree-panel"></div>
+      <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+        <div class="filter-bar">
+          <input type="search" class="filter-input" id="combatFilter" placeholder="Filter military ships...">
+          <select class="filter-select" id="combatFactionFilter"><option value="">All factions</option></select>
+        </div>
+        <div class="tbl-wrap" style="flex:1"><table class="tbl"><thead><tr><th>Ship Class</th><th>Hull</th><th>Faction</th><th>Count</th><th>Target</th><th>Deficit</th><th>Status</th></tr></thead><tbody id="combatBody"></tbody></table></div>
+      </div>
+    </div>
   </div>
   <!-- Market: static filter bar -->
   <div class="view" id="view-market">
@@ -150,7 +174,6 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 function fmtName(s){return s.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());}
 // ── Persistent UI state (survives re-renders) ───────────────────────────────
 let D = null;
-let selectedShip = null;
 let selectedSystem = '';
 let mktCommoditiesPopulated = false;
 let mktSystemsPopulated = false;
@@ -185,6 +208,7 @@ function render() {
   if (active.id === 'view-overview') renderOverview();
   else if (active.id === 'view-stations') renderStations();
   else if (active.id === 'view-ships') renderShips();
+  else if (active.id === 'view-combat') renderCombat();
   else if (active.id === 'view-market') renderMarket();
   else if (active.id === 'view-systems') renderSystems();
 }
@@ -275,135 +299,204 @@ function renderOverview() {
   </div>`;
 }
 
-// ── Stations ────────────────────────────────────────────────────────────────
-function renderStations() {
-  const stFilter = (document.getElementById('stFilter')?.value || '').toLowerCase();
-  const stStatus = document.getElementById('stStatusFilter')?.value || '';
-  const stSort = document.getElementById('stSortBy')?.value || 'system';
-  const stGroup = document.getElementById('stGroupBy')?.value || 'none';
+// ── Region Tree Builder ──────────────────────────────────────────────────────
+let shipTreeSelection = '';  // region or cluster filter
+let stTreeSelection = '';
+let combatTreeSelection = '';
 
-  let allRows = [];
-  for (const [sid, sys] of Object.entries(D.systems || {})) {
-    for (const st of sys.stations) {
-      if (!st.production.length) continue;
-      allRows.push({sys: sys.name, station: st.name, security: sys.security, faction: sys.faction||'unclaimed', region: sys.region||'', type: st.type||'', production: st.production, buyOrders: st.buy_orders || []});
-    }
+function buildRegionTree(containerId, systems, selectionVar, renderFn) {
+  const tree = {};
+  for (const [sid, sys] of Object.entries(systems)) {
+    const region = sys.region || 'Unknown';
+    const cluster = sys.cluster || 'Unknown';
+    if (!tree[region]) tree[region] = {};
+    if (!tree[region][cluster]) tree[region][cluster] = [];
+    tree[region][cluster].push({id: sid, name: sys.name});
   }
-  if (stFilter) allRows = allRows.filter(r => r.sys.toLowerCase().includes(stFilter) || r.station.toLowerCase().includes(stFilter) || r.faction.toLowerCase().includes(stFilter) || r.production.some(p=>p.name.toLowerCase().includes(stFilter)));
-  if (stStatus === 'active') allRows = allRows.filter(r => r.production.some(p=>!p.halted));
-  if (stStatus === 'halted') allRows = allRows.filter(r => r.production.every(p=>p.halted));
-  if (stSort === 'station') allRows.sort((a,b) => a.station.localeCompare(b.station));
-  else if (stSort === 'status') allRows.sort((a,b) => {const aH=a.production.filter(p=>p.halted).length; const bH=b.production.filter(p=>p.halted).length; return bH-aH;});
-  else allRows.sort((a,b) => a.sys.localeCompare(b.sys));
+  let html = '<div class="tree-region" data-sel="" style="color:#66bb6a">All Regions</div>';
+  for (const [region, clusters] of Object.entries(tree).sort((a,b)=>a[0].localeCompare(b[0]))) {
+    const sysCt = Object.values(clusters).reduce((s,c)=>s+c.length, 0);
+    html += `<div class="tree-region" data-sel="r:${region}">${region} <span style="color:#5a7a9a">(${sysCt})</span></div>`;
+  }
+  const el = document.getElementById(containerId);
+  el.innerHTML = html;
+  el.querySelectorAll('.tree-region').forEach(n => n.addEventListener('click', () => {
+    el.querySelectorAll('.tree-region,.tree-cluster').forEach(e=>e.classList.remove('active'));
+    n.classList.add('active');
+    if (containerId === 'shipTree') shipTreeSelection = n.dataset.sel;
+    else if (containerId === 'stTree') stTreeSelection = n.dataset.sel;
+    else combatTreeSelection = n.dataset.sel;
+    renderFn();
+  }));
+}
 
-  // Group
-  let groups = {'': allRows};
-  if (stGroup === 'faction') { groups = {}; allRows.forEach(r => { const k=r.faction; if(!groups[k])groups[k]=[]; groups[k].push(r); }); }
-  else if (stGroup === 'region') { groups = {}; allRows.forEach(r => { const k=r.region||'Unknown'; if(!groups[k])groups[k]=[]; groups[k].push(r); }); }
-  else if (stGroup === 'type') { groups = {}; allRows.forEach(r => { const k=r.type||'unknown'; if(!groups[k])groups[k]=[]; groups[k].push(r); }); }
+function matchesTreeSelection(sys, selection) {
+  if (!selection) return true;
+  if (selection.startsWith('r:')) return sys.region === selection.slice(2);
+  if (selection.startsWith('c:')) return sys.cluster === selection.slice(2);
+  return true;
+}
+
+// ── Stations (flat table with tree) ─────────────────────────────────────────
+function renderStations() {
+  const systems = D.systems || {};
+  if (!document.getElementById('stTree').children.length) buildRegionTree('stTree', systems, 'stTreeSelection', renderStations);
+
+  const textF = (document.getElementById('stFilter')?.value || '').toLowerCase();
+  const statusF = document.getElementById('stStatusFilter')?.value || '';
 
   let rows = '';
-  for (const [groupName, items] of Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0]))) {
-    if (stGroup !== 'none') rows += `<tr><td colspan="5" style="background:#0a1828;color:#4fc3f7;font-weight:bold;padding:8px;text-transform:uppercase;letter-spacing:1px">${groupName} (${items.length})</td></tr>`;
-    for (const r of items) {
-      const prodLines = r.production.map(p => {
-        const status = p.halted ? '<span class="badge badge-halt">HALT</span>' : `<span class="badge badge-ok">${p.actual.toFixed(1)}/t</span>`;
-        const inputs = p.inputs.map(i => {
-          const pct = Math.min(100, (i.have / Math.max(i.need, 0.1)) * 100);
-          const col = pct > 50 ? '#66bb6a' : pct > 10 ? '#ffd54f' : '#ef5350';
-          return `<span style="color:${col}" title="${i.name}: ${i.have}/${i.need}">${i.name.split(' ')[0]}:${Math.round(i.have)}</span>`;
-        }).join(' ');
-        return `<div style="padding:2px 0;border-bottom:1px solid #0a1420"><span style="color:#ffd54f">${p.name}</span> ${status} <span style="color:#4fc3f7;margin:0 6px">stk:${Math.round(p.stock)}</span><span style="font-size:12px">${inputs}</span></div>`;
-      }).join('');
-      const buys = r.buyOrders.slice(0,4).map(b => `<div style="font-size:12px;padding:1px 0"><span style="color:#ef5350">${fmtName(b.commodity)}</span> ${Math.round(b.qty)} @${b.price.toFixed(0)}</div>`).join('');
-      rows += `<tr><td>${r.sys}</td><td>${r.station}</td><td><span class="badge badge-${r.security}">${r.security}</span></td><td style="vertical-align:top">${prodLines}</td><td style="vertical-align:top">${buys||'-'}</td></tr>`;
+  for (const [sid, sys] of Object.entries(systems)) {
+    if (!matchesTreeSelection(sys, stTreeSelection)) continue;
+    for (const st of sys.stations) {
+      if (!st.production.length) continue;
+      const active = st.production.filter(p => !p.halted).length;
+      const halted = st.production.filter(p => p.halted).length;
+      const total = st.production.length;
+      if (statusF === 'active' && halted === total) continue;
+      if (statusF === 'halted' && halted === 0) continue;
+      const eff = total > 0 ? Math.round(active / total * 100) : 0;
+      const topOutput = st.production[0] || {};
+      const searchStr = `${sys.name} ${st.name} ${st.type}`.toLowerCase();
+      if (textF && !searchStr.includes(textF)) continue;
+
+      const effCol = eff > 80 ? '#66bb6a' : eff > 40 ? '#ffd54f' : '#ef5350';
+      rows += `<tr>
+        <td>${st.name}</td>
+        <td><span class="badge badge-${sys.security}">${st.type}</span></td>
+        <td>${sys.name}</td>
+        <td><span class="badge badge-${sys.security}">${sys.security}</span></td>
+        <td>${total}</td>
+        <td style="color:#66bb6a">${active}</td>
+        <td style="color:${halted?'#ef5350':'#8aa0b8'}">${halted}</td>
+        <td style="color:${effCol}">${eff}%</td>
+        <td style="color:#ffd54f">${topOutput.name||'-'}</td>
+        <td>${topOutput.stock?Math.round(topOutput.stock):'-'}</td>
+      </tr>`;
     }
   }
-  document.getElementById('stBody').innerHTML = rows;
+  document.getElementById('stBody').innerHTML = rows || '<tr><td colspan="10" style="color:#8aa0b8;text-align:center;padding:20px">No stations match</td></tr>';
 }
-// Station filter handlers
 document.getElementById('stFilter')?.addEventListener('input', () => renderStations());
 document.getElementById('stStatusFilter')?.addEventListener('change', () => renderStations());
-document.getElementById('stSortBy')?.addEventListener('change', () => renderStations());
-document.getElementById('stGroupBy')?.addEventListener('change', () => renderStations());
 
-// ── Ships (grouped by faction with fleet summary) ─────────────────
+// ── Ships (flat table with tree) ────────────────────────────────────────────
 function renderShips() {
   const ships = D.ships || [];
+  const systems = D.systems || {};
+  if (!document.getElementById('shipTree').children.length) buildRegionTree('shipTree', systems, 'shipTreeSelection', renderShips);
+
   const stateColors = {idle:'#66bb6a',traveling:'#4fc3f7',intra_traveling:'#4fc3f7',loading:'#ffd54f',unloading:'#ff8a65',mining:'#ab47bc'};
   const textF = document.getElementById('shipFilter').value.toLowerCase();
   const stateF = document.getElementById('shipStateFilter').value;
   const roleF = document.getElementById('shipRoleFilter').value;
 
-  // Filter
-  let filtered = ships.filter(s => {
-    if (textF && !s.name.toLowerCase().includes(textF) && !s.location.toLowerCase().includes(textF) && !s.faction.toLowerCase().includes(textF)) return false;
-    if (stateF && s.state !== stateF) return false;
-    if (roleF && s.role !== roleF) return false;
-    return true;
-  });
-
-  // Group by faction
-  const groups = {};
-  filtered.forEach(s => { const f = s.faction || 'Independent'; if(!groups[f])groups[f]=[]; groups[f].push(s); });
-
-  // Fleet summary at top
-  const stateCounts = {};
-  filtered.forEach(s => { stateCounts[s.state] = (stateCounts[s.state]||0)+1; });
-  let html = `<div style="display:flex;gap:12px;padding:6px 0;border-bottom:1px solid #1a2844;margin-bottom:6px;flex-wrap:wrap">
-    <span style="color:#8aa0b8">${filtered.length} ships</span>
-    ${Object.entries(stateCounts).map(([st,c])=>`<span style="color:${stateColors[st]||'#888'}">${st}: ${c}</span>`).join('')}
-  </div>`;
-
-  // Render grouped
-  for (const [faction, fships] of Object.entries(groups).sort((a,b)=>b[1].length-a[1].length)) {
-    const roleCounts = {};
-    fships.forEach(s => { roleCounts[s.role]=(roleCounts[s.role]||0)+1; });
-    html += `<div style="padding:4px 0;margin-top:6px;border-bottom:1px solid #1a2844">
-      <span style="color:#4fc3f7;font-weight:bold;font-size:12px">${faction}</span>
-      <span style="color:#8aa0b8;margin-left:8px;font-size:11px">${fships.length} ships (${Object.entries(roleCounts).map(([r,c])=>`${c} ${r}`).join(', ')})</span>
-    </div>`;
-    for (const s of fships) {
-      const isSelected = selectedShip === s.id;
-      const col = stateColors[s.state] || '#8aa0b8';
-      const cargoPct = s.cargo_capacity > 0 ? (s.cargo_used / s.cargo_capacity * 100) : 0;
-      let detail = '';
-      if (isSelected) {
-        const cargoStr = Object.entries(s.cargo).map(([k,v]) => `${Math.round(v)} ${fmtName(k)}`).join(', ') || 'empty';
-        detail = `<div class="ship-detail">
-          <div class="row"><span class="k">State</span><span class="v" style="color:${col}">${s.state}${s.timer ? ' ('+s.timer+'t)' : ''}</span></div>
-          <div class="row"><span class="k">Location</span><span class="v">${s.location}</span></div>
-          <div class="row"><span class="k">Destination</span><span class="v">${s.destination || '-'}</span></div>
-          <div class="row"><span class="k">Cargo</span><span class="v">${cargoStr}</span></div>
-          <div class="cargo-bar"><div class="cargo-fill" style="width:${cargoPct}%"></div></div>
-          <div style="font-size:11px;color:#8aa0b8">${Math.round(s.cargo_used)}/${s.cargo_capacity}</div>
-        </div>`;
-      }
-      html += `<div class="ship-card ${isSelected?'selected':''}" data-id="${s.id}">
-        <div class="ship-header">
-          <span class="badge" style="background:${col}22;color:${col};font-size:10px">${s.state}</span>
-          <span class="ship-name" style="font-size:11px">${s.name}</span>
-          <span class="ship-class" style="font-size:10px;color:#8aa0b8">${s.ship_class}</span>
-          <span style="margin-left:auto;color:#8aa0b8;font-size:10px">${s.location}</span>
-        </div>${detail}
-      </div>`;
+  let rows = '';
+  for (const s of ships) {
+    if (textF && !s.name.toLowerCase().includes(textF) && !s.location.toLowerCase().includes(textF) && !s.faction.toLowerCase().includes(textF)) continue;
+    if (stateF && s.state !== stateF) continue;
+    if (roleF && s.role !== roleF) continue;
+    // Tree filter: match by location system's region
+    if (shipTreeSelection) {
+      const locSys = systems[s.location_id];
+      if (locSys && !matchesTreeSelection(locSys, shipTreeSelection)) continue;
     }
-  }
-  document.getElementById('shipList').innerHTML = html;
-}
 
-// Ship click handler (delegated, won't break on re-render)
-document.getElementById('shipList').addEventListener('click', e => {
-  const card = e.target.closest('.ship-card');
-  if (!card) return;
-  const id = card.dataset.id;
-  selectedShip = selectedShip === id ? null : id;
-  renderShips();
-});
-// Filter change handlers (just re-render, state lives in DOM inputs which are static)
+    const col = stateColors[s.state] || '#8aa0b8';
+    const cargoPct = s.cargo_capacity > 0 ? Math.round(s.cargo_used / s.cargo_capacity * 100) : 0;
+    rows += `<tr>
+      <td>${s.name}</td>
+      <td style="color:#8aa0b8">${s.ship_class}</td>
+      <td>${s.role}</td>
+      <td><span class="badge" style="background:${col}22;color:${col}">${s.state}</span></td>
+      <td>${s.location}</td>
+      <td>${s.destination || '-'}</td>
+      <td style="color:#4fc3f7">${cargoPct}%</td>
+      <td style="color:#8aa0b8">${s.faction}</td>
+    </tr>`;
+  }
+  document.getElementById('shipBody').innerHTML = rows || '<tr><td colspan="8" style="color:#8aa0b8;text-align:center;padding:20px">No ships match</td></tr>';
+}
 document.getElementById('shipFilter').addEventListener('input', () => renderShips());
 document.getElementById('shipStateFilter').addEventListener('change', () => renderShips());
 document.getElementById('shipRoleFilter').addEventListener('change', () => renderShips());
+
+// ── Combat Ships ────────────────────────────────────────────────────────────
+function renderCombat() {
+  const warfare = D.warfare || {};
+  const fleets = warfare.fleet_strength || {};
+  const textF = (document.getElementById('combatFilter')?.value || '').toLowerCase();
+  const factionF = document.getElementById('combatFactionFilter')?.value || '';
+
+  // Populate faction filter once
+  const sel = document.getElementById('combatFactionFilter');
+  if (sel.options.length <= 1 && Object.keys(fleets).length) {
+    for (const fid of Object.keys(fleets).sort()) {
+      const opt = document.createElement('option'); opt.value = fid; opt.textContent = fmtName(fid); sel.appendChild(opt);
+    }
+  }
+
+  // Build tree from faction data
+  if (!document.getElementById('combatTree').children.length) {
+    let html = '<div class="tree-region" data-sel="" style="color:#66bb6a">All Factions</div>';
+    for (const fid of Object.keys(fleets).sort()) {
+      html += `<div class="tree-region" data-sel="f:${fid}">${fmtName(fid)} <span style="color:#5a7a9a">(${fleets[fid]})</span></div>`;
+    }
+    const el = document.getElementById('combatTree');
+    el.innerHTML = html;
+    el.querySelectorAll('.tree-region').forEach(n => n.addEventListener('click', () => {
+      el.querySelectorAll('.tree-region').forEach(e=>e.classList.remove('active'));
+      n.classList.add('active');
+      combatTreeSelection = n.dataset.sel;
+      renderCombat();
+    }));
+  }
+
+  // Use rebuild_orders from warfare for deficit info
+  const rebuilds = warfare.rebuild_orders || {};
+  const battles = warfare.recent_battles || [];
+
+  let rows = '';
+  // We need military ship data, fetch from the fleet details
+  // For now show faction-level summary rows
+  for (const [fid, total] of Object.entries(fleets).sort((a,b)=>a[0].localeCompare(b[0]))) {
+    if (factionF && fid !== factionF) continue;
+    if (combatTreeSelection && combatTreeSelection.startsWith('f:') && combatTreeSelection.slice(2) !== fid) continue;
+    if (textF && !fid.toLowerCase().includes(textF) && !fmtName(fid).toLowerCase().includes(textF)) continue;
+
+    const statusCol = total > 30 ? '#66bb6a' : total > 15 ? '#ffd54f' : '#ef5350';
+    const status = total > 30 ? 'Strong' : total > 15 ? 'Weakened' : 'Critical';
+    rows += `<tr>
+      <td style="color:#4fc3f7;font-weight:bold">${fmtName(fid)}</td>
+      <td>Fleet</td>
+      <td>${fmtName(fid)}</td>
+      <td style="color:#e0e8f0">${total}</td>
+      <td>42</td>
+      <td style="color:${total<42?'#ef5350':'#66bb6a'}">${Math.max(0, 42-total)}</td>
+      <td><span class="badge" style="background:${statusCol}22;color:${statusCol}">${status}</span></td>
+    </tr>`;
+  }
+
+  // Recent battles
+  if (battles.length && !textF && !factionF && !combatTreeSelection) {
+    rows += '<tr><td colspan="7" style="background:#0a1828;color:#ffd54f;font-weight:bold;padding:6px">Recent Battles</td></tr>';
+    for (const b of battles.slice(-8).reverse()) {
+      rows += `<tr>
+        <td style="color:#ef5350">${b.attacker} vs ${b.defender}</td>
+        <td>Skirmish</td>
+        <td>T${b.tick}</td>
+        <td style="color:#ef5350">-${b.a_losses}</td>
+        <td style="color:#4fc3f7">-${b.d_losses}</td>
+        <td></td>
+        <td><span class="badge badge-halt">Combat</span></td>
+      </tr>`;
+    }
+  }
+
+  document.getElementById('combatBody').innerHTML = rows || '<tr><td colspan="7" style="color:#8aa0b8;text-align:center;padding:20px">No combat data</td></tr>';
+}
+document.getElementById('combatFilter')?.addEventListener('input', () => renderCombat());
+document.getElementById('combatFactionFilter')?.addEventListener('change', () => renderCombat());
 
 // ── Market (categorized tree-view) ────────────────────────────────────────
 const TIER_MAP = {};
