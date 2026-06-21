@@ -79,6 +79,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 
 /* 3D System Labels */
 .system-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:#fff;pointer-events:none;white-space:nowrap}
+.system-label.hidden{visibility:hidden}
 
 /* Ship list items */
 .ship-item{padding:6px 10px;border-radius:4px;margin-bottom:4px;border:1px solid transparent;font-size:11px;cursor:pointer;transition:all .15s}
@@ -415,8 +416,7 @@ async function initSystems(){
   // CSS2D labels (visibility managed per frame via display style)
   const labelDivs=[];
   systems.forEach((s,i)=>{
-    const div=document.createElement('div');div.className='system-label';div.textContent=s.name;
-    div.style.display='none';
+    const div=document.createElement('div');div.className='system-label hidden';div.textContent=s.name;
     const label=new CSS2DObject(div);
     label.position.set(s.x,s.y+s.size*2+6,s.z);
     scene.add(label);
@@ -436,10 +436,15 @@ async function initSystems(){
     }
     for(const ld of labelDivs){
       const i=ld.idx;
-      if(i===sel||connSet.has(i)){ld.div.style.display='';continue;}
-      const s=systems[i];
-      const dx=s.x-camPos.x,dy=s.y-camPos.y,dz=s.z-camPos.z;
-      ld.div.style.display=(dx*dx+dy*dy+dz*dz)<showRadiusSq?'':'none';
+      let show=false;
+      if(i===sel||connSet.has(i)){show=true;}
+      else{
+        const s=systems[i];
+        const dx=s.x-camPos.x,dy=s.y-camPos.y,dz=s.z-camPos.z;
+        show=(dx*dx+dy*dy+dz*dz)<showRadiusSq;
+      }
+      if(show)ld.div.classList.remove('hidden');
+      else ld.div.classList.add('hidden');
     }
   }
   window._updateLabels=updateLabelVisibility;
@@ -458,10 +463,10 @@ async function initSystems(){
   const facColors2={terran_fed:'#4fc3f7',science_collective:'#ab47bc',merchants_guild:'#ffd54f',free_states:'#66bb6a',iron_compact:'#ff8a65',corsairs:'#ef5350'};
   Object.entries(clusterCenters).forEach(([name,c])=>{
     c.x/=c.n;c.y/=c.n;c.z/=c.n;
-    const color=facColors2[c.faction]||'#aabbcc';
-    const sz=c.faction?'12':'9';
+    const color=facColors2[c.faction]||'#8899aa';
+    const sz=c.faction?'16':'11';
     const div=document.createElement('div');
-    div.style.cssText=`font-family:'JetBrains Mono',monospace;font-size:${sz}px;color:${color};letter-spacing:2px;text-transform:uppercase;opacity:0.9;pointer-events:none;white-space:nowrap`;
+    div.style.cssText=`font-family:'JetBrains Mono',monospace;font-size:${sz}px;color:${color};font-weight:bold;letter-spacing:2px;text-transform:uppercase;pointer-events:none;white-space:nowrap`;
     div.textContent=name;
     const label=new CSS2DObject(div);
     label.position.set(c.x,c.y+30,c.z);
@@ -671,6 +676,7 @@ function focusSystem(index){
   const item=document.querySelector(`.system-item[data-index="${index}"]`);
   if(item){item.classList.add('active');item.scrollIntoView({block:'nearest'});}
   renderSystemList(document.getElementById('sysSearch')?.value||'');
+  updateSystemDetail(index);
   fetchMarket();
 }
 function zoomToSystem(index){
