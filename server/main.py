@@ -622,6 +622,33 @@ def api_data_factions():
     return jsonify(load_factions())
 
 
+@app.route("/api/data/faction_agents", methods=["GET"])
+def api_data_faction_agents():
+    """List all faction agents."""
+    from server.game_data_db import get_data_db
+    conn = get_data_db()
+    rows = conn.execute("SELECT * FROM faction_agents WHERE alive=1 ORDER BY faction_id, role").fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/data/faction_agents/regenerate", methods=["POST"])
+def api_regenerate_agents():
+    """Regenerate faction agents (all or single faction)."""
+    from server.agent_generator import regenerate_all, regenerate_faction
+    faction_id = request.args.get('faction', '')
+    if faction_id:
+        regenerate_faction(faction_id)
+    else:
+        regenerate_all()
+    # Return fresh list
+    from server.game_data_db import get_data_db
+    conn = get_data_db()
+    rows = conn.execute("SELECT * FROM faction_agents WHERE alive=1 ORDER BY faction_id, role").fetchall()
+    conn.close()
+    return jsonify({"status": "regenerated", "agents": [dict(r) for r in rows]})
+
+
 if __name__ == "__main__":
     import webbrowser
     port = int(os.getenv("PORT", "8000"))

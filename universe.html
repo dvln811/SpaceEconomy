@@ -2,40 +2,36 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Space Economy - Universe Design</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<title>Space Economy - Universe</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html{height:100%}
-body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:15px;line-height:1.7;min-height:100%}
-.nav{position:sticky;top:0;z-index:100;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:0 24px;height:48px;gap:20px}
-.nav h1{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#4fc3f7;letter-spacing:3px;text-transform:uppercase}
-.nav a{font-size:12px;color:#8aa0b8;text-decoration:none;padding:6px 14px;border:1px solid #1a2844;border-radius:3px;transition:all .15s;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
-.nav a:hover{color:#4fc3f7;border-color:#4fc3f7;background:#0d1a2f}
-.nav a.active{color:#4fc3f7;border-color:#4fc3f7}
-.content{max-width:960px;margin:0 auto;padding:48px 24px 96px}
-.content h2{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:#4fc3f7;letter-spacing:2px;text-transform:uppercase;margin:48px 0 16px;padding-bottom:8px;border-bottom:1px solid #1a2844}
-.content h2:first-child{margin-top:0}
-.content h3{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;color:#ffd54f;letter-spacing:1px;text-transform:uppercase;margin:32px 0 12px}
-.content p{margin-bottom:16px;color:#a0b4c8}
-.content ul{margin:0 0 16px 20px;color:#a0b4c8}
-.content li{margin-bottom:8px}
-.content strong{color:#e0e8f0}
-.content em{color:#4fc3f7;font-style:normal}
-.card{background:#0a0e18;border:1px solid #1a2844;border-radius:6px;padding:20px;margin:16px 0}
-.card-title{font-family:'JetBrains Mono',monospace;font-size:12px;color:#8aa0b8;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
-table{width:100%;border-collapse:collapse;margin:16px 0}
-th{font-family:'JetBrains Mono',monospace;font-size:12px;color:#8aa0b8;letter-spacing:1px;text-transform:uppercase;text-align:left;padding:6px 8px;border-bottom:1px solid #1a2844}
-td{padding:6px 8px;border-bottom:1px solid #0f1a28;font-size:12px;color:#a0b4c8}
-.tag{display:inline-block;font-size:12px;padding:2px 6px;border-radius:3px;margin:1px 2px;letter-spacing:0.5px;text-transform:uppercase}
-.tag-high{background:#66bb6a22;color:#66bb6a;border:1px solid #66bb6a44}
-.tag-medium{background:#4fc3f722;color:#4fc3f7;border:1px solid #4fc3f744}
-.tag-low{background:#ffd54f22;color:#ffd54f;border:1px solid #ffd54f44}
-.tag-none{background:#ef535022;color:#ef5350;border:1px solid #ef535044}
-blockquote{border-left:3px solid #4fc3f7;padding:12px 16px;margin:16px 0;background:#0a0f1a;color:#8aa0b8;font-style:italic}
-
+body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:15px;}
+h1{font-family:'JetBrains Mono',monospace;color:#4fc3f7;font-size:22px;letter-spacing:3px;margin-bottom:12px}
+h2{font-family:'JetBrains Mono',monospace;color:#4fc3f7;font-size:15px;letter-spacing:2px;margin:32px 0 16px;border-bottom:1px solid #1a2844;padding-bottom:8px}
+p{color:#8aa0b8;line-height:1.6;margin-bottom:12px}
+a{color:#4fc3f7;text-decoration:none}
+a:hover{text-decoration:underline}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin:16px 0}
+@media(max-width:1000px){.grid{grid-template-columns:1fr 1fr}}
+.card{background:#0a0e18;border:1px solid #1a2844;border-radius:6px;padding:20px;cursor:pointer;transition:all .15s;display:block;text-decoration:none}
+.card:hover{border-color:#4fc3f7;background:#0d1a2f;transform:translateY(-2px);text-decoration:none}
+.card h3{font-family:'JetBrains Mono',monospace;font-size:14px;letter-spacing:1px;margin-bottom:4px}
+.card .subtitle{color:#8aa0b8;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.card p{color:#8aa0b8;font-size:12px;margin:0}
+.card .stats{display:flex;gap:12px;margin-top:8px;font-size:11px;flex-wrap:wrap}
+.card .stats span{padding:2px 6px;border-radius:3px;background:#0a1020}
+.note{background:#0a1020;border:1px solid #1a2844;border-radius:4px;padding:12px;margin:12px 0;font-size:12px;color:#8aa0b8}
+.detail{display:none;background:#0a0e18;border:1px solid #1a2844;border-radius:6px;padding:20px;margin:16px 0}
+.detail.active{display:block}
+.agent{padding:8px 12px;margin:4px 0;border-left:3px solid #1a2844;background:#0a1020;border-radius:0 4px 4px 0}
+.agent-name{color:#e0e8f0;font-weight:500;font-size:13px}
+.agent-title{color:#8aa0b8;font-size:11px;text-transform:uppercase;letter-spacing:1px}
+.trait-bar{display:inline-block;height:6px;border-radius:3px;margin-left:4px;vertical-align:middle}
+.btn{font-size:11px;color:#8aa0b8;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;cursor:pointer;background:none;font-family:inherit;letter-spacing:1px;text-transform:uppercase;transition:all .1s}
+.btn:hover{color:#4fc3f7;border-color:#4fc3f7}
+.btn-danger{color:#ef5350;border-color:#ef5350}
+.btn-danger:hover{background:#ef5350;color:#fff}
 #docnav .dnl{font-size:12px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;transition:all .15s}
 #docnav .dnl:hover{color:#4fc3f7;border-color:#4fc3f7;background:#0d1a2f}
 #docnav .dnl.active{color:#4fc3f7;border-color:#4fc3f7}
@@ -48,174 +44,133 @@ blockquote{border-left:3px solid #4fc3f7;padding:12px 16px;margin:16px 0;backgro
 <a href="/design" class="dnl">Design</a><a href="/universe" class="dnl active">Universe</a><a href="/economy" class="dnl">Economy</a><a href="/resources" class="dnl">Resources</a><a href="/materials" class="dnl">Materials</a><a href="/products" class="dnl">Products</a><span style="color:#1a2844">|</span>
 <a href="/debug" class="dnl">Dashboard</a>
 </div>
-<div class="content">
-<h2>Universe Structure</h2>
+<div style="max-width:1200px;margin:0 auto;padding:0 40px">
+<h1>Universe</h1>
+<p>2,500 star systems across 20 regions. Six factions vie for territory, resources, and dominance. The galaxy starts mostly wild and slowly civilizes through expansion, trade, and war.</p>
 
-<p>The galaxy contains <strong>~2,500 star systems</strong> organized into regions, constellations, and clusters. Most of the galaxy starts unclaimed and wild. Factions hold small core territories and expand outward over months and years of real-time simulation. Security levels evolve as factions build infrastructure and project force.</p>
-
-<blockquote>The universe is persistent and evolves through NPC faction activity. Systems that are wild today may be civilized in six months. Systems that are safe today may fall to warfare. Think of it as a living place with a history that writes itself.</blockquote>
-
-<h2>Scale and Distribution</h2>
-
-<h3>Target: ~2,500 Systems</h3>
-<table>
-<tr><th>Zone</th><th>Systems (approx)</th><th>% of Galaxy</th><th>Character</th></tr>
-<tr><td><span class="tag tag-high">High-Sec</span></td><td>~150 (at start)</td><td>6%</td><td>Faction homeworlds, fully developed, safe. Grows over time.</td></tr>
-<tr><td><span class="tag tag-medium">Medium-Sec</span></td><td>~250 (at start)</td><td>10%</td><td>Frontier of civilization. Some infrastructure, some risk.</td></tr>
-<tr><td><span class="tag tag-low">Low-Sec</span></td><td>~500 (at start)</td><td>20%</td><td>Contested, sparse stations, pirate activity. Good ore.</td></tr>
-<tr><td><span class="tag tag-none">Null-Sec / Wild</span></td><td>~1,600 (at start)</td><td>64%</td><td>Unclaimed, no infrastructure, rare resources. The frontier to conquer.</td></tr>
-</table>
-
-<p>Over time, faction expansion shifts these numbers. High-sec grows, null-sec shrinks. But warfare and Corsair activity push back, creating a dynamic equilibrium.</p>
-
-<h3>Faction Starting Territories</h3>
-<table>
-<tr><th>Faction</th><th>Homeworld Region</th><th>Starting Systems</th><th>Starting Stations</th></tr>
-<tr><td>Terran Federation</td><td>Core (center)</td><td>~40</td><td>~60 (heavily developed)</td></tr>
-<tr><td>Nexus Collective</td><td>Core (north)</td><td>~30</td><td>~40 (research-focused)</td></tr>
-<tr><td>Merchants Guild</td><td>Rim (east)</td><td>~35</td><td>~50 (trade hubs)</td></tr>
-<tr><td>Frontier Alliance</td><td>Rim (west)</td><td>~30</td><td>~35 (scattered colonies)</td></tr>
-<tr><td>Iron Compact</td><td>Outer (south)</td><td>~25</td><td>~30 (military-industrial)</td></tr>
-<tr><td>The Corsairs</td><td>Scattered (null-sec)</td><td>~15</td><td>~15 (hidden bases)</td></tr>
-</table>
-<p>Total claimed at start: ~175 systems. The remaining ~2,325 are unclaimed wilderness.</p>
-
-<h2>Security Level Progression</h2>
-
-<p>Security is not a fixed property of a system. It evolves based on faction activity:</p>
-
-<h3>How Security Rises</h3>
-<ul>
-<li><strong>Station construction</strong> - building a station begins civilizing a system</li>
-<li><strong>Military patrols</strong> - faction fleets patrolling raises security</li>
-<li><strong>Trade volume</strong> - sustained commerce indicates stability</li>
-<li><strong>Time</strong> - security rises slowly even with minimal activity (weeks per level)</li>
-</ul>
-
-<h3>How Security Falls</h3>
-<ul>
-<li><strong>Station destruction</strong> - warfare destroying infrastructure drops security</li>
-<li><strong>Pirate activity</strong> - Corsair raids degrade security</li>
-<li><strong>Abandonment</strong> - systems with no faction presence slowly regress</li>
-<li><strong>Blockades</strong> - cutting off supply lines starves stations</li>
-</ul>
-
-<h3>Progression Timeline (per system)</h3>
-<table>
-<tr><th>Transition</th><th>Requirements</th><th>Real-Time</th></tr>
-<tr><td>Wild -> Low</td><td>First station built, basic patrols</td><td>~1 week</td></tr>
-<tr><td>Low -> Medium</td><td>2+ stations, regular trade, military presence</td><td>~2-3 weeks</td></tr>
-<tr><td>Medium -> High</td><td>Full infrastructure, sustained peace, high trade volume</td><td>~4-6 weeks</td></tr>
-</table>
-<p>At ~1 system per week average advancement, civilizing the entire galaxy would take roughly <strong>3-5 years</strong> of continuous simulation (with setbacks from warfare slowing it further).</p>
-
-<h2>Faction Expansion Mechanics</h2>
-
-<h3>How Factions Grow</h3>
-<ul>
-<li>Factions target adjacent unclaimed systems for expansion</li>
-<li>They build stations (requires hauling construction materials)</li>
-<li>They assign patrol fleets to protect new territory</li>
-<li>They establish mining operations for local resources</li>
-<li>Expansion rate limited by economy (can't build stations without materials)</li>
-</ul>
-
-<h3>Expansion Priorities (AI)</h3>
-<ul>
-<li><strong>Resource-rich systems</strong> - rare ore deposits attract colonization</li>
-<li><strong>Strategic chokepoints</strong> - control jump nexus systems for trade control</li>
-<li><strong>Buffer zones</strong> - expand toward enemies to create defensive depth</li>
-<li><strong>Trade routes</strong> - connect isolated colonies to the main economy</li>
-</ul>
-
-<h3>Conflict Over Territory</h3>
-<ul>
-<li>Two factions expanding toward the same system creates a flashpoint</li>
-<li>Warfare breaks out over contested systems</li>
-<li>Winner claims the system, loser's stations are destroyed or captured</li>
-<li>Border systems are perpetually contested (low-sec buffer zones)</li>
-</ul>
-
-<h2>Universe Generation (Planned)</h2>
-
-<p>2,500 systems will be procedurally generated with constraints:</p>
-
-<h3>Generation Rules</h3>
-<ul>
-<li><strong>Faction homeworlds hand-placed</strong> at specific coordinates with pre-built infrastructure</li>
-<li><strong>Jump gate network</strong> connects systems (average 3-4 connections per system, some chokepoints with 1-2)</li>
-<li><strong>Ore distribution follows security gradient</strong> - common ores everywhere, rare ores only in deep null-sec</li>
-<li><strong>System types distributed logically</strong> - mining systems near ore, shipyards near faction capitals</li>
-<li><strong>Distance from faction center = danger</strong> - the further out, the less infrastructure, the more wild</li>
-</ul>
-
-<h3>System Contents</h3>
-<p>Each system contains:</p>
-<ul>
-<li>A central star (type varies: main sequence, red giant, binary, etc.)</li>
-<li>2-6 planets with moons</li>
-<li>0-4 asteroid belts (more in mining-rich systems)</li>
-<li>0-3 stations (in claimed systems, more in developed ones)</li>
-<li>Jump gates (one per connection, at outer ring)</li>
-</ul>
-
-<h2>Navigation Model</h2>
-
-<h3>Two-Layer Travel</h3>
-<ul>
-<li><strong>Inter-system:</strong> Jump gates connect systems. Travel time varies by distance (30-120 seconds per hop).</li>
-<li><strong>Intra-system:</strong> Travel between objects within a system (stations, belts, gates). 30-90 seconds depending on distance and ship speed.</li>
-<li><strong>Align time:</strong> Ships take 2-15 seconds to align before warping intra-system (larger ships = slower).</li>
-</ul>
-
-<h3>Scale Implications</h3>
-<p>With 2,500 systems, crossing the galaxy takes many jumps. This means:</p>
-<ul>
-<li>Local economies are somewhat isolated (prices vary by region)</li>
-<li>Hauling rare ore from null-sec to core is a significant logistics operation</li>
-<li>Factions cannot instantly project force across their territory</li>
-<li>Chokepoint systems have enormous strategic value</li>
-</ul>
-
-<h2>NPC Ship Simulation</h2>
-
-<p>At 2,500 systems, the NPC population scales to <strong>100,000+ ships</strong>. These are simulated abstractly:</p>
-
-<h3>Performance Model</h3>
-<ul>
-<li>Each NPC is a state machine: <code style="color:#ffd54f">{system, destination, state, cargo, faction, ship_class}</code></li>
-<li>Ships only need detailed simulation when player is in the same system</li>
-<li>Aggregate behavior (trade volume, mining output) can be calculated per-system without individual tick processing</li>
-<li>Military fleets simulated as unit groups, not individual ships</li>
-<li>Target: simulate 100K+ ships at 1 tick/sec on shared-cpu-2x</li>
-</ul>
-
-<h3>Ship Distribution (target)</h3>
-<table>
-<tr><th>Role</th><th>Count</th><th>Behavior</th></tr>
-<tr><td>Haulers</td><td>~40,000</td><td>Move goods between stations along trade routes</td></tr>
-<tr><td>Miners</td><td>~20,000</td><td>Extract ore from asteroid fields, deliver to refineries</td></tr>
-<tr><td>Military (patrol)</td><td>~15,000</td><td>Patrol faction territory, raise security</td></tr>
-<tr><td>Military (fleet)</td><td>~10,000</td><td>Organized battle groups for warfare/expansion</td></tr>
-<tr><td>Corsairs/Pirates</td><td>~5,000</td><td>Raid trade routes, attack vulnerable systems</td></tr>
-<tr><td>Civilian/Other</td><td>~10,000</td><td>Station crew shuttles, exploration, misc</td></tr>
-</table>
-
-<h2>Ore Distribution</h2>
-
-<blockquote>The rarer the ore, the further from civilization you must go to find it.</blockquote>
-
-<table>
-<tr><th>Ore Category</th><th>Examples</th><th>Found In</th><th>Volume per Unit</th></tr>
-<tr><td><strong>Common</strong></td><td>Iron, Copper, Carbonite, Hydral Ice, Silicon</td><td>Everywhere (high-sec included)</td><td>0.1 m3</td></tr>
-<tr><td><strong>Uncommon</strong></td><td>Cobalt, Zinc, Tin, Nickel, Nitrogen Ice, Biomass</td><td>Med-sec and below</td><td>0.2-0.3 m3</td></tr>
-<tr><td><strong>Rare</strong></td><td>Titanium, Tungsten, Chromium, Helium-3, Xenon</td><td>Low-sec and below</td><td>0.5-0.6 m3</td></tr>
-<tr><td><strong>Exotic</strong></td><td>Platinum, Gold, Palladium, Quartz/Lithium/Beryllium Crystal</td><td>Null-sec only</td><td>1.0-1.2 m3</td></tr>
-<tr><td><strong>Anomalous</strong></td><td>Kraxolite, Void Shard, Neutronium</td><td>Deep null-sec anomalies</td><td>1.5-2.0 m3</td></tr>
-</table>
-
-<p>This creates natural supply chain pressure: common materials are cheap and plentiful, but capital ship construction requires exotic materials from dangerous space, creating logistics challenges and trade opportunities.</p>
-
+<h2>Factions</h2>
+<div class="note">
+Each faction is led by named agents with personalities that shape decisions. Agents can be regenerated for a fresh start.
+<button class="btn btn-danger" style="margin-left:12px" onclick="regenerateAgents()">Regenerate All Agents</button>
 </div>
+<div class="grid" id="factionGrid"></div>
+<div id="factionDetail"></div>
+
+<h2>Galaxy</h2>
+<div class="grid" style="grid-template-columns:1fr 1fr">
+  <div class="card" onclick="location.href='/'">
+    <h3>Star Map</h3>
+    <p>3D interactive star map. Navigate systems, view connections, explore regions.</p>
+    <div class="stats"><span>2,500 systems</span><span>20 regions</span><span>138 clusters</span></div>
+  </div>
+  <div class="card" onclick="location.href='/debug'">
+    <h3>Simulation Dashboard</h3>
+    <p>Live economy stats, ship tracking, production health, performance metrics.</p>
+  </div>
+</div>
+</div>
+
+<script>
+let factions = {};
+let agents = [];
+
+async function init() {
+  const [facRes, agentRes] = await Promise.all([
+    fetch('/api/data/factions'),
+    fetch('/api/data/faction_agents')
+  ]);
+  factions = await facRes.json();
+  agents = await agentRes.json();
+  renderGrid();
+}
+
+function renderGrid() {
+  const grid = document.getElementById('factionGrid');
+  let html = '';
+  for (const [fid, f] of Object.entries(factions)) {
+    const agentCount = agents.filter(a => a.faction_id === fid).length;
+    const leader = agents.find(a => a.faction_id === fid && a.role === 'leader');
+    html += `<div class="card" onclick="showFaction('${fid}')" style="border-left:3px solid ${f.color}">
+      <h3 style="color:${f.color}">${f.name}</h3>
+      <div class="subtitle">${f.short} // ${leader ? leader.title : 'Unknown'}</div>
+      <p>${f.philosophy}</p>
+      <div class="stats">
+        <span>${agentCount} agents</span>
+        <span>${f.home_cluster}</span>
+        <span style="color:#ef5350">${(f.enemies||[]).length} enemies</span>
+      </div>
+    </div>`;
+  }
+  grid.innerHTML = html;
+}
+
+function showFaction(fid) {
+  const f = factions[fid];
+  const fAgents = agents.filter(a => a.faction_id === fid);
+  const leader = fAgents.find(a => a.role === 'leader');
+  const others = fAgents.filter(a => a.role !== 'leader');
+  const nameMap = {};
+  for (const [k, v] of Object.entries(factions)) nameMap[k] = v.name;
+
+  const traitBar = (val, color) => `<span class="trait-bar" style="width:${val*60}px;background:${color}"></span> ${(val*100).toFixed(0)}%`;
+
+  let html = `<div class="detail active">
+    <h2 style="color:${f.color};margin-top:0">${f.name}</h2>
+    <p><strong>Philosophy:</strong> ${f.philosophy}</p>
+    <p><strong>Territory:</strong> ${f.home_cluster} | <strong>Allies:</strong> ${(f.allies||[]).map(a=>nameMap[a]||a).join(', ')||'None'} | <strong>Enemies:</strong> ${(f.enemies||[]).map(e=>nameMap[e]||e).join(', ')||'None'}</p>
+    <p><strong>Corporations:</strong> ${f.corporations.map(c=>c.name).join(', ')}</p>`;
+
+  if (leader) {
+    html += `<h2>Leadership</h2>
+    <div class="agent" style="border-color:${f.color}">
+      <div class="agent-name">${leader.name}</div>
+      <div class="agent-title">${leader.title} (${leader.role})</div>
+      <div style="margin-top:6px;font-size:11px">
+        <div>Aggression: ${traitBar(leader.aggression,'#ef5350')}</div>
+        <div>Caution: ${traitBar(leader.caution,'#4fc3f7')}</div>
+        <div>Competence: ${traitBar(leader.competence,'#66bb6a')}</div>
+        <div>Loyalty: ${traitBar(leader.loyalty,'#ffd54f')}</div>
+        <div>Ambition: ${traitBar(leader.ambition,'#ab47bc')}</div>
+      </div>
+    </div>`;
+  }
+
+  if (others.length) {
+    html += `<h2>Officers</h2>`;
+    for (const a of others) {
+      html += `<div class="agent">
+        <div class="agent-name">${a.name}</div>
+        <div class="agent-title">${a.title} (${a.role})</div>
+        <div style="margin-top:4px;font-size:11px">
+          Agg: ${traitBar(a.aggression,'#ef5350')} | Comp: ${traitBar(a.competence,'#66bb6a')} | Loy: ${traitBar(a.loyalty,'#ffd54f')}
+        </div>
+      </div>`;
+    }
+  }
+
+  html += `<div style="margin-top:16px"><button class="btn" onclick="regenerateFaction('${fid}')">Regenerate ${f.short} Agents</button></div>`;
+  html += `</div>`;
+  document.getElementById('factionDetail').innerHTML = html;
+}
+
+async function regenerateAgents() {
+  if (!confirm('Regenerate ALL faction agents? This replaces all current leaders and officers.')) return;
+  const r = await fetch('/api/data/faction_agents/regenerate', {method: 'POST'});
+  const d = await r.json();
+  agents = d.agents || [];
+  renderGrid();
+  document.getElementById('factionDetail').innerHTML = '<div class="note">Agents regenerated. Click a faction to view.</div>';
+}
+
+async function regenerateFaction(fid) {
+  const r = await fetch('/api/data/faction_agents/regenerate?faction=' + fid, {method: 'POST'});
+  const d = await r.json();
+  agents = d.agents || [];
+  renderGrid();
+  showFaction(fid);
+}
+
+init();
+</script>
 </body>
 </html>
