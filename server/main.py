@@ -19,6 +19,12 @@ if os.path.exists(_shipped_db):
     import shutil
     shutil.copy2(_shipped_db, _live_db)
     log.info("Deployed fresh game_data.db to volume")
+    # Also copy tag files needed by generators
+    for _tag_file in ("portrait_tags_shipped.json", "emblem_tags_shipped.json"):
+        _src = os.path.join(BASE_DIR, _tag_file)
+        _dst = os.path.join(_data_dir, _tag_file.replace("_shipped", ""))
+        if os.path.exists(_src):
+            shutil.copy2(_src, _dst)
 
 app = Flask(__name__, static_folder=None)
 

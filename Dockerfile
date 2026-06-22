@@ -9,6 +9,8 @@ COPY . .
 
 # Preserve game_data.db outside the volume mount point so it survives mount
 RUN cp data/game_data.db /app/game_data_shipped.db
+RUN cp data/portrait_tags.json /app/portrait_tags_shipped.json
+RUN cp data/emblem_tags.json /app/emblem_tags_shipped.json
 
 ENV PYTHONUNBUFFERED=1
 ENV DATA_DIR=/app/data

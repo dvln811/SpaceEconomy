@@ -75,6 +75,50 @@ def _load_json(path):
         return json.load(f)
 
 
+HISTORY_TEMPLATES = [
+    "Founded {years} years ago in the {region} sector, {name} began as a small {specialty} outfit before expanding into a {faction}-aligned powerhouse.",
+    "{name} rose to prominence after securing exclusive {specialty} contracts with the {faction}. Under {ceo}'s leadership, it has grown into one of the sector's most influential corporations.",
+    "Originally a family-owned {specialty} venture, {name} was acquired and restructured {years} years ago. Now backed by {faction} capital, it operates across multiple systems.",
+    "Born from the ashes of the Collapse, {name} carved out a niche in {specialty}. Its {members:,} employees are fiercely loyal to CEO {ceo}.",
+    "{name} was established by ex-military officers seeking profit in the {specialty} trade. It maintains close ties to the {faction} and operates with military precision.",
+    "What started as a cooperative of independent {specialty} operators became {name} after {ceo} unified them under a single banner {years} years ago.",
+    "A controversial but profitable corporation, {name} dominates {specialty} in its home systems. Critics call it a monopoly; {ceo} calls it efficiency.",
+    "{name} emerged from the frontier colonies, building its reputation on reliable {specialty} services. The {faction} granted it exclusive operating licenses {years} years ago.",
+]
+
+
+def generate_corp_history(name, specialty, faction_id, ceo_name, members):
+    """Generate a short backstory for a corporation."""
+    template = random.choice(HISTORY_TEMPLATES)
+    faction_name = faction_id.replace('_', ' ').title()
+    return template.format(
+        name=name,
+        specialty=specialty.replace('_', ' '),
+        faction=faction_name,
+        ceo=ceo_name,
+        years=random.randint(8, 120),
+        region=random.choice(['Outer Rim', 'Core', 'Mid-Belt', 'Frontier', 'Deep Space', 'Nexus']),
+        members=members,
+    )
+
+
+def assign_stations(faction_id, conn):
+    """Pick 1-3 stations in faction territory for a corp to control."""
+    rows = conn.execute(
+        "SELECT s.id, s.name, sys.id as sys_id, sys.name as sys_name FROM stations s "
+        "JOIN systems sys ON s.system_id = sys.id WHERE sys.faction_id = ?",
+        (faction_id,)
+    ).fetchall()
+    if not rows:
+        rows = conn.execute(
+            "SELECT s.id, s.name, sys.id as sys_id, sys.name as sys_name FROM stations s "
+            "JOIN systems sys ON s.system_id = sys.id LIMIT 20"
+        ).fetchall()
+    count = random.choices([1, 2, 3], weights=[50, 35, 15])[0]
+    picks = random.sample(rows, min(count, len(rows))) if rows else []
+    return json.dumps([{"station": r[1], "system": r[3], "system_id": r[2]} for r in picks])
+
+
 def generate_corp_name(used_names):
     for _ in range(200):
         name = f"{random.choice(PREFIXES)} {random.choice(SUFFIXES)}"
@@ -117,7 +161,9 @@ def pick_head_portrait(gender, archetype, used_portraits, portrait_tags):
 def seed_corporations():
     """Generate and insert the initial set of corporations."""
     conn = sqlite3.connect(DB)
+    conn.row_factory = sqlite3.Row
     conn.execute("DELETE FROM corporations")
+    conn.execute("DELETE FROM faction_agents WHERE id LIKE 'corp_%'")
 
     emblem_tags = _load_json(EMBLEM_TAGS_PATH)
     portrait_tags = _load_json(PORTRAIT_TAGS_PATH)
@@ -147,6 +193,11 @@ def seed_corporations():
             portrait = pick_head_portrait(gender, archetype, used_portraits, portrait_tags)
             head_id = f"corp_{corp_id}_ceo"
 
+            # Corp details
+            members = random.randint(800, 45000)
+            stations_json = assign_stations(faction_id, conn)
+            history = generate_corp_history(name, specialty, faction_id, head_name, members)
+
             # Insert head agent into faction_agents
             conn.execute("""INSERT INTO faction_agents
                 (id, name, title, faction_id, role, aggression, caution, competence,
@@ -159,14 +210,13 @@ def seed_corporations():
                  round(random.gauss(0.6, 0.15), 2),
                  round(random.gauss(0.7, 0.12), 2),
                  round(random.gauss(0.2, 0.1), 2),
-                 f"Head of {name}, a {specialty.replace('_', ' ')} corporation aligned with the {faction_id.replace('_', ' ').title()}.",
-                 portrait))
+                 history, portrait))
 
-            corps.append((corp_id, name, emblem, faction_id, specialty, head_id, 0, 'active'))
+            corps.append((corp_id, name, emblem, faction_id, specialty, head_id, 0, 'active', history, members, stations_json))
 
     conn.executemany("""INSERT INTO corporations
-        (id, name, emblem, faction_id, specialty, head_agent_id, founded_tick, status)
-        VALUES (?,?,?,?,?,?,?,?)""", corps)
+        (id, name, emblem, faction_id, specialty, head_agent_id, founded_tick, status, history, members, stations)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?)""", corps)
 
     conn.commit()
     conn.close()
