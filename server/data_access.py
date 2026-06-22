@@ -147,7 +147,7 @@ def load_universe(conn=None) -> dict:
 
 
 def load_ship_types(conn=None) -> dict:
-    """Load civilian ship types from DB."""
+    """Load non-faction ships from unified ships table."""
     close = False
     if conn is None:
         conn = get_data_db()
@@ -155,10 +155,10 @@ def load_ship_types(conn=None) -> dict:
 
     from server.ship_types import ShipType
     ships = {}
-    rows = conn.execute("SELECT * FROM ship_types").fetchall()
+    rows = conn.execute("SELECT * FROM ships WHERE faction_id = ''").fetchall()
     for row in rows:
         ships[row["id"]] = ShipType(
-            id=row["id"], name=row["name"], role=row["role"], tier=row["tier"],
+            id=row["id"], name=row["name"], role=row["hull_class"], tier=row["tier"],
             cargo_capacity=row["cargo_capacity"], fuel_capacity=row["fuel_capacity"],
             speed=row["speed"], intra_speed=row["intra_speed"],
             hull_hp=row["hull_hp"], align_time=row["align_time"],
@@ -173,7 +173,7 @@ def load_ship_types(conn=None) -> dict:
 
 
 def load_military_ships(conn=None) -> dict:
-    """Load military ship classes from DB."""
+    """Load faction military ships from unified ships table."""
     close = False
     if conn is None:
         conn = get_data_db()
@@ -181,7 +181,7 @@ def load_military_ships(conn=None) -> dict:
 
     from server.military import MilitaryShipClass
     ships = {}
-    rows = conn.execute("SELECT * FROM military_ships").fetchall()
+    rows = conn.execute("SELECT * FROM ships WHERE faction_id != ''").fetchall()
     for row in rows:
         ships[row["id"]] = MilitaryShipClass(
             id=row["id"], name=row["name"], hull_class=row["hull_class"],

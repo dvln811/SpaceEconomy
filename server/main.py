@@ -585,24 +585,34 @@ def api_data_systems():
     return jsonify([dict(r) for r in rows])
 
 
-@app.route("/api/data/military_ships", methods=["GET"])
-def api_data_military():
-    """List all military ships from DB."""
+@app.route("/api/data/ships", methods=["GET"])
+def api_data_ships():
+    """List all ships (unified table)."""
     from server.game_data_db import get_data_db
     conn = get_data_db()
-    rows = conn.execute("SELECT * FROM military_ships ORDER BY faction_id, hull_class").fetchall()
+    rows = conn.execute("SELECT * FROM ships ORDER BY hull_class, tier, name").fetchall()
     conn.close()
-    return jsonify([{**dict(r), "weapons": json.loads(r["weapons"]), "modules": json.loads(r["modules"]), "build_cost": json.loads(r["build_cost"])} for r in rows])
+    return jsonify([{**dict(r), "hardpoints": json.loads(r["hardpoints"]), "weapons": json.loads(r["weapons"]), "modules": json.loads(r["modules"]), "build_cost": json.loads(r["build_cost"])} for r in rows])
+
+
+@app.route("/api/data/military_ships", methods=["GET"])
+def api_data_military():
+    """List faction military ships."""
+    from server.game_data_db import get_data_db
+    conn = get_data_db()
+    rows = conn.execute("SELECT * FROM ships WHERE faction_id != '' ORDER BY faction_id, hull_class").fetchall()
+    conn.close()
+    return jsonify([{**dict(r), "hardpoints": json.loads(r["hardpoints"]), "weapons": json.loads(r["weapons"]), "modules": json.loads(r["modules"]), "build_cost": json.loads(r["build_cost"])} for r in rows])
 
 
 @app.route("/api/data/ship_types", methods=["GET"])
 def api_data_ship_types():
-    """List all civilian ship types from DB."""
+    """List non-faction ships (civilian hulls)."""
     from server.game_data_db import get_data_db
     conn = get_data_db()
-    rows = conn.execute("SELECT * FROM ship_types ORDER BY role, tier").fetchall()
+    rows = conn.execute("SELECT * FROM ships WHERE faction_id = '' ORDER BY hull_class, tier").fetchall()
     conn.close()
-    return jsonify([{**dict(r), "hardpoints": json.loads(r["hardpoints"]), "build_cost": json.loads(r["build_cost"])} for r in rows])
+    return jsonify([{**dict(r), "hardpoints": json.loads(r["hardpoints"]), "weapons": json.loads(r["weapons"]), "modules": json.loads(r["modules"]), "build_cost": json.loads(r["build_cost"])} for r in rows])
 
 
 @app.route("/api/data/factions", methods=["GET"])

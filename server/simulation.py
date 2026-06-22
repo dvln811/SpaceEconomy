@@ -104,7 +104,7 @@ class Simulation:
     def _spawn_traders(self, count: int):
         from server.data_access import load_ship_types
         all_ships = load_ship_types()
-        hauler_types = [s for s in all_ships.values() if s.role == 'hauler']
+        hauler_types = [s for s in all_ships.values() if s.role == 'Industrial']
         trade_corps = ["Voidway Logistics", "Galactic Exchange", "Federal Transit Authority", "Smelter's Union", "Terraform Pioneers"]
         risk_by_tier = {1: 0.2, 2: 0.5, 3: 0.7, 4: 0.9}
 
@@ -142,7 +142,7 @@ class Simulation:
         mining_systems = [sid for sid, sys in self.universe.items() if sys.asteroid_fields]
         from server.data_access import load_ship_types
         all_ships = load_ship_types()
-        miner_types = [s for s in all_ships.values() if s.role == 'miner']
+        miner_types = [s for s in all_ships.values() if s.role == 'Mining Barge']
         miner_factions = ["Rockbreaker Collective", "Deepvein Extraction", "Smelter's Union"]
         risk_by_tier = {1: 0.2, 2: 0.5, 3: 0.8}
         for i in range(count):
