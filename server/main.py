@@ -295,10 +295,21 @@ def api_state():
 @app.route("/api/ships")
 def api_ships():
     """Ship positions and state for the game map."""
+    since_tick = request.args.get('since_tick', type=int)
+    tracker = supervisor.change_tracker if supervisor else None
+
+    # Determine which ships to serialize
+    changed_ids = None
+    if since_tick is not None and tracker and tracker.has_tick(since_tick):
+        changes = tracker.get_changes_since(since_tick)
+        changed_ids = changes["ships"]
+
     ships = []
     for s in sim.ships:
+        if changed_ids is not None and s.id not in changed_ids:
+            continue
         ship_data = {
-            "name": s.name, "role": s.role, "ship_class": s.ship_class, "faction": s.faction,
+            "id": s.id, "name": s.name, "role": s.role, "ship_class": s.ship_class, "faction": s.faction,
             "state": s.state, "location": s.location, "destination": s.destination,
             "progress": round(s.progress, 4), "speed": s.speed, "cargo": s.cargo,
             "intra_position": s.intra_position, "intra_destination": s.intra_destination,
@@ -323,7 +334,7 @@ def api_ships():
                 ship_data["intra_to"] = {"d": to_obj.distance, "a": round(to_obj.angle, 4)}
                 ship_data["intra_dist"] = round(dist, 3)
         ships.append(ship_data)
-    return jsonify({"tick": sim.tick_count, "ships": ships})
+    return jsonify({"tick": sim.tick_count, "ships": ships, "delta": changed_ids is not None})
 
 
 @app.route("/api/ship_model/<class_id>")
@@ -343,9 +354,17 @@ def api_debug():
     """Debug summary for the monitor page."""
     from server.simulation import COMMODITIES as COMS
     summary = sim.get_state_summary()
+
+    since_tick = request.args.get('since_tick', type=int)
+    tracker = supervisor.change_tracker if supervisor else None
+    is_delta = since_tick is not None and tracker and tracker.has_tick(since_tick)
+    changes = tracker.get_changes_since(since_tick) if is_delta else None
+
     # Per-system station production details
     systems_detail = {}
     for sid, sys_obj in sim.universe.items():
+        if is_delta and sid not in changes["systems"]:
+            continue
         stations_info = []
         for st in sys_obj.stations:
             # Calculate production health for each output
@@ -397,6 +416,8 @@ def api_debug():
     # Ship details with full info
     ships = []
     for s in sim.ships:
+        if is_delta and s.id not in changes["ships"]:
+            continue
         loc_name = sim.universe[s.location].name if s.location in sim.universe else s.location or "-"
         dest_name = sim.universe[s.destination].name if s.destination in sim.universe else s.destination or "-"
         ships.append({
@@ -449,6 +470,7 @@ def api_debug():
     if supervisor:
         summary["performance"] = supervisor.metrics
 
+    summary["delta"] = is_delta
     return jsonify(summary)
 
 
@@ -457,6 +479,21 @@ def api_system(system_id):
     """Detailed system view with objects and ship positions."""
     if system_id not in sim.universe:
         return jsonify({"error": "unknown system"}), 404
+
+    since_tick = request.args.get('since_tick', type=int)
+    tracker = supervisor.change_tracker if supervisor else None
+
+    # If since_tick provided and system hasn't changed, return minimal response
+    if since_tick is not None and tracker and tracker.has_tick(since_tick):
+        changes = tracker.get_changes_since(since_tick)
+        if system_id not in changes["systems"]:
+            # Check if any ship in this system changed
+            ship_changed = any(
+                s.id in changes["ships"] for s in sim.ships if s.location == system_id
+            )
+            if not ship_changed:
+                return jsonify({"tick": sim.tick_count, "changed": False})
+
     sys_obj = sim.universe[system_id]
     objects = [{"id": o.id, "name": o.name, "type": o.obj_type, "distance": o.distance, "angle": round(o.angle, 4), "connects_to": o.connects_to, "parent": o.parent} for o in sys_obj.objects]
     # Ships in this system
@@ -481,7 +518,7 @@ def api_system(system_id):
     return jsonify({
         "id": system_id, "name": sys_obj.name, "type": sys_obj.system_type,
         "security": sys_obj.security, "objects": objects, "ships": ships_here,
-        "tick": sim.tick_count,
+        "tick": sim.tick_count, "changed": True,
     })
 
 

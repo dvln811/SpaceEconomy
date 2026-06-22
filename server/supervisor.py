@@ -9,6 +9,7 @@ from server.intents import (
     ShipSellIntent, ShipMineIntent, ShipDestroyedEvent, ShipBuiltEvent,
     SpawnCommand, FactionOrder, PriceUpdate, EventLog,
 )
+from server.change_tracker import ChangeTracker
 
 log = logging.getLogger("supervisor")
 
@@ -91,6 +92,7 @@ class Supervisor:
         self.multiplier = 1
         self._stop = False
         self._thread = None
+        self.change_tracker = ChangeTracker()
         # Build region cache and ship index for workers
         self._region_cache = {}  # {region: {commodity: [(system_id, station_name, qty)]}}
         self._ship_index = {}  # {ship_id: ship}
@@ -199,6 +201,9 @@ class Supervisor:
         if len(self.sim.events) > 100:
             self.sim.events = self.sim.events[-100:]
 
+        # Prune old change tracking entries
+        self.change_tracker.tick_cleanup(tick)
+
     def _apply_intent(self, intent, tick: int):
         """Apply a single intent to canonical state."""
         if isinstance(intent, InventoryDelta):
@@ -208,6 +213,7 @@ class Supervisor:
                     if st.name == intent.station_name:
                         for commodity, delta in intent.deltas.items():
                             st.inventory[commodity] = max(0, st.inventory.get(commodity, 0) + delta)
+                        self.change_tracker.record_system_change(tick, intent.system_id)
                         break
 
         elif isinstance(intent, PriceUpdate):
@@ -216,6 +222,7 @@ class Supervisor:
                 for st in sys.stations:
                     if st.name == intent.station_name:
                         st.price_cache[intent.commodity_id] = intent.new_price
+                        self.change_tracker.record_system_change(tick, intent.system_id)
                         break
 
         elif isinstance(intent, ShipMoveIntent):
@@ -231,11 +238,13 @@ class Supervisor:
                     else:
                         ship.state = "traveling"
                         ship.progress = 0.0
+                    self.change_tracker.record_ship_change(tick, ship.id)
 
         elif isinstance(intent, ShipIntraIntent):
             ship = self._ship_index.get(intent.ship_id)
             if ship and ship.state == "idle":
                 self._start_intra_travel(ship, intent.dest_obj_id)
+                self.change_tracker.record_ship_change(tick, ship.id)
 
         elif isinstance(intent, ShipBuyIntent):
             ship = self._ship_index.get(intent.ship_id)
@@ -256,6 +265,8 @@ class Supervisor:
                 ship.state_timer = LOADING_TICKS
                 ship.route_path = intent.route_home
                 ship.destination = intent.route_home[0] if intent.route_home else ship.assigned_system
+                self.change_tracker.record_ship_change(tick, ship.id)
+                self.change_tracker.record_system_change(tick, intent.system_id)
 
         elif isinstance(intent, ShipSellIntent):
             ship = self._ship_index.get(intent.ship_id)
@@ -273,12 +284,15 @@ class Supervisor:
                 ship.state = "unloading"
                 ship.state_timer = UNLOADING_TICKS
                 self.sim.trade_volume += 1
+                self.change_tracker.record_ship_change(tick, ship.id)
+                self.change_tracker.record_system_change(tick, intent.system_id)
 
         elif isinstance(intent, ShipMineIntent):
             ship = self._ship_index.get(intent.ship_id)
             if ship and ship.state == "idle":
                 ship.state = "mining"
                 ship.state_timer = MINING_TICKS
+                self.change_tracker.record_ship_change(tick, ship.id)
 
         elif isinstance(intent, ShipDestroyedEvent):
             if hasattr(self.sim, 'warfare'):
@@ -339,6 +353,7 @@ class Supervisor:
     def _process_timers(self):
         import random
         from server.simulation import COMMODITIES
+        tick = self.sim.tick_count
         for ship in self.sim.ships:
             if ship.state in ("loading", "unloading", "mining") and ship.state_timer > 0:
                 ship.state_timer -= 1
@@ -356,6 +371,7 @@ class Supervisor:
                         ship.state = "idle"
                     elif ship.state == "mining":
                         self._complete_mining(ship, random)
+                    self.change_tracker.record_ship_change(tick, ship.id)
 
     def _complete_mining(self, ship, random):
         import random as rnd
@@ -379,6 +395,7 @@ class Supervisor:
 
     def _move_ships(self):
         import math
+        tick = self.sim.tick_count
         for ship in self.sim.ships:
             if ship.state != "traveling" or not ship.destination:
                 continue
@@ -386,6 +403,7 @@ class Supervisor:
             b = self.sim.universe.get(ship.destination)
             if not b:
                 ship.state = "idle"
+                self.change_tracker.record_ship_change(tick, ship.id)
                 continue
             dist = math.sqrt((a.x - b.x)**2 + (a.y - b.y)**2 + (a.z - b.z)**2)
             travel_ticks = max(3, min(15, dist / 70))
@@ -415,9 +433,11 @@ class Supervisor:
                 else:
                     ship.destination = ""
                     ship.state = "idle"
+                self.change_tracker.record_ship_change(tick, ship.id)
 
     def _move_ships_intra(self):
         import math
+        tick = self.sim.tick_count
         for ship in self.sim.ships:
             if ship.state != "intra_traveling" or not ship.intra_destination:
                 continue
@@ -440,6 +460,7 @@ class Supervisor:
                     ship.progress = 0.0
                 else:
                     ship.state = "idle"
+                self.change_tracker.record_ship_change(tick, ship.id)
 
     def _start_intra_travel(self, ship, dest_obj_id: str):
         if ship.intra_position == dest_obj_id:

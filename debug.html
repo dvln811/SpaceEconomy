@@ -179,6 +179,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 function fmtName(s){return s.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());}
 // ── Persistent UI state (survives re-renders) ───────────────────────────────
 let D = null;
+let lastDebugTick = 0;
 let selectedSystem = '';
 let sysOptionsPopulated = false;
 
@@ -196,8 +197,34 @@ document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
 // ── Fetch (every 2s, only updates data, never touches filter DOM) ───────────
 async function fetchData() {
   try {
-    const r = await fetch('/api/debug');
-    D = await r.json();
+    const url = lastDebugTick ? `/api/debug?since_tick=${lastDebugTick}` : '/api/debug';
+    const r = await fetch(url);
+    const data = await r.json();
+    if(data.delta && D) {
+      // Merge changed systems into cached data
+      Object.assign(D.systems, data.systems);
+      // Merge changed ships by id
+      if(data.ships && data.ships.length) {
+        const byId = {};
+        for(const s of D.ships) byId[s.id]=s;
+        for(const s of data.ships) byId[s.id]=s;
+        D.ships = Object.values(byId);
+      }
+      // Update summary stats (always included)
+      D.tick = data.tick;
+      D.npc_ships = data.npc_ships;
+      D.trade_volume = data.trade_volume;
+      D.ships_by_state = data.ships_by_state;
+      D.total_inventory = data.total_inventory;
+      D.recent_events = data.recent_events;
+      if(data.prices) D.prices = data.prices;
+      if(data.demand) D.demand = data.demand;
+      if(data.warfare) D.warfare = data.warfare;
+      if(data.performance) D.performance = data.performance;
+    } else {
+      D = data;
+    }
+    lastDebugTick = data.tick;
     document.getElementById('tickInfo').textContent = `T${D.tick} | ${D.npc_ships} ships | ${D.trade_volume} trades`;
     render();
   } catch(e) { console.error(e); }
@@ -724,6 +751,8 @@ document.getElementById('sysSelect').addEventListener('change', e => {
 document.getElementById('nukeBtn').addEventListener('click', async () => {
   if (!confirm('NUKE: Reset the entire simulation to initial state?')) return;
   await fetch('/api/nuke', {method: 'POST'});
+  lastDebugTick = 0;
+  D = null;
   fetchData();
 });
 

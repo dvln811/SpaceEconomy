@@ -378,11 +378,16 @@ function draw() {
 }
 
 // ── Data fetch ──────────────────────────────────────────────────────────────
+let lastSystemTick = 0;
 async function fetchSystem() {
   try {
-    const res = await fetch(`/api/system/${systemId}`);
+    const url = lastSystemTick ? `/api/system/${systemId}?since_tick=${lastSystemTick}` : `/api/system/${systemId}`;
+    const res = await fetch(url);
     if (!res.ok) return;
-    systemData = await res.json();
+    const data = await res.json();
+    lastSystemTick = data.tick;
+    if (data.changed === false) return;
+    systemData = data;
     document.getElementById('sysTitle').textContent = systemData.name;
     document.getElementById('sysMeta').textContent = `${systemData.type} | ${systemData.security}-sec`;
     updateShipTargets();

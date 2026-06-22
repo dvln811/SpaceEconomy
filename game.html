@@ -611,6 +611,7 @@ function makeStarTexture(color){
 const shipData=[];
 const shipMeshes=[];
 let liveShips=[];
+let lastShipsTick=0;
 
 function makeShipTexture(shape){
   const c=document.createElement('canvas');c.width=32;c.height=32;
@@ -1006,9 +1007,18 @@ let prevPrices={};
 
 async function fetchShips(){
   try{
-    const r=await fetch('/api/ships');
+    const url = lastShipsTick ? `/api/ships?since_tick=${lastShipsTick}` : '/api/ships';
+    const r=await fetch(url);
     const d=await r.json();
-    liveShips=d.ships;
+    if(d.delta && liveShips){
+      const byId = {};
+      for(const s of liveShips) byId[s.id]=s;
+      for(const s of d.ships) byId[s.id]=s;
+      liveShips=Object.values(byId);
+    } else {
+      liveShips=d.ships;
+    }
+    lastShipsTick=d.tick;
     // Update clock
     const tick=d.tick||0;
     const hrs=Math.floor(tick/3600);const mins=Math.floor((tick%3600)/60);
