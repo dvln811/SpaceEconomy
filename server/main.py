@@ -115,11 +115,11 @@ def _build_order_book(st):
                     buy_orders.append({"commodity": inp_id, "qty": round(deficit, 1), "price": round(buy_price, 1)})
     for commodity_id in STATION_CONSUMPTION.get(st.station_type, []):
         have = st.inventory.get(commodity_id, 0)
-        if have < 50:
+        if have < 500:
             base = st.price_cache.get(commodity_id, 0)
             buy_price = base * 1.15 if base > 0 else COMS[commodity_id].base_price * 1.15 if commodity_id in COMS else 0
             if buy_price > 0:
-                buy_orders.append({"commodity": commodity_id, "qty": round(50 - have, 1), "price": round(buy_price, 1)})
+                buy_orders.append({"commodity": commodity_id, "qty": round(500 - have, 1), "price": round(buy_price, 1)})
     return sorted(sell_orders, key=lambda x: -x["qty"])[:20], sorted(buy_orders, key=lambda x: -x["qty"])[:20]
 
 

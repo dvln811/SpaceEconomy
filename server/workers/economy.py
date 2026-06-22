@@ -78,7 +78,7 @@ class EconomyWorker(WorkerThread):
 
                 # End-use consumption
                 for commodity_id in self.station_consumption.get(station.station_type, []):
-                    deltas[commodity_id] = deltas.get(commodity_id, 0) - 0.1
+                    deltas[commodity_id] = deltas.get(commodity_id, 0) - 2.0
 
                 if deltas:
                     self.emit(InventoryDelta(system_id=sys_id, station_name=station.name, deltas=deltas))
