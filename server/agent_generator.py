@@ -131,29 +131,28 @@ def generate_agents(faction_id, government, rng=None):
 
 def regenerate_all():
     """Regenerate all faction agents in the database."""
+    from server.faction_lore import generate_bio
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
 
-    # Get faction governments
     states = conn.execute("SELECT faction_id, government FROM faction_state").fetchall()
-
     conn.execute("DELETE FROM faction_agents")
 
     all_agents = []
     for state in states:
         agents = generate_agents(state['faction_id'], state['government'])
         all_agents.extend(agents)
-        # Update leader reference
         leader = next(a for a in agents if a['role'] == 'leader')
         conn.execute("UPDATE faction_state SET leader_id=? WHERE faction_id=?",
                      (leader['id'], state['faction_id']))
 
     for a in all_agents:
+        bio = generate_bio(a['faction_id'], a['role'])
         conn.execute("""INSERT INTO faction_agents
-            (id, name, title, faction_id, role, aggression, caution, competence, loyalty, ambition, corruption)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (id, name, title, faction_id, role, aggression, caution, competence, loyalty, ambition, corruption, bio)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
             (a['id'], a['name'], a['title'], a['faction_id'], a['role'],
-             a['aggression'], a['caution'], a['competence'], a['loyalty'], a['ambition'], a['corruption']))
+             a['aggression'], a['caution'], a['competence'], a['loyalty'], a['ambition'], a['corruption'], bio))
 
     conn.commit()
     conn.close()
@@ -162,6 +161,7 @@ def regenerate_all():
 
 def regenerate_faction(faction_id):
     """Regenerate agents for a single faction."""
+    from server.faction_lore import generate_bio
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
 
@@ -177,11 +177,12 @@ def regenerate_faction(faction_id):
     conn.execute("UPDATE faction_state SET leader_id=? WHERE faction_id=?", (leader['id'], faction_id))
 
     for a in agents:
+        bio = generate_bio(a['faction_id'], a['role'])
         conn.execute("""INSERT INTO faction_agents
-            (id, name, title, faction_id, role, aggression, caution, competence, loyalty, ambition, corruption)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (id, name, title, faction_id, role, aggression, caution, competence, loyalty, ambition, corruption, bio)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
             (a['id'], a['name'], a['title'], a['faction_id'], a['role'],
-             a['aggression'], a['caution'], a['competence'], a['loyalty'], a['ambition'], a['corruption']))
+             a['aggression'], a['caution'], a['competence'], a['loyalty'], a['ambition'], a['corruption'], bio))
 
     conn.commit()
     conn.close()

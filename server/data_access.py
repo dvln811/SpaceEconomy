@@ -74,6 +74,7 @@ def load_factions(conn=None) -> dict:
             "philosophy": row["philosophy"], "home_cluster": row["home_cluster"],
             "allies": json.loads(row["allies"]), "enemies": json.loads(row["enemies"]),
             "color": row["color"],
+            "history": row["history"] if "history" in row.keys() else "",
             "corporations": [{"id": c["id"], "name": c["name"], "focus": c["focus"], "description": c["description"]} for c in corps],
         }
 

@@ -118,6 +118,7 @@ function showFaction(fid) {
     <h2 style="color:${f.color};margin-top:0">${f.name}</h2>
     <p><strong>Philosophy:</strong> ${f.philosophy}</p>
     <p><strong>Territory:</strong> ${f.home_cluster} | <strong>Allies:</strong> ${(f.allies||[]).map(a=>nameMap[a]||a).join(', ')||'None'} | <strong>Enemies:</strong> ${(f.enemies||[]).map(e=>nameMap[e]||e).join(', ')||'None'}</p>
+    ${f.history ? `<p style="margin-top:12px;line-height:1.8;color:#c8d4e0;font-size:13px">${f.history}</p>` : ''}
     <p><strong>Corporations:</strong> ${f.corporations.map(c=>c.name).join(', ')}</p>`;
 
   if (leader) {
@@ -125,6 +126,7 @@ function showFaction(fid) {
     <div class="agent" style="border-color:${f.color}">
       <div class="agent-name">${leader.name}</div>
       <div class="agent-title">${leader.title} (${leader.role})</div>
+      ${leader.bio ? `<p style="color:#8aa0b8;font-size:12px;margin:6px 0;line-height:1.6">${leader.bio}</p>` : ''}
       <div style="margin-top:6px;font-size:11px">
         <div>Aggression: ${traitBar(leader.aggression,'#ef5350')}</div>
         <div>Caution: ${traitBar(leader.caution,'#4fc3f7')}</div>
@@ -141,6 +143,7 @@ function showFaction(fid) {
       html += `<div class="agent">
         <div class="agent-name">${a.name}</div>
         <div class="agent-title">${a.title} (${a.role})</div>
+        ${a.bio ? `<p style="color:#8aa0b8;font-size:11px;margin:4px 0;line-height:1.5">${a.bio}</p>` : ''}
         <div style="margin-top:4px;font-size:11px">
           Agg: ${traitBar(a.aggression,'#ef5350')} | Comp: ${traitBar(a.competence,'#66bb6a')} | Loy: ${traitBar(a.loyalty,'#ffd54f')}
         </div>
