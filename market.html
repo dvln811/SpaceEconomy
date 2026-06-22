@@ -25,13 +25,19 @@ a{color:#4fc3f7;text-decoration:none}a:hover{text-decoration:underline}
 .tree-label.selected{color:#4fc3f7;background:#0a1a30}
 .tree-toggle{width:14px;font-size:10px;color:#8aa0b8;flex-shrink:0;text-align:center}
 .tree-count{color:#8aa0b8;font-size:10px;margin-left:auto;flex-shrink:0}
-.main-content{flex:1;display:flex;flex-direction:column;overflow-y:auto}
+.main-content{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .toolbar{display:flex;align-items:center;gap:12px;padding:6px 12px;border-bottom:1px solid #1a2844;background:#0a0e18;flex-wrap:wrap}
 .toolbar label{color:#8aa0b8;font-size:11px;text-transform:uppercase;letter-spacing:1px}
 .toolbar select{background:#05080f;border:1px solid #1a2844;border-radius:3px;padding:3px 6px;color:#c8d4e0;font-family:inherit;font-size:12px}
-.pane{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:200px}
+.info-panel{padding:8px 12px;background:#0a1020;border-bottom:1px solid #1a2844;font-size:11px;display:none}
+.info-panel.visible{display:block}
+.info-panel .info-name{color:#4fc3f7;font-size:13px;font-weight:600;margin-bottom:4px}
+.info-panel .info-stats{display:flex;gap:12px;flex-wrap:wrap;color:#8aa0b8}
+.info-panel .info-stats span{padding:1px 6px;background:#0a0e18;border:1px solid #1a2844;border-radius:3px}
+.panes-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.pane{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
 .pane-header{padding:6px 12px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#4fc3f7;background:#0a0e18;border-bottom:1px solid #1a2844;flex-shrink:0}
-.pane-body{flex:1;overflow-y:auto;max-height:35vh}
+.pane-body{flex:1;overflow-y:auto}
 table{width:100%;border-collapse:collapse}
 th{position:sticky;top:0;background:#0a0e18;padding:4px 8px;text-align:left;font-size:11px;color:#8aa0b8;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #1a2844;cursor:pointer;user-select:none;white-space:nowrap}
 th:hover{color:#4fc3f7}
@@ -41,6 +47,10 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 th.num{text-align:right}
 tr:hover td{background:#0a1020}
 .status-bar{padding:4px 12px;font-size:10px;color:#8aa0b8;border-top:1px solid #1a2844;background:#0a0e18;display:flex;gap:16px}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:#05080f}
+::-webkit-scrollbar-thumb{background:#1a2844;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:#2a3854}
 </style>
 </head>
 <body>
@@ -55,13 +65,19 @@ tr:hover td{background:#0a1020}
     <select id="groupBy"><option value="none">None</option><option value="item">Item</option><option value="region">Region</option><option value="system">System</option><option value="station">Station</option></select>
     <span id="filterLabel" style="color:#4fc3f7;font-size:11px"></span>
   </div>
-  <div class="pane" style="border-bottom:2px solid #1a2844">
+  <div id="infoPanel" class="info-panel">
+    <div class="info-name" id="infoName"></div>
+    <div class="info-stats" id="infoStats"></div>
+  </div>
+  <div class="panes-wrap">
+  <div class="pane" style="border-bottom:1px solid #1a2844">
     <div class="pane-header">Buy Orders</div>
     <div class="pane-body"><table><thead id="buyHead"></thead><tbody id="buyBody"></tbody></table></div>
   </div>
   <div class="pane">
     <div class="pane-header">Sell Orders</div>
     <div class="pane-body"><table><thead id="sellHead"></thead><tbody id="sellBody"></tbody></table></div>
+  </div>
   </div>
   <div class="status-bar"><span id="statusTick"></span><span id="statusOrders"></span><span id="statusRefresh"></span></div>
 </div>
@@ -72,8 +88,16 @@ const COLS = ['item','qty','price','station','system','region'];
 let commodities = [], commodityMap = {}, treeData = {};
 let buyOrders = [], sellOrders = [];
 let selectedFilter = null;
-let sortCol = 'price', sortDir = -1;
+let buySortCol = 'price', buySortDir = -1;
+let sellSortCol = 'price', sellSortDir = -1;
 let lastTick = 0, expanded = {};
+
+function displayName(c){
+  if(!c) return '';
+  let n = c.name || c.id;
+  if(c.size && c.size !== 'N/A' && c.size !== '') n = c.size + ' ' + n;
+  return n;
+}
 
 async function loadCommodities(){
   const [res, shipsRes] = await Promise.all([
@@ -83,11 +107,10 @@ async function loadCommodities(){
   commodities = res;
   commodityMap = {};
   commodities.forEach(c => { commodityMap[c.id] = c; });
-  // Add ships as virtual items
   const seen = new Set();
   shipsRes.forEach(s => {
     if(seen.has(s.id)) return; seen.add(s.id);
-    commodityMap['ship_'+s.id] = {id:'ship_'+s.id, name:s.name, category:'Ships', subcategory:s.hull_class, group_name:s.hull_class};
+    commodityMap['ship_'+s.id] = {id:'ship_'+s.id, name:s.name, category:'Ships', subcategory:s.hull_class, group_name:s.hull_class, size:'', base_price:s.price};
   });
   buildTree(shipsRes);
 }
@@ -127,11 +150,10 @@ function renderTree(){
         if(f && !grp.toLowerCase().includes(f) && !sub.toLowerCase().includes(f) && !cat.toLowerCase().includes(f)) return;
         const gKey = cat+'|'+sub+'|'+grp, gOpen = expanded[gKey];
         const gSel = selMatch('group',cat,sub,grp) ? ' selected' : '';
-        // Individual items under this group
         let itemsHtml = '';
         ids.forEach(id => {
           const c = commodityMap[id];
-          const name = c ? c.name : id;
+          const name = c ? displayName(c) : id;
           if(f && !name.toLowerCase().includes(f) && !grp.toLowerCase().includes(f) && !sub.toLowerCase().includes(f) && !cat.toLowerCase().includes(f)) return;
           const iSel = selMatch('item',cat,sub,grp,id) ? ' selected' : '';
           itemsHtml += '<div class="tree-node"><div class="tree-label'+iSel+'" style="--depth:3" data-t="item" data-c="'+cat+'" data-s="'+sub+'" data-g="'+grp+'" data-id="'+id+'"><span class="tree-toggle"></span><span>'+name+'</span></div></div>';
@@ -166,18 +188,40 @@ function selMatch(type, cat, sub, grp, id){
 function onTreeClick(e){
   const el = e.currentTarget;
   const t = el.dataset.t, cat = el.dataset.c, sub = el.dataset.s, grp = el.dataset.g, id = el.dataset.id;
-  // Toggle expand for cat/sub/group levels
   if(t==='cat'){ expanded[cat] = !expanded[cat]; }
   else if(t==='sub'){ expanded[cat+'|'+sub] = !expanded[cat+'|'+sub]; }
   else if(t==='group'){ expanded[cat+'|'+sub+'|'+grp] = !expanded[cat+'|'+sub+'|'+grp]; }
-  // Set filter
   if(t==='cat') selectedFilter = {type:'cat', cat};
   else if(t==='sub') selectedFilter = {type:'sub', cat, sub};
   else if(t==='group') selectedFilter = {type:'group', cat, sub, grp};
   else if(t==='item') selectedFilter = {type:'item', id};
-  document.getElementById('filterLabel').textContent = (t==='item' ? (commodityMap[id]?.name||id) : grp || sub || cat || '');
+  document.getElementById('filterLabel').textContent = (t==='item' ? displayName(commodityMap[id]) : grp || sub || cat || '');
+  updateInfoPanel();
   renderTree();
   renderOrders();
+}
+
+function updateInfoPanel(){
+  const panel = document.getElementById('infoPanel');
+  const nameEl = document.getElementById('infoName');
+  const statsEl = document.getElementById('infoStats');
+  if(!selectedFilter || selectedFilter.type !== 'item'){
+    panel.classList.remove('visible');
+    return;
+  }
+  const c = commodityMap[selectedFilter.id];
+  if(!c){ panel.classList.remove('visible'); return; }
+  panel.classList.add('visible');
+  nameEl.textContent = displayName(c);
+  let stats = '';
+  if(c.category) stats += '<span>'+c.category+'</span>';
+  if(c.subcategory) stats += '<span>'+c.subcategory+'</span>';
+  if(c.size && c.size !== 'N/A') stats += '<span>Size: '+c.size+'</span>';
+  if(c.tier) stats += '<span>Tier: '+c.tier+'</span>';
+  if(c.base_price) stats += '<span>Base: '+Math.round(c.base_price).toLocaleString()+'</span>';
+  if(c.volume) stats += '<span>Vol: '+c.volume+' m3</span>';
+  if(c.description) stats += '<div style="margin-top:4px;color:#8aa0b8;font-size:10px;width:100%">'+c.description+'</div>';
+  statsEl.innerHTML = stats;
 }
 
 function getFilteredIds(){
@@ -223,14 +267,15 @@ function parseOrders(dbg, ships){
     const region = sys.region || '', sysName = sys.name || sid;
     (sys.stations||[]).forEach(st => {
       (st.sell_orders||[]).forEach(o => {
-        sellOrders.push({item: commodityMap[o.commodity]?.name||o.commodity, itemId:o.commodity, qty:o.qty, price:o.price, station:st.name, system:sysName, region});
+        const c = commodityMap[o.commodity];
+        sellOrders.push({item: c ? displayName(c) : o.commodity, itemId:o.commodity, qty:o.qty, price:o.price, station:st.name, system:sysName, region});
       });
       (st.buy_orders||[]).forEach(o => {
-        buyOrders.push({item: commodityMap[o.commodity]?.name||o.commodity, itemId:o.commodity, qty:o.qty, price:o.price, station:st.name, system:sysName, region});
+        const c = commodityMap[o.commodity];
+        buyOrders.push({item: c ? displayName(c) : o.commodity, itemId:o.commodity, qty:o.qty, price:o.price, station:st.name, system:sysName, region});
       });
     });
   }
-  // Ships as sell orders
   const seen = new Set();
   ships.forEach(s => {
     if(seen.has(s.id)) return; seen.add(s.id);
@@ -239,21 +284,21 @@ function parseOrders(dbg, ships){
 }
 
 function renderOrders(){
-  renderTable('buy', buyOrders);
-  renderTable('sell', sellOrders);
+  renderTable('buy', buyOrders, buySortCol, buySortDir);
+  renderTable('sell', sellOrders, sellSortCol, sellSortDir);
 }
 
-function renderTable(prefix, orders){
+function renderTable(prefix, orders, col, dir){
   const headEl = document.getElementById(prefix+'Head');
   const bodyEl = document.getElementById(prefix+'Body');
-  headEl.innerHTML = '<tr>'+COLS.map(c=>'<th data-col="'+c+'"'+((c==='qty'||c==='price')?' class="num"':'')+'>'+c+'<span class="sort-arrow">'+(sortCol===c?(sortDir>0?'\u25B2':'\u25BC'):'')+'</span></th>').join('')+'</tr>';
+  headEl.innerHTML = '<tr>'+COLS.map(c=>'<th data-col="'+c+'" data-pane="'+prefix+'"'+((c==='qty'||c==='price')?' class="num"':'')+'>'+c+'<span class="sort-arrow">'+(col===c?(dir>0?'\u25B2':'\u25BC'):'')+'</span></th>').join('')+'</tr>';
   headEl.querySelectorAll('th').forEach(th=>th.addEventListener('click',onSort));
   let filtered = orders;
   const ids = getFilteredIds();
   if(Array.isArray(ids) && ids.length) filtered = orders.filter(o=>ids.includes(o.itemId));
   const search = document.getElementById('treeSearch').value.toLowerCase();
   if(search) filtered = filtered.filter(o=>o.item.toLowerCase().includes(search)||o.system.toLowerCase().includes(search));
-  filtered.sort((a,b)=>{let va=a[sortCol],vb=b[sortCol];if(typeof va==='number')return(va-vb)*sortDir;return String(va||'').localeCompare(String(vb||''))*sortDir;});
+  filtered.sort((a,b)=>{let va=a[col],vb=b[col];if(typeof va==='number')return(va-vb)*dir;return String(va||'').localeCompare(String(vb||''))*dir;});
   const groupBy = document.getElementById('groupBy').value;
   let rows = '';
   if(groupBy!=='none'){
@@ -269,7 +314,17 @@ function renderTable(prefix, orders){
 
 function oRow(o){return '<tr><td>'+o.item+'</td><td class="num">'+fmtN(o.qty)+'</td><td class="num">'+fmtN(o.price)+'</td><td>'+o.station+'</td><td>'+o.system+'</td><td>'+o.region+'</td></tr>';}
 function fmtN(n){return typeof n==='number'?Math.round(n).toLocaleString():n;}
-function onSort(e){const c=e.currentTarget.dataset.col;if(sortCol===c)sortDir*=-1;else{sortCol=c;sortDir=1;}renderOrders();}
+
+function onSort(e){
+  const col=e.currentTarget.dataset.col;
+  const pane=e.currentTarget.dataset.pane;
+  if(pane==='buy'){
+    if(buySortCol===col) buySortDir*=-1; else {buySortCol=col;buySortDir=1;}
+  } else {
+    if(sellSortCol===col) sellSortDir*=-1; else {sellSortCol=col;sellSortDir=1;}
+  }
+  renderOrders();
+}
 
 document.getElementById('treeSearch').addEventListener('input',function(){renderTree();renderOrders();});
 document.getElementById('groupBy').addEventListener('change',renderOrders);
