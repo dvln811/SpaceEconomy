@@ -154,18 +154,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   </div>
   <!-- Market: static filter bar -->
   <div class="view" id="view-market">
-    <div style="display:flex;height:100%;overflow:hidden">
-    <div id="mktSidebar" class="tree-panel" style="width:200px"></div>
-    <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;padding:4px">
-      <div class="filter-bar" style="margin-bottom:4px">
-        <input type="search" class="filter-input" id="mktSearch" placeholder="Search items...">
-        <select class="filter-select" id="mktRegionFilter"><option value="">All Regions</option></select>
-        <select class="filter-select" id="mktSystemFilter"><option value="">All Systems</option></select>
-        <select class="filter-select" id="mktSortBy"><option value="commodity">Sort: Name</option><option value="price_asc">Sort: Price Low</option><option value="price_desc">Sort: Price High</option><option value="stock_desc">Sort: Stock High</option></select>
-      </div>
-      <div class="tbl-wrap" style="flex:1"><table class="tbl" style="table-layout:fixed;width:100%"><thead><tr><th style="width:22%">Item</th><th style="width:14%">Region</th><th style="width:14%">System</th><th style="width:16%">Station</th><th style="width:10%;text-align:right">Price</th><th style="width:8%;text-align:right">Stock</th><th style="width:8%;text-align:right">Buy</th><th style="width:8%;text-align:right">Sell</th></tr></thead><tbody id="mktBody"></tbody></table></div>
-    </div>
-    </div>
+    <iframe src="/market" style="width:100%;height:100%;border:none"></iframe>
   </div>
   <!-- Systems: static dropdown -->
   <div class="view" id="view-systems">

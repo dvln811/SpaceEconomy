@@ -123,8 +123,18 @@ function renderTree(){
         const ids = groups[grp];
         subCount += ids.length;
         if(f && !grp.toLowerCase().includes(f) && !sub.toLowerCase().includes(f) && !cat.toLowerCase().includes(f)) return;
+        const gKey = cat+'|'+sub+'|'+grp, gOpen = expanded[gKey];
         const gSel = selMatch('group',cat,sub,grp) ? ' selected' : '';
-        subHtml += '<div class="tree-node"><div class="tree-label'+gSel+'" style="--depth:2" data-t="group" data-c="'+cat+'" data-s="'+sub+'" data-g="'+grp+'"><span class="tree-toggle"></span><span>'+grp+'</span><span class="tree-count">'+ids.length+'</span></div></div>';
+        // Individual items under this group
+        let itemsHtml = '';
+        ids.forEach(id => {
+          const c = commodityMap[id];
+          const name = c ? c.name : id;
+          if(f && !name.toLowerCase().includes(f) && !grp.toLowerCase().includes(f) && !sub.toLowerCase().includes(f) && !cat.toLowerCase().includes(f)) return;
+          const iSel = selMatch('item',cat,sub,grp,id) ? ' selected' : '';
+          itemsHtml += '<div class="tree-node"><div class="tree-label'+iSel+'" style="--depth:3" data-t="item" data-c="'+cat+'" data-s="'+sub+'" data-g="'+grp+'" data-id="'+id+'"><span class="tree-toggle"></span><span>'+name+'</span></div></div>';
+        });
+        subHtml += '<div class="tree-node"><div class="tree-label'+gSel+'" style="--depth:2" data-t="group" data-c="'+cat+'" data-s="'+sub+'" data-g="'+grp+'"><span class="tree-toggle">'+(itemsHtml?(gOpen?'\u25BC':'\u25B6'):'')+'</span><span>'+grp+'</span><span class="tree-count">'+ids.length+'</span></div><div class="tree-children" style="display:'+(gOpen?'block':'none')+'">'+itemsHtml+'</div></div>';
       });
       catCount += subCount;
       if(f && !subHtml && !sub.toLowerCase().includes(f) && !cat.toLowerCase().includes(f)) return;
@@ -141,26 +151,29 @@ function renderTree(){
   wrap.querySelectorAll('.tree-label').forEach(el => el.addEventListener('click', onTreeClick));
 }
 
-function selMatch(type, cat, sub, grp){
+function selMatch(type, cat, sub, grp, id){
   if(!selectedFilter) return false;
   const f = selectedFilter;
   if(type==='cat') return f.type==='cat' && f.cat===cat;
   if(type==='sub') return f.type==='sub' && f.cat===cat && f.sub===sub;
   if(type==='group') return f.type==='group' && f.cat===cat && f.sub===sub && f.grp===grp;
+  if(type==='item') return f.type==='item' && f.id===id;
   return false;
 }
 
 function onTreeClick(e){
   const el = e.currentTarget;
-  const t = el.dataset.t, cat = el.dataset.c, sub = el.dataset.s, grp = el.dataset.g;
-  // Toggle expand for cat/sub levels
+  const t = el.dataset.t, cat = el.dataset.c, sub = el.dataset.s, grp = el.dataset.g, id = el.dataset.id;
+  // Toggle expand for cat/sub/group levels
   if(t==='cat'){ expanded[cat] = !expanded[cat]; }
   else if(t==='sub'){ expanded[cat+'|'+sub] = !expanded[cat+'|'+sub]; }
+  else if(t==='group'){ expanded[cat+'|'+sub+'|'+grp] = !expanded[cat+'|'+sub+'|'+grp]; }
   // Set filter
   if(t==='cat') selectedFilter = {type:'cat', cat};
   else if(t==='sub') selectedFilter = {type:'sub', cat, sub};
   else if(t==='group') selectedFilter = {type:'group', cat, sub, grp};
-  document.getElementById('filterLabel').textContent = grp || sub || cat || '';
+  else if(t==='item') selectedFilter = {type:'item', id};
+  document.getElementById('filterLabel').textContent = (t==='item' ? (commodityMap[id]?.name||id) : grp || sub || cat || '');
   renderTree();
   renderOrders();
 }
@@ -168,6 +181,7 @@ function onTreeClick(e){
 function getFilteredIds(){
   if(!selectedFilter) return null;
   const f = selectedFilter;
+  if(f.type==='item') return [f.id];
   if(f.type==='cat'){
     const ids = [];
     const subs = treeData[f.cat] || {};

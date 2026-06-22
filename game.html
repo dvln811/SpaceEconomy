@@ -154,7 +154,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <!-- Header -->
   <div class="header">
     <h1>Hauler's Almanac</h1>
-    <a href="#" onclick="window.open('/market','market','width=1200,height=800,resizable=yes');return false;" style="font-size:12px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;transition:all .15s" onmouseover="this.style.color='#4fc3f7';this.style.borderColor='#4fc3f7'" onmouseout="this.style.color='#8aa0b8';this.style.borderColor='#1a2844'">Market</a>
+    <a href="#" onclick="document.getElementById('mktWin').style.display='flex';return false;" style="font-size:12px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;transition:all .15s" onmouseover="this.style.color='#4fc3f7';this.style.borderColor='#4fc3f7'" onmouseout="this.style.color='#8aa0b8';this.style.borderColor='#1a2844'">Market</a>
     <a href="/docs" style="font-size:12px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;transition:all .15s" onmouseover="this.style.color='#4fc3f7';this.style.borderColor='#4fc3f7'" onmouseout="this.style.color='#8aa0b8';this.style.borderColor='#1a2844'">Docs</a>
     <div class="credits">Balance: <span>₡ 847,320</span></div>
     <div class="clock" id="gameClock">Cycle 0 | 00:00 GST</div>
@@ -269,6 +269,14 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     <div id="svShipList" style="flex:1;overflow-y:auto"></div>
   </div>
   </div>
+</div>
+
+<div id="mktWin" style="position:fixed;top:40px;left:200px;width:1000px;height:700px;background:#0a0e18;border:1px solid #1a2844;border-radius:6px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.7);z-index:200;resize:both;min-width:600px;min-height:400px">
+  <div id="mktTitlebar" style="display:flex;align-items:center;padding:0 12px;height:30px;background:#0a0f1a;border-bottom:1px solid #1a2844;cursor:move;flex-shrink:0;user-select:none">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:#4fc3f7;letter-spacing:2px;text-transform:uppercase">Market</span>
+    <button id="mktClose" style="margin-left:auto;width:18px;height:18px;border:none;background:none;color:#8aa0b8;cursor:pointer;font-size:15px;border-radius:3px">&times;</button>
+  </div>
+  <iframe src="/market" style="flex:1;border:none;width:100%;height:100%"></iframe>
 </div>
 
 <script>
@@ -1288,6 +1296,16 @@ svTitlebar.addEventListener('mousedown',e=>{svDragging=true;svDragOff={x:e.clien
 document.addEventListener('mousemove',e=>{if(svDragging){svWin.style.left=(e.clientX-svDragOff.x)+'px';svWin.style.top=(e.clientY-svDragOff.y)+'px';}});
 document.addEventListener('mouseup',()=>{svDragging=false;document.body.style.userSelect='';});
 document.getElementById('svClose').addEventListener('click',()=>{svWin.classList.remove('open');});
+
+// Market window drag/close
+(function(){
+const mw=document.getElementById('mktWin'),mt=document.getElementById('mktTitlebar');
+let md=false,mo={x:0,y:0};
+mt.addEventListener('mousedown',e=>{md=true;mo={x:e.clientX-mw.offsetLeft,y:e.clientY-mw.offsetTop};document.body.style.userSelect='none';});
+document.addEventListener('mousemove',e=>{if(md){mw.style.left=(e.clientX-mo.x)+'px';mw.style.top=(e.clientY-mo.y)+'px';}});
+document.addEventListener('mouseup',()=>{md=false;document.body.style.userSelect='';});
+document.getElementById('mktClose').addEventListener('click',()=>{mw.style.display='none';});
+})();
 
 // Zoom buttons (adjust OrbitControls distance)
 document.getElementById('svZoomIn').addEventListener('click',()=>{svCam.position.multiplyScalar(0.7);svControls.update();});
