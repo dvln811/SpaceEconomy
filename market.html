@@ -101,12 +101,11 @@ function buildTree(shipsRes){
     tree[c.category][c.subcategory][c.group_name].push(c.id);
   });
   const seen = new Set();
-  tree['Ships'] = {};
+  tree['Ships'] = {'All Classes': {}};
   shipsRes.forEach(s => {
     if(seen.has(s.id)) return; seen.add(s.id);
-    if(!tree['Ships'][s.hull_class]) tree['Ships'][s.hull_class] = {};
-    if(!tree['Ships'][s.hull_class][s.hull_class]) tree['Ships'][s.hull_class][s.hull_class] = [];
-    tree['Ships'][s.hull_class][s.hull_class].push('ship_'+s.id);
+    if(!tree['Ships']['All Classes'][s.hull_class]) tree['Ships']['All Classes'][s.hull_class] = [];
+    tree['Ships']['All Classes'][s.hull_class].push('ship_'+s.id);
   });
   treeData = tree;
   renderTree();
