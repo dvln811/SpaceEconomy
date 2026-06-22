@@ -409,7 +409,7 @@ function renderShips() {
     const cargoPct = s.cargo_capacity > 0 ? Math.round(s.cargo_used / s.cargo_capacity * 100) : 0;
     rows += `<tr>
       <td>${s.name}</td>
-      <td style="color:#8aa0b8">${s.ship_class}</td>
+      <td style="color:#8aa0b8">${fmtName(s.ship_class)}</td>
       <td>${s.role}</td>
       <td><span class="badge" style="background:${col}22;color:${col}">${s.state}</span></td>
       <td>${s.location}</td>

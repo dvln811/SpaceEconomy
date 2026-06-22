@@ -166,21 +166,22 @@ function searchAll() {
   render(matched, matched.length > 0 ? (matched.find(i=>i.stats.dps) ? 'Weapons' : matched[0].category) : 'Raw Materials');
 }
 
-function fmtTime(s){if(!s)return'-';if(s>=3600)return(s/3600).toFixed(1)+'h';if(s>=60)return Math.round(s/60)+'m';return s+'s';}
+function fmtTime(s){if(!s)return'-';if(s>=86400)return Math.round(s/86400)+'d';if(s>=3600)return Math.round(s/3600)+'h';if(s>=60)return Math.round(s/60)+'m';return s+'s';}
+function fmtId(s){if(!s||s==='-')return'-';return s.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());}
+const SLOT_LABELS = {'weapon_mount':'Weapon Mount','utility_bay':'Utility Bay','core_slot':'Core Slot'};
 
 function render(filtered, cat) {
   const el = document.getElementById('content');
   let cols = '', rowFn = null;
   if (cat === 'Weapons') {
-    cols = '<th>Name</th><th>Size</th><th>Quality</th><th>Optimal Range</th><th>ROF Bonus</th><th>Tracking</th><th>Dmg Type</th><th>Class</th><th>Slot</th><th>Price</th><th>Recipe</th><th>Build</th>';
-    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||'-'}</td><td class="stat">${i.stats.quality||'-'}</td><td>${i.stats.optimal_range||'-'}</td><td>+${i.stats.rof_bonus||0}%</td><td>${i.stats.tracking||'-'}</td><td>${i.stats.damage_type||'-'}</td><td>${i.stats.weapon_class||'-'}</td><td>${i.stats.slot||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td class="recipe">${i.recipe}</td><td>${fmtTime(i.build_time)}</td>`;
+    cols = '<th>Name</th><th>Size</th><th>Quality</th><th>Optimal Range</th><th>ROF Bonus</th><th>Tracking</th><th>Dmg Type</th><th>Class</th><th>Slot</th><th>Price</th><th>Recipe</th><th>Build</th><th>Description</th>';
+    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||'-'}</td><td class="stat">${i.stats.quality||'-'}</td><td>${i.stats.optimal_range||'-'}</td><td>+${i.stats.rof_bonus||0}%</td><td>${i.stats.tracking||'-'}</td><td>${i.stats.damage_type||'-'}</td><td>${i.stats.weapon_class||'-'}</td><td>${SLOT_LABELS[i.stats.slot]||fmtId(i.stats.slot)}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td class="recipe">${i.recipe}</td><td>${fmtTime(i.build_time)}</td><td class="desc">${i.description}</td>`;
   } else if (cat === 'Ammunition') {
-    cols = '<th>Name</th><th>Size</th><th>Quality</th><th>Damage Type</th><th>For Weapon</th><th>Price</th><th>Vol</th><th>Recipe</th><th>Build</th>';
-    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||'-'}</td><td class="stat">${i.stats.quality||'-'}</td><td>${i.stats.damage_type||'-'}</td><td>${i.stats.for_weapon||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td><td>${fmtTime(i.build_time)}</td>`;
+    cols = '<th>Name</th><th>Size</th><th>Quality</th><th>Damage Type</th><th>For Weapon</th><th>Price</th><th>Vol</th><th>Recipe</th><th>Build</th><th>Description</th>';
+    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||'-'}</td><td class="stat">${i.stats.quality||'-'}</td><td>${i.stats.damage_type||'-'}</td><td>${fmtId(i.stats.for_weapon)}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td><td>${fmtTime(i.build_time)}</td><td class="desc">${i.description}</td>`;
   } else if (cat === 'Ship Equipment') {
     cols = '<th>Name</th><th>Size</th><th>Quality</th><th>Slot</th><th>HP Bonus</th><th>Price</th><th>Recipe</th><th>Build</th><th>Description</th>';
-    const slotLabel = s => ({'weapon_mount':'Weapon Mount','utility_bay':'Utility Bay','core_slot':'Core Slot'}[s]||s||'-');
-    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||'-'}</td><td class="stat">${i.stats.quality||'-'}</td><td>${slotLabel(i.stats.slot)}</td><td class="stat">${i.stats.hp_bonus||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td class="recipe">${i.recipe}</td><td>${fmtTime(i.build_time)}</td><td class="desc">${i.description}</td>`;
+    rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||'-'}</td><td class="stat">${i.stats.quality||'-'}</td><td>${SLOT_LABELS[i.stats.slot]||fmtId(i.stats.slot)}</td><td class="stat">${i.stats.hp_bonus||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td class="recipe">${i.recipe}</td><td>${fmtTime(i.build_time)}</td><td class="desc">${i.description}</td>`;
   } else if (cat === 'Drones') {
     cols = '<th>Name</th><th>Size</th><th>Quality</th><th>Damage Type</th><th>Price</th><th>Vol</th><th>Recipe</th><th>Build</th><th>Description</th>';
     rowFn = i => `<td style="color:#e0e8f0">${i.name}</td><td class="stat">${i.stats.size||i.stats.drone_size||'-'}</td><td class="stat">${i.stats.quality||'-'}</td><td>${i.stats.damage_type||'-'}</td><td style="color:#ffd54f">${i.price.toLocaleString()}</td><td>${i.volume}</td><td class="recipe">${i.recipe}</td><td>${fmtTime(i.build_time)}</td><td class="desc">${i.description}</td>`;
