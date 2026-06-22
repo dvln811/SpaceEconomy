@@ -159,6 +159,11 @@ def economy_page():
     return send_from_directory(BASE_DIR, "economy.html")
 
 
+@app.route("/market")
+def market_page():
+    return send_from_directory(BASE_DIR, "market.html")
+
+
 @app.route("/resources")
 def resources_page():
     return send_from_directory(BASE_DIR, "resources.html")
