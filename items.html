@@ -39,7 +39,17 @@ tr:hover td{background:#0d1525}
 </div>
 <div class="main">
 <div class="sidebar" id="sidebar"></div>
+<div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+<div style="display:flex;gap:8px;padding:4px 12px;align-items:center;border-bottom:1px solid #1a2844;flex-shrink:0">
+  <select id="sizeFilter" style="background:#0a1020;border:1px solid #1a3050;color:#c8d4e0;font-size:12px;padding:4px 8px;border-radius:3px;font-family:inherit">
+    <option value="">All Sizes</option><option value="S">Small</option><option value="M">Medium</option><option value="L">Large</option><option value="C">Capital</option>
+  </select>
+  <select id="qualityFilter" style="background:#0a1020;border:1px solid #1a3050;color:#c8d4e0;font-size:12px;padding:4px 8px;border-radius:3px;font-family:inherit">
+    <option value="">All Quality</option><option value="Standard">Standard</option><option value="Named">Named</option><option value="T2">T2</option><option value="Faction">Faction</option>
+  </select>
+</div>
 <div class="content" id="content"><div class="loading">Loading items...</div></div>
+</div>
 </div>
 <script>
 let items = [];
@@ -65,6 +75,8 @@ async function init() {
     buildSidebar();
     document.getElementById('itemSearch').addEventListener('input', searchAll);
     document.getElementById('itemSearch').addEventListener('search', searchAll);
+    document.getElementById('sizeFilter').addEventListener('change', () => { document.querySelector('.side-item.active')?.click(); });
+    document.getElementById('qualityFilter').addEventListener('change', () => { document.querySelector('.side-item.active')?.click(); });
   } catch(e) { document.getElementById('content').innerHTML = '<div class="loading">Error: '+e.message+'</div>'; }
 }
 
@@ -156,14 +168,24 @@ function buildSidebar() {
 }
 
 function setActive(el) { document.querySelectorAll('.side-item').forEach(b => b.classList.remove('active')); el.classList.add('active'); }
-function showCat(cat) { render(items.filter(i => i.category === cat), cat); }
-function showSub(cat, sub) { render(items.filter(i => i.category === cat && (i.subcategory || 'General') === sub), cat); }
-function showGroup(cat, sub, grp) { render(items.filter(i => i.category === cat && (i.subcategory || 'General') === sub && i.group_name === grp), cat); }
+function applyFilters(list) {
+  const sz = document.getElementById('sizeFilter').value;
+  const ql = document.getElementById('qualityFilter').value;
+  if (sz) list = list.filter(i => i.stats.size === sz);
+  if (ql) list = list.filter(i => i.stats.quality === ql);
+  return list;
+}
+function showCat(cat) { render(applyFilters(items.filter(i => i.category === cat)), cat); }
+function showSub(cat, sub) { render(applyFilters(items.filter(i => i.category === cat && (i.subcategory || 'General') === sub)), cat); }
+function showGroup(cat, sub, grp) { render(applyFilters(items.filter(i => i.category === cat && (i.subcategory || 'General') === sub && i.group_name === grp)), cat); }
+let _lastShowFn = null;
+const _origShowCat = showCat, _origShowSub = showSub, _origShowGroup = showGroup;
 function searchAll() {
   const q = (document.getElementById('itemSearch').value || '').toLowerCase();
   if (!q) { document.querySelector('.side-item.active')?.click(); return; }
-  const matched = items.filter(i => i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q) || i.subcategory.toLowerCase().includes(q) || i.recipe.toLowerCase().includes(q) || Object.keys(i.stats).some(k => String(i.stats[k]).toLowerCase().includes(q) || k.toLowerCase().includes(q)));
-  render(matched, matched.length > 0 ? (matched.find(i=>i.stats.dps) ? 'Weapons' : matched[0].category) : 'Raw Materials');
+  let matched = items.filter(i => i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q) || i.subcategory.toLowerCase().includes(q) || i.recipe.toLowerCase().includes(q) || Object.keys(i.stats).some(k => String(i.stats[k]).toLowerCase().includes(q) || k.toLowerCase().includes(q)));
+  matched = applyFilters(matched);
+  render(matched, matched.length > 0 ? (matched.find(i=>i.stats.optimal_range) ? 'Weapons' : matched[0].category) : 'Materials');
 }
 
 function fmtTime(s){if(!s)return'-';if(s>=86400)return Math.round(s/86400)+'d';if(s>=3600)return Math.round(s/3600)+'h';if(s>=60)return Math.round(s/60)+'m';return s+'s';}
