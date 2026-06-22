@@ -43,7 +43,7 @@ td.desc{color:#8aa0b8;font-size:11px;white-space:normal;width:100%}
 <script>
 let civilian = [];
 function fmtTime(s){if(!s)return'-';if(s>=86400)return Math.round(s/86400)+'d';if(s>=3600)return Math.round(s/3600)+'h';return Math.round(s/60)+'m';}
-function grpList(arr){if(!arr||!arr.length)return'-';const counts={};arr.forEach(x=>{const name=n(x);counts[name]=(counts[name]||0)+1;});return Object.entries(counts).map(([name,c])=>c>1?`${name} (${c})`:name).join('<br>');}
+function grpList(arr){if(!arr||!arr.length)return'-';const counts={};arr.forEach(x=>{const name=nameMap[x]||x.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());counts[name]=(counts[name]||0)+1;});return Object.entries(counts).map(([name,c])=>c>1?`${name} (${c})`:name).join('<br>');}
 function isUtility(id){return /shield|afterburner|mwd|cap_|scanner|ecm|sensor|warp_|stasis|energy_n|remote_repper/.test(id);}
 let military = [];
 let factions = {};
