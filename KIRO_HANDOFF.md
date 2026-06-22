@@ -43,7 +43,7 @@ A browser-based space economy simulation game. Currently single-player with plan
 - **Deployment:** fly.io, auto-deploy via GitHub Actions on push to master
 - **Local dev:** `restart_server.ps1` runs Flask with debug=True on port 8000
 
-### Simulation Architecture (NEW)
+### Simulation Architecture
 - **Supervisor thread** owns tick clock (1/sec), distributes state snapshots to workers, merges intents
 - **Economy worker** - production, consumption, ore gen, price updates (every tick)
 - **NPC Decision worker** - hauler/miner AI, batched 50 ships/tick, uses region inventory cache
@@ -54,6 +54,7 @@ A browser-based space economy simulation game. Currently single-player with plan
 - Workers produce typed **intents** (dataclasses), Supervisor applies them atomically between ticks
 - **Region inventory cache** rebuilt every 10 ticks for O(1) NPC trade lookups
 - **20 regions** (~125 systems each) define NPC market search boundaries
+- Performance: ~10-18ms per tick, 15-55 ticks/sec at 120x speed
 
 ---
 
@@ -61,21 +62,65 @@ A browser-based space economy simulation game. Currently single-player with plan
 
 | Table | Records | Description |
 |-------|---------|-------------|
-| commodities | 152 | All items (ores, materials, weapons, ammo, etc) |
-| recipes | ~300 | Production chain inputs per commodity |
-| systems | 48 | Star systems with positions, security, faction |
-| system_connections | ~140 | Jump gate connections |
-| stations | 58 | Stations with types and production rates |
-| station_produces | ~80 | What each station can manufacture |
-| asteroid_fields | 34 | Mining fields with density |
-| field_yields | ~100 | What ores each field produces |
-| system_objects | 620+ | Stars, planets, moons, gates, belts |
-| ship_types | 14 | Civilian ships (6 haulers, 5 miners, 3 military) |
-| military_ships | 42 | Warships across 6 factions |
+| commodities | 1540 | All items with 3-level hierarchy (category/subcategory/group_name) |
+| recipes | 3391 | Production chain inputs per commodity |
+| ships | 56 | Unified ship table (14 civilian hulls + 42 faction military) |
+| systems | 2500 | Star systems with positions, security, faction, region |
+| system_connections | ~7000 | Jump gate connections |
+| stations | ~700 | Stations with types and production rates |
+| station_produces | ~700 | What each station can manufacture |
+| asteroid_fields | ~800 | Mining fields with density |
+| field_yields | ~2400 | What ores each field produces |
+| system_objects | ~15000 | Stars, planets, moons, gates, belts |
 | factions | 6 | Major factions |
 | corporations | 24 | Sub-factions (4 per faction) |
 | fleet_targets | 42 | How many ships each faction maintains |
 | station_consumption | 38 | End-use demand per station type |
+
+---
+
+## Items System (1540 items)
+
+### Hierarchy: category > subcategory > group_name
+- **Weapons** (192): Turrets (Autocannon, Artillery, Blaster, Railgun, Gauss, Flak), Energy Weapons (Pulse Laser, Beam Laser, Plasma Cannon), Launchers (Rocket, Missile, Torpedo)
+- **Ammunition** (396): Projectile Ammo, Hybrid Charges, Energy Crystals, Missiles, Magnetic Ammo, Energy Cells
+- **Ship Equipment** (748): Shields, Armor, Hull, Propulsion, Navigation, Electronic Warfare, Tackle, Energy Warfare, Remote Repair, Engineering, Electronics, Drones, Mining
+- **Drones** (96): Combat (EM/Thermal/Kinetic/Explosive), Utility, Logistics, EWAR
+- **Materials** (96): Raw Materials (Ore/Ice/Crystals/Gas/Organic/Exotic), Refined, Manufactured, Components
+- **Trade Goods** (6)
+
+### Sizes: Small (S), Medium (M), Large (L), Capital (C)
+### Quality Tiers: Standard, Named (Compact), T2 (Advanced), Faction (Navy)
+
+### Weapon Stats Model
+- Weapons modify: optimal_range, rof_bonus, tracking
+- Damage comes from ammo/crystal loaded into the weapon
+- Slot type: weapon_mount
+
+### Module Slot System
+- **Weapon Mounts** - weapons, mining lasers, salvagers, tractor beams
+- **Utility Bays** - shields, EWAR, propulsion, cap boosters, scanners
+- **Core Slots** - armor, engineering, damage mods, cargo expanders
+
+---
+
+## Ships (56 total, unified `ships` table)
+
+### Hull Classes
+- **Frigate** (small combat), **Destroyer** (small combat)
+- **Cruiser**, **Battlecruiser**, **Battleship** (medium/large combat)
+- **Carrier**, **Dreadnought** (capital)
+- **Industrial** (hauling), **Mining Barge** (mining)
+
+### Design: Hull determines potential, fitting determines role
+- All ships have minimum 2 Weapon Mounts
+- No military vs civilian split on hulls. Faction ships are just variants.
+- See docs/SHIP_HULL_CLASSES.md and docs/SHIP_BUILD_TIMES.md
+
+### Build Times
+- Fighter: 8m, Frigate: 22m, Destroyer: 3h, Cruiser: 12h
+- Battlecruiser: 1.5d, Battleship: 8d, Carrier: 17d, Dreadnought: 28d
+- Industrial T1: 5-10m, T3: 1-2d, Clydesdale: 6d
 
 ---
 
@@ -93,15 +138,16 @@ A browser-based space economy simulation game. Currently single-player with plan
 | `server/workers/battle_sim.py` | Fleet combat resolution, ship building |
 | `server/workers/corsair_spawn.py` | Pirate AI, universe assessment, NPC spawning |
 | `server/workers/dashboard.py` | Cached JSON state preparation for API endpoints |
-| `server/warfare.py` | (Legacy) Faction battles, ship destruction/rebuilding |
 | `server/persistence.py` | Save/load runtime state (game.db) |
 | `server/game_data_db.py` | Schema definition for game_data.db |
 | `server/data_access.py` | Load functions (commodities, universe, ships, factions from DB) |
 | `server/models.py` | Dataclass definitions ONLY (no data) |
-| `server/ship_types.py` | ShipType dataclass ONLY |
-| `server/military.py` | MilitaryShipClass dataclass ONLY |
-| `server/factions.py` | Faction/Corporation dataclass ONLY |
-| `server/ship_geometry.py` | 3D ship model geometry data for renderer |
+| `server/generate_items.py` | Item database generator (1540 items with recipes) |
+| `server/categorize_items.py` | Assigns 3-level hierarchy to all items |
+| `server/cleanup_pass.py` | Stats formatting, ammo descriptions, weapon model fixes |
+| `server/merge_ships.py` | Merges ship_types + military_ships into unified ships table |
+| `server/fix_military_ships.py` | Fixes military ship weapons/modules/recipes |
+| `server/set_build_times.py` | Sets build times per docs/SHIP_BUILD_TIMES.md |
 | `server/assign_regions_v2.py` | Assigns 20 balanced regions via priority-queue BFS |
 
 ---
@@ -111,7 +157,11 @@ A browser-based space economy simulation game. Currently single-player with plan
 | URL | File | Purpose |
 |-----|------|---------|
 | `/` | `game.html` | Main game (3D star map, system view, market, activity feed) |
-| `/debug` | `debug.html` | Dashboard (simulation stats, stations, ships, market, systems) |
+| `/debug` | `debug.html` | Dashboard (overview, stations, ships, combat, market, systems) |
+| `/items` | `items.html` | Items DB (collapsible tree, size/quality filters, sortable columns) |
+| `/ships_db` | `ships_db.html` | Ships DB (civilian + military, Weapons/Utility/Core columns) |
+| `/chain` | `chain.html` | Production chain calculator (tree breakdown) |
+| `/ships` | `ships.html` | Ship 3D model viewer |
 | `/docs` | `docs.html` | Documentation hub |
 | `/design` | `design.html` | Game design document |
 | `/universe` | `universe.html` | Universe design |
@@ -121,70 +171,6 @@ A browser-based space economy simulation game. Currently single-player with plan
 | `/products` | `products.html` | T4-T5 components/products |
 | `/fitting` | `fitting.html` | Ship fitting design (slots, CPU/PG) |
 | `/factions` | `factions_doc.html` | Faction lore and corps |
-| `/items` | `items.html` | Items database (table per category, stats) |
-| `/ships_db` | `ships_db.html` | Ships database (civilian + military, build costs) |
-| `/chain` | `chain.html` | Production chain calculator (tree breakdown) |
-| `/ships` | `ships.html` | Ship 3D model viewer |
-
----
-
-## Economy System
-
-### 152 Commodities (in game_data.db)
-- 29 T1 raw ores (common 0.1m3, exotic 2.0m3)
-- 20 T2 refined materials
-- 18 T3 manufactured materials
-- 22 T4 components
-- 29 T5 products (weapons S/M/L, shields, engines, drones, mining)
-- 13 T5 ammunition (projectile, missiles, energy charges)
-- 6 T0 trade goods
-
-### Production Chain
-- Mining colonies passively generate ore (8.0*density/tick, cap 50K)
-- Refineries: T1 -> T2 (rate 0.3)
-- Industrial Hubs: T2 -> T3 (rate 0.15)
-- Component Factories: T3 -> T4 (rate 0.08)
-- Shipyards: T4 -> T5 (rate 0.04)
-- Self-limiting production: throttles based on ticks of supply remaining
-
-### Logistics
-- **Contract haulers:** 50 haulers assigned to specific stations, fetch needed inputs
-- **Miners:** 20 miners at asteroid fields
-- **Sector-wide visibility:** Haulers find nearest source across their cluster
-- **Travel:** Inter-system 3-15s, intra-system 30-90s, ship-class align times (2-15s)
-
-### Pricing
-- Supply/demand driven with dynamic pressure
-- Unfilled demand raises buy price over time
-- Oversupply lowers sell price
-- Prices recalculate every 10 ticks
-
-### Warfare
-- 3 active conflicts (Iron Compact vs Frontier Alliance, Corsairs vs others)
-- Skirmishes every 20 ticks (40% chance), 1-3 ships lost per side
-- Shipyards rebuild lost ships (consuming T5 products)
-- Creates demand sink for the economy
-
----
-
-## Factions (6)
-
-| Faction | Short | Territory | Philosophy |
-|---------|-------|-----------|------------|
-| Terran Federation | TFD | Core | Order, navy, regulation |
-| Nexus Collective | NXC | Core | Science, innovation |
-| Merchants Guild | MGD | Rim | Free trade, profit |
-| Frontier Alliance | FRA | Rim | Freedom, self-governance |
-| Iron Compact | IRC | Frontier | Military-industrial, expansion |
-| The Corsairs | CRS | Frontier | Piracy, smuggling |
-
-Each faction has 4 corporations and 7 military ship classes (fighter through dreadnought). Corsairs have 6 (no dreadnought).
-
----
-
-## Military Ships (42 total)
-
-7 hull classes per major faction: Fighter, Frigate, Destroyer, Cruiser, Battlecruiser, Battleship, Dreadnought. Each with unique weapons loadout, stats, and build recipe.
 
 ---
 
@@ -193,81 +179,74 @@ Each faction has 4 corporations and 7 military ship classes (fighter through dre
 ### Game
 - `GET /api/positions` - System positions/connections (fetched once)
 - `GET /api/ships` - All NPC ship states (polled every 3s)
-- `GET /api/market/<system_id>` - Market data for one system (polled every 5s)
-- `GET /api/events` - Recent events (polled every 8s)
-- `GET /api/system/<id>` - Intra-system detail (system view)
+- `GET /api/market/<system_id>` - Market data for one system
+- `GET /api/events` - Recent events
+- `GET /api/system/<id>` - Intra-system detail
 - `GET /api/ship_model/<class_id>` - 3D geometry for ship renderer
 - `POST /api/nuke` - Reset simulation state
 - `GET/POST /api/speed` - Get/set simulation speed multiplier
 
 ### CRUD (game data editing)
-- `GET /api/data/commodities` - All items
+- `GET /api/data/commodities` - All items (with category, subcategory, group_name, stats, build_time)
 - `GET/PUT /api/data/commodities/<id>` - Single item
+- `GET /api/data/ships` - All ships (unified table)
+- `GET /api/data/ship_types` - Non-faction ships only
+- `GET /api/data/military_ships` - Faction ships only
 - `GET /api/data/systems` - All systems
-- `GET /api/data/military_ships` - All warships
 - `GET /api/data/factions` - All factions
 - `POST /api/reload_data` - Hot-reload without restart
 
 ### Debug
 - `GET /api/state` - Full universe state (heavy, avoid polling)
-- `GET /api/debug` - Debug summary with production health
+- `GET /api/debug` - Debug summary with production health + performance metrics
 
 ---
 
 ## Key Design Decisions
 
 - **All data in SQLite.** No hardcoded Python dicts. DB is source of truth.
-- **Real-time, always-on.** Economy ticks 24/7.
+- **Real-time, always-on.** Economy ticks 24/7 at 1 tick/sec.
+- **Multi-threaded.** Supervisor + 6 workers with intent queues. Scales to 100K+ ships.
+- **Hull class system.** No military vs civilian. Hull determines potential, fitting determines role.
+- **Eve-inspired items.** 4 sizes, 4 quality tiers, weapons modify delivery not damage.
 - **Volume-based cargo.** Common ores 0.1m3 (bulk hauling easy), exotics 2.0m3 (scarce).
 - **Contract haulers.** Assigned to stations, not free-roaming arbitrage.
 - **Self-limiting production.** Stations throttle based on input availability.
 - **Warfare drives demand.** Ships get destroyed, need rebuilding, pulls entire chain.
-- **Recipes are logical.** Steel = iron + carbon. Electronics = silicon + copper + gold.
+- **Recipes are logical.** Ship recipe = hull materials + fitted modules.
 - **Security tiers matter.** Common ores in high-sec, exotics only in null-sec.
+- **Regions bound market visibility.** Ships only see prices within their region.
 
 ---
 
-## Known Issues / Next Steps
+## Documentation Files
 
-### RESOLVED: Simulation Performance
-- Migrated from single-threaded tick loop to multi-threaded Supervisor+Workers architecture
-- NPC decisions now batched (50/tick round-robin) with O(1) region cache lookups
-- Region inventory cache rebuilt every 10 ticks (eliminates per-hauler system scanning)
-- 20 regions (9-237 systems each) serve as market visibility boundary
-- Intent-queue pattern: workers never mutate shared state directly
-- Path to 100K+ ships: increase batch size, move to multiprocessing (same architecture)
-- Movement (O(ships) linear scan) stays in supervisor as it's already fast
+| File | Content |
+|------|---------|
+| `docs/ARCHITECTURE_THREADS.md` | Multi-threaded simulation design |
+| `docs/SHIP_HULL_CLASSES.md` | Hull class system, slot types, design principles |
+| `docs/SHIP_BUILD_TIMES.md` | Build times by hull class, design intent |
 
-### IMMEDIATE TODO (from last session)
-- [x] **Simulation performance architecture** - DONE. Multi-threaded Supervisor+Workers with intent queues, region cache, batched NPC decisions. See docs/ARCHITECTURE_THREADS.md.
-- [ ] **Weapon/module variants and pricing** - Need multiple variants per weapon type at each size. Small ~2,500, Large ~150K, T2 ~10M.
-- [ ] **Further market/ships/battle UI polish** based on user feedback after checking current deploy
+---
 
-### Economy Status
-- Economy is functional: 645 active / 80 halted production lines at tick 2000
-- Baseline input generation prevents total starvation (abstracts local mining)
-- Haulers limited to same-region search (50 system cap)
-- Ore generation: 50/tick*density at mining colonies, 20/tick at refineries with belts
-- Baseline T1/T2 inputs auto-generated at 0.5x production rate for all producing stations
-- Production still halts at higher tiers (T3/T4) due to rare ore logistics gap
-- Need to fix: basic items (Shield Gen Mk.I) currently require null-sec exotics (Gold Ore) in recipe chain
-- Solution: redesign T3 recipes so Mk.I items use only high/med-sec inputs, Mk.II/III use rarer stuff
-- Mining colony generation (8/tick) may need tuning vs consumption rates
-- Warfare not yet consuming ammo properly (ships destroyed but no ammo deducted)
+## Current Status / Next Steps
 
-### Player Integration (Next Phase)
-- Player can buy/sell at stations
-- Player travel and ship control
-- Ship fitting UI
-- Player mining
-- Fuel consumption
+### COMPLETED THIS SESSION
+- [x] Multi-threaded simulation architecture (Supervisor + 6 workers)
+- [x] Item expansion: 153 to 1540 items with proper hierarchy
+- [x] Ship table merge: unified `ships` table with hull classes
+- [x] Hardpoint/slot system (Weapon Mount / Utility Bay / Core Slot)
+- [x] Weapon stats model (weapons modify range/RoF/tracking, ammo does damage)
+- [x] All data pages cleaned up (no raw IDs, collapsible trees, sortable, filterable)
+- [x] Performance metrics in debug dashboard
+- [x] Build times documented and set
 
-### Future
-- Factions/corporations as joinable entities (Mount&Blade style)
-- Player-created factions
-- Territory control
-- Contract system (X4-style station orders)
-- Tech levels on items (Mk.I/II/III progression)
+### NEXT (to be discussed)
+- [ ] **Combat system design** - How ships fight, damage model, weapons + ammo interaction
+- [ ] **Faction strategy AI** - What drives faction decisions, expansion, war goals, territory control
+- [ ] **Economy seeding/rebalance** - Stations need to produce items from the expanded 1540-item catalog
+- [ ] **Player integration** - Buy/sell, ship control, travel, fitting
+- [ ] **Corsair/pirate AI** - Dynamic spawning, trade route interdiction
 
 ---
 
@@ -278,3 +257,4 @@ Each faction has 4 corporations and 7 military ship classes (fighter through dre
 - `data/game.db` persists on fly.io volume (runtime state)
 - No manual fly.io steps needed for normal deploys
 - Nuke via debug page resets runtime state only (game_data.db untouched)
+- Deferred init: server responds to health checks immediately, sim loads in background (120s grace)
