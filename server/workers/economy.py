@@ -122,14 +122,14 @@ class EconomyWorker(WorkerThread):
                     supply = max(1, stock)
                     base_price = calculate_price(commodity_id, supply, demand, self.commodities)
                     new_price = round(base_price * (1 + pressure / 100), 2)
-                    old_price = station.price_cache.get(commodity_id, new_price)
+                    old_price = station.price_cache.get(commodity_id)
 
-                    if new_price != old_price:
+                    if old_price is None or new_price != old_price:
                         self.emit(PriceUpdate(
                             system_id=sys_id, station_name=station.name,
                             commodity_id=commodity_id, new_price=new_price
                         ))
-                        if old_price > 0 and stock > 1:
+                        if old_price and old_price > 0 and stock > 1:
                             pct = (new_price - old_price) / old_price * 100
                             if abs(pct) > 10:
                                 name = self.commodities[commodity_id].name
