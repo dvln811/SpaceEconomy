@@ -6,32 +6,46 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:15px;}
-h1{font-family:'JetBrains Mono',monospace;color:#4fc3f7;font-size:22px;letter-spacing:3px;margin-bottom:12px}
-h2{font-family:'JetBrains Mono',monospace;color:#4fc3f7;font-size:15px;letter-spacing:2px;margin:32px 0 16px;border-bottom:1px solid #1a2844;padding-bottom:8px}
+body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:15px}
+h1{color:#4fc3f7;font-size:22px;letter-spacing:3px;margin-bottom:12px}
+h2{color:#4fc3f7;font-size:15px;letter-spacing:2px;margin:32px 0 16px;border-bottom:1px solid #1a2844;padding-bottom:8px}
 p{color:#8aa0b8;line-height:1.6;margin-bottom:12px}
-a{color:#4fc3f7;text-decoration:none}
-a:hover{text-decoration:underline}
+a{color:#4fc3f7;text-decoration:none}a:hover{text-decoration:underline}
 .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin:16px 0}
 @media(max-width:1000px){.grid{grid-template-columns:1fr 1fr}}
-.card{background:#0a0e18;border:1px solid #1a2844;border-radius:6px;padding:20px;cursor:pointer;transition:all .15s;display:block;text-decoration:none}
-.card:hover{border-color:#4fc3f7;background:#0d1a2f;transform:translateY(-2px);text-decoration:none}
-.card h3{font-family:'JetBrains Mono',monospace;font-size:14px;letter-spacing:1px;margin-bottom:4px}
-.card .subtitle{color:#8aa0b8;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-.card p{color:#8aa0b8;font-size:12px;margin:0}
-.card .stats{display:flex;gap:12px;margin-top:8px;font-size:11px;flex-wrap:wrap}
+.card{background:#0a0e18;border:1px solid #1a2844;border-radius:6px;padding:16px;cursor:pointer;transition:all .15s}
+.card:hover{border-color:#4fc3f7;background:#0d1a2f;transform:translateY(-2px)}
+.card-header{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.card-header img{width:48px;height:48px;border-radius:4px;object-fit:contain}
+.card h3{font-size:14px;letter-spacing:1px}
+.card .subtitle{color:#8aa0b8;font-size:11px;text-transform:uppercase;letter-spacing:1px}
+.card .stats{display:flex;gap:8px;margin-top:8px;font-size:11px;flex-wrap:wrap}
 .card .stats span{padding:2px 6px;border-radius:3px;background:#0a1020}
-.note{background:#0a1020;border:1px solid #1a2844;border-radius:4px;padding:12px;margin:12px 0;font-size:12px;color:#8aa0b8}
-.detail{display:none;background:#0a0e18;border:1px solid #1a2844;border-radius:6px;padding:20px;margin:16px 0}
+.detail{display:none;background:#0a0e18;border:1px solid #1a2844;border-radius:6px;padding:24px;margin:16px 0}
 .detail.active{display:block}
-.agent{padding:8px 12px;margin:4px 0;border-left:3px solid #1a2844;background:#0a1020;border-radius:0 4px 4px 0}
-.agent-name{color:#e0e8f0;font-weight:500;font-size:13px}
-.agent-title{color:#8aa0b8;font-size:11px;text-transform:uppercase;letter-spacing:1px}
-.trait-bar{display:inline-block;height:6px;border-radius:3px;margin-left:4px;vertical-align:middle}
+.leader-block{display:flex;gap:16px;align-items:flex-start;margin:12px 0;padding:12px;background:#0a1020;border-radius:6px;border-left:3px solid #4fc3f7}
+.leader-block img{width:80px;height:80px;border-radius:6px;object-fit:cover}
+.leader-info{flex:1}
+.leader-info .name{color:#e0e8f0;font-weight:500;font-size:14px}
+.leader-info .title{color:#8aa0b8;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:2px 0 6px}
+.leader-info .bio{color:#8aa0b8;font-size:12px;line-height:1.5}
+.trait-row{font-size:11px;margin-top:6px}
+.trait-bar{display:inline-block;height:5px;border-radius:3px;margin-left:4px;vertical-align:middle}
+.agent{display:flex;gap:12px;align-items:center;padding:8px 12px;margin:4px 0;border-left:3px solid #1a2844;background:#0a1020;border-radius:0 4px 4px 0}
+.agent img{width:44px;height:44px;border-radius:4px;object-fit:cover}
+.agent-info{flex:1}
+.agent-name{color:#e0e8f0;font-weight:500;font-size:12px}
+.agent-title{color:#8aa0b8;font-size:10px;text-transform:uppercase;letter-spacing:1px}
+.corps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin:12px 0}
+.corp-card{display:flex;gap:10px;align-items:center;padding:10px;background:#0a1020;border:1px solid #1a2844;border-radius:6px;transition:border-color .15s}
+.corp-card:hover{border-color:#4fc3f7}
+.corp-card img{width:40px;height:40px;border-radius:4px;object-fit:contain}
+.corp-card .corp-name{color:#e0e8f0;font-size:12px;font-weight:500}
+.corp-card .corp-spec{color:#8aa0b8;font-size:10px;text-transform:uppercase;letter-spacing:1px}
+.note{background:#0a1020;border:1px solid #1a2844;border-radius:4px;padding:12px;margin:12px 0;font-size:12px;color:#8aa0b8}
 .btn{font-size:11px;color:#8aa0b8;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;cursor:pointer;background:none;font-family:inherit;letter-spacing:1px;text-transform:uppercase;transition:all .1s}
 .btn:hover{color:#4fc3f7;border-color:#4fc3f7}
-.btn-danger{color:#ef5350;border-color:#ef5350}
-.btn-danger:hover{background:#ef5350;color:#fff}
+.btn-danger{color:#ef5350;border-color:#ef5350}.btn-danger:hover{background:#ef5350;color:#fff}
 #docnav .dnl{font-size:12px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;transition:all .15s}
 #docnav .dnl:hover{color:#4fc3f7;border-color:#4fc3f7;background:#0d1a2f}
 #docnav .dnl.active{color:#4fc3f7;border-color:#4fc3f7}
@@ -46,11 +60,11 @@ a:hover{text-decoration:underline}
 </div>
 <div style="max-width:1200px;margin:0 auto;padding:0 40px">
 <h1>Universe</h1>
-<p>2,500 star systems across 20 regions. Six factions vie for territory, resources, and dominance. The galaxy starts mostly wild and slowly civilizes through expansion, trade, and war.</p>
+<p>2,500 star systems across 20 regions. Six factions vie for territory, resources, and dominance.</p>
 
 <h2>Factions</h2>
 <div class="note">
-Each faction is led by named agents with personalities that shape decisions. Agents can be regenerated for a fresh start.
+Each faction is led by named agents with personalities that shape decisions.
 <button class="btn btn-danger" style="margin-left:12px" onclick="regenerateAgents()">Regenerate All Agents</button>
 </div>
 <div class="grid" id="factionGrid"></div>
@@ -60,17 +74,26 @@ Each faction is led by named agents with personalities that shape decisions. Age
 <div class="grid" style="grid-template-columns:1fr 1fr">
   <div class="card" onclick="location.href='/'">
     <h3>Star Map</h3>
-    <p>3D interactive star map. Navigate systems, view connections, explore regions.</p>
-    <div class="stats"><span>2,500 systems</span><span>20 regions</span><span>138 clusters</span></div>
+    <p style="font-size:12px">3D interactive star map. Navigate systems, view connections, explore regions.</p>
+    <div class="stats"><span>2,500 systems</span><span>20 regions</span></div>
   </div>
   <div class="card" onclick="location.href='/debug'">
     <h3>Simulation Dashboard</h3>
-    <p>Live economy stats, ship tracking, production health, performance metrics.</p>
+    <p style="font-size:12px">Live economy stats, ship tracking, production health, performance metrics.</p>
   </div>
 </div>
 </div>
 
 <script>
+const FACTION_EMBLEM = {
+  corsairs: 'the_corsairs.png',
+  free_states: 'frontier_alliance.png',
+  iron_compact: 'iron_compact.png',
+  merchants_guild: 'merchants_guild.png',
+  science_collective: 'nexus_collective.png',
+  terran_fed: 'terran_federation.png'
+};
+
 let factions = {};
 let agents = [];
 
@@ -84,71 +107,104 @@ async function init() {
   renderGrid();
 }
 
+function emblemUrl(fid) { return '/static/faction_emblems/' + FACTION_EMBLEM[fid]; }
+function portraitUrl(p) { return p ? '/static/agent_portraits/' + encodeURIComponent(p) : ''; }
+function corpEmblemUrl(e) { return e ? '/static/faction_emblems/' + e : ''; }
+function fmtSpec(s) { return s ? s.replace(/_/g, ' ') : ''; }
+
 function renderGrid() {
   const grid = document.getElementById('factionGrid');
   let html = '';
   for (const [fid, f] of Object.entries(factions)) {
     const agentCount = agents.filter(a => a.faction_id === fid).length;
     const leader = agents.find(a => a.faction_id === fid && a.role === 'leader');
+    const corpCount = (f.corporations || []).length;
     html += `<div class="card" onclick="showFaction('${fid}')" style="border-left:3px solid ${f.color}">
-      <h3 style="color:${f.color}">${f.name}</h3>
-      <div class="subtitle">${f.short} // ${leader ? leader.title : 'Unknown'}</div>
-      <p>${f.philosophy}</p>
+      <div class="card-header">
+        <img src="${emblemUrl(fid)}" alt="${f.name}">
+        <div>
+          <h3 style="color:${f.color}">${f.name}</h3>
+          <div class="subtitle">${leader ? leader.name + ' // ' + leader.title : f.short}</div>
+        </div>
+      </div>
       <div class="stats">
         <span>${agentCount} agents</span>
+        <span>${corpCount} corps</span>
         <span>${f.home_cluster}</span>
-        <span style="color:#ef5350">${(f.enemies||[]).length} enemies</span>
       </div>
     </div>`;
   }
   grid.innerHTML = html;
 }
 
+function traitBar(val, color) {
+  return `<span class="trait-bar" style="width:${val*50}px;background:${color}"></span> ${(val*100).toFixed(0)}%`;
+}
+
 function showFaction(fid) {
   const f = factions[fid];
-  const fAgents = agents.filter(a => a.faction_id === fid);
+  const fAgents = agents.filter(a => a.faction_id === fid && !a.id.startsWith('corp_'));
   const leader = fAgents.find(a => a.role === 'leader');
-  const others = fAgents.filter(a => a.role !== 'leader');
+  const officers = fAgents.filter(a => a.role !== 'leader');
+  const corps = f.corporations || [];
   const nameMap = {};
   for (const [k, v] of Object.entries(factions)) nameMap[k] = v.name;
 
-  const traitBar = (val, color) => `<span class="trait-bar" style="width:${val*60}px;background:${color}"></span> ${(val*100).toFixed(0)}%`;
-
   let html = `<div class="detail active">
-    <h2 style="color:${f.color};margin-top:0">${f.name}</h2>
-    <p><strong>Philosophy:</strong> ${f.philosophy}</p>
-    <p><strong>Territory:</strong> ${f.home_cluster} | <strong>Allies:</strong> ${(f.allies||[]).map(a=>nameMap[a]||a).join(', ')||'None'} | <strong>Enemies:</strong> ${(f.enemies||[]).map(e=>nameMap[e]||e).join(', ')||'None'}</p>
-    ${f.history ? `<p style="margin-top:12px;line-height:1.8;color:#c8d4e0;font-size:13px">${f.history}</p>` : ''}
-    <p><strong>Corporations:</strong> ${f.corporations.map(c=>c.name).join(', ')}</p>`;
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:16px">
+      <img src="${emblemUrl(fid)}" style="width:72px;height:72px;object-fit:contain">
+      <div>
+        <h2 style="color:${f.color};margin:0;border:none;padding:0">${f.name}</h2>
+        <p style="margin:4px 0;font-size:12px">${f.philosophy}</p>
+        <p style="margin:0;font-size:11px"><strong>Allies:</strong> ${(f.allies||[]).map(a=>nameMap[a]||a).join(', ')||'None'} | <strong>Enemies:</strong> ${(f.enemies||[]).map(e=>nameMap[e]||e).join(', ')||'None'}</p>
+      </div>
+    </div>
+    ${f.history ? `<p style="line-height:1.7;color:#c8d4e0;font-size:12px;margin-bottom:16px">${f.history}</p>` : ''}`;
 
+  // Leader
   if (leader) {
     html += `<h2>Leadership</h2>
-    <div class="agent" style="border-color:${f.color}">
-      <div class="agent-name">${leader.name}</div>
-      <div class="agent-title">${leader.title} (${leader.role})</div>
-      ${leader.bio ? `<p style="color:#8aa0b8;font-size:12px;margin:6px 0;line-height:1.6">${leader.bio}</p>` : ''}
-      <div style="margin-top:6px;font-size:11px">
-        <div>Aggression: ${traitBar(leader.aggression,'#ef5350')}</div>
-        <div>Caution: ${traitBar(leader.caution,'#4fc3f7')}</div>
-        <div>Competence: ${traitBar(leader.competence,'#66bb6a')}</div>
-        <div>Loyalty: ${traitBar(leader.loyalty,'#ffd54f')}</div>
-        <div>Ambition: ${traitBar(leader.ambition,'#ab47bc')}</div>
+    <div class="leader-block" style="border-color:${f.color}">
+      ${leader.portrait ? `<img src="${portraitUrl(leader.portrait)}" alt="${leader.name}">` : ''}
+      <div class="leader-info">
+        <div class="name">${leader.name}</div>
+        <div class="title">${leader.title}</div>
+        ${leader.bio ? `<div class="bio">${leader.bio}</div>` : ''}
+        <div class="trait-row">
+          Agg: ${traitBar(leader.aggression,'#ef5350')} Caut: ${traitBar(leader.caution,'#4fc3f7')} Comp: ${traitBar(leader.competence,'#66bb6a')} Loy: ${traitBar(leader.loyalty,'#ffd54f')}
+        </div>
       </div>
     </div>`;
   }
 
-  if (others.length) {
+  // Officers
+  if (officers.length) {
     html += `<h2>Officers</h2>`;
-    for (const a of others) {
-      html += `<div class="agent">
-        <div class="agent-name">${a.name}</div>
-        <div class="agent-title">${a.title} (${a.role})</div>
-        ${a.bio ? `<p style="color:#8aa0b8;font-size:11px;margin:4px 0;line-height:1.5">${a.bio}</p>` : ''}
-        <div style="margin-top:4px;font-size:11px">
-          Agg: ${traitBar(a.aggression,'#ef5350')} | Comp: ${traitBar(a.competence,'#66bb6a')} | Loy: ${traitBar(a.loyalty,'#ffd54f')}
+    for (const a of officers) {
+      html += `<div class="agent" style="border-color:${f.color}55">
+        ${a.portrait ? `<img src="${portraitUrl(a.portrait)}" alt="${a.name}">` : ''}
+        <div class="agent-info">
+          <div class="agent-name">${a.name}</div>
+          <div class="agent-title">${a.title} (${a.role})</div>
         </div>
       </div>`;
     }
+  }
+
+  // Corporations
+  if (corps.length) {
+    html += `<h2>Corporations (${corps.length})</h2><div class="corps-grid">`;
+    for (const c of corps) {
+      const head = agents.find(a => a.id === c.head_agent_id);
+      html += `<div class="corp-card">
+        ${c.emblem ? `<img src="${corpEmblemUrl(c.emblem)}" alt="${c.name}">` : ''}
+        <div>
+          <div class="corp-name">${c.name}</div>
+          <div class="corp-spec">${fmtSpec(c.specialty)}${head ? ' // ' + head.name : ''}</div>
+        </div>
+      </div>`;
+    }
+    html += `</div>`;
   }
 
   html += `<div style="margin-top:16px"><button class="btn" onclick="regenerateFaction('${fid}')">Regenerate ${f.short} Agents</button></div>`;

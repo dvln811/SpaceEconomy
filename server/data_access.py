@@ -68,14 +68,14 @@ def load_factions(conn=None) -> dict:
     factions = {}
     rows = conn.execute("SELECT * FROM factions").fetchall()
     for row in rows:
-        corps = conn.execute("SELECT * FROM corporations WHERE faction_id=?", (row["id"],)).fetchall()
+        corps = conn.execute("SELECT * FROM corporations WHERE faction_id=? AND status='active'", (row["id"],)).fetchall()
         factions[row["id"]] = {
             "id": row["id"], "name": row["name"], "short": row["short"],
             "philosophy": row["philosophy"], "home_cluster": row["home_cluster"],
             "allies": json.loads(row["allies"]), "enemies": json.loads(row["enemies"]),
             "color": row["color"],
             "history": row["history"] if "history" in row.keys() else "",
-            "corporations": [{"id": c["id"], "name": c["name"], "focus": c["focus"], "description": c["description"]} for c in corps],
+            "corporations": [{"id": c["id"], "name": c["name"], "emblem": c["emblem"], "specialty": c["specialty"], "head_agent_id": c["head_agent_id"]} for c in corps],
         }
 
     if close:

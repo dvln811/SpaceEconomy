@@ -5,6 +5,67 @@ import json
 import os
 
 DB = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "game_data.db")
+PORTRAIT_TAGS_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "portrait_tags.json")
+
+# Faction -> portrait archetype mapping
+FACTION_ARCHETYPE = {
+    'corsairs': 'renegade',
+    'free_states': 'military',
+    'iron_compact': 'military',
+    'merchants_guild': 'corporate',
+    'science_collective': 'corporate',
+    'terran_fed': 'military',
+}
+
+# Role -> preferred age tiers
+ROLE_AGE = {
+    'leader': ['senior', 'mid'],
+    'admiral': ['senior', 'mid'],
+    'governor': ['senior', 'mid'],
+    'general': ['mid', 'senior'],
+    'director': ['mid', 'young'],
+    'spymaster': ['mid', 'young'],
+}
+
+
+def _load_portrait_pool():
+    """Load and index portraits by archetype/gender/age."""
+    if not os.path.exists(PORTRAIT_TAGS_PATH):
+        return {}
+    with open(PORTRAIT_TAGS_PATH) as f:
+        return json.load(f)
+
+
+def pick_portrait(faction_id, role, used_portraits):
+    """Pick an appropriate portrait for an agent."""
+    tags = _load_portrait_pool()
+    if not tags:
+        return None
+    archetype = FACTION_ARCHETYPE.get(faction_id, 'military')
+    age_prefs = ROLE_AGE.get(role, ['mid', 'young'])
+    gender = random.choice(['male', 'female'])
+
+    # Filter candidates: match archetype, gender, preferred age
+    candidates = [f for f, t in tags.items()
+                  if t['archetype'] == archetype and t['gender'] == gender
+                  and t['age'] in age_prefs and f not in used_portraits]
+    # Fallback: drop age constraint
+    if not candidates:
+        candidates = [f for f, t in tags.items()
+                      if t['archetype'] == archetype and t['gender'] == gender
+                      and f not in used_portraits]
+    # Fallback: drop gender
+    if not candidates:
+        candidates = [f for f, t in tags.items()
+                      if t['archetype'] == archetype and f not in used_portraits]
+    # Last resort: anything unused
+    if not candidates:
+        candidates = [f for f in tags if f not in used_portraits]
+    if not candidates:
+        return None
+    pick = random.choice(candidates)
+    used_portraits.add(pick)
+    return pick
 
 # Name pools
 FIRST_NAMES = [
@@ -139,6 +200,7 @@ def regenerate_all():
     conn.execute("DELETE FROM faction_agents")
 
     all_agents = []
+    used_portraits = set()
     for state in states:
         agents = generate_agents(state['faction_id'], state['government'])
         all_agents.extend(agents)
@@ -148,11 +210,12 @@ def regenerate_all():
 
     for a in all_agents:
         bio = generate_bio(a['faction_id'], a['role'])
+        portrait = pick_portrait(a['faction_id'], a['role'], used_portraits)
         conn.execute("""INSERT INTO faction_agents
-            (id, name, title, faction_id, role, aggression, caution, competence, loyalty, ambition, corruption, bio)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (id, name, title, faction_id, role, aggression, caution, competence, loyalty, ambition, corruption, bio, portrait)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (a['id'], a['name'], a['title'], a['faction_id'], a['role'],
-             a['aggression'], a['caution'], a['competence'], a['loyalty'], a['ambition'], a['corruption'], bio))
+             a['aggression'], a['caution'], a['competence'], a['loyalty'], a['ambition'], a['corruption'], bio, portrait))
 
     conn.commit()
     conn.close()
@@ -176,13 +239,18 @@ def regenerate_faction(faction_id):
     leader = next(a for a in agents if a['role'] == 'leader')
     conn.execute("UPDATE faction_state SET leader_id=? WHERE faction_id=?", (leader['id'], faction_id))
 
+    # Get already-used portraits from other factions
+    used_portraits = set(r[0] for r in conn.execute(
+        "SELECT portrait FROM faction_agents WHERE portrait IS NOT NULL").fetchall())
+
     for a in agents:
         bio = generate_bio(a['faction_id'], a['role'])
+        portrait = pick_portrait(a['faction_id'], a['role'], used_portraits)
         conn.execute("""INSERT INTO faction_agents
-            (id, name, title, faction_id, role, aggression, caution, competence, loyalty, ambition, corruption, bio)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (id, name, title, faction_id, role, aggression, caution, competence, loyalty, ambition, corruption, bio, portrait)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (a['id'], a['name'], a['title'], a['faction_id'], a['role'],
-             a['aggression'], a['caution'], a['competence'], a['loyalty'], a['ambition'], a['corruption'], bio))
+             a['aggression'], a['caution'], a['competence'], a['loyalty'], a['ambition'], a['corruption'], bio, portrait))
 
     conn.commit()
     conn.close()
