@@ -71,7 +71,7 @@ def _init_simulation():
     supervisor.multiplier = sim_speed["multiplier"]
     supervisor.add_worker(EconomyWorker(COMMODITIES, STATION_CONSUMPTION))
     supervisor.add_worker(NPCDecisionWorker(COMMODITIES))
-    supervisor.add_worker(FactionStrategyWorker({}))
+    supervisor.add_worker(FactionStrategyWorker())
     supervisor.add_worker(BattleSimWorker())
     supervisor.add_worker(CorsairSpawnWorker())
     supervisor.add_worker(DashboardWorker(COMMODITIES, STATION_CONSUMPTION))
@@ -491,7 +491,7 @@ def api_nuke():
     supervisor.multiplier = 1
     supervisor.add_worker(EconomyWorker(COMMODITIES, STATION_CONSUMPTION))
     supervisor.add_worker(NPCDecisionWorker(COMMODITIES))
-    supervisor.add_worker(FactionStrategyWorker({}))
+    supervisor.add_worker(FactionStrategyWorker())
     supervisor.add_worker(BattleSimWorker())
     supervisor.add_worker(CorsairSpawnWorker())
     supervisor.add_worker(DashboardWorker(COMMODITIES, STATION_CONSUMPTION))
