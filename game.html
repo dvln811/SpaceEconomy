@@ -282,17 +282,12 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 // Side panel resize
 (function(){
   const app=document.querySelector('.app');
-  let leftW=280, rightW=320;
+  let rightW=320;
 
   function updateCols(){
-    app.style.gridTemplateColumns=`${leftW}px 4px 1fr 4px ${rightW}px`;
+    app.style.gridTemplateColumns=`1fr 4px ${rightW}px`;
     window.dispatchEvent(new Event('resize'));
   }
-
-  // Left handle
-  const lh=document.getElementById('left-handle');
-  let ldrag=false, lStartX, lStartW;
-  lh.addEventListener('mousedown',(e)=>{ldrag=true;lStartX=e.clientX;lStartW=leftW;document.body.style.cursor='ew-resize';e.preventDefault();});
 
   // Right handle
   const rh=document.getElementById('right-handle');
@@ -300,11 +295,10 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   rh.addEventListener('mousedown',(e)=>{rdrag=true;rStartX=e.clientX;rStartW=rightW;document.body.style.cursor='ew-resize';e.preventDefault();});
 
   document.addEventListener('mousemove',(e)=>{
-    if(ldrag){leftW=Math.max(180,Math.min(500,lStartW+(e.clientX-lStartX)));updateCols();}
     if(rdrag){rightW=Math.max(200,Math.min(600,rStartW-(e.clientX-rStartX)));updateCols();}
   });
   document.addEventListener('mouseup',()=>{
-    if(ldrag||rdrag){ldrag=false;rdrag=false;document.body.style.cursor='';}
+    if(rdrag){rdrag=false;document.body.style.cursor='';}
   });
 })();
 </script>
@@ -897,11 +891,13 @@ const systemList=document.getElementById('system-list');
 const typeLabels={industrial:'Industrial Hub',mining:'Mining Colony',trade:'Trade Hub',agricultural:'Agricultural',processing:'Processing',frontier:'Frontier',nexus:'Jump Nexus',shipyard:'Shipyard',military:'Military Base'};
 
 function buildSystemCards(){
+  if(!systemList) return;
   renderSystemList('');
-  document.getElementById('sysSearch').addEventListener('input',e=>renderSystemList(e.target.value));
-  document.getElementById('sysSearch').addEventListener('search',e=>renderSystemList(e.target.value));
+  document.getElementById('sysSearch')?.addEventListener('input',e=>renderSystemList(e.target.value));
+  document.getElementById('sysSearch')?.addEventListener('search',e=>renderSystemList(e.target.value));
 }
 function renderSystemList(query){
+  if(!systemList) return;
   const q=query.toLowerCase();
   let selRegion='',selCluster='';
   if(selectedSystem>=0){selRegion=systems[selectedSystem].region;selCluster=systems[selectedSystem].cluster;}
