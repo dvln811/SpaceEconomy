@@ -74,16 +74,22 @@ async function init() {
   const ships = await shipRes.json();
   const military = await milRes.json();
 
-  // Build name map from commodities
-  commodities.forEach(c => { names[c.id] = c.name; });
+  // Build name map from commodities (include size prefix)
+  commodities.forEach(c => {
+    const sz = c.stats && c.stats.size ? c.stats.size + ' ' : '';
+    names[c.id] = sz + c.name;
+  });
 
   // Map commodities to chain items
   const tierCat = {0:'Trade Goods',1:'Raw Materials',2:'Refined Materials',3:'Manufactured',4:'Components',5:'Products'};
-  items = commodities.map(c => ({
-    id: c.id, name: c.name, type: 'commodity',
-    category: c.category || tierCat[c.tier] || 'Other', sub: c.subcategory || '',
-    recipe: c.recipe || {}
-  }));
+  items = commodities.map(c => {
+    const sz = c.stats && c.stats.size ? c.stats.size + ' ' : '';
+    return {
+      id: c.id, name: sz + c.name, type: 'commodity',
+      category: c.category || tierCat[c.tier] || 'Other', sub: c.subcategory || '',
+      recipe: c.recipe || {}
+    };
+  });
 
   // Add civilian ships
   ships.forEach(s => {
@@ -170,7 +176,7 @@ function showChain(id) {
     <div class="item-title">${item.name}</div>
     <div class="totals">
       <div class="totals-title">Total Raw Materials Required</div>
-      ${sorted.map(([rid, qty]) => `<div class="total-row"><span class="qty">${qty}x</span><span class="name">${names[rid] || rid}</span></div>`).join('')}
+      ${sorted.map(([rid, qty]) => `<div class="total-row"><span class="qty">${fmtQ(qty)}x</span><span class="name">${names[rid] || rid}</span></div>`).join('')}
     </div>
     <div class="chain-wrap">
       <div class="chain-title">Production Chain</div>
@@ -178,19 +184,21 @@ function showChain(id) {
     </div>`;
 }
 
+function fmtQ(n){ return Math.round(n).toLocaleString(); }
+
 function buildTreeHtml(id, qty, depth) {
   if (depth > 12) return '';
   const item = lookup[id];
   const name = names[id] || (item ? item.name : id);
   if (!item || !item.recipe || Object.keys(item.recipe).length === 0) {
-    return `<div class="chain-row" style="padding-left:${depth * 8}px"><span class="chain-qty">${qty}x</span><span class="chain-raw">${name}</span></div>`;
+    return `<div class="chain-row" style="padding-left:${depth * 8}px"><span class="chain-qty">${fmtQ(qty)}x</span><span class="chain-raw">${name}</span></div>`;
   }
   let children = '';
   for (const [inp, inpQty] of Object.entries(item.recipe))
     children += buildTreeHtml(inp, inpQty * qty, depth + 1);
   return `<div style="padding-left:${depth * 8}px">
     <div class="chain-row" style="cursor:pointer" onclick="const s=this.nextElementSibling;s.style.display=s.style.display==='none'?'block':'none';this.querySelector('.tog').textContent=s.style.display==='none'?'▶':'▼'">
-      <span class="chain-qty">${qty}x</span><span class="tog" style="color:#8aa0b8;margin-right:4px">▼</span><span class="chain-name">${name}</span>
+      <span class="chain-qty">${fmtQ(qty)}x</span><span class="tog" style="color:#8aa0b8;margin-right:4px">▼</span><span class="chain-name">${name}</span>
     </div>
     <div class="chain-children">${children}</div>
   </div>`;
