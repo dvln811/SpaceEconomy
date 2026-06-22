@@ -105,17 +105,21 @@ def _build_order_book(st):
         if not com or not com.recipe:
             continue
         for inp_id, qty_needed in com.recipe.items():
-            want = qty_needed * st.production_rate * 200  # want 200 ticks of buffer
+            want = qty_needed * st.production_rate * 100  # want 100 ticks of buffer
             have = st.inventory.get(inp_id, 0)
             deficit = want - have
             if deficit > 0:
-                buy_price = st.price_cache.get(inp_id, 0) * 1.1
-                buy_orders.append({"commodity": inp_id, "qty": round(deficit, 1), "price": round(buy_price, 1)})
+                base = st.price_cache.get(inp_id, 0)
+                buy_price = base * 1.1 if base > 0 else COMS[inp_id].base_price * 1.1 if inp_id in COMS else 0
+                if buy_price > 0:
+                    buy_orders.append({"commodity": inp_id, "qty": round(deficit, 1), "price": round(buy_price, 1)})
     for commodity_id in STATION_CONSUMPTION.get(st.station_type, []):
         have = st.inventory.get(commodity_id, 0)
         if have < 50:
-            buy_price = st.price_cache.get(commodity_id, 0) * 1.15
-            buy_orders.append({"commodity": commodity_id, "qty": round(50 - have, 1), "price": round(buy_price, 1)})
+            base = st.price_cache.get(commodity_id, 0)
+            buy_price = base * 1.15 if base > 0 else COMS[commodity_id].base_price * 1.15 if commodity_id in COMS else 0
+            if buy_price > 0:
+                buy_orders.append({"commodity": commodity_id, "qty": round(50 - have, 1), "price": round(buy_price, 1)})
     return sorted(sell_orders, key=lambda x: -x["qty"])[:20], sorted(buy_orders, key=lambda x: -x["qty"])[:20]
 
 
@@ -241,6 +245,36 @@ def api_positions():
             "has_asteroids": len(sys.asteroid_fields) > 0,
         }
     return jsonify({"systems": systems})
+
+
+@app.route("/api/market/ships")
+def api_market_ships():
+    """Ships available at shipyard stations with computed prices."""
+    from server.game_data_db import get_data_db
+    conn = get_data_db()
+    rows = conn.execute("SELECT id, name, hull_class, build_cost, build_time FROM ships ORDER BY hull_class, name").fetchall()
+    # Get base prices for cost calculation
+    price_rows = conn.execute("SELECT id, base_price FROM commodities").fetchall()
+    conn.close()
+    base_prices = {r["id"]: r["base_price"] for r in price_rows}
+    # Find shipyard stations
+    shipyards = []
+    for sid, sys_obj in sim.universe.items():
+        for st in sys_obj.stations:
+            if st.station_type == "shipyard":
+                shipyards.append({"system": sys_obj.name, "station": st.name})
+    result = []
+    for r in rows:
+        cost_data = json.loads(r["build_cost"]) if r["build_cost"] else {}
+        price = sum(qty * base_prices.get(mat, 100) for mat, qty in cost_data.items())
+        if price == 0:
+            hull_mult = {"frigate": 50000, "destroyer": 150000, "cruiser": 500000, "battleship": 1500000, "industrial": 80000, "mining_barge": 60000}
+            price = hull_mult.get(r["hull_class"], 100000)
+        for yard in shipyards:
+            result.append({"id": r["id"], "name": r["name"], "hull_class": r["hull_class"],
+                           "price": round(price), "build_time": r["build_time"],
+                           "shipyard_system": yard["system"], "shipyard_station": yard["station"]})
+    return jsonify(result)
 
 
 @app.route("/api/market/<system_id>")

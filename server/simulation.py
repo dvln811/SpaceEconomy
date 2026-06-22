@@ -53,9 +53,9 @@ class Simulation:
         self.warfare = WarfareSimulation()
 
     def _bootstrap_seed(self):
-        """Demand-driven seeding: seed each station with enough inputs for 500 ticks
+        """Demand-driven seeding: seed each station with enough inputs for 100 ticks
         of production, plus seed mining colonies with raw ores scaled to demand."""
-        BUFFER = 500
+        BUFFER = 100
         # Seed producing stations with inputs
         for sys in self.universe.values():
             for station in sys.stations:

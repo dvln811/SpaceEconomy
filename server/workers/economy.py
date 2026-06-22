@@ -13,7 +13,7 @@ class EconomyWorker(WorkerThread):
     def process(self, tick: int, snapshot):
         universe = snapshot['universe']
         self._production_consumption(universe, tick)
-        if tick % 10 == 0:
+        if tick % 60 == 0:
             self._update_prices(universe, tick)
 
     def _production_consumption(self, universe, tick):
