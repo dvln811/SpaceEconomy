@@ -135,8 +135,10 @@ function show(filter, btn) {
     if (filter === 'miners') ships = civilian.filter(s => s.role === 'miner');
     ships = ships.filter(match);
     el.innerHTML = `<table><thead><tr>
-      <th>Name</th><th>Role</th><th>Tier</th><th>Cargo (m3)</th><th>Fuel</th><th>Speed</th><th>Hull HP</th><th>Align (s)</th><th>Hardpoints</th><th>Recipe</th><th>Build Time</th><th style="width:120px">Description</th>
-    </tr></thead><tbody>${ships.map(s => `<tr>
+      <th>Name</th><th>Role</th><th>Tier</th><th>Cargo (m3)</th><th>Fuel</th><th>Speed</th><th>Hull HP</th><th>Align (s)</th><th>Hardpoints</th><th>Recipe</th><th>Build Time</th><th>Description</th>
+    </tr></thead><tbody>${ships.map(s => {
+      const hp = typeof s.hardpoints === 'string' ? JSON.parse(s.hardpoints) : (s.hardpoints||{});
+      return `<tr>
       <td style="color:#e0e8f0">${s.name}</td>
       <td>${s.role}</td>
       <td>T${s.tier}</td>
@@ -145,11 +147,11 @@ function show(filter, btn) {
       <td>${s.speed}x</td>
       <td>${s.hull_hp}</td>
       <td>${s.align_time}</td>
-      <td style="font-size:11px">${Object.entries(s.hardpoints).map(([k,v])=>v+'x '+k).join('<br>')}</td>
+      <td style="font-size:11px">${hp.weapon_mounts||0}W / ${hp.utility_bays||0}U / ${hp.core_slots||0}C</td>
       <td style="font-size:11px;color:#66bb6a">${Object.entries(s.build_cost).map(([k,v])=>v+'x '+n(k)).join('<br>')}</td>
       <td>${s.build_time?fmtTime(s.build_time):'-'}</td>
       <td class="desc">${s.description}</td>
-    </tr>`).join('')}</tbody></table>`;
+    </tr>`;}).join('')}</tbody></table>`;
   } else {
     let ships = military;
     if (filter.startsWith('mil_')) ships = military.filter(s => s.faction_id === filter.replace('mil_',''));
