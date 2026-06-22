@@ -29,11 +29,12 @@ a{color:#4fc3f7;text-decoration:none}a:hover{text-decoration:underline}
 .toolbar{display:flex;align-items:center;gap:12px;padding:6px 12px;border-bottom:1px solid #1a2844;background:#0a0e18;flex-wrap:wrap}
 .toolbar label{color:#8aa0b8;font-size:11px;text-transform:uppercase;letter-spacing:1px}
 .toolbar select{background:#05080f;border:1px solid #1a2844;border-radius:3px;padding:3px 6px;color:#c8d4e0;font-family:inherit;font-size:12px}
-.info-panel{padding:8px 12px;background:#0a1020;border-bottom:1px solid #1a2844;font-size:11px;display:none}
+.info-panel{padding:8px 12px;background:#0a1020;border-bottom:1px solid #1a2844;font-size:11px;display:none;max-height:130px;overflow-y:auto}
 .info-panel.visible{display:block}
-.info-panel .info-name{color:#4fc3f7;font-size:13px;font-weight:600;margin-bottom:4px}
-.info-panel .info-stats{display:flex;gap:12px;flex-wrap:wrap;color:#8aa0b8}
-.info-panel .info-stats span{padding:1px 6px;background:#0a0e18;border:1px solid #1a2844;border-radius:3px}
+.info-panel .info-name{color:#4fc3f7;font-size:13px;font-weight:600;margin-bottom:6px}
+.info-panel .info-grid{display:grid;grid-template-columns:auto 1fr;gap:1px 12px}
+.info-panel .info-grid .lbl{color:#556;font-size:10px}
+.info-panel .info-grid .val{color:#c8d4e0;font-size:11px}
 .panes-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .pane{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
 .pane-header{padding:6px 12px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#4fc3f7;background:#0a0e18;border-bottom:1px solid #1a2844;flex-shrink:0}
@@ -67,7 +68,7 @@ tr:hover td{background:#0a1020}
   </div>
   <div id="infoPanel" class="info-panel">
     <div class="info-name" id="infoName"></div>
-    <div class="info-stats" id="infoStats"></div>
+    <div class="info-grid" id="infoGrid"></div>
   </div>
   <div class="panes-wrap">
   <div class="pane" style="border-bottom:1px solid #1a2844">
@@ -95,7 +96,8 @@ let lastTick = 0, expanded = {};
 function displayName(c){
   if(!c) return '';
   let n = c.name || c.id;
-  if(c.size && c.size !== 'N/A' && c.size !== '') n = c.size + ' ' + n;
+  const sz = c.stats && c.stats.size;
+  if(sz) n = sz + ' ' + n;
   return n;
 }
 
@@ -204,7 +206,7 @@ function onTreeClick(e){
 function updateInfoPanel(){
   const panel = document.getElementById('infoPanel');
   const nameEl = document.getElementById('infoName');
-  const statsEl = document.getElementById('infoStats');
+  const gridEl = document.getElementById('infoGrid');
   if(!selectedFilter || selectedFilter.type !== 'item'){
     panel.classList.remove('visible');
     return;
@@ -213,15 +215,26 @@ function updateInfoPanel(){
   if(!c){ panel.classList.remove('visible'); return; }
   panel.classList.add('visible');
   nameEl.textContent = displayName(c);
-  let stats = '';
-  if(c.category) stats += '<span>'+c.category+'</span>';
-  if(c.subcategory) stats += '<span>'+c.subcategory+'</span>';
-  if(c.size && c.size !== 'N/A') stats += '<span>Size: '+c.size+'</span>';
-  if(c.tier) stats += '<span>Tier: '+c.tier+'</span>';
-  if(c.base_price) stats += '<span>Base: '+Math.round(c.base_price).toLocaleString()+'</span>';
-  if(c.volume) stats += '<span>Vol: '+c.volume+' m3</span>';
-  if(c.description) stats += '<div style="margin-top:4px;color:#8aa0b8;font-size:10px;width:100%">'+c.description+'</div>';
-  statsEl.innerHTML = stats;
+  let html = '';
+  function row(label, val){ html += '<span class="lbl">'+label+':</span><span class="val">'+val+'</span>'; }
+  if(c.category) row('Type', c.subcategory || c.category);
+  if(c.stats && c.stats.size) row('Size', c.stats.size);
+  if(c.stats && c.stats.quality) row('Quality', c.stats.quality);
+  if(c.base_price) row('Base Price', Math.round(c.base_price).toLocaleString());
+  if(c.volume) row('Volume', c.volume + ' m3');
+  if(c.tier) row('Tier', c.tier);
+  // Weapon/module stats
+  if(c.stats){
+    const s = c.stats;
+    if(s.weapon_class) row('Weapon Class', s.weapon_class);
+    if(s.damage_type) row('Damage Type', s.damage_type);
+    if(s.rof_bonus) row('RoF Bonus', s.rof_bonus + '/min');
+    if(s.tracking) row('Tracking', s.tracking + ' deg/s');
+    if(s.optimal_range) row('Optimal Range', Math.round(s.optimal_range).toLocaleString() + ' m');
+    if(s.slot) row('Slot', s.slot.replace(/_/g, ' '));
+  }
+  if(c.description) html += '<span class="lbl" style="grid-column:1/-1;margin-top:4px;color:#8aa0b8;font-style:italic">'+c.description+'</span>';
+  gridEl.innerHTML = html;
 }
 
 function getFilteredIds(){
