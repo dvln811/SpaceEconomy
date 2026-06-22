@@ -36,14 +36,13 @@ def _load_portrait_pool():
         return json.load(f)
 
 
-def pick_portrait(faction_id, role, used_portraits):
+def pick_portrait(faction_id, role, used_portraits, gender='male'):
     """Pick an appropriate portrait for an agent."""
     tags = _load_portrait_pool()
     if not tags:
         return None
     archetype = FACTION_ARCHETYPE.get(faction_id, 'military')
     age_prefs = ROLE_AGE.get(role, ['mid', 'young'])
-    gender = random.choice(['male', 'female'])
 
     # Filter candidates: match archetype, gender, preferred age
     candidates = [f for f, t in tags.items()
@@ -54,10 +53,10 @@ def pick_portrait(faction_id, role, used_portraits):
         candidates = [f for f, t in tags.items()
                       if t['archetype'] == archetype and t['gender'] == gender
                       and f not in used_portraits]
-    # Fallback: drop gender
+    # Fallback: drop archetype
     if not candidates:
         candidates = [f for f, t in tags.items()
-                      if t['archetype'] == archetype and f not in used_portraits]
+                      if t['gender'] == gender and f not in used_portraits]
     # Last resort: anything unused
     if not candidates:
         candidates = [f for f in tags if f not in used_portraits]
@@ -68,13 +67,16 @@ def pick_portrait(faction_id, role, used_portraits):
     return pick
 
 # Name pools
-FIRST_NAMES = [
-    'Wei', 'Elena', 'Dmitri', 'Lyra', 'Adisa', 'Hana', 'Victor', 'Camila', 'Marcus',
-    'Fatima', 'Zara', 'Jack', 'Maria', 'Linh', 'Alexei', 'Irena', 'Conrad', 'Oleg',
-    'Silas', 'Jax', 'Quinn', 'Mira', 'Yuki', 'Kai', 'Amir', 'Selene', 'Ravi',
-    'Nadia', 'Tobias', 'Ingrid', 'Hassan', 'Yuna', 'Darius', 'Freya', 'Kofi',
-    'Anastasia', 'Rafael', 'Petra', 'Idris', 'Soren', 'Celeste', 'Nikolai', 'Thea',
-    'Emeka', 'Aria', 'Kenji', 'Astrid', 'Omar', 'Valentina', 'Ronan', 'Ines',
+FIRST_NAMES_M = [
+    'Wei', 'Dmitri', 'Victor', 'Marcus', 'Jack', 'Alexei', 'Conrad', 'Oleg',
+    'Silas', 'Jax', 'Kai', 'Amir', 'Ravi', 'Tobias', 'Hassan', 'Darius', 'Kofi',
+    'Rafael', 'Idris', 'Soren', 'Nikolai', 'Emeka', 'Kenji', 'Omar', 'Ronan',
+]
+FIRST_NAMES_F = [
+    'Elena', 'Lyra', 'Hana', 'Camila', 'Fatima', 'Zara', 'Maria', 'Linh',
+    'Irena', 'Quinn', 'Mira', 'Yuki', 'Selene', 'Nadia', 'Ingrid', 'Yuna',
+    'Freya', 'Anastasia', 'Petra', 'Celeste', 'Thea', 'Aria', 'Astrid',
+    'Valentina', 'Ines', 'Adisa',
 ]
 LAST_NAMES = [
     'Chen', 'Harris', 'Volkov', 'Voss', 'Okafor', 'Reis', 'Cross', 'Silva', 'Brennan',
@@ -121,10 +123,11 @@ AGENT_SLOTS = [
 ]
 
 
-def generate_name(used_names):
-    """Generate a unique name."""
+def generate_name(used_names, gender='male'):
+    """Generate a unique name matching gender."""
+    pool = FIRST_NAMES_M if gender == 'male' else FIRST_NAMES_F
     for _ in range(100):
-        first = random.choice(FIRST_NAMES)
+        first = random.choice(pool)
         last = random.choice(LAST_NAMES)
         name = f"{first} {last}"
         if name not in used_names:
@@ -149,7 +152,8 @@ def generate_agents(faction_id, government, rng=None):
     agents = []
 
     # Leader
-    name = generate_name(used_names)
+    gender = random.choice(['male', 'female'])
+    name = generate_name(used_names, gender)
     title_pool = TITLES['leader'].get(government, ['Leader'])
     title = random.choice(title_pool)
     agents.append({
@@ -158,6 +162,7 @@ def generate_agents(faction_id, government, rng=None):
         'title': title,
         'faction_id': faction_id,
         'role': 'leader',
+        'gender': gender,
         'aggression': generate_trait(0.5, bias.get('aggression', 0)),
         'caution': generate_trait(0.5, bias.get('caution', 0)),
         'competence': generate_trait(0.7, bias.get('competence', 0)),
@@ -170,7 +175,8 @@ def generate_agents(faction_id, government, rng=None):
     for role, chance in AGENT_SLOTS:
         if random.random() > chance:
             continue
-        name = generate_name(used_names)
+        gender = random.choice(['male', 'female'])
+        name = generate_name(used_names, gender)
         title_pool = TITLES.get(role, ['Officer'])
         title = random.choice(title_pool)
         agents.append({
@@ -179,6 +185,7 @@ def generate_agents(faction_id, government, rng=None):
             'title': title,
             'faction_id': faction_id,
             'role': role,
+            'gender': gender,
             'aggression': generate_trait(0.5, bias.get('aggression', 0)),
             'caution': generate_trait(0.5, bias.get('caution', 0)),
             'competence': generate_trait(0.5, bias.get('competence', 0)),
@@ -210,7 +217,7 @@ def regenerate_all():
 
     for a in all_agents:
         bio = generate_bio(a['faction_id'], a['role'])
-        portrait = pick_portrait(a['faction_id'], a['role'], used_portraits)
+        portrait = pick_portrait(a['faction_id'], a['role'], used_portraits, a.get('gender', 'male'))
         conn.execute("""INSERT INTO faction_agents
             (id, name, title, faction_id, role, aggression, caution, competence, loyalty, ambition, corruption, bio, portrait)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
@@ -245,7 +252,7 @@ def regenerate_faction(faction_id):
 
     for a in agents:
         bio = generate_bio(a['faction_id'], a['role'])
-        portrait = pick_portrait(a['faction_id'], a['role'], used_portraits)
+        portrait = pick_portrait(a['faction_id'], a['role'], used_portraits, a.get('gender', 'male'))
         conn.execute("""INSERT INTO faction_agents
             (id, name, title, faction_id, role, aggression, caution, competence, loyalty, ambition, corruption, bio, portrait)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
