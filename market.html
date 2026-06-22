@@ -33,7 +33,7 @@ a{color:#4fc3f7;text-decoration:none}a:hover{text-decoration:underline}
 .info-panel.visible{display:block}
 .info-panel .info-name{color:#4fc3f7;font-size:13px;font-weight:600;margin-bottom:6px}
 .info-panel .info-grid{display:grid;grid-template-columns:auto 1fr;gap:1px 12px}
-.info-panel .info-grid .lbl{color:#556;font-size:10px}
+.info-panel .info-grid .lbl{color:#8aa0b8;font-size:10px}
 .info-panel .info-grid .val{color:#c8d4e0;font-size:11px}
 .panes-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .pane{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
@@ -217,10 +217,10 @@ function updateInfoPanel(){
   nameEl.textContent = displayName(c);
   let html = '';
   function row(label, val){ html += '<span class="lbl">'+label+':</span><span class="val">'+val+'</span>'; }
-  if(c.category) row('Type', c.subcategory || c.category);
+  function depl(s){ return s.endsWith('s') && !s.endsWith('ss') ? s.slice(0,-1) : s; }
+  if(c.category) row('Type', depl(c.subcategory || c.category));
   if(c.stats && c.stats.size) row('Size', c.stats.size);
   if(c.stats && c.stats.quality) row('Quality', c.stats.quality);
-  if(c.base_price) row('Base Price', Math.round(c.base_price).toLocaleString());
   if(c.volume) row('Volume', c.volume + ' m3');
   if(c.tier) row('Tier', c.tier);
   // Weapon/module stats
