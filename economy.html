@@ -6,7 +6,7 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:13px;overflow:hidden;height:100vh;display:flex;flex-direction:column}
+body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:13px;height:100vh;display:flex;flex-direction:column}
 a{color:#4fc3f7;text-decoration:none}a:hover{text-decoration:underline}
 #docnav .dnl{font-size:12px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;transition:all .15s}
 #docnav .dnl:hover{color:#4fc3f7;border-color:#4fc3f7;background:#0d1a2f}
@@ -23,13 +23,13 @@ a{color:#4fc3f7;text-decoration:none}a:hover{text-decoration:underline}
 .tree-label.selected{color:#4fc3f7;background:#0a1a30}
 .tree-toggle{width:14px;font-size:10px;color:#8aa0b8;flex-shrink:0;text-align:center}
 .tree-count{color:#8aa0b8;font-size:10px;margin-left:auto;flex-shrink:0}
-.main-content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.main-content{flex:1;display:flex;flex-direction:column;overflow-y:auto}
 .toolbar{display:flex;align-items:center;gap:12px;padding:6px 12px;border-bottom:1px solid #1a2844;background:#0a0e18;flex-wrap:wrap}
 .toolbar label{color:#8aa0b8;font-size:11px;text-transform:uppercase;letter-spacing:1px}
 .toolbar select{background:#05080f;border:1px solid #1a2844;border-radius:3px;padding:3px 6px;color:#c8d4e0;font-family:inherit;font-size:12px}
-.pane{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.pane{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:200px}
 .pane-header{padding:6px 12px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#4fc3f7;background:#0a0e18;border-bottom:1px solid #1a2844;flex-shrink:0}
-.pane-body{flex:1;overflow-y:auto}
+.pane-body{flex:1;overflow-y:auto;max-height:35vh}
 table{width:100%;border-collapse:collapse}
 th{position:sticky;top:0;background:#0a0e18;padding:4px 8px;text-align:left;font-size:11px;color:#8aa0b8;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #1a2844;cursor:pointer;user-select:none;white-space:nowrap}
 th:hover{color:#4fc3f7}
