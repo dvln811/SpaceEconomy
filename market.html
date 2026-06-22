@@ -38,17 +38,9 @@ td{padding:3px 8px;border-bottom:1px solid #0d1420;white-space:nowrap}
 td.num{text-align:right;font-variant-numeric:tabular-nums}
 tr:hover td{background:#0a1020}
 .status-bar{padding:4px 12px;font-size:10px;color:#8aa0b8;border-top:1px solid #1a2844;background:#0a0e18;display:flex;gap:16px}
-.ships-section{border-top:2px solid #1a2844}
-.ships-section .pane-header{color:#ffd54f}
 </style>
 </head>
 <body>
-<div id="docnav" style="position:sticky;top:0;z-index:100;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:0 24px;height:48px;gap:12px;flex-wrap:wrap">
-<a href="/" class="dnl">Game</a><a href="/docs" class="dnl">Hub</a><span style="color:#1a2844">|</span>
-<a href="/items" class="dnl">Items DB</a><a href="/ships_db" class="dnl">Ships DB</a><a href="/chain" class="dnl">Chain Calc</a><a href="/factions" class="dnl">Factions</a><a href="/ships" class="dnl">Ships 3D</a><a href="/fitting" class="dnl">Fitting</a><span style="color:#1a2844">|</span>
-<a href="/design" class="dnl">Design</a><a href="/universe" class="dnl">Universe</a><a href="/economy" class="dnl active">Economy</a><a href="/resources" class="dnl">Resources</a><a href="/materials" class="dnl">Materials</a><a href="/products" class="dnl">Products</a><span style="color:#1a2844">|</span>
-<a href="/debug" class="dnl">Dashboard</a>
-</div>
 <div class="layout">
 <div class="sidebar">
   <div class="sidebar-header"><input id="treeSearch" placeholder="Search items..." /></div>
@@ -68,33 +60,36 @@ tr:hover td{background:#0a1020}
     <div class="pane-header">Sell Orders</div>
     <div class="pane-body"><table><thead id="sellHead"></thead><tbody id="sellBody"></tbody></table></div>
   </div>
-  <div class="pane ships-section">
-    <div class="pane-header">Ships Market</div>
-    <div class="pane-body"><table><thead id="shipsHead"></thead><tbody id="shipsBody"></tbody></table></div>
-  </div>
   <div class="status-bar"><span id="statusTick"></span><span id="statusOrders"></span><span id="statusRefresh"></span></div>
 </div>
 </div>
 <script>
 (function(){
 const COLS = ['item','qty','price','station','system','region'];
-const SHIP_COLS = ['name','hull_class','price','build_time','shipyard_system','shipyard_station'];
-let commodities = [], commodityMap = {}, treeData = [];
-let buyOrders = [], sellOrders = [], shipsData = [];
-let selectedFilter = null; // {type:'category'|'subcategory'|'group', value:...}
-let sortCol = 'price', sortDir = 1, shipSortCol = 'name', shipSortDir = 1;
-let refreshTimer = null, lastTick = 0;
+let commodities = [], commodityMap = {}, treeData = {};
+let buyOrders = [], sellOrders = [];
+let selectedFilter = null;
+let sortCol = 'price', sortDir = -1;
+let lastTick = 0, expanded = {};
 
-// Fetch commodity list for tree
 async function loadCommodities(){
-  const res = await fetch('/api/data/commodities');
-  commodities = await res.json();
+  const [res, shipsRes] = await Promise.all([
+    fetch('/api/data/commodities').then(r=>r.json()),
+    fetch('/api/market/ships').then(r=>r.json())
+  ]);
+  commodities = res;
   commodityMap = {};
   commodities.forEach(c => { commodityMap[c.id] = c; });
-  buildTree();
+  // Add ships as virtual items
+  const seen = new Set();
+  shipsRes.forEach(s => {
+    if(seen.has(s.id)) return; seen.add(s.id);
+    commodityMap['ship_'+s.id] = {id:'ship_'+s.id, name:s.name, category:'Ships', subcategory:s.hull_class, group_name:s.hull_class};
+  });
+  buildTree(shipsRes);
 }
 
-function buildTree(){
+function buildTree(shipsRes){
   const tree = {};
   commodities.forEach(c => {
     if(!tree[c.category]) tree[c.category] = {};
@@ -102,16 +97,23 @@ function buildTree(){
     if(!tree[c.category][c.subcategory][c.group_name]) tree[c.category][c.subcategory][c.group_name] = [];
     tree[c.category][c.subcategory][c.group_name].push(c.id);
   });
+  const seen = new Set();
+  tree['Ships'] = {};
+  shipsRes.forEach(s => {
+    if(seen.has(s.id)) return; seen.add(s.id);
+    if(!tree['Ships'][s.hull_class]) tree['Ships'][s.hull_class] = {};
+    if(!tree['Ships'][s.hull_class][s.hull_class]) tree['Ships'][s.hull_class][s.hull_class] = [];
+    tree['Ships'][s.hull_class][s.hull_class].push('ship_'+s.id);
+  });
   treeData = tree;
   renderTree();
 }
 
-function renderTree(filter){
+function renderTree(){
   const wrap = document.getElementById('treeWrap');
-  const f = (filter || '').toLowerCase();
+  const f = document.getElementById('treeSearch').value.toLowerCase();
   let html = '';
-  const cats = Object.keys(treeData).sort();
-  cats.forEach(cat => {
+  Object.keys(treeData).sort().forEach(cat => {
     const subs = treeData[cat];
     let catCount = 0, catHtml = '';
     Object.keys(subs).sort().forEach(sub => {
@@ -119,203 +121,144 @@ function renderTree(filter){
       let subCount = 0, subHtml = '';
       Object.keys(groups).sort().forEach(grp => {
         const ids = groups[grp];
-        const cnt = ids.length;
-        subCount += cnt;
+        subCount += ids.length;
         if(f && !grp.toLowerCase().includes(f) && !sub.toLowerCase().includes(f) && !cat.toLowerCase().includes(f)) return;
-        subHtml += `<div class="tree-node"><div class="tree-label${isSelected('group',cat,sub,grp)}" style="--depth:2" data-type="group" data-cat="${cat}" data-sub="${sub}" data-grp="${grp}"><span class="tree-toggle"></span><span>${grp}</span><span class="tree-count">${cnt}</span></div></div>`;
+        const gSel = selMatch('group',cat,sub,grp) ? ' selected' : '';
+        subHtml += '<div class="tree-node"><div class="tree-label'+gSel+'" style="--depth:2" data-t="group" data-c="'+cat+'" data-s="'+sub+'" data-g="'+grp+'"><span class="tree-toggle"></span><span>'+grp+'</span><span class="tree-count">'+ids.length+'</span></div></div>';
       });
       catCount += subCount;
       if(f && !subHtml && !sub.toLowerCase().includes(f) && !cat.toLowerCase().includes(f)) return;
-      catHtml += `<div class="tree-node"><div class="tree-label${isSelected('subcategory',cat,sub)}" style="--depth:1" data-type="subcategory" data-cat="${cat}" data-sub="${sub}"><span class="tree-toggle">${subHtml?'\u25B6':''}</span><span>${sub}</span><span class="tree-count">${subCount}</span></div><div class="tree-children" style="display:none">${subHtml}</div></div>`;
+      const sKey = cat+'|'+sub, sOpen = expanded[sKey];
+      const sSel = selMatch('sub',cat,sub) ? ' selected' : '';
+      catHtml += '<div class="tree-node"><div class="tree-label'+sSel+'" style="--depth:1" data-t="sub" data-c="'+cat+'" data-s="'+sub+'"><span class="tree-toggle">'+(subHtml?(sOpen?'\u25BC':'\u25B6'):'')+'</span><span>'+sub+'</span><span class="tree-count">'+subCount+'</span></div><div class="tree-children" style="display:'+(sOpen?'block':'none')+'">'+subHtml+'</div></div>';
     });
     if(f && !catHtml && !cat.toLowerCase().includes(f)) return;
-    html += `<div class="tree-node"><div class="tree-label${isSelected('category',cat)}" style="--depth:0" data-type="category" data-cat="${cat}"><span class="tree-toggle">${catHtml?'\u25B6':''}</span><span>${cat}</span><span class="tree-count">${catCount}</span></div><div class="tree-children" style="display:none">${catHtml}</div></div>`;
+    const cOpen = expanded[cat];
+    const cSel = selMatch('cat',cat) ? ' selected' : '';
+    html += '<div class="tree-node"><div class="tree-label'+cSel+'" style="--depth:0" data-t="cat" data-c="'+cat+'"><span class="tree-toggle">'+(catHtml?(cOpen?'\u25BC':'\u25B6'):'')+'</span><span>'+cat+'</span><span class="tree-count">'+catCount+'</span></div><div class="tree-children" style="display:'+(cOpen?'block':'none')+'">'+catHtml+'</div></div>';
   });
-  // Ships category
-  const hullClasses = [...new Set(shipsData.map(s=>s.hull_class))].sort();
-  let shipsHtml = '';
-  hullClasses.forEach(hc => {
-    const cnt = shipsData.filter(s=>s.hull_class===hc).length / Math.max(1, [...new Set(shipsData.map(s=>s.shipyard_system))].length);
-    shipsHtml += `<div class="tree-node"><div class="tree-label${isSelected('hull_class','Ships','Ships',hc)}" style="--depth:2" data-type="hull_class" data-grp="${hc}"><span class="tree-toggle"></span><span>${hc}</span></div></div>`;
-  });
-  html += `<div class="tree-node"><div class="tree-label${isSelected('category','Ships')}" style="--depth:0" data-type="category" data-cat="Ships"><span class="tree-toggle">\u25B6</span><span>Ships</span></div><div class="tree-children" style="display:none">${shipsHtml}</div></div>`;
   wrap.innerHTML = html;
-  // Attach events
-  wrap.querySelectorAll('.tree-label').forEach(el => {
-    el.addEventListener('click', onTreeClick);
-  });
+  wrap.querySelectorAll('.tree-label').forEach(el => el.addEventListener('click', onTreeClick));
 }
 
-function isSelected(type, cat, sub, grp){
-  if(!selectedFilter) return '';
-  if(type==='category' && selectedFilter.type==='category' && selectedFilter.cat===cat) return ' selected';
-  if(type==='subcategory' && selectedFilter.type==='subcategory' && selectedFilter.cat===cat && selectedFilter.sub===sub) return ' selected';
-  if(type==='group' && selectedFilter.type==='group' && selectedFilter.cat===cat && selectedFilter.sub===sub && selectedFilter.grp===grp) return ' selected';
-  if(type==='hull_class' && selectedFilter.type==='hull_class' && selectedFilter.grp===grp) return ' selected';
-  return '';
+function selMatch(type, cat, sub, grp){
+  if(!selectedFilter) return false;
+  const f = selectedFilter;
+  if(type==='cat') return f.type==='cat' && f.cat===cat;
+  if(type==='sub') return f.type==='sub' && f.cat===cat && f.sub===sub;
+  if(type==='group') return f.type==='group' && f.cat===cat && f.sub===sub && f.grp===grp;
+  return false;
 }
 
 function onTreeClick(e){
   const el = e.currentTarget;
-  const type = el.dataset.type;
-  const children = el.nextElementSibling;
-  // Toggle expand
-  if(children && children.classList.contains('tree-children')){
-    const open = children.style.display !== 'none';
-    children.style.display = open ? 'none' : 'block';
-    const tog = el.querySelector('.tree-toggle');
-    if(tog) tog.textContent = open ? '\u25B6' : '\u25BC';
-  }
+  const t = el.dataset.t, cat = el.dataset.c, sub = el.dataset.s, grp = el.dataset.g;
+  // Toggle expand for cat/sub levels
+  if(t==='cat'){ expanded[cat] = !expanded[cat]; }
+  else if(t==='sub'){ expanded[cat+'|'+sub] = !expanded[cat+'|'+sub]; }
   // Set filter
-  if(type==='category') selectedFilter = {type:'category', cat:el.dataset.cat};
-  else if(type==='subcategory') selectedFilter = {type:'subcategory', cat:el.dataset.cat, sub:el.dataset.sub};
-  else if(type==='group') selectedFilter = {type:'group', cat:el.dataset.cat, sub:el.dataset.sub, grp:el.dataset.grp};
-  else if(type==='hull_class') selectedFilter = {type:'hull_class', grp:el.dataset.grp};
-  document.getElementById('filterLabel').textContent = selectedFilter.grp || selectedFilter.sub || selectedFilter.cat || '';
-  renderTree(document.getElementById('treeSearch').value);
+  if(t==='cat') selectedFilter = {type:'cat', cat};
+  else if(t==='sub') selectedFilter = {type:'sub', cat, sub};
+  else if(t==='group') selectedFilter = {type:'group', cat, sub, grp};
+  document.getElementById('filterLabel').textContent = grp || sub || cat || '';
+  renderTree();
   renderOrders();
 }
 
 function getFilteredIds(){
   if(!selectedFilter) return null;
   const f = selectedFilter;
-  if(f.type==='category'){
-    if(f.cat==='Ships') return 'ships';
-    return commodities.filter(c=>c.category===f.cat).map(c=>c.id);
+  if(f.type==='cat'){
+    const ids = [];
+    const subs = treeData[f.cat] || {};
+    for(const sub in subs) for(const grp in subs[sub]) ids.push(...subs[sub][grp]);
+    return ids;
   }
-  if(f.type==='subcategory') return commodities.filter(c=>c.category===f.cat && c.subcategory===f.sub).map(c=>c.id);
-  if(f.type==='group') return commodities.filter(c=>c.category===f.cat && c.subcategory===f.sub && c.group_name===f.grp).map(c=>c.id);
-  if(f.type==='hull_class') return 'hull:'+f.grp;
+  if(f.type==='sub'){
+    const ids = [];
+    const groups = (treeData[f.cat]||{})[f.sub] || {};
+    for(const grp in groups) ids.push(...groups[grp]);
+    return ids;
+  }
+  if(f.type==='group') return ((treeData[f.cat]||{})[f.sub]||{})[f.grp] || [];
   return null;
 }
 
 async function loadMarketData(){
   try{
-    const [dbg, ships] = await Promise.all([fetch('/api/debug').then(r=>r.json()), fetch('/api/market/ships').then(r=>r.json())]);
+    const [dbg, ships] = await Promise.all([
+      fetch('/api/debug').then(r=>r.json()),
+      fetch('/api/market/ships').then(r=>r.json())
+    ]);
     lastTick = dbg.tick || 0;
-    shipsData = ships;
-    parseOrders(dbg);
+    parseOrders(dbg, ships);
     renderOrders();
-    renderShips();
-    document.getElementById('statusTick').textContent = 'Tick: ' + lastTick;
-    document.getElementById('statusOrders').textContent = `Buy: ${buyOrders.length} | Sell: ${sellOrders.length} | Ships: ${shipsData.length}`;
-  }catch(e){ console.error('Market fetch error', e); }
-  document.getElementById('statusRefresh').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+    document.getElementById('statusTick').textContent = 'Tick: '+lastTick;
+    document.getElementById('statusOrders').textContent = 'Buy: '+buyOrders.length+' | Sell: '+sellOrders.length;
+  }catch(e){ console.error(e); }
+  document.getElementById('statusRefresh').textContent = new Date().toLocaleTimeString();
 }
 
-function parseOrders(dbg){
+function parseOrders(dbg, ships){
   buyOrders = []; sellOrders = [];
   const systems = dbg.systems || {};
   for(const sid in systems){
     const sys = systems[sid];
-    const region = sys.region || '';
-    const sysName = sys.name || sid;
+    const region = sys.region || '', sysName = sys.name || sid;
     (sys.stations||[]).forEach(st => {
       (st.sell_orders||[]).forEach(o => {
-        sellOrders.push({item: commodityMap[o.commodity]?.name || o.commodity, itemId: o.commodity, qty: o.qty, price: o.price, station: st.name, system: sysName, region});
+        sellOrders.push({item: commodityMap[o.commodity]?.name||o.commodity, itemId:o.commodity, qty:o.qty, price:o.price, station:st.name, system:sysName, region});
       });
       (st.buy_orders||[]).forEach(o => {
-        buyOrders.push({item: commodityMap[o.commodity]?.name || o.commodity, itemId: o.commodity, qty: o.qty, price: o.price, station: st.name, system: sysName, region});
+        buyOrders.push({item: commodityMap[o.commodity]?.name||o.commodity, itemId:o.commodity, qty:o.qty, price:o.price, station:st.name, system:sysName, region});
       });
     });
   }
+  // Ships as sell orders
+  const seen = new Set();
+  ships.forEach(s => {
+    if(seen.has(s.id)) return; seen.add(s.id);
+    sellOrders.push({item:s.name, itemId:'ship_'+s.id, qty:1, price:s.price, station:s.shipyard_station, system:s.shipyard_system, region:''});
+  });
 }
 
 function renderOrders(){
-  renderTable('buy', buyOrders, sortCol, sortDir);
-  renderTable('sell', sellOrders, sortCol, sortDir);
+  renderTable('buy', buyOrders);
+  renderTable('sell', sellOrders);
 }
 
-function renderTable(prefix, orders, col, dir){
+function renderTable(prefix, orders){
   const headEl = document.getElementById(prefix+'Head');
   const bodyEl = document.getElementById(prefix+'Body');
-  // Header
-  headEl.innerHTML = '<tr>' + COLS.map(c => `<th data-col="${c}" data-prefix="${prefix}">${c}<span class="sort-arrow">${col===c?(dir>0?'\u25B2':'\u25BC'):''}</span></th>`).join('') + '</tr>';
-  headEl.querySelectorAll('th').forEach(th => th.addEventListener('click', onSortClick));
-  // Filter
+  headEl.innerHTML = '<tr>'+COLS.map(c=>'<th data-col="'+c+'">'+c+'<span class="sort-arrow">'+(sortCol===c?(sortDir>0?'\u25B2':'\u25BC'):'')+'</span></th>').join('')+'</tr>';
+  headEl.querySelectorAll('th').forEach(th=>th.addEventListener('click',onSort));
   let filtered = orders;
   const ids = getFilteredIds();
-  if(ids === 'ships'){ bodyEl.innerHTML = ''; return; }
-  if(typeof ids === 'string' && ids.startsWith('hull:')){ bodyEl.innerHTML = ''; return; }
-  if(Array.isArray(ids)) filtered = orders.filter(o => ids.includes(o.itemId));
-  // Search filter
+  if(Array.isArray(ids) && ids.length) filtered = orders.filter(o=>ids.includes(o.itemId));
   const search = document.getElementById('treeSearch').value.toLowerCase();
-  if(search) filtered = filtered.filter(o => o.item.toLowerCase().includes(search) || o.system.toLowerCase().includes(search) || o.station.toLowerCase().includes(search));
-  // Sort
-  filtered.sort((a,b) => {
-    let va = a[col], vb = b[col];
-    if(typeof va === 'number') return (va - vb) * dir;
-    return String(va).localeCompare(String(vb)) * dir;
-  });
-  // Group
+  if(search) filtered = filtered.filter(o=>o.item.toLowerCase().includes(search)||o.system.toLowerCase().includes(search));
+  filtered.sort((a,b)=>{let va=a[sortCol],vb=b[sortCol];if(typeof va==='number')return(va-vb)*sortDir;return String(va||'').localeCompare(String(vb||''))*sortDir;});
   const groupBy = document.getElementById('groupBy').value;
   let rows = '';
-  if(groupBy !== 'none'){
-    const groups = {};
-    filtered.forEach(o => { const k = o[groupBy] || 'Unknown'; if(!groups[k]) groups[k]=[]; groups[k].push(o); });
-    Object.keys(groups).sort().forEach(g => {
-      rows += `<tr><td colspan="6" style="color:#4fc3f7;padding:6px 8px;background:#0a1020;font-size:11px;letter-spacing:1px">${g} (${groups[g].length})</td></tr>`;
-      groups[g].slice(0,200).forEach(o => { rows += orderRow(o); });
+  if(groupBy!=='none'){
+    const g={};
+    filtered.forEach(o=>{const k=o[groupBy]||'?';if(!g[k])g[k]=[];g[k].push(o);});
+    Object.keys(g).sort().forEach(k=>{
+      rows+='<tr><td colspan="6" style="color:#4fc3f7;padding:6px 8px;background:#0a1020;font-size:11px">'+k+' ('+g[k].length+')</td></tr>';
+      g[k].slice(0,100).forEach(o=>{rows+=oRow(o);});
     });
-  } else {
-    filtered.slice(0,500).forEach(o => { rows += orderRow(o); });
-  }
-  bodyEl.innerHTML = rows || '<tr><td colspan="6" style="color:#8aa0b8;padding:12px">No orders</td></tr>';
+  } else { filtered.slice(0,500).forEach(o=>{rows+=oRow(o);}); }
+  bodyEl.innerHTML = rows||'<tr><td colspan="6" style="color:#8aa0b8;padding:12px">No orders</td></tr>';
 }
 
-function orderRow(o){
-  return `<tr><td>${o.item}</td><td class="num">${fmtNum(o.qty)}</td><td class="num">${fmtNum(o.price)}</td><td>${o.station}</td><td>${o.system}</td><td>${o.region}</td></tr>`;
-}
+function oRow(o){return '<tr><td>'+o.item+'</td><td class="num">'+fmtN(o.qty)+'</td><td class="num">'+fmtN(o.price)+'</td><td>'+o.station+'</td><td>'+o.system+'</td><td>'+o.region+'</td></tr>';}
+function fmtN(n){return typeof n==='number'?n.toLocaleString(undefined,{maximumFractionDigits:1}):n;}
+function onSort(e){const c=e.currentTarget.dataset.col;if(sortCol===c)sortDir*=-1;else{sortCol=c;sortDir=1;}renderOrders();}
 
-function renderShips(){
-  const headEl = document.getElementById('shipsHead');
-  const bodyEl = document.getElementById('shipsBody');
-  headEl.innerHTML = '<tr>' + SHIP_COLS.map(c => `<th data-col="${c}" data-prefix="ships">${c.replace(/_/g,' ')}<span class="sort-arrow">${shipSortCol===c?(shipSortDir>0?'\u25B2':'\u25BC'):''}</span></th>`).join('') + '</tr>';
-  headEl.querySelectorAll('th').forEach(th => th.addEventListener('click', onShipSortClick));
-  let filtered = shipsData;
-  const ids = getFilteredIds();
-  if(typeof ids === 'string' && ids.startsWith('hull:')) filtered = shipsData.filter(s=>s.hull_class===ids.slice(5));
-  else if(ids === 'ships') { /* show all */ }
-  else if(Array.isArray(ids)) { bodyEl.innerHTML = '<tr><td colspan="6" style="color:#8aa0b8;padding:12px">Select Ships category</td></tr>'; return; }
-  const search = document.getElementById('treeSearch').value.toLowerCase();
-  if(search) filtered = filtered.filter(s => s.name.toLowerCase().includes(search) || s.hull_class.toLowerCase().includes(search));
-  filtered.sort((a,b) => { let va=a[shipSortCol],vb=b[shipSortCol]; if(typeof va==='number') return (va-vb)*shipSortDir; return String(va).localeCompare(String(vb))*shipSortDir; });
-  // Deduplicate by ship id (show one row per unique ship, pick first shipyard)
-  const seen = new Set();
-  let rows = '';
-  filtered.forEach(s => {
-    if(seen.has(s.id)) return;
-    seen.add(s.id);
-    rows += `<tr><td>${s.name}</td><td>${s.hull_class}</td><td class="num">${fmtNum(s.price)}</td><td class="num">${s.build_time}s</td><td>${s.shipyard_system}</td><td>${s.shipyard_station}</td></tr>`;
-  });
-  bodyEl.innerHTML = rows || '<tr><td colspan="6" style="color:#8aa0b8;padding:12px">No ships</td></tr>';
-}
-
-function onSortClick(e){
-  const col = e.currentTarget.dataset.col;
-  if(sortCol === col) sortDir *= -1;
-  else { sortCol = col; sortDir = 1; }
-  renderOrders();
-}
-function onShipSortClick(e){
-  const col = e.currentTarget.dataset.col;
-  if(shipSortCol === col) shipSortDir *= -1;
-  else { shipSortCol = col; shipSortDir = 1; }
-  renderShips();
-}
-
-function fmtNum(n){ return typeof n==='number' ? n.toLocaleString(undefined,{maximumFractionDigits:1}) : n; }
-
-document.getElementById('treeSearch').addEventListener('input', function(){
-  renderTree(this.value);
-  renderOrders();
-  renderShips();
-});
-document.getElementById('groupBy').addEventListener('change', renderOrders);
-
-// Init
+document.getElementById('treeSearch').addEventListener('input',function(){renderTree();renderOrders();});
+document.getElementById('groupBy').addEventListener('change',renderOrders);
 loadCommodities().then(loadMarketData);
-refreshTimer = setInterval(loadMarketData, 10000);
+setInterval(loadMarketData,10000);
 })();
 </script>
 </body>
