@@ -38,6 +38,7 @@ th:hover{color:#4fc3f7}
 th .sort-arrow{margin-left:2px;font-size:9px}
 td{padding:3px 8px;border-bottom:1px solid #0d1420;white-space:nowrap;font-size:11px;font-weight:normal;color:#a0b0c0}
 td.num{text-align:right;font-variant-numeric:tabular-nums}
+th.num{text-align:right}
 tr:hover td{background:#0a1020}
 .status-bar{padding:4px 12px;font-size:10px;color:#8aa0b8;border-top:1px solid #1a2844;background:#0a0e18;display:flex;gap:16px}
 </style>
@@ -246,7 +247,7 @@ function renderOrders(){
 function renderTable(prefix, orders){
   const headEl = document.getElementById(prefix+'Head');
   const bodyEl = document.getElementById(prefix+'Body');
-  headEl.innerHTML = '<tr>'+COLS.map(c=>'<th data-col="'+c+'">'+c+'<span class="sort-arrow">'+(sortCol===c?(sortDir>0?'\u25B2':'\u25BC'):'')+'</span></th>').join('')+'</tr>';
+  headEl.innerHTML = '<tr>'+COLS.map(c=>'<th data-col="'+c+'"'+((c==='qty'||c==='price')?' class="num"':'')+'>'+c+'<span class="sort-arrow">'+(sortCol===c?(sortDir>0?'\u25B2':'\u25BC'):'')+'</span></th>').join('')+'</tr>';
   headEl.querySelectorAll('th').forEach(th=>th.addEventListener('click',onSort));
   let filtered = orders;
   const ids = getFilteredIds();
