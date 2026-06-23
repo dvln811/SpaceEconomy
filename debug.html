@@ -214,6 +214,7 @@ async function fetchData() {
       if(data.demand) D.demand = data.demand;
       if(data.warfare) D.warfare = data.warfare;
       if(data.performance) D.performance = data.performance;
+      if(data.factions) D.factions = data.factions;
     } else {
       D = data;
     }
@@ -246,49 +247,51 @@ function renderFactions() {
   const phaseColors = {scouting:'#ffd54f',staging:'#ff8a65',constructing:'#66bb6a',complete:'#4fc3f7',requisitioning:'#ffd54f',assembling:'#ff8a65',deployed:'#4fc3f7'};
   let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:10px">';
   for (const [fid, f] of Object.entries(factions)) {
-    html += '<div style="background:#0a1020;border:1px solid #1a2844;border-radius:6px;padding:12px;display:flex;flex-direction:column;max-height:600px">';
+    html += '<div style="background:#0a1020;border:1px solid #1a2844;border-radius:6px;padding:12px;display:flex;flex-direction:column;height:550px">';
     // Header
     html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-shrink:0">';
     if (f.emblem) html += '<img src="/static/faction_emblems/'+f.emblem+'" style="width:36px;height:36px;border-radius:4px;object-fit:contain">';
     html += '<div><div style="color:#4fc3f7;font-size:13px;font-weight:600">'+(f.name||fid)+'</div>';
     html += '<div style="font-size:10px;color:#8aa0b8">'+f.systems+' systems | Agg: '+f.aggression+' | Exp: '+f.expansion+' | Eco: '+f.economic+'</div></div></div>';
-    // Projects
-    if (f.projects && f.projects.length) {
-      html += '<div style="color:#c8d4e0;font-size:11px;font-weight:600;letter-spacing:1px;margin:6px 0 4px">PROJECTS</div>';
-      for (const p of f.projects) {
-        const pc = phaseColors[p.phase]||'#8aa0b8';
-        html += '<div style="margin-bottom:5px"><div style="font-size:11px;color:#e0e8f0">'+p.name+' <span style="background:'+pc+'22;color:'+pc+';padding:1px 5px;border-radius:2px;font-size:9px;text-transform:uppercase">'+p.phase+'</span></div>';
-        html += '<div style="display:flex;align-items:center;gap:6px;margin-top:2px"><div style="flex:1;height:5px;background:#1a2844;border-radius:3px;overflow:hidden"><div style="width:'+Math.min(100,p.progress)+'%;height:100%;background:'+pc+'"></div></div><span style="font-size:10px;color:#8aa0b8">'+p.progress+'%</span></div></div>';
-      }
-    }
-    // Fleet builds
-    if (f.fleet_builds && f.fleet_builds.length) {
-      html += '<div style="color:#c8d4e0;font-size:11px;font-weight:600;letter-spacing:1px;margin:8px 0 4px">FLEET BUILDS</div>';
-      for (const fb of f.fleet_builds) {
-        const pc = phaseColors[fb.phase]||'#8aa0b8';
-        html += '<div style="margin-bottom:5px"><div style="font-size:11px;color:#e0e8f0">'+fb.name+' <span style="background:'+pc+'22;color:'+pc+';padding:1px 5px;border-radius:2px;font-size:9px;text-transform:uppercase">'+fb.phase+'</span></div>';
-        html += '<div style="display:flex;align-items:center;gap:6px;margin-top:2px"><div style="flex:1;height:5px;background:#1a2844;border-radius:3px;overflow:hidden"><div style="width:'+Math.min(100,fb.progress)+'%;height:100%;background:'+pc+'"></div></div><span style="font-size:10px;color:#8aa0b8">'+fb.progress+'%</span></div></div>';
-      }
-    }
-    // Corporations (scrollable card list)
-    if (f.corporations && f.corporations.length) {
-      html += '<div style="color:#c8d4e0;font-size:11px;font-weight:600;letter-spacing:1px;margin:8px 0 4px">CORPORATIONS ('+f.corporations.length+')</div>';
-      html += '<div style="max-height:120px;overflow-y:auto;border:1px solid #1a2844;border-radius:4px;padding:4px">';
-      for (const c of f.corporations) {
-        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 6px;border-bottom:1px solid #0d1420;font-size:10px">';
-        html += '<span style="color:#c8d4e0">'+c.name+'</span>';
-        html += '<span style="color:#8aa0b8">'+fmtTask(c.specialty)+'</span>';
-        html += '<span style="color:#4fc3f7">'+fmtTask(c.activity)+'</span>';
-        html += '</div>';
+    // Policy Decisions (top, greedy)
+    if (f.decisions && f.decisions.length) {
+      html += '<div style="color:#c8d4e0;font-size:11px;font-weight:600;letter-spacing:1px;margin-bottom:4px;flex-shrink:0">POLICY DECISIONS</div>';
+      html += '<div style="flex:1;min-height:0;overflow-y:auto;border:1px solid #1a2844;border-radius:4px;padding:4px;margin-bottom:8px">';
+      for (const d of f.decisions) {
+        html += '<div style="font-size:10px;margin-bottom:3px;padding:2px 4px;border-bottom:1px solid #0d1420"><span style="color:#667">T'+d.tick+'</span> <span style="color:#4fc3f7;font-weight:500">'+fmtTask(d.decision)+'</span> <span style="color:#8aa0b8">'+d.reasoning+'</span></div>';
       }
       html += '</div>';
     }
-    // Decision log (scrollable)
-    if (f.decisions && f.decisions.length) {
-      html += '<div style="color:#c8d4e0;font-size:11px;font-weight:600;letter-spacing:1px;margin:8px 0 4px">DECISIONS</div>';
-      html += '<div style="max-height:100px;overflow-y:auto;border:1px solid #1a2844;border-radius:4px;padding:4px">';
-      for (const d of f.decisions) {
-        html += '<div style="font-size:10px;margin-bottom:3px;padding:2px 4px;border-bottom:1px solid #0d1420"><span style="color:#667">T'+d.tick+'</span> <span style="color:#4fc3f7;font-weight:500">'+fmtTask(d.decision)+'</span> <span style="color:#8aa0b8">'+d.reasoning+'</span></div>';
+    // Projects
+    if (f.projects && f.projects.length) {
+      html += '<div style="color:#c8d4e0;font-size:11px;font-weight:600;letter-spacing:1px;margin-bottom:4px;flex-shrink:0">PROJECTS</div>';
+      for (const p of f.projects) {
+        const pc = phaseColors[p.phase]||'#8aa0b8';
+        html += '<div style="margin-bottom:4px;flex-shrink:0"><div style="font-size:11px;color:#e0e8f0">'+p.name+' <span style="background:'+pc+'22;color:'+pc+';padding:1px 5px;border-radius:2px;font-size:9px;text-transform:uppercase">'+p.phase+'</span></div>';
+        html += '<div style="display:flex;align-items:center;gap:6px;margin-top:2px"><div style="flex:1;height:5px;background:#1a2844;border-radius:3px;overflow:hidden"><div style="width:'+Math.min(100,p.progress)+'%;height:100%;background:'+pc+'"></div></div><span style="font-size:10px;color:#8aa0b8">'+p.progress+'%</span></div></div>';
+      }
+    }
+    // Fleet builds (scrollable)
+    if (f.fleet_builds && f.fleet_builds.length) {
+      html += '<div style="color:#c8d4e0;font-size:11px;font-weight:600;letter-spacing:1px;margin:4px 0;flex-shrink:0">FLEET BUILDS</div>';
+      html += '<div style="max-height:80px;overflow-y:auto;flex-shrink:0">';
+      for (const fb of f.fleet_builds) {
+        const pc = phaseColors[fb.phase]||'#8aa0b8';
+        html += '<div style="margin-bottom:4px"><div style="font-size:11px;color:#e0e8f0">'+fb.name+' <span style="background:'+pc+'22;color:'+pc+';padding:1px 5px;border-radius:2px;font-size:9px;text-transform:uppercase">'+fb.phase+'</span></div>';
+        html += '<div style="display:flex;align-items:center;gap:6px;margin-top:2px"><div style="flex:1;height:5px;background:#1a2844;border-radius:3px;overflow:hidden"><div style="width:'+Math.min(100,fb.progress)+'%;height:100%;background:'+pc+'"></div></div><span style="font-size:10px;color:#8aa0b8">'+fb.progress+'%</span></div></div>';
+      }
+      html += '</div>';
+    }
+    // Corporations
+    if (f.corporations && f.corporations.length) {
+      html += '<div style="color:#c8d4e0;font-size:11px;font-weight:600;letter-spacing:1px;margin:4px 0;flex-shrink:0">CORPORATIONS ('+f.corporations.length+')</div>';
+      html += '<div style="max-height:100px;overflow-y:auto;border:1px solid #1a2844;border-radius:4px;padding:4px;flex-shrink:0">';
+      for (const c of f.corporations) {
+        html += '<div style="display:flex;align-items:center;padding:2px 6px;border-bottom:1px solid #0d1420;font-size:10px;gap:4px">';
+        html += '<span style="color:#c8d4e0;flex:1">'+c.name+'</span>';
+        html += '<span style="color:#8aa0b8;width:100px;text-align:right">'+fmtTask(c.specialty)+'</span>';
+        html += '<span style="color:#4fc3f7;width:100px;text-align:right">'+fmtTask(c.activity)+'</span>';
+        html += '</div>';
       }
       html += '</div>';
     }
