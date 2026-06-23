@@ -705,12 +705,14 @@ function drawRoutePath(pathIndices, startIdx){
 }
 
 const homeSystem=()=>{const i=systems.findIndex(s=>s.name==='Cygnus');return i>=0?i:0;};
+let waypoints=[]; // indices where user explicitly added waypoints
 
 window.setRouteTo=function(sysName){
   const toIdx=systems.findIndex(s=>s.name.toLowerCase()===sysName.toLowerCase());
   if(toIdx<0)return;
   const from=homeSystem();
   currentRoute=findPath(from,toIdx);
+  waypoints=[];
   drawRoutePath(currentRoute, from);
   // Switch to map view to show the route
   const frame=document.getElementById('viewFrame');
@@ -727,10 +729,11 @@ window.setRouteTo=function(sysName){
 window.addWaypoint=function(sysName){
   const toIdx=systems.findIndex(s=>s.name.toLowerCase()===sysName.toLowerCase());
   if(toIdx<0)return;
-  // Extend from last point in current route, or from home if no route
   const from=currentRoute.length?currentRoute[currentRoute.length-1]:homeSystem();
   const extension=findPath(from,toIdx);
   if(extension.length){
+    // Mark the current end as a waypoint before extending
+    if(currentRoute.length) waypoints.push(currentRoute.length-1);
     currentRoute=currentRoute.concat(extension);
     drawRoutePath(currentRoute, homeSystem());
   }
@@ -738,6 +741,7 @@ window.addWaypoint=function(sysName){
 
 window.clearRoute=function(){
   currentRoute=[];
+  waypoints=[];
   drawRoutePath([],0);
 };
 
@@ -756,8 +760,12 @@ function renderRoutePanel(){
   html+='<div class="route-card" data-idx="'+startIdx+'" style="border-left-color:#66ff66">'+systems[startIdx].name+' <span style="color:#66ff66;font-size:9px">CURR</span></div>';
   currentRoute.forEach((idx,i)=>{
     const isLast=i===currentRoute.length-1;
-    const badge=isLast?'<span style="color:#aaff44;font-size:9px">DEST</span>':'<span style="color:#8aa0b8;font-size:9px">WPT '+(i+1)+'</span>';
-    html+='<div class="route-card" data-idx="'+idx+'"'+(isLast?' style="border-left-color:#aaff44"':'')+'>'+systems[idx].name+' '+badge+'</div>';
+    const isWpt=waypoints.includes(i);
+    let badge='';
+    if(isLast) badge='<span style="color:#aaff44;font-size:9px">DEST</span>';
+    else if(isWpt) badge='<span style="color:#ffd54f;font-size:9px">WPT</span>';
+    const borderColor=isLast?'#aaff44':isWpt?'#ffd54f':'#1a2844';
+    html+='<div class="route-card" data-idx="'+idx+'" style="border-left-color:'+borderColor+'">'+systems[idx].name+(badge?' '+badge:'')+'</div>';
   });
   panel.innerHTML=html;
   panel.querySelectorAll('.route-card').forEach(card=>{
