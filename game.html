@@ -71,7 +71,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 
 /* Right Panel - System Info */
 .right-panel{background:#0a0e18;overflow-y:auto;padding:12px;border-left:1px solid #1a2844;display:flex;flex-direction:column}
-.route-card{padding:4px 8px;margin:2px 0;font-size:11px;color:#c8d4e0;background:#0a1020;border-left:3px solid #1a2844;border-radius:2px;cursor:pointer;transition:background .1s}
+.route-card{padding:4px 8px;margin:2px 0;font-size:11px;color:#c8d4e0;background:#0a1020;border-left:3px solid #1a2844;border-radius:2px;cursor:pointer;transition:background .1s;user-select:none}
 .route-card:hover{background:#0d1a2f}
 .commodity-row{display:flex;align-items:center;padding:4px 8px;border-bottom:1px solid #0f1a28;transition:background .15s;gap:8px}
 .commodity-row:hover{background:#111a28}
@@ -156,6 +156,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     <button class="nav-btn" data-view="inventory">Inventory</button>
     <button class="nav-btn" data-view="market">Market</button>
     <button class="nav-btn" data-view="encyclopedia">Encyclopedia</button>
+    <button class="nav-btn" data-view="settings">Settings</button>
     <div style="flex:1"></div>
     <button class="nav-btn danger" data-view="dashboard">Dashboard</button>
   </div>
@@ -220,6 +221,10 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     <div id="system-info-content" style="flex-shrink:0"><div style="color:#8aa0b8;font-size:12px">Select a system to view info</div></div>
     <div style="margin-top:12px;border-top:1px solid #1a2844;padding-top:8px;flex:1;display:flex;flex-direction:column;min-height:0">
       <div id="route-header" style="flex-shrink:0;font-size:11px;color:#c8d4e0;margin-bottom:4px;display:flex;justify-content:space-between"><span>No route set</span></div>
+      <div id="route-options" style="flex-shrink:0;font-size:10px;color:#8aa0b8;margin-bottom:6px;display:flex;flex-wrap:wrap;gap:8px">
+        <label style="cursor:pointer"><input type="checkbox" id="routePrefSafe" style="margin-right:3px;accent-color:#4fc3f7">Prefer Safe</label>
+        <label style="cursor:pointer"><input type="checkbox" id="routeAvoidNull" style="margin-right:3px;accent-color:#4fc3f7">Avoid Null</label>
+      </div>
       <div id="route-panel" style="flex:1;overflow-y:auto;min-height:0"></div>
     </div>
   </div>
@@ -230,7 +235,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 (function(){
   const btns=document.querySelectorAll('.nav-panel .nav-btn');
   const frame=document.getElementById('viewFrame');
-  const viewUrls={market:'/market',encyclopedia:'/docs',dashboard:'/debug',ship:'/ship',inventory:'/inventory'};
+  const viewUrls={market:'/market',encyclopedia:'/docs',dashboard:'/debug',ship:'/ship',inventory:'/inventory',settings:'/settings'};
   const rightHandle = document.getElementById('right-handle');
   const rightPanel = document.querySelector('.right-panel');
   const app = document.querySelector('.app');

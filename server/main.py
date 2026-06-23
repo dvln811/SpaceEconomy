@@ -240,6 +240,11 @@ def inventory_page():
     return send_from_directory(BASE_DIR, "inventory.html")
 
 
+@app.route("/settings")
+def settings_page():
+    return send_from_directory(BASE_DIR, "settings.html")
+
+
 @app.route("/docs")
 def docs_page():
     return send_from_directory(BASE_DIR, "docs.html")
