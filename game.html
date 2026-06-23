@@ -1198,7 +1198,7 @@ const SV_HEX={star:'#ffd54f',gate:'#ab47bc',station:'#4fc3f7',asteroid_belt:'#ff
 
 // Three.js scene setup (3D navigable)
 const svScene=new THREE.Scene();
-const svW=svContainer.clientWidth||600, svH=svContainer.clientHeight||400;
+let svW=600, svH=400;
 const svCam=new THREE.PerspectiveCamera(60, svW/svH, 1, 5000);
 svCam.position.set(0,150,300);
 const svRenderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});
