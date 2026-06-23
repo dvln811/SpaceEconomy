@@ -96,6 +96,7 @@ class Supervisor:
         # Build region cache and ship index for workers
         self._region_cache = {}  # {region: {commodity: [(system_id, station_name, qty)]}}
         self._ship_index = {}  # {ship_id: ship}
+        self._station_index = {}  # {(system_id, station_name): station}
         self._rebuild_indices()
         # Performance metrics
         self.metrics = {
@@ -172,10 +173,14 @@ class Supervisor:
 
         # Collect and apply intents
         intent_count = 0
+        changed_systems = set()
         for w in self.workers:
             for intent in w.drain_intents():
-                self._apply_intent(intent, tick)
+                self._apply_intent_fast(intent, tick, changed_systems)
                 intent_count += 1
+        # Batch record system changes
+        for sid in changed_systems:
+            self.change_tracker.record_system_change(tick, sid)
         t_merge = time.time()
 
         # Rebuild indices periodically
@@ -205,25 +210,26 @@ class Supervisor:
         self.change_tracker.tick_cleanup(tick)
 
     def _apply_intent(self, intent, tick: int):
-        """Apply a single intent to canonical state."""
+        """Apply a single intent to canonical state (legacy, used by nothing now)."""
+        pass
+
+    def _apply_intent_fast(self, intent, tick: int, changed_systems: set):
+        """Apply a single intent, batch change tracking into changed_systems set."""
         if isinstance(intent, InventoryDelta):
             sys = self.sim.universe.get(intent.system_id)
             if sys:
-                for st in sys.stations:
-                    if st.name == intent.station_name:
-                        for commodity, delta in intent.deltas.items():
-                            st.inventory[commodity] = max(0, st.inventory.get(commodity, 0) + delta)
-                        self.change_tracker.record_system_change(tick, intent.system_id)
-                        break
+                # Use station index if available
+                st = self._station_index.get((intent.system_id, intent.station_name))
+                if st:
+                    for commodity, delta in intent.deltas.items():
+                        st.inventory[commodity] = max(0, st.inventory.get(commodity, 0) + delta)
+                    changed_systems.add(intent.system_id)
 
         elif isinstance(intent, PriceUpdate):
-            sys = self.sim.universe.get(intent.system_id)
-            if sys:
-                for st in sys.stations:
-                    if st.name == intent.station_name:
-                        st.price_cache[intent.commodity_id] = intent.new_price
-                        self.change_tracker.record_system_change(tick, intent.system_id)
-                        break
+            st = self._station_index.get((intent.system_id, intent.station_name))
+            if st:
+                st.price_cache[intent.commodity_id] = intent.new_price
+                changed_systems.add(intent.system_id)
 
         elif isinstance(intent, ShipMoveIntent):
             ship = self._ship_index.get(intent.ship_id)
@@ -266,7 +272,7 @@ class Supervisor:
                 ship.route_path = intent.route_home
                 ship.destination = intent.route_home[0] if intent.route_home else ship.assigned_system
                 self.change_tracker.record_ship_change(tick, ship.id)
-                self.change_tracker.record_system_change(tick, intent.system_id)
+                changed_systems.add(intent.system_id)
 
         elif isinstance(intent, ShipSellIntent):
             ship = self._ship_index.get(intent.ship_id)
@@ -285,7 +291,7 @@ class Supervisor:
                 ship.state_timer = UNLOADING_TICKS
                 self.sim.trade_volume += 1
                 self.change_tracker.record_ship_change(tick, ship.id)
-                self.change_tracker.record_system_change(tick, intent.system_id)
+                changed_systems.add(intent.system_id)
 
         elif isinstance(intent, ShipMineIntent):
             ship = self._ship_index.get(intent.ship_id)
@@ -326,8 +332,13 @@ class Supervisor:
             self.sim.events.append({"tick": intent.tick, "time": time.time(), "msg": intent.msg})
 
     def _rebuild_indices(self):
-        """Rebuild region inventory cache and ship index."""
+        """Rebuild region inventory cache, ship index, and station index."""
         self._ship_index = {s.id: s for s in self.sim.ships}
+        # Station index: {(system_id, station_name): station_obj}
+        self._station_index = {}
+        for sid, sys in self.sim.universe.items():
+            for st in sys.stations:
+                self._station_index[(sid, st.name)] = st
         # Region cache: {region: {commodity: [(system_id, station_name, qty)]}}
         cache = {}
         for sid, sys in self.sim.universe.items():
