@@ -105,7 +105,7 @@ def _build_order_book(st):
         if not com or not com.recipe:
             continue
         for inp_id, qty_needed in com.recipe.items():
-            want = qty_needed * st.production_rate * 100  # want 100 ticks of buffer
+            want = qty_needed * st.production_rate * 100
             have = st.inventory.get(inp_id, 0)
             deficit = want - have
             if deficit > 0:
@@ -120,7 +120,43 @@ def _build_order_book(st):
             buy_price = base * 1.15 if base > 0 else COMS[commodity_id].base_price * 1.15 if commodity_id in COMS else 0
             if buy_price > 0:
                 buy_orders.append({"commodity": commodity_id, "qty": round(500 - have, 1), "price": round(buy_price, 1)})
-    return sorted(sell_orders, key=lambda x: -x["qty"])[:20], sorted(buy_orders, key=lambda x: -x["qty"])[:20]
+    return sorted(sell_orders, key=lambda x: -x["qty"])[:20], sorted(buy_orders, key=lambda x: -x["qty"])[:50]
+
+
+def _get_project_buy_orders():
+    """Generate buy orders from active build projects, cascaded through recipes."""
+    from server.simulation import COMMODITIES as COMS
+    from server.game_data_db import get_data_db
+    conn = get_data_db()
+    projects = conn.execute("SELECT target_system, requirements, accumulated FROM build_projects WHERE status='active'").fetchall()
+    conn.close()
+    # {system_id: [{commodity, qty, price}]}
+    orders_by_system = {}
+    for p in projects:
+        target = p['target_system']
+        reqs = json.loads(p['requirements'])
+        accumulated = json.loads(p['accumulated'])
+        if target not in orders_by_system:
+            orders_by_system[target] = []
+        for mat_id, qty_needed in reqs.items():
+            have = accumulated.get(mat_id, 0)
+            deficit = qty_needed - have
+            if deficit > 0:
+                # Direct demand for the component/material
+                price = COMS[mat_id].base_price * 1.2 if mat_id in COMS else 1000
+                orders_by_system[target].append({"commodity": mat_id, "qty": round(deficit), "price": round(price, 1)})
+                # Also cascade: post demand for recipe inputs of this material
+                com = COMS.get(mat_id)
+                if com and com.recipe:
+                    for inp_id, inp_qty in com.recipe.items():
+                        inp_need = inp_qty * deficit
+                        inp_price = COMS[inp_id].base_price * 1.15 if inp_id in COMS else 100
+                        orders_by_system[target].append({"commodity": inp_id, "qty": round(inp_need), "price": round(inp_price, 1)})
+    return orders_by_system
+
+
+_project_orders_cache = {}
+_project_orders_tick = 0
 
 
 
@@ -426,12 +462,18 @@ def api_debug():
                     "halted": can_produce <= 0, "inputs": inputs_status,
                     "stock": round(st.inventory.get(prod_id, 0), 1),
                 })
+            # Get project buy orders for this system
+            global _project_orders_cache, _project_orders_tick
+            if sim.tick_count - _project_orders_tick > 60:
+                _project_orders_cache = _get_project_buy_orders()
+                _project_orders_tick = sim.tick_count
+            proj_orders = _project_orders_cache.get(sid, [])
             stations_info.append({
                 "name": st.name, "type": st.station_type,
                 "production": prod_status,
                 "inventory": {k: round(v, 1) for k, v in st.inventory.items() if v > 0.1},
                 "sell_orders": _build_order_book(st)[0][:10],
-                "buy_orders": _build_order_book(st)[1][:10],
+                "buy_orders": (_build_order_book(st)[1] + proj_orders)[:20],
             })
         ships_in_sys = sum(1 for s in sim.ships if s.location == sid)
         systems_detail[sid] = {
