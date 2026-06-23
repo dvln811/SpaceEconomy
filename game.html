@@ -71,6 +71,8 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 
 /* Right Panel - System Info */
 .right-panel{background:#0a0e18;overflow-y:auto;padding:12px;border-left:1px solid #1a2844;display:flex;flex-direction:column}
+.route-card{padding:4px 8px;margin:2px 0;font-size:11px;color:#c8d4e0;background:#0a1020;border-left:3px solid #1a2844;border-radius:2px;cursor:pointer;transition:background .1s}
+.route-card:hover{background:#0d1a2f}
 .commodity-row{display:flex;align-items:center;padding:4px 8px;border-bottom:1px solid #0f1a28;transition:background .15s;gap:8px}
 .commodity-row:hover{background:#111a28}
 .commodity-name{font-size:12px;color:#b0c4d8;flex:1;text-transform:capitalize}
@@ -216,6 +218,9 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <div class="right-panel">
     <div class="panel-title" style="margin-bottom:8px">System Info</div>
     <div id="system-info-content"><div style="color:#8aa0b8;font-size:12px">Select a system to view info</div></div>
+    <div style="margin-top:12px;border-top:1px solid #1a2844;padding-top:8px">
+      <div id="route-panel"><div style="color:#8aa0b8;font-size:11px">No route set</div></div>
+    </div>
   </div>
 </div>
 
@@ -685,25 +690,27 @@ function findPath(fromIdx, toIdx){
   return [];
 }
 
-function drawRoutePath(pathIndices){
-  if(!pathIndices.length){routePathGeo.setAttribute('position',new THREE.Float32BufferAttribute([],3));return;}
+function drawRoutePath(pathIndices, startIdx){
+  if(!pathIndices.length){routePathGeo.setAttribute('position',new THREE.Float32BufferAttribute([],3));renderRoutePanel();return;}
   const verts=[];
-  let prev=selectedSystem>=0?selectedSystem:0;
+  let prev=startIdx;
   for(const idx of pathIndices){
     const a=systems[prev],b=systems[idx];
     verts.push(a.x,a.y,a.z,b.x,b.y,b.z);
     prev=idx;
   }
   routePathGeo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+  renderRoutePanel();
 }
+
+const homeSystem=()=>{const i=systems.findIndex(s=>s.name==='Cygnus');return i>=0?i:0;};
 
 window.setRouteTo=function(sysName){
   const toIdx=systems.findIndex(s=>s.name.toLowerCase()===sysName.toLowerCase());
   if(toIdx<0)return;
-  // Default "home" is Cygnus if no system selected
-  const fromIdx=selectedSystem>=0?selectedSystem:systems.findIndex(s=>s.name==='Cygnus');
-  currentRoute=findPath(fromIdx>=0?fromIdx:0,toIdx);
-  drawRoutePath(currentRoute);
+  const from=homeSystem();
+  currentRoute=findPath(from,toIdx);
+  drawRoutePath(currentRoute, from);
   // Switch to map view to show the route
   const frame=document.getElementById('viewFrame');
   frame.style.display='none';frame.src='';
@@ -715,6 +722,42 @@ window.setRouteTo=function(sysName){
   document.querySelector('.app').style.gridTemplateColumns='120px 1fr 4px 320px';
   if(currentRoute.length) focusSystem(toIdx);
 };
+
+window.addWaypoint=function(sysName){
+  const toIdx=systems.findIndex(s=>s.name.toLowerCase()===sysName.toLowerCase());
+  if(toIdx<0)return;
+  // Extend from last point in current route, or from home if no route
+  const from=currentRoute.length?currentRoute[currentRoute.length-1]:homeSystem();
+  const extension=findPath(from,toIdx);
+  if(extension.length){
+    currentRoute=currentRoute.concat(extension);
+    drawRoutePath(currentRoute, homeSystem());
+  }
+};
+
+window.clearRoute=function(){
+  currentRoute=[];
+  drawRoutePath([],0);
+};
+
+function renderRoutePanel(){
+  const panel=document.getElementById('route-panel');
+  if(!panel)return;
+  if(!currentRoute.length){panel.innerHTML='<div style="color:#8aa0b8;font-size:11px">No route set</div>';return;}
+  let html='<div style="font-size:10px;color:#667;margin-bottom:4px;display:flex;justify-content:space-between"><span>ROUTE ('+currentRoute.length+' jumps)</span><span style="color:#ef5350;cursor:pointer" onclick="clearRoute()">Clear</span></div>';
+  // Start system
+  const startIdx=homeSystem();
+  html+='<div class="route-card" data-idx="'+startIdx+'" style="border-left-color:#66ff66">'+systems[startIdx].name+' <span style="color:#66ff66;font-size:9px">HOME</span></div>';
+  currentRoute.forEach((idx,i)=>{
+    const isLast=i===currentRoute.length-1;
+    html+='<div class="route-card" data-idx="'+idx+'"'+(isLast?' style="border-left-color:#aaff44"':'')+'>'+systems[idx].name+(isLast?' <span style="color:#aaff44;font-size:9px">DEST</span>':'')+'</div>';
+  });
+  panel.innerHTML=html;
+  panel.querySelectorAll('.route-card').forEach(card=>{
+    card.addEventListener('click',()=>focusSystem(parseInt(card.dataset.idx)));
+    card.addEventListener('dblclick',()=>{focusSystem(parseInt(card.dataset.idx));zoomToSystem(parseInt(card.dataset.idx));});
+  });
+}
 
 let selectedSystem=-1;
 let selectedShip=-1;
@@ -923,10 +966,13 @@ renderer.domElement.addEventListener('contextmenu',(e)=>{
       menu.style.cssText='position:fixed;z-index:999;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;padding:4px 0;box-shadow:0 4px 16px rgba(0,0,0,0.6);min-width:160px;left:'+e.clientX+'px;top:'+e.clientY+'px';
       menu.innerHTML='<div style="padding:4px 12px;font-size:10px;color:#667;border-bottom:1px solid #1a2844;margin-bottom:2px">'+s.name+'</div>'
         +'<div class="mapctx" style="padding:5px 12px;font-size:11px;color:#c8d4e0;cursor:pointer" onmouseover="this.style.background=\'#0d1a2f\';this.style.color=\'#4fc3f7\'" onmouseout="this.style.background=\'\';this.style.color=\'#c8d4e0\'">Set Route</div>'
+        +'<div class="mapctx" style="padding:5px 12px;font-size:11px;color:#c8d4e0;cursor:pointer" onmouseover="this.style.background=\'#0d1a2f\';this.style.color=\'#4fc3f7\'" onmouseout="this.style.background=\'\';this.style.color=\'#c8d4e0\'">Add Waypoint</div>'
+        +'<div style="border-top:1px solid #1a2844;margin:2px 0"></div>'
         +'<div class="mapctx" style="padding:5px 12px;font-size:11px;color:#c8d4e0;cursor:pointer" onmouseover="this.style.background=\'#0d1a2f\';this.style.color=\'#4fc3f7\'" onmouseout="this.style.background=\'\';this.style.color=\'#c8d4e0\'">View System</div>';
       document.body.appendChild(menu);
       menu.children[1].onclick=()=>{menu.remove();window.setRouteTo(s.name);};
-      menu.children[2].onclick=()=>{menu.remove();focusSystem(idx);openSystemView(s.id);};
+      menu.children[2].onclick=()=>{menu.remove();window.addWaypoint(s.name);};
+      menu.children[4].onclick=()=>{menu.remove();focusSystem(idx);openSystemView(s.id);};
       document.addEventListener('click',()=>menu.remove(),{once:true});
     }
   }
