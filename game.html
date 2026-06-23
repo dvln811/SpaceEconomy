@@ -1708,11 +1708,18 @@ setInterval(svFetch,3000);
 
 // Open system view
 window.openSystemView=function(sysId){
-  // Open system view in main iframe instead of modal
-  const frame=document.getElementById('viewFrame');
-  frame.src='/system_view?id='+sysId;
-  frame.style.display='block';
-  document.querySelectorAll('.nav-panel .nav-btn').forEach(b=>b.classList.remove('active'));
+  // Open system view in modal (3D)
+  svCurrentId=sysId;window._svCurrentId=sysId;svData=null;svShipPos={};
+  svShipCache={};svShipsGroup.clear();svBuiltForId='';
+  svCam.position.set(0,150,300);
+  svControls.target.set(0,0,0);svControls.update();
+  svWin.classList.add('open');
+  svResize();
+  document.getElementById('svTitle').textContent='System Map';
+  document.getElementById('svMeta').textContent='Loading...';
+  svFetch().then(()=>{
+    if(svData){document.getElementById('svTitle').textContent=svData.name;document.getElementById('svMeta').textContent=svData.type+' | '+svData.security+'-sec';}
+  });
 };
 })();
 </script>
