@@ -371,6 +371,7 @@ function showCtxMenu(x,y,sys,item){
     <div style="border-top:1px solid #1a2844;margin:2px 0"></div>
     <div class="ctx-item" onclick="navTo('${sys}')">Navigate to ${sys}</div>
     <div class="ctx-item" onclick="setRoute('${sys}')">Set Route to ${sys}</div>
+    <div class="ctx-item" onclick="addWpt('${sys}')">Add Waypoint: ${sys}</div>
     <div style="border-top:1px solid #1a2844;margin:2px 0"></div>
     <div class="ctx-item" onclick="copyText('${sys}')">Copy System Name</div>
     <div class="ctx-item" onclick="copyText('${item}')">Copy Item Name</div>
@@ -379,8 +380,10 @@ function showCtxMenu(x,y,sys,item){
   ctxMenu.style.left=Math.min(x,window.innerWidth-180)+'px';
   ctxMenu.style.top=Math.min(y,window.innerHeight-140)+'px';
 }
-function navTo(sys){ctxMenu.style.display='none';if(window.parent&&window.parent.navigateToSystem)window.parent.navigateToSystem(sys);}
-function setRoute(sys){ctxMenu.style.display='none';if(window.parent&&window.parent.setRouteTo)window.parent.setRouteTo(sys);}
+function getParent(){return (window.parent && window.parent!==window) ? window.parent : window;}
+function navTo(sys){ctxMenu.style.display='none';const p=getParent();if(p.navigateToSystem)p.navigateToSystem(sys);}
+function setRoute(sys){ctxMenu.style.display='none';const p=getParent();if(p.setRouteTo)p.setRouteTo(sys);}
+function addWpt(sys){ctxMenu.style.display='none';const p=getParent();if(p.addWaypoint)p.addWaypoint(sys);}
 function copyText(t){ctxMenu.style.display='none';navigator.clipboard.writeText(t);}
 function doBuy(item,sys){ctxMenu.style.display='none';/* TODO: open buy dialog */}
 function doSell(item,sys){ctxMenu.style.display='none';/* TODO: open sell dialog */}
