@@ -688,9 +688,19 @@ function drawRoutePath(pathIndices){
 window.setRouteTo=function(sysName){
   const toIdx=systems.findIndex(s=>s.name.toLowerCase()===sysName.toLowerCase());
   if(toIdx<0)return;
+  // Default "home" is Cygnus if no system selected
   const fromIdx=selectedSystem>=0?selectedSystem:systems.findIndex(s=>s.name==='Cygnus');
   currentRoute=findPath(fromIdx>=0?fromIdx:0,toIdx);
   drawRoutePath(currentRoute);
+  // Switch to map view to show the route
+  const frame=document.getElementById('viewFrame');
+  frame.style.display='none';frame.src='';
+  document.getElementById('sysviewWin').classList.remove('open');
+  document.querySelectorAll('.nav-panel .nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.nav-btn[data-view="map"]').classList.add('active');
+  const rh=document.getElementById('right-handle'),rp=document.querySelector('.right-panel');
+  if(rh)rh.style.display='';if(rp)rp.style.display='';
+  document.querySelector('.app').style.gridTemplateColumns='120px 1fr 4px 320px';
   if(currentRoute.length) focusSystem(toIdx);
 };
 
@@ -884,6 +894,31 @@ const raycaster=new THREE.Raycaster();
 const mouse=new THREE.Vector2();
 let _mdown={x:0,y:0};
 renderer.domElement.addEventListener('mousedown',(e)=>{_mdown={x:e.clientX,y:e.clientY};});
+
+// Right-click on star map: Set Route context menu
+renderer.domElement.addEventListener('contextmenu',(e)=>{
+  e.preventDefault();
+  const rect=renderer.domElement.getBoundingClientRect();
+  const mx=((e.clientX-rect.left)/rect.width)*2-1;
+  const my=-((e.clientY-rect.top)/rect.height)*2+1;
+  raycaster.setFromCamera(new THREE.Vector2(mx,my),camera);
+  const hits=raycaster.intersectObjects(systemMeshes);
+  if(hits.length>0){
+    const idx=systemMeshes.indexOf(hits[0].object);
+    if(idx>=0){
+      const s=systems[idx];
+      const menu=document.createElement('div');
+      menu.style.cssText='position:fixed;z-index:999;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;padding:4px 0;box-shadow:0 4px 16px rgba(0,0,0,0.6);min-width:160px;left:'+e.clientX+'px;top:'+e.clientY+'px';
+      menu.innerHTML='<div style="padding:4px 12px;font-size:10px;color:#667;border-bottom:1px solid #1a2844;margin-bottom:2px">'+s.name+'</div>'
+        +'<div class="mapctx" style="padding:5px 12px;font-size:11px;color:#c8d4e0;cursor:pointer" onmouseover="this.style.background=\'#0d1a2f\';this.style.color=\'#4fc3f7\'" onmouseout="this.style.background=\'\';this.style.color=\'#c8d4e0\'">Set Route</div>'
+        +'<div class="mapctx" style="padding:5px 12px;font-size:11px;color:#c8d4e0;cursor:pointer" onmouseover="this.style.background=\'#0d1a2f\';this.style.color=\'#4fc3f7\'" onmouseout="this.style.background=\'\';this.style.color=\'#c8d4e0\'">View System</div>';
+      document.body.appendChild(menu);
+      menu.children[1].onclick=()=>{menu.remove();window.setRouteTo(s.name);};
+      menu.children[2].onclick=()=>{menu.remove();focusSystem(idx);openSystemView(s.id);};
+      document.addEventListener('click',()=>menu.remove(),{once:true});
+    }
+  }
+});
 renderer.domElement.addEventListener('click',(e)=>{
   if(animating) return;
   if(document.getElementById('sysviewWin').classList.contains('open')||document.getElementById('viewFrame').style.display==='block') return;
