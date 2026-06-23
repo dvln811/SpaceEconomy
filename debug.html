@@ -215,7 +215,8 @@ async function fetchData() {
       D = data;
     }
     lastDebugTick = data.tick;
-    document.getElementById('tickInfo').textContent = `T${D.tick} | ${h}h${m}m${sec}s | ${D.npc_ships} ships | ${D.trade_volume} trades`;
+    const _u=D.uptime_seconds||0,_h=Math.floor(_u/3600),_m=Math.floor((_u%3600)/60),_s=_u%60;
+    document.getElementById('tickInfo').textContent = `T${D.tick} | ${_h}h${_m}m${_s}s | ${D.npc_ships} ships | ${D.trade_volume} trades`;
     render();
   } catch(e) { console.error(e); }
 }
