@@ -99,10 +99,9 @@ def _build_order_book(st):
         if qty > 1 and commodity_id in COMS:
             market_price = st.price_cache.get(commodity_id, 0)
             base = COMS[commodity_id].base_price
-            # Never sell below base price
             price = max(market_price, base) if market_price > 0 else base
             if price > 0:
-                sell_orders.append({"commodity": commodity_id, "qty": round(qty), "price": round(price, 2)})
+                sell_orders.append({"commodity": commodity_id, "qty": int(qty), "price": round(price, 2)})
     for prod_id in st.produces:
         com = COMS.get(prod_id)
         if not com or not com.recipe:
@@ -112,18 +111,17 @@ def _build_order_book(st):
             have = st.inventory.get(inp_id, 0)
             deficit = want - have
             if deficit > 0 and inp_id in COMS:
-                # Buy at market price or base price, whichever is higher
-                market = st.price_cache.get(inp_id, 0)
                 base = COMS[inp_id].base_price
-                buy_price = max(market, base) * 1.05  # 5% premium to attract sellers
-                buy_orders.append({"commodity": inp_id, "qty": round(deficit), "price": round(buy_price, 2)})
+                market = st.price_cache.get(inp_id, 0)
+                buy_price = min(max(market, base) * 1.05, base * 2)
+                buy_orders.append({"commodity": inp_id, "qty": int(deficit), "price": round(buy_price, 2)})
     for commodity_id in STATION_CONSUMPTION.get(st.station_type, []):
         have = st.inventory.get(commodity_id, 0)
         if have < 500 and commodity_id in COMS:
-            market = st.price_cache.get(commodity_id, 0)
             base = COMS[commodity_id].base_price
-            buy_price = max(market, base) * 1.1
-            buy_orders.append({"commodity": commodity_id, "qty": round(500 - have), "price": round(buy_price, 2)})
+            market = st.price_cache.get(commodity_id, 0)
+            buy_price = min(max(market, base) * 1.1, base * 2)
+            buy_orders.append({"commodity": commodity_id, "qty": int(500 - have), "price": round(buy_price, 2)})
     return sorted(sell_orders, key=lambda x: -x["qty"])[:20], sorted(buy_orders, key=lambda x: -x["qty"])[:50]
 
 
@@ -146,16 +144,14 @@ def _get_project_buy_orders():
             have = accumulated.get(mat_id, 0)
             deficit = qty_needed - have
             if deficit > 0:
-                # Direct demand for the component/material
                 price = COMS[mat_id].base_price * 1.2 if mat_id in COMS else 1000
-                orders_by_system[target].append({"commodity": mat_id, "qty": round(deficit), "price": round(price, 1)})
-                # Also cascade: post demand for recipe inputs of this material
+                orders_by_system[target].append({"commodity": mat_id, "qty": int(deficit), "price": round(price, 2)})
                 com = COMS.get(mat_id)
                 if com and com.recipe:
                     for inp_id, inp_qty in com.recipe.items():
                         inp_need = inp_qty * deficit
                         inp_price = COMS[inp_id].base_price * 1.15 if inp_id in COMS else 100
-                        orders_by_system[target].append({"commodity": inp_id, "qty": round(inp_need), "price": round(inp_price, 1)})
+                        orders_by_system[target].append({"commodity": inp_id, "qty": int(inp_need), "price": round(inp_price, 2)})
     return orders_by_system
 
 

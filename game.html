@@ -164,7 +164,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <!-- Main: Star Map -->
   <div class="main">
     <div class="map-tooltip" id="map-tooltip"></div>
-    <div class="map-label"><select id="starColorMode" style="background:#0a1020;border:1px solid #1a2844;color:#c8d4e0;padding:3px 6px;border-radius:3px;font:inherit;font-size:12px">
+    <div class="map-label"><input id="sysSearchMap" type="search" placeholder="Search system..." style="background:#0a1020;border:1px solid #1a2844;color:#c8d4e0;padding:3px 8px;border-radius:3px;font:inherit;font-size:12px;width:140px;margin-right:6px"><select id="starColorMode" style="background:#0a1020;border:1px solid #1a2844;color:#c8d4e0;padding:3px 6px;border-radius:3px;font:inherit;font-size:12px">
       <option value="default">Star Type</option>
       <option value="faction">Faction</option>
       <option value="security">Security</option>
@@ -764,6 +764,14 @@ function applyKeyNav(){
 
 // ── Camera focus animation ────────────────────────────────────────────────────
 let animating=false;
+
+// Navigate to a system by name (used by market right-click and search)
+window.navigateToSystem = function(name) {
+  const idx = systems.findIndex(s => s.name.toLowerCase() === name.toLowerCase());
+  if (idx >= 0) { focusSystem(idx); zoomToSystem(idx); }
+};
+document.getElementById('sysSearchMap').addEventListener('search', function(){ window.navigateToSystem(this.value); });
+document.getElementById('sysSearchMap').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); window.navigateToSystem(this.value); }});
 
 function focusSystem(index){
   selectedSystem=index;
