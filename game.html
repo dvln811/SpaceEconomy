@@ -954,7 +954,7 @@ function updateSystemDetail(index){
     <div class="system-detail">
       <div class="detail-row"><span>Region</span><span class="val">${s.region}</span></div>
       <div class="detail-row"><span>Constellation</span><span class="val">${s.cluster}</span></div>
-      <div class="detail-row"><span>Security</span><span class="val" style="color:${secColor}">${s.sec_level.toFixed(2)} (${s.security})</span></div>
+      <div class="detail-row"><span>Security</span><span class="val" style="color:${secColor}">${(s.sec_level||0).toFixed(1)} (${s.security})</span></div>
       <div class="detail-row"><span>Faction</span><span class="val" style="color:${facColor}">${facName}</span></div>
       <div class="detail-row"><span>Type</span><span class="val">${typeLabels[s.type]||s.type}</span></div>
       <div class="detail-row"><span>Stations</span><span class="val">${s.station_count}</span></div>
