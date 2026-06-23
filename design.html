@@ -51,11 +51,17 @@ blockquote{border-left:3px solid #4fc3f7;padding:12px 16px;margin:16px 0;backgro
 #docnav .dnl{font-size:12px;color:#8aa0b8;text-decoration:none;padding:6px 10px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;transition:all .15s;border-bottom:2px solid transparent}
 #docnav .dnl:hover{color:#4fc3f7;border-bottom-color:#4fc3f7}
 #docnav .dnl.active{color:#4fc3f7;border-bottom-color:#4fc3f7}
+#docnav .dnl-drop{position:relative;display:inline-block}
+#docnav .dnl-drop .dnl-menu{display:none;position:absolute;top:100%;left:0;background:#0a0f1a;border:1px solid #1a2844;border-radius:4px;padding:4px 0;min-width:120px;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,0.5)}
+#docnav .dnl-drop:hover .dnl-menu{display:block}
+#docnav .dnl-menu a{display:block;padding:5px 12px;color:#8aa0b8;text-decoration:none;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:0.5px}
+#docnav .dnl-menu a:hover{color:#4fc3f7;background:#0d1a2f}
+#docnav .dnl-sep{display:inline-block;width:1px;height:20px;background:#1a2844;margin:0 8px;vertical-align:middle}
 </style>
 </head>
 <body>
 <div id="docnav" style="position:sticky;top:0;z-index:100;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:0 24px;height:48px;gap:12px;flex-wrap:wrap">
-<a href="/docs" class="dnl">Hub</a><a href="/items" class="dnl">Items DB</a><a href="/ships_db" class="dnl">Ships DB</a><a href="/chain" class="dnl">Chain Calc</a><a href="/ships" class="dnl">Ships 3D</a><a href="/fitting" class="dnl">Fitting</a><a href="/design" class="dnl active">Design</a><a href="/universe" class="dnl">Universe</a><a href="/economy" class="dnl">Economy</a><a href="/resources" class="dnl">Resources</a><a href="/materials" class="dnl">Materials</a><a href="/products" class="dnl">Products</a>
+<a href="/docs" class="dnl">Hub</a><a href="/universe" class="dnl">Universe</a><a href="/items" class="dnl">Items DB</a><a href="/chain" class="dnl">Chain Calc</a><div class="dnl-drop"><a href="/ships_db" class="dnl">Ships ▾</a><div class="dnl-menu"><a href="/ships_db">Ships DB</a><a href="/ships">Ships 3D</a><a href="/fitting">Fitting</a></div></div><div class="dnl-drop"><a href="/resources" class="dnl">Materials ▾</a><div class="dnl-menu"><a href="/resources">Resources</a><a href="/materials">Materials</a><a href="/products">Products</a></div></div><span class="dnl-sep"></span><a href="/design" class="dnl active">Design</a>
 </div>
 <div class="content">
 <h2>Core Vision</h2>
@@ -297,6 +303,14 @@ blockquote{border-left:3px solid #4fc3f7;padding:12px 16px;margin:16px 0;backgro
 <li>Observe if the economy self-sustains or needs tuning</li>
 <li>Add depth as needed (diplomacy, espionage, tech progression)</li>
 </ul>
+
+<h2>Economic Mechanics</h2>
+<div class="note">
+<strong>Pricing:</strong> Supply/demand driven. Stations track pressure over time. Unfilled demand raises buy price. Oversupply lowers sell price. Prices update every 60 ticks.<br><br>
+<strong>Self-Limiting Production:</strong> Stations produce at a rate limited by available inputs. If supply drops, production smoothly slows rather than halting abruptly. As logistics improve, production automatically scales up.<br><br>
+<strong>Trade AI:</strong> NPC traders see all buy/sell opportunities across their entire cluster. They pick the most profitable route and haul goods accordingly. Dynamic pricing ensures resources flow where they're needed.<br><br>
+<strong>Mining:</strong> Mining colonies with asteroid fields passively generate ore. NPC miners also extract from belts and sell at local stations. Higher density fields produce faster.
+</div>
 
 </div>
 </body>

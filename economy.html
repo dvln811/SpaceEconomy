@@ -1,86 +1,0 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Space Economy - Economy Design</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:15px;}
-h1{font-family:'JetBrains Mono',monospace;color:#4fc3f7;font-size:22px;letter-spacing:3px;margin-bottom:12px}
-h2{font-family:'JetBrains Mono',monospace;color:#4fc3f7;font-size:15px;letter-spacing:2px;margin:32px 0 16px;border-bottom:1px solid #1a2844;padding-bottom:8px}
-p{color:#8aa0b8;line-height:1.6;margin-bottom:12px}
-a{color:#4fc3f7;text-decoration:none}
-a:hover{text-decoration:underline}
-.nav{margin-bottom:24px;font-size:12px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
-.card{background:#0a0e18;border:1px solid #1a2844;border-radius:6px;padding:20px;text-decoration:none;transition:all .15s;display:block}
-.card:hover{border-color:#4fc3f7;background:#0d1a2f;transform:translateY(-2px);text-decoration:none}
-.card h3{font-family:'JetBrains Mono',monospace;font-size:12px;color:#4fc3f7;letter-spacing:1px;margin-bottom:8px}
-.card p{color:#8aa0b8;font-size:12px;margin:0}
-.card .count{color:#ffd54f;font-size:12px;margin-top:6px}
-.note{background:#0a1020;border:1px solid #1a2844;border-radius:4px;padding:12px;margin:12px 0;font-size:12px;color:#8aa0b8}
-
-#docnav .dnl{font-size:12px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;transition:all .15s}
-#docnav .dnl:hover{color:#4fc3f7;border-color:#4fc3f7;background:#0d1a2f}
-#docnav .dnl.active{color:#4fc3f7;border-color:#4fc3f7}
-</style>
-</head>
-<body>
-<div id="docnav" style="position:sticky;top:0;z-index:100;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:0 24px;height:48px;gap:12px;flex-wrap:wrap">
-<a href="/" class="dnl">Game</a><a href="/docs" class="dnl">Hub</a><span style="color:#1a2844">|</span>
-<a href="/items" class="dnl">Items DB</a><a href="/ships_db" class="dnl">Ships DB</a><a href="/chain" class="dnl">Chain Calc</a><a href="/factions" class="dnl">Factions</a><a href="/ships" class="dnl">Ships 3D</a><a href="/fitting" class="dnl">Fitting</a><span style="color:#1a2844">|</span>
-<a href="/design" class="dnl">Design</a><a href="/universe" class="dnl">Universe</a><a href="/economy" class="dnl active">Economy</a><a href="/resources" class="dnl">Resources</a><a href="/materials" class="dnl">Materials</a><a href="/products" class="dnl">Products</a><span style="color:#1a2844">|</span>
-<a href="/debug" class="dnl">Dashboard</a>
-</div>
-<div style="max-width:1200px;margin:0 auto;padding:0 40px">
-<h1>Economy Design</h1>
-<p>The economy is a living production chain. Raw materials are mined, refined into materials, manufactured into components, and assembled into final products. Every item flows through this chain via NPC and player traders.</p>
-
-<h2>Production Chain</h2>
-<div class="note">
-<strong>Flow:</strong> Asteroid Fields ! Mining Colony ! Refinery ! Industrial Hub ! Component Factory ! Shipyard<br><br>
-<strong>Volume Design:</strong> Common ores are tiny (0.1 m3) so ships can haul thousands per trip. Exotic materials are bulky (1-2 m3) limiting supply. Final products are 2-5 m3 each.
-</div>
-
-<div class="grid">
-  <a href="/items" class="card">
-    <h3>Items Database</h3>
-    <p>Complete searchable database: 29 raw ores, 38 refined/manufactured materials, 51 components/products, 6 trade goods. Browse by category, search, view recipes and descriptions.</p>
-    <div class="count">124 total items</div>
-  </a>
-  <a href="/resources" class="card">
-    <h3>Mining &amp; Harvesting</h3>
-    <p>Asteroid types, ore yields by security zone, harvesting mechanics, field composition.</p>
-  </a>
-  <a href="/materials" class="card">
-    <h3>Refining &amp; Manufacturing</h3>
-    <p>Recipe chains from raw ore to refined metals, fuels, electronics, and advanced compounds.</p>
-  </a>
-  <a href="/products" class="card">
-    <h3>Assembly &amp; Products</h3>
-    <p>Components and final products: weapons, shields, engines, drones, and mining equipment.</p>
-  </a>
-</div>
-
-<h2>Related Systems</h2>
-<div class="grid">
-  <a href="/fitting" class="card">
-    <h3>Ship Fitting</h3>
-    <p>Module slots (High/Mid/Low/Engine/Rig), CPU/Power Grid budgets, stat effects.</p>
-  </a>
-  <a href="/factions" class="card">
-    <h3>Factions &amp; Corporations</h3>
-    <p>Six major factions, their corps, territories, trade relationships, and conflicts.</p>
-  </a>
-</div>
-
-<h2>Economic Mechanics</h2>
-<div class="note">
-<strong>Pricing:</strong> Supply/demand driven. Stations track pressure over time. Unfilled demand raises buy price. Oversupply lowers sell price. Prices update every 10 ticks.<br><br>
-<strong>Self-Limiting Production:</strong> Stations produce at a rate limited by available inputs. If supply drops, production smoothly slows rather than halting abruptly. As logistics improve, production automatically scales up.<br><br>
-<strong>Trade AI:</strong> NPC traders see all buy/sell opportunities across their entire cluster. They pick the most profitable route and haul goods accordingly. Dynamic pricing ensures resources flow where they're needed.<br><br>
-<strong>Mining:</strong> Mining colonies with asteroid fields passively generate ore. NPC miners also extract from belts and sell at local stations. Higher density fields produce faster.
-</div>
-</body>
-</html>

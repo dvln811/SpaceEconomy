@@ -190,11 +190,6 @@ def static_files(filename):
     return send_from_directory(os.path.join(BASE_DIR, "static"), filename)
 
 
-@app.route("/economy")
-def economy_page():
-    return send_from_directory(BASE_DIR, "economy.html")
-
-
 @app.route("/market")
 def market_page():
     return send_from_directory(BASE_DIR, "market.html")
