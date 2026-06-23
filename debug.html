@@ -247,20 +247,17 @@ function renderFactions() {
   const phaseColors = {scouting:'#ffd54f',staging:'#ff8a65',constructing:'#66bb6a',complete:'#4fc3f7',requisitioning:'#ffd54f',assembling:'#ff8a65',deployed:'#4fc3f7'};
   let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:10px">';
   for (const [fid, f] of Object.entries(factions)) {
-    html += '<div style="background:#0a1020;border:1px solid #1a2844;border-radius:6px;padding:12px;display:flex;flex-direction:column;height:550px">';
+    html += '<div style="background:#0a1020;border:1px solid #1a2844;border-radius:6px;padding:12px;display:flex;flex-direction:column">';
     // Header
     html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-shrink:0">';
     if (f.emblem) html += '<img src="/static/faction_emblems/'+f.emblem+'" style="width:36px;height:36px;border-radius:4px;object-fit:contain">';
     html += '<div><div style="color:#4fc3f7;font-size:13px;font-weight:600">'+(f.name||fid)+'</div>';
     html += '<div style="font-size:10px;color:#8aa0b8">'+f.systems+' systems | Agg: '+f.aggression+' | Exp: '+f.expansion+' | Eco: '+f.economic+'</div></div></div>';
-    // Policy Decisions (top, greedy)
+    // Policy Decisions (simple text block, current only)
     if (f.decisions && f.decisions.length) {
-      html += '<div style="color:#c8d4e0;font-size:11px;font-weight:600;letter-spacing:1px;margin-bottom:4px;flex-shrink:0">POLICY DECISIONS</div>';
-      html += '<div style="flex:1;min-height:0;overflow-y:auto;border:1px solid #1a2844;border-radius:4px;padding:4px;margin-bottom:8px">';
-      for (const d of f.decisions) {
-        html += '<div style="font-size:10px;margin-bottom:3px;padding:2px 4px;border-bottom:1px solid #0d1420"><span style="color:#667">T'+d.tick+'</span> <span style="color:#4fc3f7;font-weight:500">'+fmtTask(d.decision)+'</span> <span style="color:#8aa0b8">'+d.reasoning+'</span></div>';
-      }
-      html += '</div>';
+      const d = f.decisions[0];
+      html += '<div style="color:#c8d4e0;font-size:11px;font-weight:600;letter-spacing:1px;margin-bottom:3px;flex-shrink:0">POLICY</div>';
+      html += '<div style="font-size:11px;padding:4px 8px;background:#0d1420;border-radius:4px;margin-bottom:8px;flex-shrink:0;max-height:42px;overflow:hidden"><span style="color:#4fc3f7;font-weight:500">'+fmtTask(d.decision)+'</span> <span style="color:#8aa0b8">'+d.reasoning+'</span></div>';
     }
     // Projects
     if (f.projects && f.projects.length) {
@@ -285,7 +282,7 @@ function renderFactions() {
     // Corporations
     if (f.corporations && f.corporations.length) {
       html += '<div style="color:#c8d4e0;font-size:11px;font-weight:600;letter-spacing:1px;margin:4px 0;flex-shrink:0">CORPORATIONS ('+f.corporations.length+')</div>';
-      html += '<div style="max-height:100px;overflow-y:auto;border:1px solid #1a2844;border-radius:4px;padding:4px;flex-shrink:0">';
+      html += '<div id="corps_'+fid+'" style="max-height:100px;overflow-y:auto;border:1px solid #1a2844;border-radius:4px;padding:4px;flex-shrink:0">';
       for (const c of f.corporations) {
         html += '<div style="display:flex;align-items:center;padding:2px 6px;border-bottom:1px solid #0d1420;font-size:10px;gap:4px">';
         html += '<span style="color:#c8d4e0;flex:1">'+c.name+'</span>';
@@ -298,7 +295,15 @@ function renderFactions() {
     html += '</div>';
   }
   html += '</div>';
+  // Preserve scroll positions
+  const scrolls = {};
+  document.querySelectorAll('#factionsContent [id^="corps_"]').forEach(el => { scrolls[el.id] = el.scrollTop; });
   document.getElementById('factionsContent').innerHTML = html;
+  // Restore scroll positions
+  for (const [id, top] of Object.entries(scrolls)) {
+    const el = document.getElementById(id);
+    if (el) el.scrollTop = top;
+  }
 }
 
 function renderOverview() {
@@ -360,7 +365,7 @@ function renderOverview() {
     </div>
     <div class="panel">
       <div class="panel-title">Inventory (Top)</div>
-      ${topInv.map(([k,v])=>`<div class="stat-row"><span class="label">${fmtName(k)}</span><span class="value">${Math.round(v)}</span></div>`).join('')}
+      ${topInv.map(([k,v])=>`<div class="stat-row"><span class="label">${fmtName(k)}</span><span class="value">${Math.round(v).toLocaleString()}</span></div>`).join('')}
     </div>
     <div class="panel">
       <div class="panel-title">Demand Balance</div>
@@ -372,7 +377,7 @@ function renderOverview() {
         let allBuys=[];
         for(const sys of Object.values(D.systems||{})){for(const st of sys.stations){for(const b of (st.buy_orders||[])){allBuys.push({...b,station:st.name});}}}
         allBuys.sort((a,b)=>b.qty-a.qty);
-        return allBuys.slice(0,8).map(b=>`<div class="stat-row"><span class="label">${fmtName(b.commodity)}</span><span class="value">${Math.round(b.qty)}</span></div>`).join('')||'<div style="color:#8aa0b8">None</div>';
+        return allBuys.slice(0,8).map(b=>`<div class="stat-row"><span class="label">${fmtName(b.commodity)}</span><span class="value">${Math.round(b.qty).toLocaleString()}</span></div>`).join('')||'<div style="color:#8aa0b8">None</div>';
       })()}
     </div>
     <div class="panel">
@@ -381,7 +386,7 @@ function renderOverview() {
     </div>
     <div class="panel">
       <div class="panel-title">Events</div>
-      ${events.slice(0,10).map(e=>`<div style="padding:1px 0;font-size:12px;border-bottom:1px solid #0a1420"><span style="color:#8aa0b8;margin-right:4px">T${e.tick}</span>${e.msg}</div>`).join('')}
+      ${events.slice(0,10).map(e=>{const msg=e.msg||'';let col='#8aa0b8';if(msg.startsWith('^'))col='#66bb6a';else if(msg.startsWith('v '))col='#ef5350';else if(msg.includes('STRATEGY'))col='#4fc3f7';else if(msg.includes('BATTLE')||msg.includes('attack'))col='#ff8a65';else if(msg.includes('expand'))col='#ffd54f';return `<div style="padding:1px 0;font-size:12px;border-bottom:1px solid #0a1420"><span style="color:#667;margin-right:4px">T${e.tick}</span><span style="color:${col}">${msg}</span></div>`;}).join('')}
     </div>
   </div>`;
 }
