@@ -206,6 +206,7 @@ async function fetchData() {
       D.ships_by_state = data.ships_by_state;
       D.total_inventory = data.total_inventory;
       D.recent_events = data.recent_events;
+      D.uptime_seconds = data.uptime_seconds;
       if(data.prices) D.prices = data.prices;
       if(data.demand) D.demand = data.demand;
       if(data.warfare) D.warfare = data.warfare;
@@ -214,7 +215,7 @@ async function fetchData() {
       D = data;
     }
     lastDebugTick = data.tick;
-    document.getElementById('tickInfo').textContent = `T${D.tick} | ${D.npc_ships} ships | ${D.trade_volume} trades`;
+    document.getElementById('tickInfo').textContent = `T${D.tick} | ${h}h${m}m${sec}s | ${D.npc_ships} ships | ${D.trade_volume} trades`;
     render();
   } catch(e) { console.error(e); }
 }
@@ -658,8 +659,8 @@ function renderMarket() {
 
 document.getElementById('mktRegionFilter')?.addEventListener('change', () => renderMarket());
 document.getElementById('mktSystemFilter')?.addEventListener('change', () => renderMarket());
-document.getElementById('mktSearch').addEventListener('input', () => renderMarket());
-document.getElementById('mktSortBy').addEventListener('change', () => renderMarket());
+document.getElementById('mktSearch')?.addEventListener('input', () => renderMarket());
+document.getElementById('mktSortBy')?.addEventListener('change', () => renderMarket());
 
 // ── Systems ─────────────────────────────────────────────────────────────────
 function renderSystems() {
