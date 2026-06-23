@@ -326,8 +326,10 @@ function renderTable(prefix, orders, col, dir){
   bodyEl.querySelectorAll('tr[data-sys]').forEach(tr=>{
     tr.addEventListener('contextmenu',function(e){
       e.preventDefault();
+      e.stopPropagation();
       const sys=this.dataset.sys;
-      if(window.parent&&window.parent.navigateToSystem)window.parent.navigateToSystem(sys);
+      const item=this.children[0]?.textContent||'';
+      showCtxMenu(e.clientX,e.clientY,sys,item);
     });
   });
 }
@@ -346,6 +348,34 @@ function onSort(e){
   }
   renderOrders();
 }
+
+// Context menu
+const ctxMenu = document.createElement('div');
+ctxMenu.id='ctxMenu';
+ctxMenu.style.cssText='display:none;position:fixed;z-index:999;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;padding:4px 0;box-shadow:0 4px 16px rgba(0,0,0,0.6);min-width:160px';
+document.body.appendChild(ctxMenu);
+document.addEventListener('click',()=>{ctxMenu.style.display='none';});
+document.addEventListener('contextmenu',e=>{if(!e.target.closest('tr[data-sys]'))ctxMenu.style.display='none';});
+
+function showCtxMenu(x,y,sys,item){
+  ctxMenu.innerHTML=`
+    <div style="padding:4px 12px;font-size:10px;color:#667;text-transform:uppercase;letter-spacing:1px">${item}</div>
+    <div class="ctx-item" onclick="navTo('${sys}')">Navigate to ${sys}</div>
+    <div class="ctx-item" onclick="setRoute('${sys}')">Set Route to ${sys}</div>
+    <div class="ctx-item" onclick="copyText('${sys}')">Copy System Name</div>
+  `;
+  ctxMenu.style.display='block';
+  ctxMenu.style.left=Math.min(x,window.innerWidth-180)+'px';
+  ctxMenu.style.top=Math.min(y,window.innerHeight-100)+'px';
+}
+function navTo(sys){ctxMenu.style.display='none';if(window.parent&&window.parent.navigateToSystem)window.parent.navigateToSystem(sys);}
+function setRoute(sys){ctxMenu.style.display='none';if(window.parent&&window.parent.navigateToSystem)window.parent.navigateToSystem(sys);}
+function copyText(t){ctxMenu.style.display='none';navigator.clipboard.writeText(t);}
+
+// Style for ctx items
+const ctxStyle=document.createElement('style');
+ctxStyle.textContent='.ctx-item{padding:5px 12px;font-size:11px;color:#c8d4e0;cursor:pointer}.ctx-item:hover{background:#0d1a2f;color:#4fc3f7}';
+document.head.appendChild(ctxStyle);
 
 document.getElementById('treeSearch').addEventListener('input',function(){renderTree();renderOrders();});
 document.getElementById('groupBy').addEventListener('change',renderOrders);
