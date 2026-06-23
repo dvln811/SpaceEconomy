@@ -121,9 +121,9 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .route-profit{margin-left:auto;font-size:12px;color:#66bb6a}
 
 /* Inline System View Window */
-.sysview-window{position:fixed;top:60px;left:300px;width:800px;height:600px;background:#0a0e18;border:1px solid #1a2844;border-radius:6px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.7);z-index:200;resize:both;min-width:500px;min-height:350px}
+.sysview-window{position:absolute;inset:0;background:#0a0e18;display:none;flex-direction:column;overflow:hidden;z-index:15}
 .sysview-window.open{display:flex}
-.sysview-titlebar{display:flex;align-items:center;padding:0 12px;height:30px;background:#0a0f1a;border-bottom:1px solid #1a2844;cursor:move;flex-shrink:0;user-select:none}
+.sysview-titlebar{display:flex;align-items:center;padding:0 12px;height:30px;background:#0a0f1a;border-bottom:1px solid #1a2844;flex-shrink:0;user-select:none}
 .sysview-titlebar h2{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:#4fc3f7;letter-spacing:2px;text-transform:uppercase}
 .sysview-titlebar .sv-meta{margin-left:10px;font-size:12px;color:#8aa0b8}
 .sysview-titlebar .sv-close{margin-left:auto;width:18px;height:18px;border:none;background:none;color:#8aa0b8;cursor:pointer;font-size:15px;border-radius:3px}
@@ -177,6 +177,36 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
       <button>−</button>
     </div>
     <iframe id="viewFrame" style="display:none;position:absolute;inset:0;width:100%;height:100%;border:none;z-index:10;background:#05080f"></iframe>
+    <div class="sysview-window" id="sysviewWin">
+      <div class="sysview-titlebar" id="sysviewTitlebar">
+        <h2 id="svTitle">System Map</h2>
+        <span class="sv-meta" id="svMeta"></span>
+        <button class="sv-close" id="svClose">&times;</button>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:row;overflow:hidden">
+      <div id="svInfoPanel" style="width:200px;overflow-y:auto;background:#0a0e18;border-right:1px solid #1a2844;padding:10px;font-size:12px;flex-shrink:0">
+        <div id="svSelInfo"><div style="color:#8aa0b8;font-size:12px">Click an object or ship to view details</div></div>
+      </div>
+      <div class="sysview-body" id="sysviewBody">
+        <div id="svRenderer" style="position:absolute;inset:0;overflow:hidden;cursor:grab"></div>
+        <div class="sysview-tooltip" id="svTooltip">
+          <div class="tt-name"></div>
+          <div class="tt-type"></div>
+          <div class="tt-detail"></div>
+        </div>
+        <div class="sysview-zoom">
+          <button id="svZoomIn">+</button>
+          <button id="svZoomOut">&minus;</button>
+        </div>
+      </div>
+      <div id="svSidebar" style="width:180px;overflow-y:auto;background:#0a0e18;border-left:1px solid #1a2844;padding:8px;font-size:12px;flex-shrink:0;display:flex;flex-direction:column">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#8aa0b8;letter-spacing:1px;margin-bottom:4px">SOLAR BODIES</div>
+        <div id="svBodiesList" style="max-height:45%;overflow-y:auto;margin-bottom:6px;border-bottom:1px solid #1a2844;padding-bottom:6px"></div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#8aa0b8;letter-spacing:1px;margin-bottom:4px">SHIPS</div>
+        <div id="svShipList" style="flex:1;overflow-y:auto"></div>
+      </div>
+      </div>
+    </div>
   </div>
 
   <!-- Right: System Info -->
@@ -184,39 +214,6 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <div class="right-panel">
     <div class="panel-title" style="margin-bottom:8px">System Info</div>
     <div id="system-info-content"><div style="color:#8aa0b8;font-size:12px">Select a system to view info</div></div>
-  </div>
-
-</div>
-
-<!-- Inline System View Window -->
-<div class="sysview-window" id="sysviewWin">
-  <div class="sysview-titlebar" id="sysviewTitlebar">
-    <h2 id="svTitle">System Map</h2>
-    <span class="sv-meta" id="svMeta"></span>
-    <button class="sv-close" id="svClose">&times;</button>
-  </div>
-  <div style="flex:1;display:flex;flex-direction:row;overflow:hidden">
-  <div id="svInfoPanel" style="width:200px;overflow-y:auto;background:#0a0e18;border-right:1px solid #1a2844;padding:10px;font-size:12px;flex-shrink:0">
-    <div id="svSelInfo"><div style="color:#8aa0b8;font-size:12px">Click an object or ship to view details</div></div>
-  </div>
-  <div class="sysview-body" id="sysviewBody">
-    <div id="svRenderer" style="position:absolute;inset:0;overflow:hidden;cursor:grab"></div>
-    <div class="sysview-tooltip" id="svTooltip">
-      <div class="tt-name"></div>
-      <div class="tt-type"></div>
-      <div class="tt-detail"></div>
-    </div>
-    <div class="sysview-zoom">
-      <button id="svZoomIn">+</button>
-      <button id="svZoomOut">&minus;</button>
-    </div>
-  </div>
-  <div id="svSidebar" style="width:180px;overflow-y:auto;background:#0a0e18;border-left:1px solid #1a2844;padding:8px;font-size:12px;flex-shrink:0;display:flex;flex-direction:column">
-    <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#8aa0b8;letter-spacing:1px;margin-bottom:4px">SOLAR BODIES</div>
-    <div id="svBodiesList" style="max-height:45%;overflow-y:auto;margin-bottom:6px;border-bottom:1px solid #1a2844;padding-bottom:6px"></div>
-    <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#8aa0b8;letter-spacing:1px;margin-bottom:4px">SHIPS</div>
-    <div id="svShipList" style="flex:1;overflow-y:auto"></div>
-  </div>
   </div>
 </div>
 
@@ -1282,9 +1279,6 @@ function svResize(){
 new ResizeObserver(svResize).observe(svContainer);
 
 // Draggable window
-svTitlebar.addEventListener('mousedown',e=>{svDragging=true;svDragOff={x:e.clientX-svWin.offsetLeft,y:e.clientY-svWin.offsetTop};document.body.style.userSelect='none';});
-document.addEventListener('mousemove',e=>{if(svDragging){svWin.style.left=(e.clientX-svDragOff.x)+'px';svWin.style.top=(e.clientY-svDragOff.y)+'px';}});
-document.addEventListener('mouseup',()=>{svDragging=false;document.body.style.userSelect='';});
 document.getElementById('svClose').addEventListener('click',()=>{svWin.classList.remove('open');});
 
 // Market window drag/close
