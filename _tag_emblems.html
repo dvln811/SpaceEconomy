@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Corp Emblem Tagger</title>
+<style>
+body{font-family:system-ui;background:#1a1a2e;color:#eee;margin:0;padding:20px}
+h1{text-align:center;margin-bottom:4px}
+#progress{text-align:center;margin-bottom:20px;color:#8cf}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,180px);gap:12px;justify-content:center}
+.card{background:#16213e;border-radius:8px;padding:8px;text-align:center}
+.card img{width:160px;height:160px;object-fit:contain;border-radius:6px;background:#000}
+.card .fname{font-size:9px;color:#888;margin:3px 0}
+.radios{display:flex;gap:10px;justify-content:center;margin:3px 0;font-size:12px}
+.radios label{cursor:pointer}
+.radios input{margin-right:2px}
+.tagged{border:2px solid #4f8}
+#exportBtn{display:block;margin:30px auto;padding:12px 32px;font-size:16px;background:#4f8;color:#000;border:none;border-radius:6px;cursor:pointer}
+#exportBtn:hover{background:#3d7}
+</style></head><body>
+<h1>Corp Emblem Tagger</h1>
+<p id="progress">Tagged: 0 / 186</p>
+<div id="grid"></div>
+<button id="exportBtn" onclick="doExport()">Export JSON</button>
+<script>
+const files = [
+"083257.png","083326.png","083341.png","083346.png","083352.png","083358.png","083403.png","083411.png","083416.png","083421.png","083429.png","083433.png","083441.png","083448.png","083454.png","083459.png","083507.png","083512.png","083521.png","083536.png","083603.png","083634.png","083719.png","083741.png","084309.png","084317.png","084325.png","084331.png","084342.png","084729.png","084739.png","084744.png","084749.png","084755.png","084812.png","084826.png","084900.png","084906.png","084930.png","084935.png","085102.png","085107.png","085111.png","085116.png","085120.png","085125.png","085132.png","085136.png","085140.png","085716.png","085721.png","085726.png","085730.png","085734.png","085741.png","085746.png","085901.png","085910.png","085919.png","085925.png","085929.png","085933.png","085939.png","085943.png","085948.png","090603.png","090609.png","090614.png","090619.png","090623.png","090628.png","090632.png","090637.png","090642.png","090932.png","090936.png","133049.png","133115.png","133125.png","133135.png","133143.png","133150.png","133157.png","133206.png","133213.png","133315.png","133320.png","133328.png","133333.png","133339.png","133344.png","133351.png","133357.png","133624.png","133631.png","133637.png","133756.png","133803.png","133809.png","133815.png","133821.png","133828.png","133834.png","133840.png","133847.png","133934.png","133941.png","133947.png","133953.png","133959.png","134004.png","134010.png","134020.png","134155.png","134201.png","134206.png","134212.png","134217.png","134222.png","134228.png","134235.png","134241.png","134354.png","134359.png","134405.png","134411.png","134416.png","134421.png","134426.png","134437.png","134442.png","134539.png","134544.png","134609.png","134614.png","134620.png","134625.png","134630.png","134636.png","134641.png","142804.png","142818.png","172939.png","172949.png","172955.png","173000.png","173006.png","173014.png","173019.png","173203.png","173208.png","173214.png","173219.png","173223.png","173227.png","173232.png","173237.png","173242.png","173349.png","173507.png","173512.png","173517.png","173521.png","173525.png","173532.png","173537.png","173542.png","173546.png","174549.png","174554.png","174557.png","174602.png","174606.png","174610.png","174617.png","174622.png","174626.png","174815.png","174819.png","174823.png","174827.png","174831.png","174835.png","174839.png","174843.png","174849.png"
+];
+
+const tags = {};
+const grid = document.getElementById('grid');
+
+files.forEach((f, i) => {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.id = 'card-' + i;
+  card.innerHTML = `<img src="static/faction_emblems/${f}" loading="lazy">
+<div class="fname">#${i+1} - ${f}</div>
+<div class="radios">
+  <label><input type="radio" name="a${i}" value="corporate" onchange="tag(${i})">Corp</label>
+  <label><input type="radio" name="a${i}" value="military" onchange="tag(${i})">Mil</label>
+  <label><input type="radio" name="a${i}" value="renegade" onchange="tag(${i})">Ren</label>
+</div>`;
+  grid.appendChild(card);
+});
+
+function tag(i) {
+  const a = document.querySelector(`input[name="a${i}"]:checked`);
+  if (a) {
+    tags[files[i]] = { archetype: a.value };
+    document.getElementById('card-' + i).classList.add('tagged');
+  }
+  document.getElementById('progress').textContent = `Tagged: ${Object.keys(tags).length} / ${files.length}`;
+}
+
+function doExport() {
+  const missing = files.length - Object.keys(tags).length;
+  if (missing > 0 && !confirm(`${missing} emblems untagged. Export anyway?`)) return;
+  const blob = new Blob([JSON.stringify(tags, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'emblem_tags.json';
+  a.click();
+}
+
+window.addEventListener('beforeunload', () => localStorage.setItem('emblem_tags', JSON.stringify(tags)));
+const saved = localStorage.getItem('emblem_tags');
+if (saved) {
+  const restored = JSON.parse(saved);
+  Object.entries(restored).forEach(([f, t]) => {
+    const i = files.indexOf(f);
+    if (i < 0) return;
+    tags[f] = t;
+    const card = document.getElementById('card-' + i);
+    card.querySelector(`input[name="a${i}"][value="${t.archetype}"]`).checked = true;
+    card.classList.add('tagged');
+  });
+  document.getElementById('progress').textContent = `Tagged: ${Object.keys(tags).length} / ${files.length}`;
+}
+</script></body></html>

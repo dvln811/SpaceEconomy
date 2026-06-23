@@ -146,12 +146,10 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <!-- Left Nav -->
   <div class="nav-panel">
     <button class="nav-btn active" data-view="map">Map</button>
+    <button class="nav-btn" data-view="ship">Ship</button>
+    <button class="nav-btn" data-view="inventory">Inventory</button>
     <button class="nav-btn" data-view="market">Market</button>
-    <button class="nav-btn" data-view="universe">Universe</button>
-    <button class="nav-btn" data-view="items">Items DB</button>
-    <button class="nav-btn" data-view="ships_db">Ships DB</button>
-    <button class="nav-btn" data-view="chain">Chain Calc</button>
-    <button class="nav-btn" data-view="docs">Docs</button>
+    <button class="nav-btn" data-view="encyclopedia">Encyclopedia</button>
     <div style="flex:1"></div>
     <button class="nav-btn danger" data-view="dashboard">Dashboard</button>
   </div>
@@ -222,12 +220,13 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 (function(){
   const btns=document.querySelectorAll('.nav-panel .nav-btn');
   const frame=document.getElementById('viewFrame');
-  const viewUrls={market:'/market',universe:'/universe',docs:'/docs',dashboard:'/debug',items:'/items',ships_db:'/ships_db',chain:'/chain'};
+  const viewUrls={market:'/market',encyclopedia:'/docs',dashboard:'/debug',ship:'/ship',inventory:'/inventory'};
   btns.forEach(btn=>{
     btn.addEventListener('click',()=>{
       btns.forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
       const view=btn.dataset.view;
+      svWin.classList.remove('open');
       if(view==='map'){frame.style.display='none';frame.src='';}
       else{frame.src=viewUrls[view]||'/';frame.style.display='block';}
     });

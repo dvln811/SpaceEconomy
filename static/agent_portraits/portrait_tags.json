@@ -1,0 +1,597 @@
+{
+  "2024-05-14_12_15_03.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "military"
+  },
+  "2024-05-14_12_15_45.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "military"
+  },
+  "2024-05-14_12_15_48.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "military"
+  },
+  "2024-05-14_12_15_51.png": {
+    "gender": "male",
+    "age": "young",
+    "archetype": "military"
+  },
+  "2024-05-14_12_15_55.png": {
+    "gender": "male",
+    "age": "senior",
+    "archetype": "military"
+  },
+  "2024-05-14_12_15_58.png": {
+    "gender": "male",
+    "age": "young",
+    "archetype": "military"
+  },
+  "2024-05-14_12_16_01.png": {
+    "gender": "female",
+    "age": "senior",
+    "archetype": "military"
+  },
+  "2024-05-14_12_16_05.png": {
+    "gender": "male",
+    "age": "senior",
+    "archetype": "military"
+  },
+  "2024-05-14_12_16_12.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "military"
+  },
+  "2024-05-14_12_16_16.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "military"
+  },
+  "2024-05-14_12_16_19.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-14_12_16_23.png": {
+    "gender": "female",
+    "age": "senior",
+    "archetype": "military"
+  },
+  "2024-05-14_12_16_26.png": {
+    "gender": "female",
+    "age": "senior",
+    "archetype": "military"
+  },
+  "2024-05-14_12_16_29.png": {
+    "gender": "male",
+    "age": "young",
+    "archetype": "military"
+  },
+  "2024-05-14_12_16_33.png": {
+    "gender": "female",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-14_12_16_36.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "military"
+  },
+  "2024-05-14_12_25_15.png": {
+    "gender": "male",
+    "age": "senior",
+    "archetype": "military"
+  },
+  "2024-05-14_12_27_22.png": {
+    "gender": "male",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-14_12_27_33.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "renegade"
+  },
+  "2024-05-14_12_27_41.png": {
+    "gender": "female",
+    "age": "senior",
+    "archetype": "renegade"
+  },
+  "2024-05-14_12_28_00.png": {
+    "gender": "female",
+    "age": "senior",
+    "archetype": "renegade"
+  },
+  "2024-05-14_12_28_17.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-14_12_29_46.png": {
+    "gender": "female",
+    "age": "senior",
+    "archetype": "corporate"
+  },
+  "2024-05-14_12_29_50.png": {
+    "gender": "male",
+    "age": "young",
+    "archetype": "corporate"
+  },
+  "2024-05-14_12_30_01.png": {
+    "gender": "female",
+    "age": "senior",
+    "archetype": "corporate"
+  },
+  "2024-05-14_12_33_41.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "corporate"
+  },
+  "2024-05-14_12_33_44.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "corporate"
+  },
+  "2024-05-14_12_33_47.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "corporate"
+  },
+  "2024-05-14_12_33_50.png": {
+    "gender": "female",
+    "age": "senior",
+    "archetype": "corporate"
+  },
+  "2024-05-14_12_33_53.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "corporate"
+  },
+  "2024-05-14_12_56_33.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "corporate"
+  },
+  "2024-05-17_12_32_54.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "renegade"
+  },
+  "2024-05-17_12_33_13.png": {
+    "gender": "female",
+    "age": "mid",
+    "archetype": "renegade"
+  },
+  "2024-05-17_12_33_20.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-17_12_33_24.png": {
+    "gender": "male",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-17_12_33_27.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-17_12_33_30.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "renegade"
+  },
+  "2024-05-17_12_33_33.png": {
+    "gender": "female",
+    "age": "mid",
+    "archetype": "renegade"
+  },
+  "2024-05-17_12_33_39.png": {
+    "gender": "male",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-17_12_33_46.png": {
+    "gender": "male",
+    "age": "young",
+    "archetype": "corporate"
+  },
+  "2024-05-17_12_33_49.png": {
+    "gender": "male",
+    "age": "young",
+    "archetype": "corporate"
+  },
+  "2024-05-17_12_33_52.png": {
+    "gender": "male",
+    "age": "young",
+    "archetype": "corporate"
+  },
+  "2024-05-17_12_33_55.png": {
+    "gender": "male",
+    "age": "young",
+    "archetype": "corporate"
+  },
+  "2024-05-17_12_33_58.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "corporate"
+  },
+  "2024-05-17_12_34_02.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "corporate"
+  },
+  "2024-05-17_12_34_06.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "corporate"
+  },
+  "2024-05-17_12_34_09.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "corporate"
+  },
+  "2024-05-17_12_34_12.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "corporate"
+  },
+  "2024-05-17_12_34_15.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "corporate"
+  },
+  "2024-05-17_12_34_18.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "corporate"
+  },
+  "2024-05-17_12_50_36.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-17_12_50_46.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-17_12_50_49.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-17_12_50_51.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-17_12_50_54.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-17_12_50_57.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-17_12_50_59.png": {
+    "gender": "female",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-17_12_51_02.png": {
+    "gender": "female",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-17_12_51_05.png": {
+    "gender": "female",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-17_12_51_08.png": {
+    "gender": "female",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-17_12_51_10.png": {
+    "gender": "female",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-17_12_51_13.png": {
+    "gender": "female",
+    "age": "senior",
+    "archetype": "military"
+  },
+  "2024-05-17_13_02_59.png": {
+    "gender": "male",
+    "age": "young",
+    "archetype": "military"
+  },
+  "2024-05-17_13_03_02.png": {
+    "gender": "female",
+    "age": "senior",
+    "archetype": "military"
+  },
+  "2024-05-17_13_03_05.png": {
+    "gender": "male",
+    "age": "senior",
+    "archetype": "military"
+  },
+  "2024-05-17_13_03_08.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "military"
+  },
+  "2024-05-17_13_03_11.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-17_14_05_00.png": {
+    "gender": "female",
+    "age": "senior",
+    "archetype": "military"
+  },
+  "2024-05-17_14_05_07.png": {
+    "gender": "male",
+    "age": "young",
+    "archetype": "military"
+  },
+  "2024-05-17_14_05_11.png": {
+    "gender": "female",
+    "age": "senior",
+    "archetype": "military"
+  },
+  "2024-05-17_14_05_13.png": {
+    "gender": "male",
+    "age": "senior",
+    "archetype": "military"
+  },
+  "2024-05-17_14_05_17.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "military"
+  },
+  "2024-05-17_14_05_20.png": {
+    "gender": "male",
+    "age": "senior",
+    "archetype": "military"
+  },
+  "2024-05-17_14_05_24.png": {
+    "gender": "male",
+    "age": "young",
+    "archetype": "military"
+  },
+  "2024-05-17_14_05_27.png": {
+    "gender": "female",
+    "age": "senior",
+    "archetype": "military"
+  },
+  "2024-05-17_14_05_30.png": {
+    "gender": "male",
+    "age": "senior",
+    "archetype": "military"
+  },
+  "2024-05-17_14_05_32.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "military"
+  },
+  "2024-05-20 12.46.01.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-20 12.46.04.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-20 12.46.09.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-20 12.46.17.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-20 12.46.19.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-20 12.46.23.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-20 12.46.26.png": {
+    "gender": "male",
+    "age": "young",
+    "archetype": "corporate"
+  },
+  "2024-05-20 12.46.30.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-20 12.46.33.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "corporate"
+  },
+  "2024-05-20 12.46.37.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "corporate"
+  },
+  "2024-05-20 12.46.40.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "military"
+  },
+  "2024-05-20 12.46.43.png": {
+    "gender": "female",
+    "age": "mid",
+    "archetype": "military"
+  },
+  "2024-05-20 12.46.46.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "military"
+  },
+  "2024-05-20 12.46.50.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 12.46.52.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 12.46.56.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 12.46.59.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 12.47.01.png": {
+    "gender": "female",
+    "age": "mid",
+    "archetype": "renegade"
+  },
+  "2024-05-20 12.47.07.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 12.47.10.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 12.47.14.png": {
+    "gender": "female",
+    "age": "mid",
+    "archetype": "renegade"
+  },
+  "2024-05-20 12.47.16.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 16.59.48.png": {
+    "gender": "female",
+    "age": "mid",
+    "archetype": "renegade"
+  },
+  "2024-05-20 16.59.52.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 16.59.54.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 17.00.01.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 17.00.03.png": {
+    "gender": "female",
+    "age": "mid",
+    "archetype": "renegade"
+  },
+  "2024-05-20 17.00.06.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 17.00.09.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 17.00.12.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 17.00.14.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 17.00.21.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 17.00.23.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 17.00.26.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 17.00.29.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 17.02.20.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 17.02.24.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 17.02.27.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 17.02.30.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 17.02.32.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-20 17.02.35.png": {
+    "gender": "female",
+    "age": "young",
+    "archetype": "renegade"
+  },
+  "2024-05-17_12_33_37.png": {
+    "gender": "male",
+    "age": "mid",
+    "archetype": "renegade"
+  }
+}

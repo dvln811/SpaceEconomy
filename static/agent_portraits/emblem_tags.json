@@ -1,0 +1,560 @@
+{
+  "083257.png": {
+    "archetype": "corporate"
+  },
+  "083326.png": {
+    "archetype": "military"
+  },
+  "083341.png": {
+    "archetype": "military"
+  },
+  "083346.png": {
+    "archetype": "corporate"
+  },
+  "083352.png": {
+    "archetype": "military"
+  },
+  "083358.png": {
+    "archetype": "military"
+  },
+  "083403.png": {
+    "archetype": "military"
+  },
+  "083411.png": {
+    "archetype": "corporate"
+  },
+  "083416.png": {
+    "archetype": "corporate"
+  },
+  "083421.png": {
+    "archetype": "renegade"
+  },
+  "083429.png": {
+    "archetype": "military"
+  },
+  "083433.png": {
+    "archetype": "military"
+  },
+  "083441.png": {
+    "archetype": "military"
+  },
+  "083448.png": {
+    "archetype": "corporate"
+  },
+  "083454.png": {
+    "archetype": "renegade"
+  },
+  "083459.png": {
+    "archetype": "renegade"
+  },
+  "083507.png": {
+    "archetype": "military"
+  },
+  "083512.png": {
+    "archetype": "military"
+  },
+  "083521.png": {
+    "archetype": "corporate"
+  },
+  "083536.png": {
+    "archetype": "renegade"
+  },
+  "083603.png": {
+    "archetype": "corporate"
+  },
+  "083634.png": {
+    "archetype": "corporate"
+  },
+  "083719.png": {
+    "archetype": "corporate"
+  },
+  "083741.png": {
+    "archetype": "corporate"
+  },
+  "084309.png": {
+    "archetype": "corporate"
+  },
+  "084317.png": {
+    "archetype": "corporate"
+  },
+  "084325.png": {
+    "archetype": "corporate"
+  },
+  "084331.png": {
+    "archetype": "corporate"
+  },
+  "084342.png": {
+    "archetype": "corporate"
+  },
+  "084729.png": {
+    "archetype": "military"
+  },
+  "084739.png": {
+    "archetype": "military"
+  },
+  "084744.png": {
+    "archetype": "military"
+  },
+  "084749.png": {
+    "archetype": "military"
+  },
+  "084755.png": {
+    "archetype": "military"
+  },
+  "084812.png": {
+    "archetype": "military"
+  },
+  "084826.png": {
+    "archetype": "military"
+  },
+  "084900.png": {
+    "archetype": "military"
+  },
+  "084906.png": {
+    "archetype": "military"
+  },
+  "084930.png": {
+    "archetype": "military"
+  },
+  "084935.png": {
+    "archetype": "military"
+  },
+  "085102.png": {
+    "archetype": "corporate"
+  },
+  "085107.png": {
+    "archetype": "military"
+  },
+  "085111.png": {
+    "archetype": "corporate"
+  },
+  "085116.png": {
+    "archetype": "corporate"
+  },
+  "085120.png": {
+    "archetype": "corporate"
+  },
+  "085125.png": {
+    "archetype": "corporate"
+  },
+  "085132.png": {
+    "archetype": "corporate"
+  },
+  "085136.png": {
+    "archetype": "corporate"
+  },
+  "085140.png": {
+    "archetype": "corporate"
+  },
+  "085716.png": {
+    "archetype": "corporate"
+  },
+  "085721.png": {
+    "archetype": "corporate"
+  },
+  "085726.png": {
+    "archetype": "corporate"
+  },
+  "085730.png": {
+    "archetype": "corporate"
+  },
+  "085734.png": {
+    "archetype": "corporate"
+  },
+  "085741.png": {
+    "archetype": "corporate"
+  },
+  "085746.png": {
+    "archetype": "corporate"
+  },
+  "085901.png": {
+    "archetype": "renegade"
+  },
+  "085910.png": {
+    "archetype": "renegade"
+  },
+  "085919.png": {
+    "archetype": "renegade"
+  },
+  "085925.png": {
+    "archetype": "renegade"
+  },
+  "085929.png": {
+    "archetype": "renegade"
+  },
+  "085933.png": {
+    "archetype": "corporate"
+  },
+  "085939.png": {
+    "archetype": "renegade"
+  },
+  "085943.png": {
+    "archetype": "renegade"
+  },
+  "085948.png": {
+    "archetype": "renegade"
+  },
+  "090603.png": {
+    "archetype": "renegade"
+  },
+  "090609.png": {
+    "archetype": "renegade"
+  },
+  "090614.png": {
+    "archetype": "renegade"
+  },
+  "090619.png": {
+    "archetype": "renegade"
+  },
+  "090623.png": {
+    "archetype": "renegade"
+  },
+  "090628.png": {
+    "archetype": "renegade"
+  },
+  "090632.png": {
+    "archetype": "renegade"
+  },
+  "090637.png": {
+    "archetype": "renegade"
+  },
+  "090642.png": {
+    "archetype": "renegade"
+  },
+  "090932.png": {
+    "archetype": "renegade"
+  },
+  "090936.png": {
+    "archetype": "renegade"
+  },
+  "133049.png": {
+    "archetype": "military"
+  },
+  "133115.png": {
+    "archetype": "military"
+  },
+  "133125.png": {
+    "archetype": "military"
+  },
+  "133135.png": {
+    "archetype": "military"
+  },
+  "133143.png": {
+    "archetype": "military"
+  },
+  "133150.png": {
+    "archetype": "military"
+  },
+  "133157.png": {
+    "archetype": "military"
+  },
+  "133206.png": {
+    "archetype": "military"
+  },
+  "133213.png": {
+    "archetype": "military"
+  },
+  "133315.png": {
+    "archetype": "military"
+  },
+  "133320.png": {
+    "archetype": "military"
+  },
+  "133328.png": {
+    "archetype": "military"
+  },
+  "133333.png": {
+    "archetype": "military"
+  },
+  "133339.png": {
+    "archetype": "military"
+  },
+  "133344.png": {
+    "archetype": "military"
+  },
+  "133351.png": {
+    "archetype": "military"
+  },
+  "133357.png": {
+    "archetype": "military"
+  },
+  "133624.png": {
+    "archetype": "corporate"
+  },
+  "133631.png": {
+    "archetype": "corporate"
+  },
+  "133637.png": {
+    "archetype": "corporate"
+  },
+  "133756.png": {
+    "archetype": "corporate"
+  },
+  "133803.png": {
+    "archetype": "corporate"
+  },
+  "133809.png": {
+    "archetype": "corporate"
+  },
+  "133815.png": {
+    "archetype": "corporate"
+  },
+  "133821.png": {
+    "archetype": "corporate"
+  },
+  "133828.png": {
+    "archetype": "corporate"
+  },
+  "133834.png": {
+    "archetype": "corporate"
+  },
+  "133840.png": {
+    "archetype": "corporate"
+  },
+  "133847.png": {
+    "archetype": "corporate"
+  },
+  "133934.png": {
+    "archetype": "corporate"
+  },
+  "133941.png": {
+    "archetype": "corporate"
+  },
+  "133947.png": {
+    "archetype": "corporate"
+  },
+  "133953.png": {
+    "archetype": "corporate"
+  },
+  "133959.png": {
+    "archetype": "corporate"
+  },
+  "134004.png": {
+    "archetype": "corporate"
+  },
+  "134010.png": {
+    "archetype": "corporate"
+  },
+  "134020.png": {
+    "archetype": "corporate"
+  },
+  "134155.png": {
+    "archetype": "corporate"
+  },
+  "134201.png": {
+    "archetype": "renegade"
+  },
+  "134206.png": {
+    "archetype": "renegade"
+  },
+  "134212.png": {
+    "archetype": "corporate"
+  },
+  "134217.png": {
+    "archetype": "corporate"
+  },
+  "134222.png": {
+    "archetype": "corporate"
+  },
+  "134228.png": {
+    "archetype": "corporate"
+  },
+  "134235.png": {
+    "archetype": "corporate"
+  },
+  "134241.png": {
+    "archetype": "renegade"
+  },
+  "134354.png": {
+    "archetype": "corporate"
+  },
+  "134359.png": {
+    "archetype": "corporate"
+  },
+  "134405.png": {
+    "archetype": "corporate"
+  },
+  "134411.png": {
+    "archetype": "corporate"
+  },
+  "134416.png": {
+    "archetype": "corporate"
+  },
+  "134421.png": {
+    "archetype": "corporate"
+  },
+  "134426.png": {
+    "archetype": "corporate"
+  },
+  "134437.png": {
+    "archetype": "corporate"
+  },
+  "134442.png": {
+    "archetype": "corporate"
+  },
+  "134539.png": {
+    "archetype": "renegade"
+  },
+  "134544.png": {
+    "archetype": "renegade"
+  },
+  "134609.png": {
+    "archetype": "renegade"
+  },
+  "134614.png": {
+    "archetype": "renegade"
+  },
+  "134620.png": {
+    "archetype": "renegade"
+  },
+  "134625.png": {
+    "archetype": "renegade"
+  },
+  "134630.png": {
+    "archetype": "renegade"
+  },
+  "134636.png": {
+    "archetype": "military"
+  },
+  "134641.png": {
+    "archetype": "renegade"
+  },
+  "142804.png": {
+    "archetype": "corporate"
+  },
+  "142818.png": {
+    "archetype": "corporate"
+  },
+  "172939.png": {
+    "archetype": "corporate"
+  },
+  "172949.png": {
+    "archetype": "corporate"
+  },
+  "172955.png": {
+    "archetype": "military"
+  },
+  "173000.png": {
+    "archetype": "military"
+  },
+  "173006.png": {
+    "archetype": "military"
+  },
+  "173014.png": {
+    "archetype": "military"
+  },
+  "173019.png": {
+    "archetype": "military"
+  },
+  "173203.png": {
+    "archetype": "military"
+  },
+  "173208.png": {
+    "archetype": "military"
+  },
+  "173214.png": {
+    "archetype": "military"
+  },
+  "173219.png": {
+    "archetype": "military"
+  },
+  "173223.png": {
+    "archetype": "military"
+  },
+  "173227.png": {
+    "archetype": "military"
+  },
+  "173232.png": {
+    "archetype": "military"
+  },
+  "173237.png": {
+    "archetype": "military"
+  },
+  "173242.png": {
+    "archetype": "military"
+  },
+  "173349.png": {
+    "archetype": "military"
+  },
+  "173507.png": {
+    "archetype": "military"
+  },
+  "173512.png": {
+    "archetype": "military"
+  },
+  "173517.png": {
+    "archetype": "military"
+  },
+  "173521.png": {
+    "archetype": "corporate"
+  },
+  "173525.png": {
+    "archetype": "corporate"
+  },
+  "173532.png": {
+    "archetype": "corporate"
+  },
+  "173537.png": {
+    "archetype": "military"
+  },
+  "173542.png": {
+    "archetype": "corporate"
+  },
+  "173546.png": {
+    "archetype": "military"
+  },
+  "174549.png": {
+    "archetype": "renegade"
+  },
+  "174554.png": {
+    "archetype": "renegade"
+  },
+  "174557.png": {
+    "archetype": "renegade"
+  },
+  "174602.png": {
+    "archetype": "renegade"
+  },
+  "174606.png": {
+    "archetype": "renegade"
+  },
+  "174610.png": {
+    "archetype": "renegade"
+  },
+  "174626.png": {
+    "archetype": "renegade"
+  },
+  "174815.png": {
+    "archetype": "renegade"
+  },
+  "174819.png": {
+    "archetype": "corporate"
+  },
+  "174823.png": {
+    "archetype": "corporate"
+  },
+  "174827.png": {
+    "archetype": "renegade"
+  },
+  "174831.png": {
+    "archetype": "renegade"
+  },
+  "174835.png": {
+    "archetype": "renegade"
+  },
+  "174839.png": {
+    "archetype": "renegade"
+  },
+  "174843.png": {
+    "archetype": "renegade"
+  },
+  "174849.png": {
+    "archetype": "renegade"
+  },
+  "174617.png": {
+    "archetype": "renegade"
+  },
+  "174622.png": {
+    "archetype": "renegade"
+  }
+}

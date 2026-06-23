@@ -12,9 +12,9 @@
 ::-webkit-scrollbar-thumb:hover{background:#2a4060}
 html,body{height:100%;overflow:hidden}
 body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:12px;display:flex;flex-direction:column}
-#docnav .dnl{font-size:12px;color:#8aa0b8;text-decoration:none;padding:5px 12px;border:1px solid #1a2844;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;transition:all .15s}
-#docnav .dnl:hover{color:#4fc3f7;border-color:#4fc3f7;background:#0d1a2f}
-#docnav .dnl.active{color:#4fc3f7;border-color:#4fc3f7}
+#docnav .dnl{font-size:12px;color:#8aa0b8;text-decoration:none;padding:6px 10px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;transition:all .15s;border-bottom:2px solid transparent}
+#docnav .dnl:hover{color:#4fc3f7;border-bottom-color:#4fc3f7}
+#docnav .dnl.active{color:#4fc3f7;border-bottom-color:#4fc3f7}
 .main{display:flex;flex:1;overflow:hidden}
 .sidebar{width:220px;background:#0a0e18;border-right:1px solid #1a2844;display:flex;flex-direction:column;flex-shrink:0}
 .sidebar input{width:calc(100% - 16px);margin:8px;background:#0a1020;border:1px solid #1a2844;color:#c8d4e0;padding:6px 8px;border-radius:3px;font:inherit;font-size:12px}
@@ -44,10 +44,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 </head>
 <body>
 <div id="docnav" style="position:sticky;top:0;z-index:100;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:0 24px;height:48px;gap:12px;flex-wrap:wrap">
-<a href="/" class="dnl">Game</a><a href="/docs" class="dnl">Hub</a><span style="color:#1a2844">|</span>
-<a href="/items" class="dnl">Items DB</a><a href="/ships_db" class="dnl">Ships DB</a><a href="/chain" class="dnl active">Chain Calc</a><a href="/factions" class="dnl">Factions</a><a href="/ships" class="dnl">Ships 3D</a><a href="/fitting" class="dnl">Fitting</a><span style="color:#1a2844">|</span>
-<a href="/design" class="dnl">Design</a><a href="/universe" class="dnl">Universe</a><a href="/economy" class="dnl">Economy</a><a href="/resources" class="dnl">Resources</a><a href="/materials" class="dnl">Materials</a><a href="/products" class="dnl">Products</a><span style="color:#1a2844">|</span>
-<a href="/debug" class="dnl">Dashboard</a>
+<a href="/docs" class="dnl">Hub</a><a href="/items" class="dnl">Items DB</a><a href="/ships_db" class="dnl">Ships DB</a><a href="/chain" class="dnl active">Chain Calc</a><a href="/ships" class="dnl">Ships 3D</a><a href="/fitting" class="dnl">Fitting</a><a href="/design" class="dnl">Design</a><a href="/universe" class="dnl">Universe</a><a href="/economy" class="dnl">Economy</a><a href="/resources" class="dnl">Resources</a><a href="/materials" class="dnl">Materials</a><a href="/products" class="dnl">Products</a>
 </div>
 <div class="main">
 <div class="sidebar">

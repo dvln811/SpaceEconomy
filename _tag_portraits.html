@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Portrait Tagger</title>
+<style>
+body{font-family:system-ui;background:#1a1a2e;color:#eee;margin:0;padding:20px}
+h1{text-align:center;margin-bottom:4px}
+#progress{text-align:center;margin-bottom:20px;color:#8cf}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,220px);gap:16px;justify-content:center}
+.card{background:#16213e;border-radius:8px;padding:10px;text-align:center}
+.card img{width:200px;height:200px;object-fit:cover;border-radius:6px}
+.card .fname{font-size:10px;color:#888;margin:4px 0}
+.radios{display:flex;gap:12px;justify-content:center;margin:4px 0;font-size:13px}
+.radios label{cursor:pointer}
+.radios input{margin-right:3px}
+.tagged{border:2px solid #4f8}
+#exportBtn{display:block;margin:30px auto;padding:12px 32px;font-size:16px;background:#4f8;color:#000;border:none;border-radius:6px;cursor:pointer}
+#exportBtn:hover{background:#3d7}
+</style></head><body>
+<h1>Portrait Tagger</h1>
+<p id="progress">Tagged: 0 / 119</p>
+<div id="grid"></div>
+<button id="exportBtn" onclick="doExport()">Export JSON</button>
+<script>
+const files = [
+"2024-05-14_12_15_03.png","2024-05-14_12_15_45.png","2024-05-14_12_15_48.png","2024-05-14_12_15_51.png","2024-05-14_12_15_55.png","2024-05-14_12_15_58.png","2024-05-14_12_16_01.png","2024-05-14_12_16_05.png","2024-05-14_12_16_12.png","2024-05-14_12_16_16.png","2024-05-14_12_16_19.png","2024-05-14_12_16_23.png","2024-05-14_12_16_26.png","2024-05-14_12_16_29.png","2024-05-14_12_16_33.png","2024-05-14_12_16_36.png","2024-05-14_12_25_15.png","2024-05-14_12_27_22.png","2024-05-14_12_27_33.png","2024-05-14_12_27_41.png","2024-05-14_12_28_00.png","2024-05-14_12_28_17.png","2024-05-14_12_29_46.png","2024-05-14_12_29_50.png","2024-05-14_12_30_01.png","2024-05-14_12_33_41.png","2024-05-14_12_33_44.png","2024-05-14_12_33_47.png","2024-05-14_12_33_50.png","2024-05-14_12_33_53.png","2024-05-14_12_56_33.png","2024-05-17_12_32_54.png","2024-05-17_12_33_13.png","2024-05-17_12_33_20.png","2024-05-17_12_33_24.png","2024-05-17_12_33_27.png","2024-05-17_12_33_30.png","2024-05-17_12_33_33.png","2024-05-17_12_33_37.png","2024-05-17_12_33_39.png","2024-05-17_12_33_46.png","2024-05-17_12_33_49.png","2024-05-17_12_33_52.png","2024-05-17_12_33_55.png","2024-05-17_12_33_58.png","2024-05-17_12_34_02.png","2024-05-17_12_34_06.png","2024-05-17_12_34_09.png","2024-05-17_12_34_12.png","2024-05-17_12_34_15.png","2024-05-17_12_34_18.png","2024-05-17_12_50_36.png","2024-05-17_12_50_46.png","2024-05-17_12_50_49.png","2024-05-17_12_50_51.png","2024-05-17_12_50_54.png","2024-05-17_12_50_57.png","2024-05-17_12_50_59.png","2024-05-17_12_51_02.png","2024-05-17_12_51_05.png","2024-05-17_12_51_08.png","2024-05-17_12_51_10.png","2024-05-17_12_51_13.png","2024-05-17_13_02_59.png","2024-05-17_13_03_02.png","2024-05-17_13_03_05.png","2024-05-17_13_03_08.png","2024-05-17_13_03_11.png","2024-05-17_14_05_00.png","2024-05-17_14_05_07.png","2024-05-17_14_05_11.png","2024-05-17_14_05_13.png","2024-05-17_14_05_17.png","2024-05-17_14_05_20.png","2024-05-17_14_05_24.png","2024-05-17_14_05_27.png","2024-05-17_14_05_30.png","2024-05-17_14_05_32.png","2024-05-20 12.46.01.png","2024-05-20 12.46.04.png","2024-05-20 12.46.09.png","2024-05-20 12.46.17.png","2024-05-20 12.46.19.png","2024-05-20 12.46.23.png","2024-05-20 12.46.26.png","2024-05-20 12.46.30.png","2024-05-20 12.46.33.png","2024-05-20 12.46.37.png","2024-05-20 12.46.40.png","2024-05-20 12.46.43.png","2024-05-20 12.46.46.png","2024-05-20 12.46.50.png","2024-05-20 12.46.52.png","2024-05-20 12.46.56.png","2024-05-20 12.46.59.png","2024-05-20 12.47.01.png","2024-05-20 12.47.07.png","2024-05-20 12.47.10.png","2024-05-20 12.47.14.png","2024-05-20 12.47.16.png","2024-05-20 16.59.48.png","2024-05-20 16.59.52.png","2024-05-20 16.59.54.png","2024-05-20 17.00.01.png","2024-05-20 17.00.03.png","2024-05-20 17.00.06.png","2024-05-20 17.00.09.png","2024-05-20 17.00.12.png","2024-05-20 17.00.14.png","2024-05-20 17.00.21.png","2024-05-20 17.00.23.png","2024-05-20 17.00.26.png","2024-05-20 17.00.29.png","2024-05-20 17.02.20.png","2024-05-20 17.02.24.png","2024-05-20 17.02.27.png","2024-05-20 17.02.30.png","2024-05-20 17.02.32.png","2024-05-20 17.02.35.png"
+];
+
+const tags = {};
+const grid = document.getElementById('grid');
+
+files.forEach((f, i) => {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.id = 'card-' + i;
+  const src = 'static/agent_portraits/' + encodeURIComponent(f).replace(/%20/g, ' ');
+  card.innerHTML = `<img src="static/agent_portraits/${encodeURIComponent(f)}" loading="lazy">
+<div class="fname">#${i+1} - ${f}</div>
+<div class="radios">
+  <label><input type="radio" name="g${i}" value="male" onchange="tag(${i})">M</label>
+  <label><input type="radio" name="g${i}" value="female" onchange="tag(${i})">F</label>
+</div>
+<div class="radios">
+  <label><input type="radio" name="age${i}" value="young" onchange="tag(${i})">Y</label>
+  <label><input type="radio" name="age${i}" value="mid" onchange="tag(${i})">M</label>
+  <label><input type="radio" name="age${i}" value="senior" onchange="tag(${i})">S</label>
+</div>
+<div class="radios">
+  <label><input type="radio" name="a${i}" value="corporate" onchange="tag(${i})">Corp</label>
+  <label><input type="radio" name="a${i}" value="military" onchange="tag(${i})">Mil</label>
+  <label><input type="radio" name="a${i}" value="renegade" onchange="tag(${i})">Ren</label>
+</div>`;
+  grid.appendChild(card);
+});
+
+function tag(i) {
+  const g = document.querySelector(`input[name="g${i}"]:checked`);
+  const age = document.querySelector(`input[name="age${i}"]:checked`);
+  const a = document.querySelector(`input[name="a${i}"]:checked`);
+  if (g && age && a) {
+    tags[files[i]] = { gender: g.value, age: age.value, archetype: a.value };
+    document.getElementById('card-' + i).classList.add('tagged');
+  }
+  document.getElementById('progress').textContent = `Tagged: ${Object.keys(tags).length} / ${files.length}`;
+}
+
+function doExport() {
+  const missing = files.length - Object.keys(tags).length;
+  if (missing > 0 && !confirm(`${missing} portraits untagged. Export anyway?`)) return;
+  const blob = new Blob([JSON.stringify(tags, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'portrait_tags.json';
+  a.click();
+}
+
+// Auto-save to localStorage
+window.addEventListener('beforeunload', () => localStorage.setItem('portrait_tags', JSON.stringify(tags)));
+const saved = localStorage.getItem('portrait_tags');
+if (saved) {
+  const restored = JSON.parse(saved);
+  Object.entries(restored).forEach(([f, t]) => {
+    const i = files.indexOf(f);
+    if (i < 0) return;
+    tags[f] = t;
+    const card = document.getElementById('card-' + i);
+    card.querySelector(`input[name="g${i}"][value="${t.gender}"]`).checked = true;
+    if (t.age) card.querySelector(`input[name="age${i}"][value="${t.age}"]`).checked = true;
+    card.querySelector(`input[name="a${i}"][value="${t.archetype}"]`).checked = true;
+    card.classList.add('tagged');
+  });
+  document.getElementById('progress').textContent = `Tagged: ${Object.keys(tags).length} / ${files.length}`;
+}
+</script></body></html>

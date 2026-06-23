@@ -235,9 +235,14 @@ def chain_page():
     return send_from_directory(BASE_DIR, "chain.html")
 
 
-@app.route("/factions")
-def factions_page():
-    return send_from_directory(BASE_DIR, "factions_doc.html")
+@app.route("/ship")
+def ship_page():
+    return send_from_directory(BASE_DIR, "ship.html")
+
+
+@app.route("/inventory")
+def inventory_page():
+    return send_from_directory(BASE_DIR, "inventory.html")
 
 
 @app.route("/docs")
