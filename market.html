@@ -385,12 +385,12 @@ function getParent(){
   try{if(window.top&&window.top!==window&&window.top.setRouteTo)return window.top;}catch(e){}
   return null;
 }
-function navTo(sys){ctxMenu.style.display='none';const p=getParent();if(p&&p.navigateToSystem)p.navigateToSystem(sys);}
-function setRoute(sys){ctxMenu.style.display='none';const p=getParent();if(p&&p.setRouteTo)p.setRouteTo(sys);else alert('Route: not in game frame');}
-function addWpt(sys){ctxMenu.style.display='none';const p=getParent();if(p&&p.addWaypoint)p.addWaypoint(sys);else alert('Waypoint: not in game frame');}
-function copyText(t){ctxMenu.style.display='none';navigator.clipboard.writeText(t);}
-function doBuy(item,sys){ctxMenu.style.display='none';/* TODO: open buy dialog */}
-function doSell(item,sys){ctxMenu.style.display='none';/* TODO: open sell dialog */}
+window.navTo=function(sys){ctxMenu.style.display='none';const p=getParent();if(p&&p.navigateToSystem)p.navigateToSystem(sys);};
+window.setRoute=function(sys){ctxMenu.style.display='none';const p=getParent();if(p&&p.setRouteTo)p.setRouteTo(sys);};
+window.addWpt=function(sys){ctxMenu.style.display='none';const p=getParent();if(p&&p.addWaypoint)p.addWaypoint(sys);};
+window.copyText=function(t){ctxMenu.style.display='none';navigator.clipboard.writeText(t);};
+window.doBuy=function(item,sys){ctxMenu.style.display='none';};
+window.doSell=function(item,sys){ctxMenu.style.display='none';};
 
 // Style for ctx items
 const ctxStyle=document.createElement('style');
