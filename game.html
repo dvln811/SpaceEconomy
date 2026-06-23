@@ -19,7 +19,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 ::-webkit-scrollbar-thumb:hover{background:#2a4060}
 
 /* Layout */
-.app{display:grid;grid-template-columns:100px 1fr 4px 320px;grid-template-rows:48px 1fr 6px 180px;height:100vh;gap:0;background:#1a2030}
+.app{display:grid;grid-template-columns:100px 1fr 4px 320px;grid-template-rows:48px 1fr;height:100vh;gap:0;background:#1a2030}
 .nav-panel{grid-row:1/-1;background:#0a0e18;border-right:1px solid #1a2844;display:flex;flex-direction:column;padding:8px 6px;gap:2px}
 .nav-btn{border:none;background:none;color:#8aa0b8;cursor:pointer;border-radius:3px;font-size:11px;font-family:'JetBrains Mono',monospace;text-align:left;padding:6px 8px;letter-spacing:0.5px;text-transform:uppercase;transition:all .12s;white-space:nowrap}
 .nav-btn:hover{background:#0d1a2f;color:#4fc3f7}
@@ -31,11 +31,6 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .side-handle{background:#0a0f1a;cursor:ew-resize;display:flex;align-items:center;justify-content:center;transition:background .15s}
 .side-handle:hover{background:#1a2844}
 .side-handle::after{content:'';width:2px;height:30px;background:#8aa0b8;border-radius:1px}
-
-/* Resize handle */
-.resize-handle{grid-column:1/-1;height:6px;background:#0a0f1a;cursor:ns-resize;display:flex;align-items:center;justify-content:center;transition:background .15s}
-.resize-handle:hover{background:#1a2844}
-.resize-handle::after{content:'';width:40px;height:2px;background:#8aa0b8;border-radius:1px}
 
 /* Header */
 .header{grid-column:2/-1;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:0 20px;gap:20px}
@@ -115,16 +110,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .map-tooltip .tt-row .tt-val{color:#e0e8f0;float:right}
 
 /* Bottom Panel - Ship/Activity */
-.bottom{grid-column:2/-1;background:#0a0e18;border-top:1px solid #1a2844;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px}
-.bottom-section{padding:12px 16px;display:flex;flex-direction:column;overflow:hidden}
-.bottom-section .panel-title{flex-shrink:0}
-.bottom-scroll{overflow-y:auto;flex:1}
-.ship-stat{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #0f1a28}
-.ship-stat .label{color:#8aa0b8;font-size:12px}
-.ship-stat .value{color:#e0e8f0;font-size:12px}
-.activity-item{padding:4px 0;font-size:12px;color:#8aa0b8;border-bottom:1px solid #0a1420}
-.activity-item .time{color:#6a9ab8;margin-right:8px}
-.activity-item .highlight{color:#4fc3f7}
+/* Bottom panel removed */
 .activity-item .profit{color:#66bb6a}
 .activity-item .loss{color:#ef5350}
 .route-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #0f1a28}
@@ -162,6 +148,9 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     <button class="nav-btn active" data-view="map">Map</button>
     <button class="nav-btn" data-view="market">Market</button>
     <button class="nav-btn" data-view="universe">Universe</button>
+    <button class="nav-btn" data-view="items">Items DB</button>
+    <button class="nav-btn" data-view="ships_db">Ships DB</button>
+    <button class="nav-btn" data-view="chain">Chain Calc</button>
     <button class="nav-btn" data-view="docs">Docs</button>
     <div style="flex:1"></div>
     <button class="nav-btn danger" data-view="dashboard">Dashboard</button>
@@ -197,35 +186,6 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     <div id="system-info-content"><div style="color:#8aa0b8;font-size:12px">Select a system to view info</div></div>
   </div>
 
-  <!-- Resize Handle -->
-  <div class="resize-handle" id="resize-handle"></div>
-
-  <!-- Bottom: Ship + Activity + Routes -->
-  <div class="bottom" id="bottom-panel">
-    <div class="bottom-section">
-      <div class="panel-title">Your Ship · "Rusty Venture"</div>
-      <div class="bottom-scroll">
-      <div class="ship-stat"><span class="label">Class</span><span class="value">Bison Mk.III Freighter</span></div>
-      <div class="ship-stat"><span class="label">Cargo</span><span class="value">340 / 500 units</span></div>
-      <div class="ship-stat"><span class="label">Fuel</span><span class="value" style="color:#ffd54f">62% ████████░░░░</span></div>
-      <div class="ship-stat"><span class="label">Hull</span><span class="value" style="color:#66bb6a">94% ██████████░░</span></div>
-      <div class="ship-stat"><span class="label">Location</span><span class="value">Docked · Cygnus Station</span></div>
-      <div class="ship-stat"><span class="label">Manifest</span><span class="value">220× Ore, 80× Meds, 40× Fuel</span></div>
-      </div>
-    </div>
-    <div class="bottom-section">
-      <div class="panel-title">Activity Feed</div>
-      <div class="bottom-scroll" id="activity-feed">
-      <div class="activity-item"><span class="time">14:28</span>NPC hauler <span class="highlight">Meridian Express</span> arrived at Cygnus (180× Food)</div>
-      <div class="activity-item"><span class="time">14:25</span>Ore price at Cygnus <span class="profit">▲ +2.1%</span> (supply shortage)</div>
-      <div class="activity-item"><span class="time">14:20</span>Pirate activity reported near <span class="loss">Wolf 359 corridor</span></div>
-      <div class="activity-item"><span class="time">14:12</span>You sold 60× Electronics at Cygnus for <span class="profit">₡ 207,000</span></div>
-      <div class="activity-item"><span class="time">14:08</span>Fuel price spiked at Arcturus <span class="profit">▲ +6%</span> (refinery fire)</div>
-      <div class="activity-item"><span class="time">13:55</span>Trade Guild contract available: deliver Meds to Vega (+22% bonus)</div>
-      </div>
-    </div>
-    </div>
-  </div>
 </div>
 
 <!-- Inline System View Window -->
@@ -265,7 +225,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 (function(){
   const btns=document.querySelectorAll('.nav-panel .nav-btn');
   const frame=document.getElementById('viewFrame');
-  const viewUrls={market:'/market',universe:'/universe',docs:'/docs',dashboard:'/debug'};
+  const viewUrls={market:'/market',universe:'/universe',docs:'/docs',dashboard:'/debug',items:'/items',ships_db:'/ships_db',chain:'/chain'};
   btns.forEach(btn=>{
     btn.addEventListener('click',()=>{
       btns.forEach(b=>b.classList.remove('active'));
@@ -274,30 +234,6 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
       if(view==='map'){frame.style.display='none';frame.src='';}
       else{frame.src=viewUrls[view]||'/';frame.style.display='block';}
     });
-  });
-})();
-
-// Bottom panel resize
-(function(){
-  const handle=document.getElementById('resize-handle');
-  const bottom=document.getElementById('bottom-panel');
-  const app=document.querySelector('.app');
-  let dragging=false, startY, startH;
-  bottom.style.height='180px';
-  handle.addEventListener('mousedown',(e)=>{
-    dragging=true;startY=e.clientY;startH=bottom.offsetHeight;
-    document.body.style.cursor='ns-resize';
-    e.preventDefault();
-  });
-  document.addEventListener('mousemove',(e)=>{
-    if(!dragging)return;
-    const h=Math.max(100,Math.min(window.innerHeight-200,startH+(startY-e.clientY)));
-    bottom.style.height=h+'px';
-    app.style.gridTemplateRows=`48px 1fr 6px ${h}px`;
-    window.dispatchEvent(new Event('resize'));
-  });
-  document.addEventListener('mouseup',()=>{
-    if(dragging){dragging=false;document.body.style.cursor='';}
   });
 })();
 
@@ -1772,17 +1708,11 @@ setInterval(svFetch,3000);
 
 // Open system view
 window.openSystemView=function(sysId){
-  svCurrentId=sysId;window._svCurrentId=sysId;svData=null;svShipPos={};
-  svShipCache={};svShipsGroup.clear();svBuiltForId='';
-  svCam.position.set(0,150,300);
-  svControls.target.set(0,0,0);svControls.update();
-  svWin.classList.add('open');
-  svResize();
-  document.getElementById('svTitle').textContent='System Map';
-  document.getElementById('svMeta').textContent='Loading...';
-  svFetch().then(()=>{
-    if(svData){document.getElementById('svTitle').textContent=svData.name;document.getElementById('svMeta').textContent=svData.type+' | '+svData.security+'-sec';}
-  });
+  // Open system view in main iframe instead of modal
+  const frame=document.getElementById('viewFrame');
+  frame.src='/system_view?id='+sysId;
+  frame.style.display='block';
+  document.querySelectorAll('.nav-panel .nav-btn').forEach(b=>b.classList.remove('active'));
 };
 })();
 </script>
