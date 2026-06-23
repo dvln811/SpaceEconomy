@@ -645,6 +645,14 @@ def api_nuke():
     global sim, supervisor
     supervisor.stop()
     clear_db()
+    # Clear faction runtime data
+    from server.game_data_db import get_data_db
+    fconn = get_data_db()
+    fconn.execute("DELETE FROM faction_decisions")
+    fconn.execute("UPDATE corporations SET activity = NULL")
+    fconn.execute("UPDATE build_projects SET accumulated = '{}', phase = 'scouting'")
+    fconn.commit()
+    fconn.close()
     sim = Simulation()
     supervisor = Supervisor(sim)
     supervisor.tick_rate = sim_speed["rate"]

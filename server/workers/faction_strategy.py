@@ -39,7 +39,7 @@ FNAME = {
 
 class FactionStrategyWorker(WorkerThread):
     def __init__(self):
-        super().__init__("faction_strategy", tick_interval=200)
+        super().__init__("faction_strategy", tick_interval=100)
         self._load_faction_data()
 
     def _load_faction_data(self):
