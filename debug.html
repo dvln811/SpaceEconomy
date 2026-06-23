@@ -86,6 +86,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <div class="live-dot"></div>
   <h1>Dashboard</h1>
   <button class="tab-btn active" data-tab="overview">Overview</button>
+  <button class="tab-btn" data-tab="factions">Factions</button>
   <button class="tab-btn" data-tab="stations">Stations</button>
   <button class="tab-btn" data-tab="ships">Ships</button>
   <button class="tab-btn" data-tab="combat">Combat</button>
@@ -108,6 +109,8 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 <div class="main">
   <!-- Overview -->
   <div class="view active" id="view-overview"><div id="overviewContent"></div></div>
+  <!-- Factions -->
+  <div class="view" id="view-factions"><div id="factionsContent" style="padding:12px;overflow-y:auto;height:100%"></div></div>
   <!-- Stations: tree + table layout -->
   <div class="view" id="view-stations">
     <div style="display:flex;height:100%;overflow:hidden">
@@ -227,6 +230,7 @@ function render() {
   if (!D) return;
   const active = document.querySelector('.view.active');
   if (active.id === 'view-overview') renderOverview();
+  else if (active.id === 'view-factions') renderFactions();
   else if (active.id === 'view-stations') renderStations();
   else if (active.id === 'view-ships') renderShips();
   else if (active.id === 'view-combat') renderCombat();
@@ -235,6 +239,43 @@ function render() {
 }
 
 // ── Overview ────────────────────────────────────────────────────────────────
+function renderFactions() {
+  const factions = D.factions || {};
+  const events = (D.recent_events || []).filter(e => e.msg && e.msg.includes('STRATEGY'));
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(350px,1fr));gap:12px">';
+  const names = {terran_fed:'Terran Federation',iron_compact:'Iron Compact',free_states:'Frontier Alliance',merchants_guild:'Merchants Guild',science_collective:'Nexus Collective',corsairs:'The Corsairs'};
+  for (const [fid, f] of Object.entries(factions)) {
+    html += '<div style="background:#0a1020;border:1px solid #1a2844;border-radius:6px;padding:12px">';
+    html += '<div style="color:#4fc3f7;font-size:13px;font-weight:600;margin-bottom:6px">'+(names[fid]||fid)+'</div>';
+    html += '<div style="font-size:11px;color:#8aa0b8;margin-bottom:8px">';
+    html += fid==='corsairs' ? 'Raider faction' : f.systems+' systems | Agg: '+f.aggression+' | Exp: '+f.expansion+' | Eco: '+f.economic;
+    html += '</div>';
+    if (f.projects && f.projects.length) {
+      html += '<div style="font-size:10px;color:#667;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Active Projects</div>';
+      for (const p of f.projects) {
+        const barW = Math.min(100, p.progress);
+        const color = p.progress > 50 ? '#66bb6a' : p.progress > 20 ? '#ffd54f' : '#ef5350';
+        html += '<div style="margin-bottom:4px">';
+        html += '<div style="font-size:11px;color:#c8d4e0">'+p.name+' <span style="color:#667">('+p.type+')</span></div>';
+        html += '<div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:6px;background:#1a2844;border-radius:3px;overflow:hidden"><div style="width:'+barW+'%;height:100%;background:'+color+';border-radius:3px"></div></div><span style="font-size:10px;color:#8aa0b8">'+p.progress+'%</span></div>';
+        html += '<div style="font-size:10px;color:#667">Target: '+p.target+'</div>';
+        html += '</div>';
+      }
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+  // Recent strategy events
+  if (events.length) {
+    html += '<div style="margin-top:16px;border-top:1px solid #1a2844;padding-top:12px"><div style="font-size:10px;color:#667;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Recent Strategy Decisions</div>';
+    for (const e of events.slice(-10)) {
+      html += '<div style="font-size:11px;color:#8aa0b8;margin:2px 0">T'+e.tick+': '+e.msg.replace('STRATEGY: ','')+'</div>';
+    }
+    html += '</div>';
+  }
+  document.getElementById('factionsContent').innerHTML = html;
+}
+
 function renderOverview() {
   const s = D.ships_by_state || {};
   const uptime = D.uptime_seconds;

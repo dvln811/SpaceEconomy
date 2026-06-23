@@ -547,6 +547,29 @@ def api_debug():
                 break
     summary["warfare"] = warfare_status
 
+    # Faction status + build projects
+    from server.game_data_db import get_data_db
+    try:
+        fconn = get_data_db()
+        faction_status = {}
+        for fs in fconn.execute("SELECT faction_id, aggression, expansion_drive, economic_focus FROM faction_state").fetchall():
+            fid = fs['faction_id']
+            # Count systems
+            sys_count = sum(1 for s in sim.universe.values() if s.faction == fid)
+            faction_status[fid] = {"systems": sys_count, "aggression": fs['aggression'], "expansion": fs['expansion_drive'], "economic": fs['economic_focus'], "projects": []}
+        for p in fconn.execute("SELECT faction_id, project_type, project_name, target_system, requirements, accumulated, status FROM build_projects").fetchall():
+            reqs = json.loads(p['requirements'])
+            acc = json.loads(p['accumulated'])
+            total_needed = sum(reqs.values())
+            total_have = sum(min(acc.get(k, 0), v) for k, v in reqs.items())
+            pct = round(100 * total_have / total_needed) if total_needed > 0 else 0
+            if p['faction_id'] in faction_status:
+                faction_status[p['faction_id']]["projects"].append({"name": p['project_name'], "type": p['project_type'], "target": p['target_system'], "progress": pct, "status": p['status']})
+        fconn.close()
+        summary["factions"] = faction_status
+    except:
+        summary["factions"] = {}
+
     # Performance metrics from supervisor
     if supervisor:
         summary["performance"] = supervisor.metrics
