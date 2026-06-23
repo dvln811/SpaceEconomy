@@ -9,7 +9,11 @@
 <div style="position:absolute;opacity:0;pointer-events:none;font-family:'JetBrains Mono',monospace;font-weight:600">.</div>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%;overflow:hidden}
+*::-webkit-scrollbar{width:8px;height:8px}
+*::-webkit-scrollbar-track{background:#0a0e18}
+*::-webkit-scrollbar-thumb{background:#1a2844;border-radius:4px}
+*::-webkit-scrollbar-thumb:hover{background:#2a3854}
+html,body{height:100%;overflow:hidden;scrollbar-color:#1a2844 #0a0e18}
 body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:15px}
 
 /* Scrollbar theming (Chromium/Edge) */
@@ -19,7 +23,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 ::-webkit-scrollbar-thumb:hover{background:#2a4060}
 
 /* Layout */
-.app{display:grid;grid-template-columns:100px 1fr 4px 320px;grid-template-rows:48px 1fr;height:100vh;gap:0;background:#1a2030}
+.app{display:grid;grid-template-columns:120px 1fr 4px 320px;grid-template-rows:48px 1fr;height:100vh;gap:0;background:#1a2030}
 .nav-panel{grid-row:1/-1;background:#0a0e18;border-right:1px solid #1a2844;display:flex;flex-direction:column;padding:8px 6px;gap:2px}
 .nav-btn{border:none;background:none;color:#8aa0b8;cursor:pointer;border-radius:3px;font-size:11px;font-family:'JetBrains Mono',monospace;text-align:left;padding:6px 8px;letter-spacing:0.5px;text-transform:uppercase;transition:all .12s;white-space:nowrap}
 .nav-btn:hover{background:#0d1a2f;color:#4fc3f7}
@@ -221,14 +225,24 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   const btns=document.querySelectorAll('.nav-panel .nav-btn');
   const frame=document.getElementById('viewFrame');
   const viewUrls={market:'/market',encyclopedia:'/docs',dashboard:'/debug',ship:'/ship',inventory:'/inventory'};
+  const rightHandle = document.getElementById('right-handle');
+  const rightPanel = document.querySelector('.right-panel');
+  const app = document.querySelector('.app');
   btns.forEach(btn=>{
     btn.addEventListener('click',()=>{
       btns.forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
       const view=btn.dataset.view;
       document.getElementById('sysviewWin').classList.remove('open');
-      if(view==='map'){frame.style.display='none';frame.src='';}
-      else{frame.src=viewUrls[view]||'/';frame.style.display='block';}
+      if(view==='map'){
+        frame.style.display='none';frame.src='';
+        rightHandle.style.display='';rightPanel.style.display='';
+        app.style.gridTemplateColumns='120px 1fr 4px 320px';
+      } else {
+        frame.src=viewUrls[view]||'/';frame.style.display='block';
+        rightHandle.style.display='none';rightPanel.style.display='none';
+        app.style.gridTemplateColumns='120px 1fr';
+      }
     });
   });
 })();
