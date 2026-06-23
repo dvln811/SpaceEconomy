@@ -359,18 +359,25 @@ document.addEventListener('contextmenu',e=>{if(!e.target.closest('tr[data-sys]')
 
 function showCtxMenu(x,y,sys,item){
   ctxMenu.innerHTML=`
-    <div style="padding:4px 12px;font-size:10px;color:#667;text-transform:uppercase;letter-spacing:1px">${item}</div>
+    <div style="padding:4px 12px;font-size:10px;color:#667;border-bottom:1px solid #1a2844;margin-bottom:2px">${item}</div>
+    <div class="ctx-item" onclick="doBuy('${item}','${sys}')">Buy</div>
+    <div class="ctx-item" onclick="doSell('${item}','${sys}')">Sell</div>
+    <div style="border-top:1px solid #1a2844;margin:2px 0"></div>
     <div class="ctx-item" onclick="navTo('${sys}')">Navigate to ${sys}</div>
     <div class="ctx-item" onclick="setRoute('${sys}')">Set Route to ${sys}</div>
+    <div style="border-top:1px solid #1a2844;margin:2px 0"></div>
     <div class="ctx-item" onclick="copyText('${sys}')">Copy System Name</div>
+    <div class="ctx-item" onclick="copyText('${item}')">Copy Item Name</div>
   `;
   ctxMenu.style.display='block';
   ctxMenu.style.left=Math.min(x,window.innerWidth-180)+'px';
-  ctxMenu.style.top=Math.min(y,window.innerHeight-100)+'px';
+  ctxMenu.style.top=Math.min(y,window.innerHeight-140)+'px';
 }
 function navTo(sys){ctxMenu.style.display='none';if(window.parent&&window.parent.navigateToSystem)window.parent.navigateToSystem(sys);}
-function setRoute(sys){ctxMenu.style.display='none';if(window.parent&&window.parent.navigateToSystem)window.parent.navigateToSystem(sys);}
+function setRoute(sys){ctxMenu.style.display='none';if(window.parent&&window.parent.setRouteTo)window.parent.setRouteTo(sys);}
 function copyText(t){ctxMenu.style.display='none';navigator.clipboard.writeText(t);}
+function doBuy(item,sys){ctxMenu.style.display='none';/* TODO: open buy dialog */}
+function doSell(item,sys){ctxMenu.style.display='none';/* TODO: open sell dialog */}
 
 // Style for ctx items
 const ctxStyle=document.createElement('style');
