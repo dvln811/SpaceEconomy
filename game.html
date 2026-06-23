@@ -19,13 +19,13 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 ::-webkit-scrollbar-thumb:hover{background:#2a4060}
 
 /* Layout */
-.app{display:grid;grid-template-columns:48px 1fr 4px 320px;grid-template-rows:48px 1fr 6px 180px;height:100vh;gap:0;background:#1a2030}
-.nav-panel{grid-row:1/-1;background:#0a0e18;border-right:1px solid #1a2844;display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px}
-.nav-btn{width:36px;height:36px;border:none;background:none;color:#8aa0b8;cursor:pointer;border-radius:4px;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .12s;position:relative}
+.app{display:grid;grid-template-columns:100px 1fr 4px 320px;grid-template-rows:48px 1fr 6px 180px;height:100vh;gap:0;background:#1a2030}
+.nav-panel{grid-row:1/-1;background:#0a0e18;border-right:1px solid #1a2844;display:flex;flex-direction:column;padding:8px 6px;gap:2px}
+.nav-btn{border:none;background:none;color:#8aa0b8;cursor:pointer;border-radius:3px;font-size:11px;font-family:'JetBrains Mono',monospace;text-align:left;padding:6px 8px;letter-spacing:0.5px;text-transform:uppercase;transition:all .12s;white-space:nowrap}
 .nav-btn:hover{background:#0d1a2f;color:#4fc3f7}
-.nav-btn.active{color:#4fc3f7;background:#0a1a30}
-.nav-btn .nav-tip{display:none;position:absolute;left:44px;top:50%;transform:translateY(-50%);background:#0a0e18;border:1px solid #1a2844;border-radius:3px;padding:3px 8px;font-size:10px;white-space:nowrap;color:#c8d4e0;z-index:100}
-.nav-btn:hover .nav-tip{display:block}
+.nav-btn.active{color:#4fc3f7;background:#0a1a30;border-left:2px solid #4fc3f7}
+.nav-btn.danger{color:#ef5350}
+.nav-btn.danger:hover{background:#1a0a0a}
 
 /* Side resize handles */
 .side-handle{background:#0a0f1a;cursor:ew-resize;display:flex;align-items:center;justify-content:center;transition:background .15s}
@@ -159,12 +159,12 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 <div class="app">
   <!-- Left Nav -->
   <div class="nav-panel">
-    <button class="nav-btn active" onclick="document.getElementById('mktWin').style.display='none'" title="Map">&#x1F5FA;<span class="nav-tip">Star Map</span></button>
-    <button class="nav-btn" onclick="document.getElementById('mktWin').style.display='flex'" title="Market">&#x1F4B0;<span class="nav-tip">Market</span></button>
-    <button class="nav-btn" onclick="window.open('/docs','_blank')" title="Docs">&#x1F4D6;<span class="nav-tip">Docs</span></button>
-    <button class="nav-btn" onclick="window.open('/universe','_blank')" title="Universe">&#x1F30D;<span class="nav-tip">Universe</span></button>
+    <button class="nav-btn active" data-view="map">Map</button>
+    <button class="nav-btn" data-view="market">Market</button>
+    <button class="nav-btn" data-view="universe">Universe</button>
+    <button class="nav-btn" data-view="docs">Docs</button>
     <div style="flex:1"></div>
-    <button class="nav-btn" onclick="window.open('/debug','_blank')" title="Dashboard" style="color:#ef5350">&#x1F527;<span class="nav-tip">Dashboard</span></button>
+    <button class="nav-btn danger" data-view="dashboard">Dashboard</button>
   </div>
 
   <!-- Header -->
@@ -187,6 +187,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
       <button>+</button>
       <button>−</button>
     </div>
+    <iframe id="viewFrame" style="display:none;position:absolute;inset:0;width:100%;height:100%;border:none;z-index:10;background:#05080f"></iframe>
   </div>
 
   <!-- Right: System Info -->
@@ -259,15 +260,23 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   </div>
 </div>
 
-<div id="mktWin" style="position:fixed;top:40px;left:200px;width:1000px;height:700px;background:#0a0e18;border:1px solid #1a2844;border-radius:6px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.7);z-index:200;resize:both;min-width:600px;min-height:400px">
-  <div id="mktTitlebar" style="display:flex;align-items:center;padding:0 12px;height:30px;background:#0a0f1a;border-bottom:1px solid #1a2844;cursor:move;flex-shrink:0;user-select:none">
-    <span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:#4fc3f7;letter-spacing:2px;text-transform:uppercase">Market</span>
-    <button id="mktClose" style="margin-left:auto;width:18px;height:18px;border:none;background:none;color:#8aa0b8;cursor:pointer;font-size:15px;border-radius:3px">&times;</button>
-  </div>
-  <iframe src="/market" style="flex:1;border:none;width:100%;height:100%"></iframe>
-</div>
-
 <script>
+// Nav panel view switching
+(function(){
+  const btns=document.querySelectorAll('.nav-panel .nav-btn');
+  const frame=document.getElementById('viewFrame');
+  const viewUrls={market:'/market',universe:'/universe',docs:'/docs',dashboard:'/debug'};
+  btns.forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      btns.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const view=btn.dataset.view;
+      if(view==='map'){frame.style.display='none';frame.src='';}
+      else{frame.src=viewUrls[view]||'/';frame.style.display='block';}
+    });
+  });
+})();
+
 // Bottom panel resize
 (function(){
   const handle=document.getElementById('resize-handle');
@@ -1343,15 +1352,6 @@ document.addEventListener('mouseup',()=>{svDragging=false;document.body.style.us
 document.getElementById('svClose').addEventListener('click',()=>{svWin.classList.remove('open');});
 
 // Market window drag/close
-(function(){
-const mw=document.getElementById('mktWin'),mt=document.getElementById('mktTitlebar');
-let md=false,mo={x:0,y:0};
-mt.addEventListener('mousedown',e=>{md=true;mo={x:e.clientX-mw.offsetLeft,y:e.clientY-mw.offsetTop};document.body.style.userSelect='none';});
-document.addEventListener('mousemove',e=>{if(md){mw.style.left=(e.clientX-mo.x)+'px';mw.style.top=(e.clientY-mo.y)+'px';}});
-document.addEventListener('mouseup',()=>{md=false;document.body.style.userSelect='';});
-document.getElementById('mktClose').addEventListener('click',()=>{mw.style.display='none';});
-})();
-
 // Zoom buttons (adjust OrbitControls distance)
 document.getElementById('svZoomIn').addEventListener('click',()=>{svCam.position.multiplyScalar(0.7);svControls.update();});
 document.getElementById('svZoomOut').addEventListener('click',()=>{svCam.position.multiplyScalar(1.4);svControls.update();});
