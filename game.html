@@ -643,9 +643,9 @@ let reticleAngle=0;
 
 // Route path overlay (green-yellow highlighted path)
 const routePathGeo=new THREE.BufferGeometry();
-const routePathMat=new THREE.LineBasicMaterial({color:0xaaff44,transparent:true,opacity:0.9,linewidth:2});
+const routePathMat=new THREE.LineBasicMaterial({color:0xaaff44,transparent:true,opacity:0.95,depthTest:false});
 const routePathMesh=new THREE.LineSegments(routePathGeo,routePathMat);
-routePathMesh.renderOrder=2;routePathMesh.frustumCulled=false;
+routePathMesh.renderOrder=10;routePathMesh.frustumCulled=false;
 scene.add(routePathMesh);
 let currentRoute=[];
 
@@ -654,12 +654,24 @@ function findPath(fromIdx, toIdx){
   if(fromIdx===toIdx) return [];
   const visited=new Set([fromIdx]);
   const queue=[[fromIdx,[]]];
-  // Build adjacency from routes
+  // Build adjacency from routes + systems connections
   const adj={};
   for(const [i,j] of routes){
     if(!adj[i])adj[i]=[];if(!adj[j])adj[j]=[];
     adj[i].push(j);adj[j].push(i);
   }
+  // Also add from systems.connections (covers any gaps)
+  systems.forEach((s,i)=>{
+    if(s.connections){
+      s.connections.forEach(cid=>{
+        const j=systems.findIndex(x=>x.id===cid);
+        if(j>=0){
+          if(!adj[i])adj[i]=[];
+          if(!adj[i].includes(j))adj[i].push(j);
+        }
+      });
+    }
+  });
   while(queue.length){
     const [cur,path]=queue.shift();
     for(const n of (adj[cur]||[])){
