@@ -226,7 +226,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
       btns.forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
       const view=btn.dataset.view;
-      svWin.classList.remove('open');
+      document.getElementById('sysviewWin').classList.remove('open');
       if(view==='map'){frame.style.display='none';frame.src='';}
       else{frame.src=viewUrls[view]||'/';frame.style.display='block';}
     });
@@ -872,7 +872,7 @@ let _mdown={x:0,y:0};
 renderer.domElement.addEventListener('mousedown',(e)=>{_mdown={x:e.clientX,y:e.clientY};});
 renderer.domElement.addEventListener('click',(e)=>{
   if(animating) return;
-  if(svWin.classList.contains('open')||document.getElementById('viewFrame').style.display==='block') return;
+  if(document.getElementById('sysviewWin').classList.contains('open')||document.getElementById('viewFrame').style.display==='block') return;
   const dx=e.clientX-_mdown.x,dy=e.clientY-_mdown.y;
   if(dx*dx+dy*dy>9) return; // dragged, ignore
   const rect=renderer.domElement.getBoundingClientRect();
@@ -1108,7 +1108,7 @@ const ttMouse=new THREE.Vector2();
 let ttVisible=false;
 
 container.addEventListener('mousemove',(e)=>{
-  if(svWin.classList.contains('open')||document.getElementById('viewFrame').style.display==='block') return;
+  if(document.getElementById('sysviewWin').classList.contains('open')||document.getElementById('viewFrame').style.display==='block') return;
   const rect=renderer.domElement.getBoundingClientRect();
   ttMouse.x=((e.clientX-rect.left)/rect.width)*2-1;
   ttMouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
