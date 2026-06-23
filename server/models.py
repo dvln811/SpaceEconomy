@@ -53,6 +53,7 @@ class System:
     system_type: str
     cluster: str
     security: str
+    sec_level: float = 0.0
     faction: str = ""
     region: str = ""
     x: float = 0.0

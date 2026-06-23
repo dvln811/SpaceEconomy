@@ -283,7 +283,7 @@ def api_positions():
     for sid, sys in sim.universe.items():
         systems[sid] = {
             "name": sys.name, "type": sys.system_type, "cluster": sys.cluster,
-            "security": sys.security, "faction": sys.faction,
+            "security": sys.security, "sec_level": sys.sec_level, "faction": sys.faction,
             "region": getattr(sys, 'region', ''),
             "x": sys.x, "y": sys.y, "z": sys.z,
             "connections": sys.connections,
