@@ -326,7 +326,7 @@ function renderTable(prefix, orders, col, dir){
 }
 
 function oRow(o){return '<tr><td>'+o.item+'</td><td class="num">'+fmtN(o.qty)+'</td><td class="num">'+fmtN(o.price)+'</td><td>'+o.station+'</td><td>'+o.system+'</td><td>'+o.region+'</td></tr>';}
-function fmtN(n){return typeof n==='number'?Math.round(n).toLocaleString():n;}
+function fmtN(n){if(typeof n!=='number')return n;if(n>=1000)return Math.round(n).toLocaleString();if(n>=1)return n.toFixed(1);return n.toFixed(2);}
 
 function onSort(e){
   const col=e.currentTarget.dataset.col;

@@ -96,10 +96,13 @@ def _build_order_book(st):
     sell_orders = []
     buy_orders = []
     for commodity_id, qty in st.inventory.items():
-        if qty > 1:
-            price = st.price_cache.get(commodity_id, 0)
+        if qty > 1 and commodity_id in COMS:
+            market_price = st.price_cache.get(commodity_id, 0)
+            base = COMS[commodity_id].base_price
+            # Never sell below base price
+            price = max(market_price, base) if market_price > 0 else base
             if price > 0:
-                sell_orders.append({"commodity": commodity_id, "qty": round(qty, 1), "price": round(price, 1)})
+                sell_orders.append({"commodity": commodity_id, "qty": round(qty), "price": round(price, 2)})
     for prod_id in st.produces:
         com = COMS.get(prod_id)
         if not com or not com.recipe:
@@ -108,18 +111,19 @@ def _build_order_book(st):
             want = qty_needed * st.production_rate * 100
             have = st.inventory.get(inp_id, 0)
             deficit = want - have
-            if deficit > 0:
-                base = st.price_cache.get(inp_id, 0)
-                buy_price = base * 1.1 if base > 0 else COMS[inp_id].base_price * 1.1 if inp_id in COMS else 0
-                if buy_price > 0:
-                    buy_orders.append({"commodity": inp_id, "qty": round(deficit, 1), "price": round(buy_price, 1)})
+            if deficit > 0 and inp_id in COMS:
+                # Buy at market price or base price, whichever is higher
+                market = st.price_cache.get(inp_id, 0)
+                base = COMS[inp_id].base_price
+                buy_price = max(market, base) * 1.05  # 5% premium to attract sellers
+                buy_orders.append({"commodity": inp_id, "qty": round(deficit), "price": round(buy_price, 2)})
     for commodity_id in STATION_CONSUMPTION.get(st.station_type, []):
         have = st.inventory.get(commodity_id, 0)
-        if have < 500:
-            base = st.price_cache.get(commodity_id, 0)
-            buy_price = base * 1.15 if base > 0 else COMS[commodity_id].base_price * 1.15 if commodity_id in COMS else 0
-            if buy_price > 0:
-                buy_orders.append({"commodity": commodity_id, "qty": round(500 - have, 1), "price": round(buy_price, 1)})
+        if have < 500 and commodity_id in COMS:
+            market = st.price_cache.get(commodity_id, 0)
+            base = COMS[commodity_id].base_price
+            buy_price = max(market, base) * 1.1
+            buy_orders.append({"commodity": commodity_id, "qty": round(500 - have), "price": round(buy_price, 2)})
     return sorted(sell_orders, key=lambda x: -x["qty"])[:20], sorted(buy_orders, key=lambda x: -x["qty"])[:50]
 
 
