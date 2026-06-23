@@ -241,38 +241,51 @@ function render() {
 // ── Overview ────────────────────────────────────────────────────────────────
 function renderFactions() {
   const factions = D.factions || {};
-  const events = (D.recent_events || []).filter(e => e.msg && e.msg.includes('STRATEGY'));
-  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(350px,1fr));gap:12px">';
-  const names = {terran_fed:'Terran Federation',iron_compact:'Iron Compact',free_states:'Frontier Alliance',merchants_guild:'Merchants Guild',science_collective:'Nexus Collective',corsairs:'The Corsairs'};
+  const phaseColors = {scouting:'#ffd54f',staging:'#ff8a65',constructing:'#66bb6a',complete:'#4fc3f7',requisitioning:'#ffd54f',assembling:'#ff8a65',deployed:'#4fc3f7'};
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:10px">';
   for (const [fid, f] of Object.entries(factions)) {
     html += '<div style="background:#0a1020;border:1px solid #1a2844;border-radius:6px;padding:12px">';
-    html += '<div style="color:#4fc3f7;font-size:13px;font-weight:600;margin-bottom:6px">'+(names[fid]||fid)+'</div>';
-    html += '<div style="font-size:11px;color:#8aa0b8;margin-bottom:8px">';
-    html += fid==='corsairs' ? 'Raider faction' : f.systems+' systems | Agg: '+f.aggression+' | Exp: '+f.expansion+' | Eco: '+f.economic;
-    html += '</div>';
+    // Header with emblem
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
+    if (f.emblem) html += '<img src="/static/faction_emblems/'+f.emblem+'" style="width:32px;height:32px;border-radius:4px">';
+    html += '<span style="color:#4fc3f7;font-size:13px;font-weight:600">'+(f.name||fid)+'</span></div>';
+    // Stats
+    html += '<div style="font-size:11px;color:#8aa0b8;margin-bottom:8px">'+f.systems+' systems | Agg: '+f.aggression+' | Exp: '+f.expansion+' | Eco: '+f.economic+'</div>';
+    // Projects
     if (f.projects && f.projects.length) {
-      html += '<div style="font-size:10px;color:#667;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Active Projects</div>';
+      html += '<div style="font-size:10px;color:#667;text-transform:uppercase;letter-spacing:1px;margin:6px 0 3px">Projects</div>';
       for (const p of f.projects) {
-        const barW = Math.min(100, p.progress);
-        const color = p.progress > 50 ? '#66bb6a' : p.progress > 20 ? '#ffd54f' : '#ef5350';
-        html += '<div style="margin-bottom:4px">';
-        html += '<div style="font-size:11px;color:#c8d4e0">'+p.name+' <span style="color:#667">('+p.type+')</span></div>';
-        html += '<div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:6px;background:#1a2844;border-radius:3px;overflow:hidden"><div style="width:'+barW+'%;height:100%;background:'+color+';border-radius:3px"></div></div><span style="font-size:10px;color:#8aa0b8">'+p.progress+'%</span></div>';
-        html += '<div style="font-size:10px;color:#667">Target: '+p.target+'</div>';
-        html += '</div>';
+        const pc = phaseColors[p.phase]||'#8aa0b8';
+        html += '<div style="margin-bottom:4px;font-size:11px"><span style="color:#c8d4e0">'+p.name+'</span> <span style="background:'+pc+'22;color:'+pc+';padding:1px 4px;border-radius:2px;font-size:10px">'+p.phase+'</span>';
+        html += '<div style="display:flex;align-items:center;gap:6px;margin-top:2px"><div style="flex:1;height:5px;background:#1a2844;border-radius:3px;overflow:hidden"><div style="width:'+Math.min(100,p.progress)+'%;height:100%;background:'+pc+'"></div></div><span style="font-size:10px;color:#8aa0b8">'+p.progress+'%</span></div></div>';
+      }
+    }
+    // Fleet builds
+    if (f.fleet_builds && f.fleet_builds.length) {
+      html += '<div style="font-size:10px;color:#667;text-transform:uppercase;letter-spacing:1px;margin:6px 0 3px">Fleet Builds</div>';
+      for (const fb of f.fleet_builds) {
+        const pc = phaseColors[fb.phase]||'#8aa0b8';
+        html += '<div style="margin-bottom:4px;font-size:11px"><span style="color:#c8d4e0">'+fb.name+'</span> <span style="background:'+pc+'22;color:'+pc+';padding:1px 4px;border-radius:2px;font-size:10px">'+fb.phase+'</span>';
+        html += '<div style="display:flex;align-items:center;gap:6px;margin-top:2px"><div style="flex:1;height:5px;background:#1a2844;border-radius:3px;overflow:hidden"><div style="width:'+Math.min(100,fb.progress)+'%;height:100%;background:'+pc+'"></div></div><span style="font-size:10px;color:#8aa0b8">'+fb.progress+'%</span></div></div>';
+      }
+    }
+    // Corporations
+    if (f.corporations && f.corporations.length) {
+      html += '<div style="font-size:10px;color:#667;text-transform:uppercase;letter-spacing:1px;margin:6px 0 3px">Corporations</div>';
+      for (const c of f.corporations) {
+        html += '<div style="font-size:11px;color:#c8d4e0;margin-bottom:2px">'+c.name+' <span style="color:#8aa0b8">('+c.specialty+')</span> → <span style="color:#4fc3f7">'+c.activity+'</span>'+(c.target?' <span style="color:#667">['+c.target+']</span>':'')+'</div>';
+      }
+    }
+    // Decisions
+    if (f.decisions && f.decisions.length) {
+      html += '<div style="font-size:10px;color:#667;text-transform:uppercase;letter-spacing:1px;margin:6px 0 3px">Decision Log</div>';
+      for (const d of f.decisions.slice(0,5)) {
+        html += '<div style="font-size:11px;color:#8aa0b8;margin-bottom:2px">T'+d.tick+': <span style="color:#c8d4e0">'+d.decision+'</span> — '+d.reasoning+'</div>';
       }
     }
     html += '</div>';
   }
   html += '</div>';
-  // Recent strategy events
-  if (events.length) {
-    html += '<div style="margin-top:16px;border-top:1px solid #1a2844;padding-top:12px"><div style="font-size:10px;color:#667;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Recent Strategy Decisions</div>';
-    for (const e of events.slice(-10)) {
-      html += '<div style="font-size:11px;color:#8aa0b8;margin:2px 0">T'+e.tick+': '+e.msg.replace('STRATEGY: ','')+'</div>';
-    }
-    html += '</div>';
-  }
   document.getElementById('factionsContent').innerHTML = html;
 }
 
