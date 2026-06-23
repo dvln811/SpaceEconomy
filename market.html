@@ -91,13 +91,14 @@ tr:hover td{background:#0a1020}
 </div>
 <script>
 (function(){
-const COLS = ['item','qty','price','station','system','region'];
+const COLS = ['item','qty','price','jumps','station','system','region'];
 let commodities = [], commodityMap = {}, treeData = {};
 let buyOrders = [], sellOrders = [];
 let selectedFilter = null;
 let buySortCol = 'price', buySortDir = -1;
 let sellSortCol = 'price', sellSortDir = -1;
 let lastTick = 0, expanded = {};
+let jumpMap = {}; // {system_id: jumps from Cygnus}
 
 function displayName(c){
   if(!c) return '';
@@ -281,24 +282,35 @@ async function loadMarketData(){
 function parseOrders(dbg, ships){
   buyOrders = []; sellOrders = [];
   const systems = dbg.systems || {};
+  // BFS from Cygnus for jump distances
+  if(!jumpMap['cygnus']&&Object.keys(systems).length){
+    jumpMap={};
+    const start=Object.keys(systems).find(k=>(systems[k].name||'').toLowerCase()==='cygnus')||Object.keys(systems)[0];
+    jumpMap[start]=0;
+    const queue=[start];
+    while(queue.length){const cur=queue.shift();const sys=systems[cur];if(!sys||!sys.connections)continue;for(const n of sys.connections){if(jumpMap[n]===undefined){jumpMap[n]=jumpMap[cur]+1;queue.push(n);}}}
+  }
   for(const sid in systems){
     const sys = systems[sid];
     const region = sys.region || '', sysName = sys.name || sid;
+    const jumps = jumpMap[sid]!==undefined?jumpMap[sid]:'?';
     (sys.stations||[]).forEach(st => {
       (st.sell_orders||[]).forEach(o => {
         const c = commodityMap[o.commodity];
-        sellOrders.push({item: c ? displayName(c) : o.commodity, itemId:o.commodity, qty:o.qty, price:o.price, station:st.name, system:sysName, region});
+        sellOrders.push({item: c ? displayName(c) : o.commodity, itemId:o.commodity, qty:o.qty, price:o.price, jumps, station:st.name, system:sysName, region});
       });
       (st.buy_orders||[]).forEach(o => {
         const c = commodityMap[o.commodity];
-        buyOrders.push({item: c ? displayName(c) : o.commodity, itemId:o.commodity, qty:o.qty, price:o.price, station:st.name, system:sysName, region});
+        buyOrders.push({item: c ? displayName(c) : o.commodity, itemId:o.commodity, qty:o.qty, price:o.price, jumps, station:st.name, system:sysName, region});
       });
     });
   }
   const seen = new Set();
   ships.forEach(s => {
     if(seen.has(s.id)) return; seen.add(s.id);
-    sellOrders.push({item:s.name, itemId:'ship_'+s.id, qty:1, price:s.price, station:s.shipyard_station, system:s.shipyard_system, region:''});
+    const sysEntry=Object.entries(systems).find(([k,v])=>v.name===s.shipyard_system);
+    const jumps=sysEntry&&jumpMap[sysEntry[0]]!==undefined?jumpMap[sysEntry[0]]:'?';
+    sellOrders.push({item:s.name, itemId:'ship_'+s.id, qty:1, price:s.price, jumps, station:s.shipyard_station, system:s.shipyard_system, region:''});
   });
 }
 
@@ -310,7 +322,7 @@ function renderOrders(){
 function renderTable(prefix, orders, col, dir){
   const headEl = document.getElementById(prefix+'Head');
   const bodyEl = document.getElementById(prefix+'Body');
-  headEl.innerHTML = '<tr>'+COLS.map(c=>'<th data-col="'+c+'" data-pane="'+prefix+'"'+((c==='qty'||c==='price')?' class="num"':'')+'>'+c+'<span class="sort-arrow">'+(col===c?(dir>0?'\u25B2':'\u25BC'):'')+'</span></th>').join('')+'</tr>';
+  headEl.innerHTML = '<tr>'+COLS.map(c=>'<th data-col="'+c+'" data-pane="'+prefix+'"'+((c==='qty'||c==='price'||c==='jumps')?' class="num"':'')+'>'+c+'<span class="sort-arrow">'+(col===c?(dir>0?'\u25B2':'\u25BC'):'')+'</span></th>').join('')+'</tr>';
   headEl.querySelectorAll('th').forEach(th=>th.addEventListener('click',onSort));
   let filtered = orders;
   const ids = getFilteredIds();
@@ -324,11 +336,11 @@ function renderTable(prefix, orders, col, dir){
     const g={};
     filtered.forEach(o=>{const k=o[groupBy]||'?';if(!g[k])g[k]=[];g[k].push(o);});
     Object.keys(g).sort().forEach(k=>{
-      rows+='<tr><td colspan="6" style="color:#4fc3f7;padding:6px 8px;background:#0a1020;font-size:11px">'+k+' ('+g[k].length+')</td></tr>';
+      rows+='<tr><td colspan="7" style="color:#4fc3f7;padding:6px 8px;background:#0a1020;font-size:11px">'+k+' ('+g[k].length+')</td></tr>';
       g[k].slice(0,100).forEach(o=>{rows+=oRow(o);});
     });
   } else { filtered.slice(0,500).forEach(o=>{rows+=oRow(o);}); }
-  bodyEl.innerHTML = rows||'<tr><td colspan="6" style="color:#8aa0b8;padding:12px">No orders</td></tr>';
+  bodyEl.innerHTML = rows||'<tr><td colspan="7" style="color:#8aa0b8;padding:12px">No orders</td></tr>';
   bodyEl.querySelectorAll('tr[data-sys]').forEach(tr=>{
     tr.addEventListener('contextmenu',function(e){
       e.preventDefault();
@@ -340,7 +352,7 @@ function renderTable(prefix, orders, col, dir){
   });
 }
 
-function oRow(o){return '<tr data-sys="'+o.system+'"><td>'+o.item+'</td><td class="num">'+fmtN(o.qty)+'</td><td class="num">'+fmtN(o.price)+'</td><td>'+o.station+'</td><td>'+o.system+'</td><td>'+o.region+'</td></tr>';}
+function oRow(o){return '<tr data-sys="'+o.system+'"><td>'+o.item+'</td><td class="num">'+fmtN(o.qty)+'</td><td class="num">'+fmtN(o.price)+'</td><td class="num">'+o.jumps+'</td><td>'+o.station+'</td><td>'+o.system+'</td><td>'+o.region+'</td></tr>';}
 function navToSystem(e,sysName){e.preventDefault();if(window.parent&&window.parent.navigateToSystem)window.parent.navigateToSystem(sysName);else window.open('/?system='+encodeURIComponent(sysName),'_top');}
 function fmtN(n){if(typeof n!=='number')return n;if(Number.isInteger(n)||n>=100)return Math.round(n).toLocaleString();if(n>=1)return n.toFixed(1);return n.toFixed(2);}
 
