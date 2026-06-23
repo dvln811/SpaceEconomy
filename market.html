@@ -380,10 +380,14 @@ function showCtxMenu(x,y,sys,item){
   ctxMenu.style.left=Math.min(x,window.innerWidth-180)+'px';
   ctxMenu.style.top=Math.min(y,window.innerHeight-140)+'px';
 }
-function getParent(){return (window.parent && window.parent!==window) ? window.parent : window;}
-function navTo(sys){ctxMenu.style.display='none';const p=getParent();if(p.navigateToSystem)p.navigateToSystem(sys);}
-function setRoute(sys){ctxMenu.style.display='none';const p=getParent();if(p.setRouteTo)p.setRouteTo(sys);}
-function addWpt(sys){ctxMenu.style.display='none';const p=getParent();if(p.addWaypoint)p.addWaypoint(sys);}
+function getParent(){
+  try{if(window.parent&&window.parent!==window&&window.parent.setRouteTo)return window.parent;}catch(e){}
+  try{if(window.top&&window.top!==window&&window.top.setRouteTo)return window.top;}catch(e){}
+  return null;
+}
+function navTo(sys){ctxMenu.style.display='none';const p=getParent();if(p&&p.navigateToSystem)p.navigateToSystem(sys);}
+function setRoute(sys){ctxMenu.style.display='none';const p=getParent();if(p&&p.setRouteTo)p.setRouteTo(sys);else alert('Route: not in game frame');}
+function addWpt(sys){ctxMenu.style.display='none';const p=getParent();if(p&&p.addWaypoint)p.addWaypoint(sys);else alert('Waypoint: not in game frame');}
 function copyText(t){ctxMenu.style.display='none';navigator.clipboard.writeText(t);}
 function doBuy(item,sys){ctxMenu.style.display='none';/* TODO: open buy dialog */}
 function doSell(item,sys){ctxMenu.style.display='none';/* TODO: open sell dialog */}

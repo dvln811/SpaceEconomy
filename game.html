@@ -218,8 +218,9 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <div class="right-panel">
     <div class="panel-title" style="margin-bottom:8px">System Info</div>
     <div id="system-info-content" style="flex-shrink:0"><div style="color:#8aa0b8;font-size:12px">Select a system to view info</div></div>
-    <div style="margin-top:12px;border-top:1px solid #1a2844;padding-top:8px;flex:1;overflow-y:auto;min-height:0">
-      <div id="route-panel"><div style="color:#8aa0b8;font-size:11px">No route set</div></div>
+    <div style="margin-top:12px;border-top:1px solid #1a2844;padding-top:8px;flex:1;display:flex;flex-direction:column;min-height:0">
+      <div id="route-header" style="flex-shrink:0;font-size:11px;color:#c8d4e0;margin-bottom:4px;display:flex;justify-content:space-between"><span>No route set</span></div>
+      <div id="route-panel" style="flex:1;overflow-y:auto;min-height:0"></div>
     </div>
   </div>
 </div>
@@ -742,10 +743,15 @@ window.clearRoute=function(){
 
 function renderRoutePanel(){
   const panel=document.getElementById('route-panel');
-  if(!panel)return;
-  if(!currentRoute.length){panel.innerHTML='<div style="color:#8aa0b8;font-size:11px">No route set</div>';return;}
-  let html='<div style="font-size:10px;color:#667;margin-bottom:4px;display:flex;justify-content:space-between"><span>ROUTE ('+currentRoute.length+' jumps)</span><span style="color:#ef5350;cursor:pointer" onclick="clearRoute()">Clear</span></div>';
-  // Start system
+  const header=document.getElementById('route-header');
+  if(!panel||!header)return;
+  if(!currentRoute.length){
+    header.innerHTML='<span style="color:#8aa0b8">No route set</span>';
+    panel.innerHTML='';
+    return;
+  }
+  header.innerHTML='<span>ROUTE ('+currentRoute.length+' jumps)</span><span style="color:#ef5350;cursor:pointer" onclick="clearRoute()">Clear</span>';
+  let html='';
   const startIdx=homeSystem();
   html+='<div class="route-card" data-idx="'+startIdx+'" style="border-left-color:#66ff66">'+systems[startIdx].name+' <span style="color:#66ff66;font-size:9px">HOME</span></div>';
   currentRoute.forEach((idx,i)=>{
