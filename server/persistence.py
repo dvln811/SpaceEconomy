@@ -53,6 +53,7 @@ def save_simulation(sim):
             "intra_position": s.intra_position, "intra_destination": s.intra_destination,
             "intra_progress": s.intra_progress, "intra_speed": s.intra_speed,
             "risk_tolerance": s.risk_tolerance,
+            "assigned_system": s.assigned_system, "assigned_station": s.assigned_station,
         })
 
     conn = _get_conn()
@@ -113,6 +114,8 @@ def load_simulation(sim) -> bool:
                 intra_progress=sd.get("intra_progress", 0.0),
                 intra_speed=sd.get("intra_speed", 0.2),
                 risk_tolerance=sd.get("risk_tolerance", 0.5),
+                assigned_system=sd.get("assigned_system", ""),
+                assigned_station=sd.get("assigned_station", ""),
             ))
 
     conn.close()
