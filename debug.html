@@ -341,8 +341,11 @@ function renderOverview() {
         const mode=window._invMode||'top';
         if(mode==='top'){
           const prev=window._prevInv||{};
-          const rows=topInv.map(([k,v])=>{const col=prev[k]===undefined?'#c8d4e0':v>prev[k]?'#66bb6a':v<prev[k]?'#ef5350':'#c8d4e0';return`<div class="stat-row"><span class="label">${fmtName(k)}</span><span class="value" style="color:${col}">${Math.round(v).toLocaleString()}</span></div>`;}).join('');
+          const prevColors=window._invColors||{};
+          const newColors={};
+          const rows=topInv.map(([k,v])=>{let col=prevColors[k]||'#c8d4e0';if(prev[k]!==undefined){if(v>prev[k])col='#66bb6a';else if(v<prev[k])col='#ef5350';}newColors[k]=col;return`<div class="stat-row"><span class="label">${fmtName(k)}</span><span class="value" style="color:${col}">${Math.round(v).toLocaleString()}</span></div>`;}).join('');
           window._prevInv=Object.assign({},inv);
+          window._invColors=newColors;
           return rows;
         }else if(mode==='deficit'){
           const dem=D.demand||{};
@@ -439,8 +442,7 @@ function renderStations() {
     halted += d.halted;
   }
 
-  document.getElementById('stationsContent').innerHTML = `<div class="overview-grid" style="grid-template-columns:repeat(2,1fr)">
-    <div class="panel" style="grid-column:1/-1">
+  document.getElementById('stationsContent').innerHTML = `<div style="margin-bottom:12px">
       <div class="panel-title">Station Overview</div>
       <div style="display:flex;gap:20px;font-size:13px;padding:4px 0">
         <span>Total: <span style="color:#4fc3f7;font-weight:600">${totalStations}</span></span>
@@ -449,17 +451,18 @@ function renderStations() {
       </div>
       <div style="display:flex;height:6px;border-radius:3px;overflow:hidden;margin-top:4px"><div style="width:${totalStations?Math.round(producing/totalStations*100):100}%;background:#66bb6a"></div><div style="flex:1;background:#ef5350"></div></div>
     </div>
-    <div class="panel">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:start">
+    <div class="panel" style="margin:0">
       <div class="panel-title">By Type</div>
-      ${Object.entries(byType).sort((a,b)=>b[1].total-a[1].total).map(([type,d])=>`<div class="stat-row"><span class="label">${fmtName(type)}</span><span class="value">${d.total} <span style="color:#66bb6a;font-size:11px">(${d.active} active${d.halted?', <span style="color:#ef5350">'+d.halted+' halted</span>':''})</span></span></div>`).join('')}
+      ${Object.entries(byType).sort((a,b)=>b[1].total-a[1].total).map(([type,d])=>`<div class="stat-row"><span class="label">${fmtName(type)}</span><span class="value">${d.total} <span style="color:#66bb6a;font-size:10px">(${d.active}/${d.halted||0})</span></span></div>`).join('')}
     </div>
-    <div class="panel">
+    <div class="panel" style="margin:0">
       <div class="panel-title">By Faction</div>
-      ${Object.entries(byFaction).sort((a,b)=>b[1].total-a[1].total).map(([f,d])=>`<div class="stat-row"><span class="label">${fmtName(f)}</span><span class="value">${d.total} <span style="color:#66bb6a;font-size:11px">(${d.active} active)</span></span></div>`).join('')}
+      ${Object.entries(byFaction).sort((a,b)=>b[1].total-a[1].total).map(([f,d])=>`<div class="stat-row"><span class="label">${fmtName(f)}</span><span class="value">${d.total} <span style="color:#66bb6a;font-size:10px">(${d.active})</span></span></div>`).join('')}
     </div>
-    <div class="panel" style="grid-column:1/-1">
+    <div class="panel" style="margin:0">
       <div class="panel-title">Top Bottlenecks</div>
-      ${topB.length ? topB.map(b=>`<div class="stat-row"><span class="label">${fmtName(b.name)}</span><span class="value" style="color:#ef5350">${b.count} stations blocked</span></div>`).join('') : '<div style="color:#66bb6a;font-size:11px">No bottlenecks — all supplied</div>'}
+      ${topB.length ? topB.map(b=>`<div class="stat-row"><span class="label">${fmtName(b.name)}</span><span class="value" style="color:#ef5350">${b.count}</span></div>`).join('') : '<div style="color:#66bb6a;font-size:11px">All supplied</div>'}
     </div>
   </div>`;
 }
@@ -478,8 +481,7 @@ function renderShips() {
 
   const stateColors = {idle:'#66bb6a',traveling:'#4fc3f7',intra_traveling:'#4fc3f7',loading:'#ffd54f',unloading:'#ff8a65',mining:'#ab47bc'};
 
-  document.getElementById('shipsContent').innerHTML = `<div class="overview-grid" style="grid-template-columns:repeat(2,1fr)">
-    <div class="panel" style="grid-column:1/-1">
+  document.getElementById('shipsContent').innerHTML = `<div style="margin-bottom:12px">
       <div class="panel-title">Fleet Overview</div>
       <div style="display:flex;gap:20px;font-size:13px;padding:4px 0">
         <span>Total: <span style="color:#4fc3f7;font-weight:600">${total}</span></span>
@@ -487,17 +489,18 @@ function renderShips() {
         <span>Idle: <span style="color:#ffd54f;font-weight:600">${idle}</span></span>
       </div>
     </div>
-    <div class="panel">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:start">
+    <div class="panel" style="margin:0">
       <div class="panel-title">By Role</div>
-      ${Object.entries(byRole).sort((a,b)=>b[1].total-a[1].total).map(([role,d])=>`<div class="stat-row"><span class="label">${fmtName(role)}</span><span class="value">${d.total} <span style="color:#66bb6a;font-size:11px">(${d.active} active)</span></span></div>`).join('')}
+      ${Object.entries(byRole).sort((a,b)=>b[1].total-a[1].total).map(([role,d])=>`<div class="stat-row"><span class="label">${fmtName(role)}</span><span class="value">${d.total} <span style="color:#66bb6a;font-size:10px">(${d.active})</span></span></div>`).join('')}
     </div>
-    <div class="panel">
+    <div class="panel" style="margin:0">
       <div class="panel-title">By State</div>
       ${['idle','mining','intra_traveling','traveling','loading','unloading'].map(state=>`<div class="stat-row"><span class="label">${fmtName(state)}</span><span class="value" style="color:${stateColors[state]||'#8aa0b8'}">${s[state]||0}</span></div>`).join('')}
     </div>
-    <div class="panel">
+    <div class="panel" style="margin:0">
       <div class="panel-title">By Faction</div>
-      ${Object.entries(byFaction).sort((a,b)=>(b[1].mil+b[1].ind)-(a[1].mil+a[1].ind)).map(([f,d])=>`<div class="stat-row"><span class="label">${fmtName(f)}</span><span class="value"><span style="color:#ef5350">${d.mil} mil</span> + <span style="color:#4fc3f7">${d.ind} ind</span></span></div>`).join('')}
+      ${Object.entries(byFaction).sort((a,b)=>(b[1].mil+b[1].ind)-(a[1].mil+a[1].ind)).map(([f,d])=>`<div class="stat-row"><span class="label">${fmtName(f)}</span><span class="value"><span style="color:#ef5350">${d.mil}</span> + <span style="color:#4fc3f7">${d.ind}</span></span></div>`).join('')}
     </div>
   </div>`;
 }
