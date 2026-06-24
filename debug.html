@@ -179,7 +179,9 @@ document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
 async function fetchData() {
   try {
     const r = await fetch('/api/debug');
-    const data = await r.json();
+    const text = await r.text();
+    window._lastDebugSize = text.length;
+    const data = JSON.parse(text);
     if (data.error) { console.warn(data.error); return; }
     D = data;
     lastDebugTick = data.tick;
@@ -295,6 +297,7 @@ function renderOverview() {
       <div class="stat-row"><span class="label">Tick</span><span class="value">${D.tick}</span></div>
       <div class="stat-row"><span class="label">Uptime</span><span class="value">${h}h ${m}m ${sec}s</span></div>
       <div class="stat-row"><span class="label">Ticks/sec</span><span class="value" style="color:${(D.performance||{}).ticks_per_sec>=0.95?'#66bb6a':'#ef5350'}">${(D.performance||{}).ticks_per_sec||'?'}</span></div>
+      <div class="stat-row"><span class="label">Data/update</span><span class="value">${window._lastDebugSize?((window._lastDebugSize/1024).toFixed(1)+'KB'):'?'}</span></div>
       <div class="stat-row"><span class="label">Systems</span><span class="value">${D.systems||0}</span></div>
       <div class="stat-row"><span class="label">Ships</span><span class="value">${D.npc_ships}</span></div>
       <div class="stat-row"><span class="label">Trades</span><span class="value">${D.trade_volume}</span></div>
