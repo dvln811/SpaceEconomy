@@ -298,7 +298,7 @@ def api_market_ships():
     """Ships available at shipyard stations with computed prices."""
     from server.game_data_db import get_data_db
     conn = get_data_db()
-    rows = conn.execute("SELECT id, name, hull_class, build_cost, build_time FROM ships ORDER BY hull_class, name").fetchall()
+    rows = conn.execute("SELECT id, name, hull_class, build_cost, build_time FROM ships WHERE hull_class NOT IN ('Carrier','Dreadnought','Battleship') ORDER BY hull_class, name").fetchall()
     # Get base prices for cost calculation
     price_rows = conn.execute("SELECT id, base_price FROM commodities").fetchall()
     conn.close()

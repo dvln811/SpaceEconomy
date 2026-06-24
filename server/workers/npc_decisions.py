@@ -22,8 +22,8 @@ class NPCDecisionWorker(WorkerThread):
         universe = snapshot['universe']
         region_cache = snapshot['region_cache']
 
-        # Collect idle ships
-        idle_ships = [s for s in ships if s.state == "idle"]
+        # Collect idle ships with active roles only
+        idle_ships = [s for s in ships if s.state == "idle" and s.role in ("hauler", "miner", "freelance")]
         if not idle_ships:
             return
 
@@ -37,6 +37,8 @@ class NPCDecisionWorker(WorkerThread):
         for ship in batch:
             if ship.role == "miner":
                 self._miner_decision(ship, universe, region_cache)
+            elif ship.role == "freelance":
+                self._freelance_decision(ship, universe, region_cache)
             else:
                 self._trader_decision(ship, universe, region_cache)
 
@@ -128,6 +130,64 @@ class NPCDecisionWorker(WorkerThread):
                 ))
         else:
             self.emit(ShipMoveIntent(ship_id=ship.id, destination=src_sys_id))
+
+    def _freelance_decision(self, ship, universe, region_cache):
+        """Freelance trader: buy cheap, sell expensive using region cache."""
+        import random
+        loc = universe.get(ship.location)
+        if not loc:
+            return
+
+        # Navigate to a station if not at one
+        station_objs = [o for o in loc.objects if o.obj_type == "station"]
+        at_station = any(ship.intra_position == o.id for o in station_objs)
+        if not at_station and station_objs:
+            self.emit(ShipIntraIntent(ship_id=ship.id, dest_obj_id=station_objs[0].id))
+            return
+
+        # If carrying cargo, sell at local station
+        if ship.cargo:
+            if loc.stations:
+                commodity = next(iter(ship.cargo))
+                self.emit(ShipSellIntent(
+                    ship_id=ship.id, system_id=ship.location,
+                    station_name=loc.stations[0].name,
+                    commodity_id=commodity, quantity=ship.cargo[commodity]
+                ))
+            return
+
+        # Find profitable commodity: high stock somewhere in region
+        region = loc.region
+        region_items = region_cache.get(region, {})
+        best = None
+        best_qty = 0
+        for commodity_id, sources in region_items.items():
+            for src_sys_id, src_station_name, qty in sources:
+                if qty > best_qty and src_sys_id != ship.location:
+                    danger = 1.0 - SECURITY_LEVEL.get(universe.get(src_sys_id, loc).security, 0.0)
+                    if danger <= ship.risk_tolerance:
+                        best = (src_sys_id, src_station_name, commodity_id, qty)
+                        best_qty = qty
+
+        if best:
+            src_sys_id, src_station_name, commodity_id, qty = best
+            if ship.location == src_sys_id:
+                buy_qty = min(qty * 0.3, ship.cargo_capacity)
+                if buy_qty > 1:
+                    self.emit(ShipBuyIntent(
+                        ship_id=ship.id, system_id=src_sys_id,
+                        station_name=src_station_name,
+                        commodity_id=commodity_id, quantity=buy_qty,
+                        route_home=[]
+                    ))
+                    return
+            self.emit(ShipMoveIntent(ship_id=ship.id, destination=src_sys_id))
+            return
+
+        # Wander
+        neighbors = [n for n in loc.connections if (1.0 - SECURITY_LEVEL.get(universe.get(n, loc).security, 0.0)) <= ship.risk_tolerance]
+        if neighbors:
+            self.emit(ShipMoveIntent(ship_id=ship.id, destination=random.choice(neighbors)))
 
     def _miner_decision(self, ship, universe, region_cache):
         loc = universe.get(ship.location)

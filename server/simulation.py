@@ -45,8 +45,7 @@ class Simulation:
         self.start_time = time.time()
         self.events: list[dict] = []
         self.trade_volume = 0
-        self._spawn_traders(200)
-        self._spawn_miners(80)
+        self._populate_universe()
         self._bootstrap_seed()
         # Warfare simulation
         from server.warfare import WarfareSimulation
@@ -101,68 +100,111 @@ class Simulation:
                     for tg in STATION_CONSUMPTION.get(station.station_type, []):
                         station.inventory[tg] = max(station.inventory.get(tg, 0), 2000)
 
-    def _spawn_traders(self, count: int):
+    def _populate_universe(self):
+        """Create a living universe: industrial ships + military fleets."""
         from server.data_access import load_ship_types
         all_ships = load_ship_types()
         hauler_types = [s for s in all_ships.values() if s.role == 'Industrial']
-        trade_corps = ["Voidway Logistics", "Galactic Exchange", "Federal Transit Authority", "Smelter's Union", "Terraform Pioneers"]
-        risk_by_tier = {1: 0.2, 2: 0.5, 3: 0.7, 4: 0.9}
-
-        # Build list of producing stations that need haulers
-        producing_stations = []
-        for sid, sys in self.universe.items():
-            for station in sys.stations:
-                if station.produces:
-                    producing_stations.append((sid, station))
-
-        # Assign haulers round-robin to producing stations (2 per station)
-        i = 0
-        for idx in range(count):
-            station_idx = idx % len(producing_stations)
-            sys_id, station = producing_stations[station_idx]
-            st = hauler_types[idx % len(hauler_types)]
-            faction = trade_corps[idx % len(trade_corps)]
-            registry = f"HLR-{random.randint(1000,9999)}"
-            ship = NPCShip(
-                id=f"hauler_{idx}", name=f"{st.name} {registry}",
-                cargo_capacity=st.cargo_capacity + random.randint(-20, 20),
-                fuel=float(st.fuel_capacity), location=sys_id,
-                speed=st.speed, state="idle",
-                role="hauler", ship_class=st.id, intra_speed=st.intra_speed,
-                risk_tolerance=risk_by_tier.get(st.tier, 0.5), faction=faction,
-                align_time=st.align_time,
-                assigned_station=station.name, assigned_system=sys_id,
-            )
-            station_objs = [o for o in self.universe[sys_id].objects if o.obj_type == "station"]
-            if station_objs:
-                ship.intra_position = station_objs[0].id
-            self.ships.append(ship)
-
-    def _spawn_miners(self, count: int):
-        mining_systems = [sid for sid, sys in self.universe.items() if sys.asteroid_fields]
-        from server.data_access import load_ship_types
-        all_ships = load_ship_types()
         miner_types = [s for s in all_ships.values() if s.role == 'Mining Barge']
-        miner_factions = ["Rockbreaker Collective", "Deepvein Extraction", "Smelter's Union"]
-        risk_by_tier = {1: 0.2, 2: 0.5, 3: 0.8}
-        for i in range(count):
-            st = miner_types[i % len(miner_types)]
-            faction = miner_factions[i % len(miner_factions)]
-            registry = f"MNR-{random.randint(1000,9999)}"
-            loc = random.choice(mining_systems)
-            ship = NPCShip(
-                id=f"miner_{i}", name=f"{st.name} {registry}",
-                cargo_capacity=st.cargo_capacity + random.randint(-10, 10),
-                fuel=float(st.fuel_capacity), location=loc,
-                speed=st.speed, state="idle",
-                role="miner", ship_class=st.id, intra_speed=st.intra_speed,
-                risk_tolerance=risk_by_tier.get(st.tier, 0.5), faction=faction,
-                align_time=st.align_time,
-            )
-            station_objs = [o for o in self.universe[loc].objects if o.obj_type == "station"]
-            if station_objs:
-                ship.intra_position = station_objs[0].id
-            self.ships.append(ship)
+
+        ship_idx = 0
+
+        # --- Industrial ships: haulers & freelancers ---
+        # ~4 per system that has stations (~600 haulers/freelancers)
+        for sys_id, sys in self.universe.items():
+            if not sys.stations:
+                continue
+            for i in range(4):
+                st = hauler_types[ship_idx % len(hauler_types)]
+                role = "freelance" if random.random() < 0.2 else "hauler"
+                station = sys.stations[i % len(sys.stations)]
+                ship = NPCShip(
+                    id=f"hlr_{ship_idx}", name=f"{random.choice(NPC_TRADER_NAMES)} {random.randint(100,999)}",
+                    cargo_capacity=st.cargo_capacity + random.randint(-20, 20),
+                    fuel=float(st.fuel_capacity), location=sys_id,
+                    speed=st.speed, state="idle",
+                    role=role, ship_class=st.id, intra_speed=st.intra_speed,
+                    risk_tolerance=random.uniform(0.3, 0.8), faction=sys.faction or "independent",
+                    align_time=st.align_time,
+                    assigned_station=station.name if role == "hauler" else "",
+                    assigned_system=sys_id if role == "hauler" else "",
+                )
+                station_objs = [o for o in sys.objects if o.obj_type == "station"]
+                if station_objs:
+                    ship.intra_position = station_objs[i % len(station_objs)].id
+                self.ships.append(ship)
+                ship_idx += 1
+
+        # --- Miners: 2 per mining system (~400 miners) ---
+        miner_idx = 0
+        mining_systems = [sid for sid, s in self.universe.items() if s.asteroid_fields]
+        random.shuffle(mining_systems)
+        for sys_id in mining_systems[:200]:
+            sys = self.universe[sys_id]
+            for i in range(2):
+                st = miner_types[miner_idx % len(miner_types)]
+                ship = NPCShip(
+                    id=f"mnr_{miner_idx}", name=f"{random.choice(NPC_MINER_NAMES)} {random.randint(100,999)}",
+                    cargo_capacity=st.cargo_capacity + random.randint(-10, 10),
+                    fuel=float(st.fuel_capacity), location=sys_id,
+                    speed=st.speed, state="idle",
+                    role="miner", ship_class=st.id, intra_speed=st.intra_speed,
+                    risk_tolerance=random.uniform(0.2, 0.7), faction=sys.faction or "independent",
+                    align_time=st.align_time,
+                )
+                station_objs = [o for o in sys.objects if o.obj_type == "station"]
+                if station_objs:
+                    ship.intra_position = station_objs[0].id
+                self.ships.append(ship)
+                miner_idx += 1
+
+        # --- Military ships: faction fleets ---
+        from server.game_data_db import get_data_db
+        conn = get_data_db()
+        conn.row_factory = __import__('sqlite3').Row
+
+        fleet_targets = {
+            "terran_fed": 80, "merchants_guild": 120, "free_states": 110,
+            "iron_compact": 100, "science_collective": 110, "corsairs": 60,
+        }
+        # Composition: 40% fighters, 25% frigates, 15% destroyers, 10% cruisers, 7% BCs, 3% BSs
+        composition = [
+            ("Fighter", 0.40), ("Frigate", 0.25), ("Destroyer", 0.15),
+            ("Cruiser", 0.10), ("Battlecruiser", 0.07), ("Battleship", 0.03),
+        ]
+
+        mil_idx = 0
+        for faction_id, total in fleet_targets.items():
+            # Get faction's systems for spreading ships
+            faction_systems = [sid for sid, s in self.universe.items() if s.faction == faction_id]
+            if not faction_systems:
+                continue
+            # Get faction's military ships by hull class
+            faction_ships = {}
+            rows = conn.execute("SELECT id, name, hull_class FROM ships WHERE faction_id=? AND hull_class NOT IN ('Carrier','Dreadnought')", (faction_id,)).fetchall()
+            for r in rows:
+                faction_ships.setdefault(r["hull_class"], []).append((r["id"], r["name"]))
+
+            for hull_class, pct in composition:
+                count = max(1, int(total * pct))
+                variants = faction_ships.get(hull_class, [])
+                if not variants:
+                    continue
+                for i in range(count):
+                    ship_def = variants[i % len(variants)]
+                    sys_id = faction_systems[mil_idx % len(faction_systems)]
+                    ship = NPCShip(
+                        id=f"mil_{mil_idx}", name=f"{ship_def[1]} {random.randint(100,999)}",
+                        cargo_capacity=0, fuel=100.0, location=sys_id,
+                        speed=1.0, state="idle",
+                        role="patrol", ship_class=ship_def[0], intra_speed=0.2,
+                        risk_tolerance=1.0, faction=faction_id,
+                        align_time=5,
+                    )
+                    self.ships.append(ship)
+                    mil_idx += 1
+
+        conn.close()
 
     # ── Intra-system helpers ─────────────────────────────────────────────────
 
@@ -452,8 +494,12 @@ class Simulation:
         for ship in self.ships:
             if ship.state != "idle":
                 continue
+            if ship.role not in ("hauler", "miner", "freelance"):
+                continue
             if ship.role == "miner":
                 self._miner_decision(ship)
+            elif ship.role == "freelance":
+                self._freelance_decision(ship)
             else:
                 self._trader_decision(ship)
 
@@ -547,6 +593,55 @@ class Simulation:
             else:
                 self._send_ship(ship, src_sys)
                 return
+
+    def _freelance_decision(self, ship: NPCShip):
+        """Freelance trader: find buy-low sell-high opportunities across the region."""
+        loc = self.universe[ship.location]
+
+        # Navigate to a station if not at one
+        station_objs = [o for o in loc.objects if o.obj_type == "station"]
+        at_station = any(ship.intra_position == o.id for o in station_objs)
+        if not at_station and station_objs:
+            self._start_intra_travel(ship, station_objs[0].id)
+            return
+
+        # If carrying cargo, sell at best local station or travel to sell target
+        if ship.cargo:
+            best_sell = self._find_best_sell(ship, loc)
+            if best_sell:
+                commodity, station, price = best_sell
+                qty = ship.cargo.pop(commodity)
+                station.inventory[commodity] = station.inventory.get(commodity, 0) + qty
+                ship.state = "unloading"
+                ship.state_timer = UNLOADING_TICKS
+                self.trade_volume += 1
+                return
+            # Look for a buyer in region
+            for neighbor_id in loc.connections:
+                if self._system_danger(neighbor_id) <= ship.risk_tolerance:
+                    if self._send_ship(ship, neighbor_id):
+                        return
+            return
+
+        # No cargo: find a trade opportunity
+        best = self._find_best_trade(ship, loc)
+        if best:
+            commodity, station, dest_id, profit = best
+            if ship.location == self.universe[ship.location].id:
+                available = station.inventory.get(commodity, 0)
+                buy_qty = min(available * 0.3, ship.cargo_capacity)
+                if buy_qty > 1:
+                    station.inventory[commodity] -= buy_qty
+                    ship.cargo[commodity] = buy_qty
+                    ship.state = "loading"
+                    ship.state_timer = LOADING_TICKS
+                    ship.route_path = self._find_path(ship.location, dest_id, ship.risk_tolerance)
+                    ship.destination = ship.route_path[0] if ship.route_path else dest_id
+                    return
+        # Wander to a neighbor
+        neighbors = [n for n in loc.connections if self._system_danger(n) <= ship.risk_tolerance]
+        if neighbors:
+            self._send_ship(ship, random.choice(neighbors))
 
     def _miner_decision(self, ship: NPCShip):
         loc = self.universe[ship.location]
