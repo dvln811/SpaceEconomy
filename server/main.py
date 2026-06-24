@@ -297,14 +297,21 @@ def api_positions():
 def api_market_orders():
     """Buy/sell orders, optionally filtered by region."""
     from server.simulation import COMMODITIES as COMS
+    from server.game_data_db import get_data_db
     region_filter = request.args.get('region', '')
     buy_orders = []
     sell_orders = []
 
-    # Civilian demand items (what populations buy)
-    CIVILIAN_ITEMS = [k for k, c in COMS.items() if c.base_price <= 500 and not k.startswith('station_')]
-    # Military demand items (weapons, ammo, drones, armor)
-    MILITARY_ITEMS = [k for k, c in COMS.items() if any(x in k for x in ('ammo_','drone_','weapon_','armor_','shield_','missile_'))]
+    # Build item category sets once
+    if not hasattr(api_market_orders, '_mil_items'):
+        conn = get_data_db()
+        api_market_orders._mil_items = [r[0] for r in conn.execute(
+            "SELECT id FROM commodities WHERE category IN ('Weapons','Ammunition','Drones','Ship Equipment')").fetchall()]
+        api_market_orders._civ_items = [r[0] for r in conn.execute(
+            "SELECT id FROM commodities WHERE category IN ('Weapons','Ammunition','Drones','Ship Equipment','Materials','Trade Goods')").fetchall()]
+        conn.close()
+    MILITARY_ITEMS = api_market_orders._mil_items
+    CIVILIAN_ITEMS = api_market_orders._civ_items
 
     for sid, sys_obj in sim.universe.items():
         region = getattr(sys_obj, 'region', '')
@@ -329,33 +336,30 @@ def api_market_orders():
             # Military base demand for combat items
             if st.station_type == 'military_base':
                 import random as _rnd
-                for item_id in _rnd.sample(MILITARY_ITEMS, min(8, len(MILITARY_ITEMS))):
+                for item_id in _rnd.sample(MILITARY_ITEMS, min(20, len(MILITARY_ITEMS))):
                     if item_id in COMS:
-                        buy_orders.append({'commodity': item_id, 'qty': _rnd.randint(5, 50),
+                        buy_orders.append({'commodity': item_id, 'qty': _rnd.randint(5, 100),
                             'price': round(COMS[item_id].base_price * 1.3, 2),
                             'station': st.name, 'system': sys_obj.name, 'system_id': sid, 'region': region})
 
-        # Civilian population demand (trade hubs buy consumer goods)
+        # Civilian population demand
         pop = getattr(sys_obj, 'population', 0) or 0
         if pop > 10000:
-            # Scale demand by population tier
             import random as _rnd
-            demand_scale = min(100, max(1, pop // 100000))
-            trade_hubs = [st for st in sys_obj.stations if st.station_type == 'trade_hub']
-            if trade_hubs:
-                hub = trade_hubs[0]
-                # Pick 5-15 random civilian items this hub wants
-                n_items = min(15, max(5, demand_scale // 5))
+            demand_scale = min(50, max(1, pop // 500000))
+            # All stations in populated systems generate some civilian demand
+            for st in sys_obj.stations:
+                n_items = min(20, max(5, demand_scale))
                 for item_id in _rnd.sample(CIVILIAN_ITEMS, min(n_items, len(CIVILIAN_ITEMS))):
                     if item_id in COMS:
-                        qty = demand_scale * _rnd.randint(2, 10)
+                        qty = max(1, demand_scale * _rnd.randint(1, 5))
                         buy_orders.append({'commodity': item_id, 'qty': qty,
-                            'price': round(COMS[item_id].base_price * 0.7, 2),
-                            'station': hub.name, 'system': sys_obj.name, 'system_id': sid, 'region': region})
+                            'price': round(COMS[item_id].base_price * 0.8, 2),
+                            'station': st.name, 'system': sys_obj.name, 'system_id': sid, 'region': region})
 
     return jsonify({"tick": sim.tick_count, "region": region_filter,
-                    "buy_orders": sorted(buy_orders, key=lambda x: -x['qty'])[:500],
-                    "sell_orders": sorted(sell_orders, key=lambda x: -x['qty'])[:500]})
+                    "buy_orders": buy_orders[:1000],
+                    "sell_orders": sell_orders[:1000]})
 
 
 @app.route("/api/market/regions")
