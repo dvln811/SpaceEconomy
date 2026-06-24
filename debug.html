@@ -643,14 +643,12 @@ function renderShips() {
       <div class="panel-title">By State</div>
       ${Object.entries(byState).sort((a,b)=>b[1]-a[1]).map(([state,ct])=>`<div class="stat-row"><span class="label">${fmtName(state)}</span><span class="value" style="color:${stateColors[state]||'#8aa0b8'}">${ct}</span></div>`).join('')}
     </div>
-    <div class="panel" style="grid-column:1/-1">
+    <div class="panel">
       <div class="panel-title">By Faction</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:4px">
       ${Object.entries(byFaction).sort((a,b)=>(b[1].mil+b[1].ind)-(a[1].mil+a[1].ind)).map(([f,d])=>`<div class="stat-row"><span class="label">${fmtName(f)}</span><span class="value"><span style="color:#ef5350">${d.mil} mil</span> + <span style="color:#4fc3f7">${d.ind} ind</span></span></div>`).join('')}
-      </div>
     </div>
-    <div class="panel" style="grid-column:1/-1">
-      <div class="panel-title">Activity Log (recent state changes)</div>
+    <div class="panel">
+      <div class="panel-title">Activity Log</div>
       ${window._shipLog.slice(0,10).map(e=>`<div style="padding:2px 0;font-size:11px;border-bottom:1px solid #0f1a28"><span style="color:#5a7a9a">T${e.tick}</span> <span style="color:#e0e8f0">${e.name}</span>: <span style="color:${stateColors[e.from]||'#8aa0b8'}">${e.from}</span> → <span style="color:${stateColors[e.to]||'#8aa0b8'}">${e.to}</span></div>`).join('')||'<div style="color:#8aa0b8;font-size:11px">No state changes recorded yet</div>'}
     </div>
   </div>`;
