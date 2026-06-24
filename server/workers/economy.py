@@ -1,5 +1,5 @@
 """Economy worker: production, consumption, ore generation, price updates.
-Optimized: batch consumption every 5 ticks, skip idle stations, only emit non-zero deltas."""
+Optimized: consumption every tick at 2x, skip idle stations, only emit non-zero deltas."""
 from server.supervisor import WorkerThread
 from server.intents import InventoryDelta, PriceUpdate, EventLog
 from server.models import calculate_price
@@ -13,7 +13,7 @@ class EconomyWorker(WorkerThread):
 
     def process(self, tick: int, snapshot):
         universe = snapshot['universe']
-        do_consumption = (tick % 5 == 0)
+        do_consumption = True
         self._production(universe, tick, do_consumption)
         if tick % 60 == 0 or tick == 1:
             self._update_prices(universe, tick)
@@ -83,10 +83,10 @@ class EconomyWorker(WorkerThread):
                             deltas[input_id] = deltas.get(input_id, 0) - qty_needed * actual
                         deltas[commodity_id] = deltas.get(commodity_id, 0) + actual
 
-                # End-use consumption (every 5 ticks, 10x rate to compensate)
+                # End-use consumption (every tick, 2x rate)
                 if do_consumption:
                     for commodity_id in station_consumption.get(station.station_type, []):
-                        deltas[commodity_id] = deltas.get(commodity_id, 0) - 10.0
+                        deltas[commodity_id] = deltas.get(commodity_id, 0) - 2.0
 
                 # Only emit if there are actual non-zero changes
                 if deltas:
