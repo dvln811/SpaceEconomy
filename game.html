@@ -1266,10 +1266,12 @@ container.addEventListener('mousemove',(e)=>{
     const idx=systemMeshes.indexOf(sysHits[0].object);
     if(idx>=0){
       const s=systems[idx];
+      const facNames={terran_fed:'Terran Federation',iron_compact:'Iron Compact',free_states:'Frontier Alliance',merchants_guild:'Merchants Guild',science_collective:'Nexus Collective',corsairs:'The Corsairs'};
       let html=`<div class="tt-title">${s.name}</div>
-        <div class="tt-row">Type: <span class="tt-val">${typeLabels[s.type]||s.type}</span></div>
+        <div class="tt-row">Faction: <span class="tt-val">${s.faction?facNames[s.faction]||s.faction:'Unclaimed'}</span></div>
         <div class="tt-row">Security: <span class="tt-val">${(s.sec_level||0).toFixed(1)} (${s.security})</span></div>
-        <div class="tt-row">Stations: <span class="tt-val">${s.station_count}</span></div>`;
+        <div class="tt-row">Region: <span class="tt-val">${s.region||'Unknown'}</span></div>
+        <div class="tt-row">Constellation: <span class="tt-val">${s.cluster||'Unknown'}</span></div>`;
       tooltip.innerHTML=html;
       tooltip.style.left=(e.clientX-rect.left+12)+'px';
       tooltip.style.top=(e.clientY-rect.top-8)+'px';
