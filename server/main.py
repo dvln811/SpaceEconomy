@@ -295,11 +295,14 @@ def api_positions():
 
 @app.route("/api/market/orders")
 def api_market_orders():
-    """All buy/sell orders across all stations. Lightweight: only stations with orders."""
+    """Buy/sell orders, optionally filtered by region."""
+    region_filter = request.args.get('region', '')
     buy_orders = []
     sell_orders = []
     for sid, sys_obj in sim.universe.items():
         region = getattr(sys_obj, 'region', '')
+        if region_filter and region != region_filter:
+            continue
         for st in sys_obj.stations:
             sells, buys = _build_order_book(st)
             for o in sells:
@@ -314,7 +317,14 @@ def api_market_orders():
                 o['system_id'] = sid
                 o['region'] = region
                 buy_orders.append(o)
-    return jsonify({"tick": sim.tick_count, "buy_orders": sorted(buy_orders, key=lambda x: -x['qty'])[:500], "sell_orders": sorted(sell_orders, key=lambda x: -x['qty'])[:500]})
+    return jsonify({"tick": sim.tick_count, "region": region_filter, "buy_orders": buy_orders[:500], "sell_orders": sell_orders[:500]})
+
+
+@app.route("/api/market/regions")
+def api_market_regions():
+    """List all regions."""
+    regions = sorted(set(getattr(s, 'region', '') for s in sim.universe.values() if getattr(s, 'region', '')))
+    return jsonify(regions)
 
 
 @app.route("/api/market/ships")

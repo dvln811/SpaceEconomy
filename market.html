@@ -68,6 +68,8 @@ tr:hover td{background:#0a1020}
 </div>
 <div class="main-content">
   <div class="toolbar">
+    <label>Region:</label>
+    <select id="regionSelect"><option value="">All Regions</option></select>
     <label>Group by:</label>
     <select id="groupBy"><option value="none">None</option><option value="item">Item</option><option value="region">Region</option><option value="system">System</option><option value="station">Station</option></select>
     <span id="filterLabel" style="color:#4fc3f7;font-size:11px"></span>
@@ -98,7 +100,14 @@ let selectedFilter = null;
 let buySortCol = 'price', buySortDir = -1;
 let sellSortCol = 'price', sellSortDir = -1;
 let lastTick = 0, expanded = {};
-let jumpMap = {}; // {system_id: jumps from Cygnus}
+let jumpMap = {};
+let currentRegion = 'The Forge'; // default: player home region
+
+async function loadRegions(){
+  const regions = await fetch('/api/market/regions').then(r=>r.json());
+  const sel = document.getElementById('regionSelect');
+  sel.innerHTML = '<option value="">All Regions</option>' + regions.map(r=>`<option value="${r}"${r===currentRegion?' selected':''}>${r}</option>`).join('');
+} // {system_id: jumps from Cygnus}
 
 function displayName(c){
   if(!c) return '';
@@ -266,8 +275,9 @@ function getFilteredIds(){
 
 async function loadMarketData(){
   try{
+    const regionParam = currentRegion ? '?region='+encodeURIComponent(currentRegion) : '';
     const [ordersRes, ships] = await Promise.all([
-      fetch('/api/market/orders').then(r=>r.json()),
+      fetch('/api/market/orders'+regionParam).then(r=>r.json()),
       fetch('/api/market/ships').then(r=>r.json())
     ]);
     lastTick = ordersRes.tick || 0;
@@ -403,6 +413,8 @@ document.head.appendChild(ctxStyle);
 
 document.getElementById('treeSearch').addEventListener('input',function(){renderTree();renderOrders();});
 document.getElementById('groupBy').addEventListener('change',renderOrders);
+document.getElementById('regionSelect').addEventListener('change',function(){currentRegion=this.value;loadMarketData();});
+loadRegions();
 loadCommodities().then(loadMarketData);
 setInterval(loadMarketData,10000);
 })();
