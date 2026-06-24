@@ -338,7 +338,7 @@ def api_market_orders():
                 import random as _rnd
                 for item_id in _rnd.sample(MILITARY_ITEMS, min(20, len(MILITARY_ITEMS))):
                     if item_id in COMS:
-                        buy_orders.append({'commodity': item_id, 'qty': _rnd.randint(5, 100),
+                        buy_orders.append({'commodity': item_id, 'qty': _rnd.randint(10, 200),
                             'price': round(COMS[item_id].base_price * 1.3, 2),
                             'station': st.name, 'system': sys_obj.name, 'system_id': sid, 'region': region})
 
@@ -356,6 +356,25 @@ def api_market_orders():
                         buy_orders.append({'commodity': item_id, 'qty': qty,
                             'price': round(COMS[item_id].base_price * 0.8, 2),
                             'station': st.name, 'system': sys_obj.name, 'system_id': sid, 'region': region})
+
+    # Include build project demand
+    global _project_orders_cache, _project_orders_tick
+    if sim.tick_count - _project_orders_tick > 60:
+        _project_orders_cache = _get_project_buy_orders()
+        _project_orders_tick = sim.tick_count
+    for sys_id, proj_orders in _project_orders_cache.items():
+        sys_obj = sim.universe.get(sys_id)
+        if not sys_obj:
+            continue
+        region = getattr(sys_obj, 'region', '')
+        if region_filter and region != region_filter:
+            continue
+        for o in proj_orders:
+            o['system'] = sys_obj.name
+            o['system_id'] = sys_id
+            o['region'] = region
+            o['station'] = 'Build Project'
+            buy_orders.append(o)
 
     return jsonify({"tick": sim.tick_count, "region": region_filter,
                     "buy_orders": buy_orders[:1000],
