@@ -36,6 +36,18 @@ class EconomyWorker(WorkerThread):
 
                 # Recipe-based production (skip if station produces nothing)
                 if station.produces:
+                    # Baseline input trickle: slowly generate recipe inputs so production doesn't completely stall
+                    if sys.faction:
+                        for prod_id in station.produces:
+                            com = commodities.get(prod_id)
+                            if not com or not com.recipe:
+                                continue
+                            for inp_id, qty in com.recipe.items():
+                                current = station.inventory.get(inp_id, 0) + deltas.get(inp_id, 0)
+                                need = qty * station.production_rate * 200
+                                if current < need:
+                                    deltas[inp_id] = deltas.get(inp_id, 0) + qty * station.production_rate * 0.3
+
                     for commodity_id in station.produces:
                         commodity = commodities.get(commodity_id)
                         if not commodity or not commodity.recipe:
