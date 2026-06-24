@@ -349,7 +349,7 @@ class Supervisor:
                 cache[region] = {}
             for st in sys.stations:
                 for commodity, qty in st.inventory.items():
-                    if qty > 50:
+                    if qty > 10:
                         if commodity not in cache[region]:
                             cache[region][commodity] = []
                         cache[region][commodity].append((sid, st.name, qty))

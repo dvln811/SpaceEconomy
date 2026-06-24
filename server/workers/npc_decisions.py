@@ -85,7 +85,9 @@ class NPCDecisionWorker(WorkerThread):
                 continue
             for inp_id, qty in c.recipe.items():
                 stock = target.inventory.get(inp_id, 0)
-                if stock < lowest:
+                # Always want more inputs - haul if below 500 ticks of supply
+                want = qty * target.production_rate * 500
+                if stock < want and stock < lowest:
                     lowest = stock
                     needed = inp_id
 
