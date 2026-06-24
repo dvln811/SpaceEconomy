@@ -15,7 +15,7 @@ log = logging.getLogger("supervisor")
 
 LOADING_TICKS = 3
 UNLOADING_TICKS = 2
-MINING_TICKS = 5
+MINING_TICKS = 20
 
 
 class WorkerThread:

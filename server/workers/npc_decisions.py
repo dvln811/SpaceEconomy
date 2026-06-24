@@ -7,7 +7,7 @@ from server.intents import (
 )
 
 
-BATCH_SIZE = 150  # Process N idle ships per tick (round-robin)
+BATCH_SIZE = 200  # Process N idle ships per tick (round-robin)
 
 
 class NPCDecisionWorker(WorkerThread):
@@ -21,24 +21,22 @@ class NPCDecisionWorker(WorkerThread):
         universe = snapshot['universe']
         region_cache = snapshot['region_cache']
 
-        # Process ALL idle miners every tick (they always have work)
-        idle_miners = [s for s in ships if s.state == "idle" and s.role == "miner"]
-        for ship in idle_miners:
-            self._miner_decision(ship, universe, region_cache)
-
-        # Batch haulers/freelancers
-        idle_traders = [s for s in ships if s.state == "idle" and s.role in ("hauler", "freelance")]
-        if not idle_traders:
+        # Collect all idle industrial ships
+        idle_ships = [s for s in ships if s.state == "idle" and s.role in ("hauler", "miner", "freelance")]
+        if not idle_ships:
             return
 
-        start = self._batch_offset % len(idle_traders)
-        batch = idle_traders[start:start + BATCH_SIZE]
-        if start + BATCH_SIZE > len(idle_traders):
-            batch += idle_traders[:max(0, (start + BATCH_SIZE) - len(idle_traders))]
+        # Process up to 200 per tick
+        start = self._batch_offset % max(1, len(idle_ships))
+        batch = idle_ships[start:start + BATCH_SIZE]
+        if len(batch) < BATCH_SIZE:
+            batch += idle_ships[:BATCH_SIZE - len(batch)]
         self._batch_offset += BATCH_SIZE
 
         for ship in batch:
-            if ship.role == "freelance":
+            if ship.role == "miner":
+                self._miner_decision(ship, universe, region_cache)
+            elif ship.role == "freelance":
                 self._freelance_decision(ship, universe, region_cache)
             else:
                 self._trader_decision(ship, universe, region_cache)

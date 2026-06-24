@@ -641,7 +641,7 @@ function renderShips() {
     </div>
     <div class="panel">
       <div class="panel-title">By State</div>
-      ${Object.entries(byState).sort((a,b)=>b[1]-a[1]).map(([state,ct])=>`<div class="stat-row"><span class="label">${fmtName(state)}</span><span class="value" style="color:${stateColors[state]||'#8aa0b8'}">${ct}</span></div>`).join('')}
+      ${['idle','mining','intra_traveling','traveling','loading','unloading'].map(state=>`<div class="stat-row"><span class="label">${fmtName(state)}</span><span class="value" style="color:${stateColors[state]||'#8aa0b8'}">${byState[state]||0}</span></div>`).join('')}
     </div>
     <div class="panel">
       <div class="panel-title">By Faction</div>
