@@ -307,6 +307,9 @@ function renderFactions() {
 }
 
 function renderOverview() {
+  // Don't re-render if user is typing in a search box
+  const focused = document.activeElement;
+  if(focused && (focused.id==='invSearch'||focused.id==='conSearch')) return;
   const s = D.ships_by_state || {};
   const uptime = D.uptime_seconds;
   const h = Math.floor(uptime/3600), m = Math.floor((uptime%3600)/60), sec = uptime%60;
@@ -391,7 +394,9 @@ function renderOverview() {
       })()}
     </div>
     <div class="panel">
-      <div class="panel-title">Consumption</div>
+      <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center">Consumption
+        <span style="font-size:10px;letter-spacing:0">${['Top','Search'].map(m=>`<span onclick="window._conMode='${m.toLowerCase()}';renderOverview()" style="cursor:pointer;padding:2px 5px;border:1px solid ${(window._conMode||'top')===m.toLowerCase()?'#4fc3f7':'#1a2844'};border-radius:2px;color:${(window._conMode||'top')===m.toLowerCase()?'#4fc3f7':'#8aa0b8'};margin-left:3px">${m}</span>`).join('')}</span>
+      </div>
       ${(()=>{const dem=D.demand||{};const mode=window._conMode||'top';
         if(mode==='search'){
           return `<input id="conSearch" type="text" placeholder="Search..." style="width:100%;background:#0d1525;border:1px solid #1a2844;color:#c8d4e0;padding:4px 6px;border-radius:3px;font-size:11px;font-family:inherit;margin-bottom:4px" value="${window._conQ||''}" onkeyup="window._conQ=this.value;clearTimeout(window._conTO2);window._conTO2=setTimeout(renderOverview,300)">
@@ -399,7 +404,6 @@ function renderOverview() {
         }
         const sorted=Object.entries(dem).filter(([,v])=>v.demand_per_tick>0).sort((a,b)=>b[1].demand_per_tick-a[1].demand_per_tick).slice(0,8);return sorted.map(([k,v])=>{const col=v.ticks_remaining>100?'#66bb6a':v.ticks_remaining>=20?'#ffd54f':'#ef5350';const status=v.ticks_remaining>100?'\u25B2':'\u25BC';return`<div class="stat-row"><span class="label">${v.name||fmtName(k)}</span><span class="value" style="font-size:11px"><span style="color:#8aa0b8">${v.demand_per_tick.toFixed(1)}/t</span> <span style="color:#5a7a9a">${Math.round(v.total_supply||0).toLocaleString()}</span> <span style="color:${col}">${status}</span></span></div>`;}).join('')||'<div style="color:#8aa0b8;font-size:11px">No data</div>';
       })()}
-      <div style="margin-top:4px;display:flex;gap:4px"><button class="mode-btn${(window._conMode||'top')==='top'?' active':''}" onclick="window._conMode='top';renderOverview()">Top</button><button class="mode-btn${window._conMode==='search'?' active':''}" onclick="window._conMode='search';renderOverview()">Search</button></div>
     </div>
     <div class="panel">
       <div class="panel-title">Demand Balance</div>
