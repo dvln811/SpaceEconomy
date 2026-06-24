@@ -296,13 +296,21 @@ def api_positions():
 @app.route("/api/market/orders")
 def api_market_orders():
     """Buy/sell orders, optionally filtered by region."""
+    from server.simulation import COMMODITIES as COMS
     region_filter = request.args.get('region', '')
     buy_orders = []
     sell_orders = []
+
+    # Civilian demand items (what populations buy)
+    CIVILIAN_ITEMS = [k for k, c in COMS.items() if c.base_price <= 500 and not k.startswith('station_')]
+    # Military demand items (weapons, ammo, drones, armor)
+    MILITARY_ITEMS = [k for k, c in COMS.items() if any(x in k for x in ('ammo_','drone_','weapon_','armor_','shield_','missile_'))]
+
     for sid, sys_obj in sim.universe.items():
         region = getattr(sys_obj, 'region', '')
         if region_filter and region != region_filter:
             continue
+        # Station-based orders (production needs + consumption)
         for st in sys_obj.stations:
             sells, buys = _build_order_book(st)
             for o in sells:
@@ -317,7 +325,37 @@ def api_market_orders():
                 o['system_id'] = sid
                 o['region'] = region
                 buy_orders.append(o)
-    return jsonify({"tick": sim.tick_count, "region": region_filter, "buy_orders": buy_orders[:500], "sell_orders": sell_orders[:500]})
+
+            # Military base demand for combat items
+            if st.station_type == 'military_base':
+                import random as _rnd
+                for item_id in _rnd.sample(MILITARY_ITEMS, min(8, len(MILITARY_ITEMS))):
+                    if item_id in COMS:
+                        buy_orders.append({'commodity': item_id, 'qty': _rnd.randint(5, 50),
+                            'price': round(COMS[item_id].base_price * 1.3, 2),
+                            'station': st.name, 'system': sys_obj.name, 'system_id': sid, 'region': region})
+
+        # Civilian population demand (trade hubs buy consumer goods)
+        pop = getattr(sys_obj, 'population', 0) or 0
+        if pop > 10000:
+            # Scale demand by population tier
+            import random as _rnd
+            demand_scale = min(100, max(1, pop // 100000))
+            trade_hubs = [st for st in sys_obj.stations if st.station_type == 'trade_hub']
+            if trade_hubs:
+                hub = trade_hubs[0]
+                # Pick 5-15 random civilian items this hub wants
+                n_items = min(15, max(5, demand_scale // 5))
+                for item_id in _rnd.sample(CIVILIAN_ITEMS, min(n_items, len(CIVILIAN_ITEMS))):
+                    if item_id in COMS:
+                        qty = demand_scale * _rnd.randint(2, 10)
+                        buy_orders.append({'commodity': item_id, 'qty': qty,
+                            'price': round(COMS[item_id].base_price * 0.7, 2),
+                            'station': hub.name, 'system': sys_obj.name, 'system_id': sid, 'region': region})
+
+    return jsonify({"tick": sim.tick_count, "region": region_filter,
+                    "buy_orders": sorted(buy_orders, key=lambda x: -x['qty'])[:500],
+                    "sell_orders": sorted(sell_orders, key=lambda x: -x['qty'])[:500]})
 
 
 @app.route("/api/market/regions")

@@ -54,6 +54,7 @@ class System:
     cluster: str
     security: str
     sec_level: float = 0.0
+    population: int = 0
     faction: str = ""
     region: str = ""
     x: float = 0.0
