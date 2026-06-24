@@ -151,6 +151,7 @@ class Simulation:
                     role="miner", ship_class=st.id, intra_speed=st.intra_speed,
                     risk_tolerance=random.uniform(0.5, 0.9), faction=sys.faction or "independent",
                     align_time=st.align_time,
+                    assigned_system=sys_id,
                 )
                 station_objs = [o for o in sys.objects if o.obj_type == "station"]
                 if station_objs:

@@ -21,22 +21,24 @@ class NPCDecisionWorker(WorkerThread):
         universe = snapshot['universe']
         region_cache = snapshot['region_cache']
 
-        # Collect idle ships with active roles only
-        idle_ships = [s for s in ships if s.state == "idle" and s.role in ("hauler", "miner", "freelance")]
-        if not idle_ships:
+        # Process ALL idle miners every tick (they always have work)
+        idle_miners = [s for s in ships if s.state == "idle" and s.role == "miner"]
+        for ship in idle_miners:
+            self._miner_decision(ship, universe, region_cache)
+
+        # Batch haulers/freelancers
+        idle_traders = [s for s in ships if s.state == "idle" and s.role in ("hauler", "freelance")]
+        if not idle_traders:
             return
 
-        # Round-robin batch: process BATCH_SIZE per tick
-        start = self._batch_offset % len(idle_ships)
-        batch = idle_ships[start:start + BATCH_SIZE]
-        if start + BATCH_SIZE > len(idle_ships):
-            batch += idle_ships[:max(0, (start + BATCH_SIZE) - len(idle_ships))]
+        start = self._batch_offset % len(idle_traders)
+        batch = idle_traders[start:start + BATCH_SIZE]
+        if start + BATCH_SIZE > len(idle_traders):
+            batch += idle_traders[:max(0, (start + BATCH_SIZE) - len(idle_traders))]
         self._batch_offset += BATCH_SIZE
 
         for ship in batch:
-            if ship.role == "miner":
-                self._miner_decision(ship, universe, region_cache)
-            elif ship.role == "freelance":
+            if ship.role == "freelance":
                 self._freelance_decision(ship, universe, region_cache)
             else:
                 self._trader_decision(ship, universe, region_cache)
@@ -113,6 +115,17 @@ class NPCDecisionWorker(WorkerThread):
                 best_src = (src_sys_id, src_station_name, qty)
 
         if not best_src:
+            # Fallback: find any high-stock item in region to haul
+            import random as _rnd
+            region = home_sys.region
+            region_items = region_cache.get(region, {})
+            if region_items:
+                # Pick a random commodity with sources
+                candidates = [(sid, stn, cid) for cid, srcs in region_items.items() for sid, stn, qty in srcs if qty > 100 and sid != ship.location]
+                if candidates:
+                    src_sys_id, src_station_name, commodity_id = _rnd.choice(candidates[:20])
+                    self.emit(ShipMoveIntent(ship_id=ship.id, destination=src_sys_id))
+                    return
             return
 
         src_sys_id, src_station_name, available = best_src
@@ -221,15 +234,17 @@ class NPCDecisionWorker(WorkerThread):
             self.emit(ShipMineIntent(ship_id=ship.id))
             return
 
-        # Travel to a system with belts
-        import random
-        mining_systems = [
-            sid for sid, s in universe.items()
-            if s.asteroid_fields and s.region == loc.region
-            and getattr(s, 'sec_level', 0.5) >= (1.0 - ship.risk_tolerance)
-        ]
-        if mining_systems:
-            self.emit(ShipMoveIntent(ship_id=ship.id, destination=random.choice(mining_systems)))
+        # No belts here - go to assigned system (home with belts) or find one nearby
+        if ship.assigned_system and ship.assigned_system != ship.location:
+            self.emit(ShipMoveIntent(ship_id=ship.id, destination=ship.assigned_system))
+            return
+
+        # Find nearest system with belts
+        for neighbor in loc.connections:
+            nsys = universe.get(neighbor)
+            if nsys and nsys.asteroid_fields:
+                self.emit(ShipMoveIntent(ship_id=ship.id, destination=neighbor))
+                return
 
     def _estimate_hops(self, from_id: str, to_id: str, universe) -> int:
         if from_id == to_id:

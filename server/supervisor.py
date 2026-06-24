@@ -458,7 +458,7 @@ class Supervisor:
                     ship.intra_progress = 0
                 continue
             dist = self._intra_distance(ship.location, ship.intra_position or f"{ship.location}_star", ship.intra_destination)
-            travel_ticks = max(30, min(90, dist * 5))
+            travel_ticks = max(8, min(30, dist * 2))
             step = 1.0 / travel_ticks
             ship.intra_progress += step
             if ship.intra_progress >= 1.0:
