@@ -178,35 +178,10 @@ document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
 // ── Fetch (every 2s, only updates data, never touches filter DOM) ───────────
 async function fetchData() {
   try {
-    const url = lastDebugTick ? `/api/debug?since_tick=${lastDebugTick}` : '/api/debug';
-    const r = await fetch(url);
+    const r = await fetch('/api/debug');
     const data = await r.json();
-    if(data.delta && D) {
-      // Merge changed systems into cached data
-      Object.assign(D.systems, data.systems);
-      // Merge changed ships by id
-      if(data.ships && data.ships.length) {
-        const byId = {};
-        for(const s of D.ships) byId[s.id]=s;
-        for(const s of data.ships) byId[s.id]=s;
-        D.ships = Object.values(byId);
-      }
-      // Update summary stats (always included)
-      D.tick = data.tick;
-      D.npc_ships = data.npc_ships;
-      D.trade_volume = data.trade_volume;
-      D.ships_by_state = data.ships_by_state;
-      D.total_inventory = data.total_inventory;
-      D.recent_events = data.recent_events;
-      D.uptime_seconds = data.uptime_seconds;
-      if(data.prices) D.prices = data.prices;
-      if(data.demand) D.demand = data.demand;
-      if(data.warfare) D.warfare = data.warfare;
-      if(data.performance) D.performance = data.performance;
-      if(data.factions) D.factions = data.factions;
-    } else {
-      D = data;
-    }
+    if (data.error) { console.warn(data.error); return; }
+    D = data;
     lastDebugTick = data.tick;
     const _u=D.uptime_seconds||0,_h=Math.floor(_u/3600),_m=Math.floor((_u%3600)/60),_s=_u%60;
     document.getElementById('tickInfo').textContent = `T${D.tick} | ${_h}h${_m}m${_s}s | ${D.npc_ships} ships | ${D.trade_volume} trades`;
@@ -306,16 +281,10 @@ function renderOverview() {
   const s = D.ships_by_state || {};
   const uptime = D.uptime_seconds;
   const h = Math.floor(uptime/3600), m = Math.floor((uptime%3600)/60), sec = uptime%60;
-  let totalProducing = 0, totalHalted = 0;
-  const haltedList = [];
-  for (const [sid, sys] of Object.entries(D.systems || {})) {
-    for (const st of sys.stations) {
-      for (const p of st.production) {
-        if (p.halted) { totalHalted++; haltedList.push({station: st.name, system: sys.name, output: p.name}); }
-        else totalProducing++;
-      }
-    }
-  }
+  const prod = D.production || {active:0, halted:0, total:0, bottlenecks:[]};
+  const totalProducing = prod.active;
+  const totalHalted = prod.halted;
+  const topB = (prod.bottlenecks||[]).slice(0,5);
   const inv = D.total_inventory || {};
   const topInv = Object.entries(inv).sort((a,b) => b[1]-a[1]).slice(0, 12);
   const events = (D.recent_events || []).slice().reverse().slice(0, 25);
@@ -326,7 +295,7 @@ function renderOverview() {
       <div class="stat-row"><span class="label">Tick</span><span class="value">${D.tick}</span></div>
       <div class="stat-row"><span class="label">Uptime</span><span class="value">${h}h ${m}m ${sec}s</span></div>
       <div class="stat-row"><span class="label">Ticks/sec</span><span class="value" style="color:${(D.performance||{}).ticks_per_sec>=0.95?'#66bb6a':'#ef5350'}">${(D.performance||{}).ticks_per_sec||'?'}</span></div>
-      <div class="stat-row"><span class="label">Systems</span><span class="value">${Object.keys(D.systems||{}).length}</span></div>
+      <div class="stat-row"><span class="label">Systems</span><span class="value">${D.systems||0}</span></div>
       <div class="stat-row"><span class="label">Ships</span><span class="value">${D.npc_ships}</span></div>
       <div class="stat-row"><span class="label">Trades</span><span class="value">${D.trade_volume}</span></div>
       <div class="stat-row" style="margin-top:6px;border-top:1px solid #152238;padding-top:4px"><span class="label">Idle</span><span class="value">${s.idle||0}</span></div>
@@ -351,14 +320,10 @@ function renderOverview() {
       ${(()=>{
         const total=totalProducing+totalHalted;
         const pctActive=total?Math.round(totalProducing/total*100):100;
-        // Compute bottlenecks
-        const bottlenecks={};
-        for(const[,sys]of Object.entries(D.systems||{})){for(const st of sys.stations){for(const p of st.production){if(p.halted&&p.inputs){for(const inp of p.inputs){if(inp.have<inp.need){bottlenecks[inp.name]=(bottlenecks[inp.name]||0)+1;}}}}}}
-        const topB=Object.entries(bottlenecks).sort((a,b)=>b[1]-a[1]).slice(0,5);
         return `<div style="display:flex;height:6px;border-radius:3px;overflow:hidden;margin-bottom:6px"><div style="width:${pctActive}%;background:#66bb6a"></div><div style="width:${100-pctActive}%;background:#ef5350"></div></div>
       <div class="stat-row"><span class="label">Active: ${totalProducing}</span><span class="value" style="color:#8aa0b8">Halted: <span style="color:#ef5350">${totalHalted}</span> | Total: ${total}</span></div>
       <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:11px;color:#5a7a9a">Top Bottlenecks:</div>
-      ${topB.length?topB.map(([name,ct])=>`<div class="stat-row"><span class="label">${name}</span><span class="value" style="color:#ef5350">${ct} stations</span></div>`).join(''):'<div style="color:#66bb6a;font-size:11px">None — all supplied</div>'}`;
+      ${topB.length?topB.map(b=>`<div class="stat-row"><span class="label">${b.name}</span><span class="value" style="color:#ef5350">${b.count} stations</span></div>`).join(''):'<div style="color:#66bb6a;font-size:11px">None — all supplied</div>'}`;
       })()}
     </div>
     <div class="panel">
@@ -407,12 +372,7 @@ function renderOverview() {
     </div>
     <div class="panel">
       <div class="panel-title">Buy Orders</div>
-      ${(()=>{
-        let allBuys=[];
-        for(const sys of Object.values(D.systems||{})){for(const st of sys.stations){for(const b of (st.buy_orders||[])){allBuys.push({...b,station:st.name});}}}
-        allBuys.sort((a,b)=>b.qty-a.qty);
-        return allBuys.slice(0,8).map(b=>`<div class="stat-row"><span class="label">${fmtName(b.commodity)}</span><span class="value">${Math.round(b.qty).toLocaleString()}</span></div>`).join('')||'<div style="color:#8aa0b8">None</div>';
-      })()}
+      <div style="color:#8aa0b8;font-size:11px">Available via system detail view</div>
     </div>
     <div class="panel">
       <div class="panel-title">Battles</div>
@@ -465,81 +425,19 @@ function matchesTreeSelection(sys, selection) {
 
 // ── Stations (aggregate dashboard) ──────────────────────────────────────────
 function renderStations() {
-  const systems = D.systems || {};
-  const textF = (document.getElementById('stFilter')?.value || '').toLowerCase();
+  const stSummary = D.stations_summary || {by_type:{}, by_faction:{}};
+  const prod = D.production || {active:0, halted:0, total:0, bottlenecks:[]};
+  const byType = stSummary.by_type || {};
+  const byFaction = stSummary.by_faction || {};
+  const topB = (prod.bottlenecks||[]).slice(0,10);
 
-  // Search results
-  const searchEl = document.getElementById('stSearchResults');
-  if (textF.length >= 2) {
-    let matches = [];
-    for (const [,sys] of Object.entries(systems)) {
-      for (const st of sys.stations) {
-        if (st.name.toLowerCase().includes(textF) || st.type.toLowerCase().includes(textF) || sys.name.toLowerCase().includes(textF)) {
-          const active = st.production.filter(p => !p.halted).length;
-          const halted = st.production.filter(p => p.halted).length;
-          matches.push({name: st.name, type: st.type, system: sys.name, active, halted, total: st.production.length});
-        }
-      }
-    }
-    matches = matches.slice(0, 20);
-    searchEl.style.display = 'block';
-    searchEl.innerHTML = '<div class="panel"><div class="panel-title">Search Results (' + matches.length + (matches.length === 20 ? '+' : '') + ')</div><div class="tbl-wrap" style="max-height:200px"><table class="tbl"><thead><tr><th>Station</th><th>Type</th><th>System</th><th>Lines</th><th>Active</th><th>Halted</th></tr></thead><tbody>' +
-      matches.map(m => `<tr><td>${m.name}</td><td>${m.type}</td><td>${m.system}</td><td>${m.total}</td><td style="color:#66bb6a">${m.active}</td><td style="color:${m.halted?'#ef5350':'#8aa0b8'}">${m.halted}</td></tr>`).join('') + '</tbody></table></div></div>';
-  } else {
-    searchEl.style.display = 'none';
-  }
-
-  // Aggregate
+  // Count totals from by_type
   let totalStations = 0, producing = 0, halted = 0;
-  const byType = {};
-  const byFaction = {};
-  const bottlenecks = {};
-
-  for (const [,sys] of Object.entries(systems)) {
-    for (const st of sys.stations) {
-      totalStations++;
-      const a = st.production.filter(p => !p.halted).length;
-      const h = st.production.filter(p => p.halted).length;
-      const isActive = h === 0 || a > 0;
-      if (a > 0) producing++;
-      if (h > 0 && a === 0) halted++;
-      else if (h > 0) producing++, halted--; // mixed counts as producing
-      // Fix: simple count
-      const stType = st.type || 'Unknown';
-      if (!byType[stType]) byType[stType] = {total: 0, active: 0, halted: 0};
-      byType[stType].total++;
-      if (h === 0 || a > 0) byType[stType].active++;
-      if (h > 0 && a === 0) byType[stType].halted++;
-
-      // Faction from system
-      const faction = sys.faction || 'Independent';
-      if (!byFaction[faction]) byFaction[faction] = {total: 0, active: 0};
-      byFaction[faction].total++;
-      if (h === 0 || a > 0) byFaction[faction].active++;
-
-      // Bottlenecks
-      for (const p of st.production) {
-        if (p.halted && p.inputs) {
-          for (const inp of p.inputs) {
-            if (inp.have < inp.need) bottlenecks[inp.name] = (bottlenecks[inp.name] || 0) + 1;
-          }
-        }
-      }
-    }
+  for (const d of Object.values(byType)) {
+    totalStations += d.total;
+    producing += d.active;
+    halted += d.halted;
   }
-
-  // Recount properly
-  producing = 0; halted = 0;
-  for (const [,sys] of Object.entries(systems)) {
-    for (const st of sys.stations) {
-      const h = st.production.filter(p => p.halted).length;
-      const a = st.production.filter(p => !p.halted).length;
-      if (st.production.length === 0 || a > 0) producing++;
-      else halted++;
-    }
-  }
-
-  const topB = Object.entries(bottlenecks).sort((a,b)=>b[1]-a[1]).slice(0,10);
 
   document.getElementById('stationsContent').innerHTML = `<div class="overview-grid" style="grid-template-columns:repeat(2,1fr)">
     <div class="panel" style="grid-column:1/-1">
@@ -561,68 +459,22 @@ function renderStations() {
     </div>
     <div class="panel" style="grid-column:1/-1">
       <div class="panel-title">Top Bottlenecks</div>
-      ${topB.length ? topB.map(([name,ct])=>`<div class="stat-row"><span class="label">${fmtName(name)}</span><span class="value" style="color:#ef5350">${ct} stations blocked</span></div>`).join('') : '<div style="color:#66bb6a;font-size:11px">No bottlenecks — all supplied</div>'}
+      ${topB.length ? topB.map(b=>`<div class="stat-row"><span class="label">${fmtName(b.name)}</span><span class="value" style="color:#ef5350">${b.count} stations blocked</span></div>`).join('') : '<div style="color:#66bb6a;font-size:11px">No bottlenecks — all supplied</div>'}
     </div>
   </div>`;
 }
-document.getElementById('stFilter')?.addEventListener('input', () => renderStations());
 
 // ── Ships (aggregate dashboard) ─────────────────────────────────────────────
-window._shipLog = window._shipLog || [];
-window._prevShipStates = window._prevShipStates || {};
 
 function renderShips() {
-  const ships = D.ships || [];
-  const textF = (document.getElementById('shipFilter')?.value || '').toLowerCase();
+  const shipsSummary = D.ships_summary || {by_role:{}, by_faction:{}};
+  const byRole = shipsSummary.by_role || {};
+  const byFaction = shipsSummary.by_faction || {};
+  const s = D.ships_by_state || {};
 
-  // Track state changes for activity log
-  for (const s of ships) {
-    const prev = window._prevShipStates[s.id];
-    if (prev && prev !== s.state) {
-      window._shipLog.unshift({name: s.name, from: prev, to: s.state, tick: D.tick});
-      if (window._shipLog.length > 50) window._shipLog.length = 50;
-    }
-    window._prevShipStates[s.id] = s.state;
-  }
-
-  // Search results
-  const searchEl = document.getElementById('shipSearchResults');
-  if (textF.length >= 2) {
-    const matches = ships.filter(s => s.name.toLowerCase().includes(textF) || s.faction.toLowerCase().includes(textF)).slice(0, 20);
-    searchEl.style.display = 'block';
-    searchEl.innerHTML = '<div class="panel"><div class="panel-title">Search Results (' + matches.length + (matches.length === 20 ? '+' : '') + ')</div><div class="tbl-wrap" style="max-height:200px"><table class="tbl"><thead><tr><th>Name</th><th>Class</th><th>Role</th><th>State</th><th>Location</th><th>Faction</th></tr></thead><tbody>' +
-      matches.map(s => {
-        const col = {idle:'#66bb6a',traveling:'#4fc3f7',intra_traveling:'#4fc3f7',loading:'#ffd54f',unloading:'#ff8a65',mining:'#ab47bc'}[s.state] || '#8aa0b8';
-        return `<tr><td>${s.name}</td><td style="color:#8aa0b8">${fmtName(s.ship_class)}</td><td>${s.role}</td><td><span class="badge" style="background:${col}22;color:${col}">${s.state}</span></td><td>${s.location}</td><td style="color:#8aa0b8">${s.faction}</td></tr>`;
-      }).join('') + '</tbody></table></div></div>';
-  } else {
-    searchEl.style.display = 'none';
-  }
-
-  // Aggregate stats
-  const total = ships.length;
-  const idle = ships.filter(s => s.state === 'idle').length;
+  const total = D.npc_ships || 0;
+  const idle = s.idle || 0;
   const active = total - idle;
-
-  // By role
-  const byRole = {};
-  for (const s of ships) {
-    if (!byRole[s.role]) byRole[s.role] = {total: 0, active: 0};
-    byRole[s.role].total++;
-    if (s.state !== 'idle') byRole[s.role].active++;
-  }
-
-  // By state
-  const byState = {};
-  for (const s of ships) { byState[s.state] = (byState[s.state] || 0) + 1; }
-
-  // By faction (split military vs industrial)
-  const byFaction = {};
-  for (const s of ships) {
-    if (!byFaction[s.faction]) byFaction[s.faction] = {mil: 0, ind: 0};
-    if (s.role === 'patrol') byFaction[s.faction].mil++;
-    else byFaction[s.faction].ind++;
-  }
 
   const stateColors = {idle:'#66bb6a',traveling:'#4fc3f7',intra_traveling:'#4fc3f7',loading:'#ffd54f',unloading:'#ff8a65',mining:'#ab47bc'};
 
@@ -641,15 +493,11 @@ function renderShips() {
     </div>
     <div class="panel">
       <div class="panel-title">By State</div>
-      ${['idle','mining','intra_traveling','traveling','loading','unloading'].map(state=>`<div class="stat-row"><span class="label">${fmtName(state)}</span><span class="value" style="color:${stateColors[state]||'#8aa0b8'}">${byState[state]||0}</span></div>`).join('')}
+      ${['idle','mining','intra_traveling','traveling','loading','unloading'].map(state=>`<div class="stat-row"><span class="label">${fmtName(state)}</span><span class="value" style="color:${stateColors[state]||'#8aa0b8'}">${s[state]||0}</span></div>`).join('')}
     </div>
     <div class="panel">
       <div class="panel-title">By Faction</div>
       ${Object.entries(byFaction).sort((a,b)=>(b[1].mil+b[1].ind)-(a[1].mil+a[1].ind)).map(([f,d])=>`<div class="stat-row"><span class="label">${fmtName(f)}</span><span class="value"><span style="color:#ef5350">${d.mil} mil</span> + <span style="color:#4fc3f7">${d.ind} ind</span></span></div>`).join('')}
-    </div>
-    <div class="panel">
-      <div class="panel-title">Activity Log</div>
-      ${window._shipLog.slice(0,10).map(e=>`<div style="padding:2px 0;font-size:11px;border-bottom:1px solid #0f1a28"><span style="color:#5a7a9a">T${e.tick}</span> <span style="color:#e0e8f0">${e.name}</span>: <span style="color:${stateColors[e.from]||'#8aa0b8'}">${e.from}</span> → <span style="color:${stateColors[e.to]||'#8aa0b8'}">${e.to}</span></div>`).join('')||'<div style="color:#8aa0b8;font-size:11px">No state changes recorded yet</div>'}
     </div>
   </div>`;
 }
@@ -804,7 +652,7 @@ function buildMktTree() {
 function renderMarket() {
   if (!D) return;
   const prices = D.prices || {};
-  const systems = D.systems || {};
+  const systems = {};  // no longer sent in debug payload
   const searchVal = (document.getElementById('mktSearch')?.value || '').toLowerCase();
   const regionF = document.getElementById('mktRegionFilter')?.value || '';
   const sysF = document.getElementById('mktSystemFilter')?.value || '';
@@ -878,77 +726,50 @@ document.getElementById('mktSortBy')?.addEventListener('change', () => renderMar
 
 // ── Systems ─────────────────────────────────────────────────────────────────
 function renderSystems() {
-  const systems = D.systems || {};
-  const sids = Object.keys(systems).sort((a,b) => systems[a].name.localeCompare(systems[b].name));
-
-  // Populate dropdown once
-  const sel = document.getElementById('sysSelect');
-  if (!sysOptionsPopulated && sids.length) {
-    for (const sid of sids) {
-      const opt = document.createElement('option'); opt.value = sid; opt.textContent = `${systems[sid].name} (${systems[sid].security})`; sel.appendChild(opt);
-    }
-    sysOptionsPopulated = true;
+  // Populate dropdown from /api/state (once)
+  if (!sysOptionsPopulated) {
+    fetch('/api/state').then(r=>r.json()).then(data=>{
+      const systems = data.systems || {};
+      const sids = Object.keys(systems).sort((a,b)=>(systems[a].name||'').localeCompare(systems[b].name||''));
+      const sel = document.getElementById('sysSelect');
+      for (const sid of sids) {
+        const opt = document.createElement('option'); opt.value = sid; opt.textContent = `${systems[sid].name} (${systems[sid].security})`; sel.appendChild(opt);
+      }
+      sysOptionsPopulated = true;
+      if(sids.length) { selectedSystem = sids[0]; loadSystemDetail(); }
+    });
+    return;
   }
+  loadSystemDetail();
+}
 
-  if (!selectedSystem) selectedSystem = sel.value || sids[0] || '';
-
-  const sys = systems[selectedSystem];
-  if (!sys) { document.getElementById('sysContent').innerHTML = ''; return; }
-
-  const stationPanels = sys.stations.map(st => {
-    const prodRows = st.production.map(p => {
-      const status = p.halted ? '<span class="badge badge-halt">HALTED</span>' : `<span class="badge badge-ok">${p.actual.toFixed(1)}/t</span>`;
-      const inputRows = p.inputs.map(i => {
-        const pct = Math.min(100, (i.have / Math.max(i.need, 0.1)) * 100);
-        const col = pct > 50 ? '#66bb6a' : pct > 10 ? '#ffd54f' : '#ef5350';
-        return `<div class="stat-row"><span class="label" style="padding-left:12px">${i.name}</span><span class="value" style="color:${col}">${i.have.toFixed(1)} / ${i.need.toFixed(1)}</span></div>`;
-      }).join('');
-      return `<div class="stat-row"><span class="label" style="color:#ffd54f">${p.name}</span>${status}</div><div class="stat-row"><span class="label" style="padding-left:12px">Stock</span><span class="value">${p.stock}</span></div>${inputRows}`;
-    }).join('');
-    const invRows = Object.entries(st.inventory).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([k,v])=>`<div class="stat-row"><span class="label">${fmtName(k)}</span><span class="value">${Math.round(v)}</span></div>`).join('');
-    // Order book
-    const sellRows = (st.sell_orders||[]).slice(0,5).map(o=>`<div class="stat-row"><span class="label" style="color:#66bb6a">${o.commodity}</span><span class="value">${Math.round(o.qty)} @ ${o.price.toFixed(0)}</span></div>`).join('');
-    const buyRows = (st.buy_orders||[]).slice(0,5).map(o=>`<div class="stat-row"><span class="label" style="color:#ef5350">${o.commodity}</span><span class="value">${Math.round(o.qty)} @ ${o.price.toFixed(0)}</span></div>`).join('');
-    return `<div class="panel"><div class="panel-title">${st.name} <span class="badge badge-${sys.security}">${st.type}</span></div>${prodRows||'<div style="color:#8aa0b8;font-size:12px">No production</div>'}
-    <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:12px;color:#8aa0b8">SELL ORDERS</div>${sellRows||'<div style="color:#8aa0b8;font-size:12px">None</div>'}
-    <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:12px;color:#8aa0b8">BUY ORDERS (DEMAND)</div>${buyRows||'<div style="color:#8aa0b8;font-size:12px">None</div>'}
-    <div style="margin-top:6px;border-top:1px solid #152238;padding-top:4px;font-size:12px;color:#8aa0b8">INVENTORY</div>${invRows||'<div style="color:#8aa0b8">Empty</div>'}</div>`;
-  }).join('');
-
-  const shipsHere = (D.ships||[]).filter(s => s.location_id === selectedSystem);
-  const shipList = shipsHere.map(s => `<div style="padding:2px 0;font-size:12px"><span class="badge" style="background:${s.role==='miner'?'#ab47bc22':'#4fc3f722'};color:${s.role==='miner'?'#ab47bc':'#4fc3f7'}">${s.role}</span> ${s.name} <span style="color:#8aa0b8">(${s.state})</span></div>`).join('');
-  const beltInfo = sys.belts.map(b => `<div class="stat-row"><span class="label">${b.name}</span><span class="value">${b.yields.map(y=>fmtName(y)).join(', ')} (d:${b.density})</span></div>`).join('');
-
-  document.getElementById('sysContent').innerHTML = `<div class="sys-panel"><div>${stationPanels}</div><div>
-    <div class="panel"><div class="panel-title">System Info</div>
-      <div class="stat-row"><span class="label">Cluster</span><span class="value">${sys.cluster}</span></div>
-      <div class="stat-row"><span class="label">Security</span><span class="value"><span class="badge badge-${sys.security}">${sys.security}</span></span></div>
-      <div class="stat-row"><span class="label">Type</span><span class="value">${sys.type}</span></div>
-      <div class="stat-row"><span class="label">Connections</span><span class="value">${sys.connections.length}</span></div>
-      <div class="stat-row"><span class="label">Ships here</span><span class="value">${sys.ships_count}</span></div>
-    </div>
-    <div class="panel"><div class="panel-title">Economic Status</div>
-      ${(()=>{
-        const totalProd = sys.stations.reduce((s,st)=>s+st.production.length, 0);
-        const halted = sys.stations.reduce((s,st)=>s+st.production.filter(p=>p.halted).length, 0);
-        const active = totalProd - halted;
-        const totalBuys = sys.stations.reduce((s,st)=>s+(st.buy_orders||[]).length, 0);
-        const totalSells = sys.stations.reduce((s,st)=>s+(st.sell_orders||[]).length, 0);
-        const health = totalProd > 0 ? Math.round(active/totalProd*100) : 0;
-        const hCol = health > 70 ? '#66bb6a' : health > 30 ? '#ffd54f' : '#ef5350';
-        return `<div class="stat-row"><span class="label">Production Health</span><span class="value" style="color:${hCol}">${health}% (${active}/${totalProd})</span></div>
-        <div class="stat-row"><span class="label">Active Buy Orders</span><span class="value" style="color:#ef5350">${totalBuys}</span></div>
-        <div class="stat-row"><span class="label">Sell Orders</span><span class="value" style="color:#66bb6a">${totalSells}</span></div>`;
-      })()}
-    </div>
-    <div class="panel"><div class="panel-title">Asteroid Fields</div>${beltInfo||'<div style="color:#8aa0b8">None</div>'}</div>
-    <div class="panel"><div class="panel-title">Ships in System (${shipsHere.length})</div>${shipList||'<div style="color:#8aa0b8">None</div>'}</div>
-  </div></div>`;
+function loadSystemDetail() {
+  if (!selectedSystem) return;
+  fetch(`/api/system/${selectedSystem}`).then(r=>r.json()).then(sys=>{
+    if (sys.error) { document.getElementById('sysContent').innerHTML = '<div style="color:#ef5350;padding:20px">System not found</div>'; return; }
+    const objects = sys.objects || [];
+    const shipsHere = sys.ships || [];
+    const stationObjs = objects.filter(o => o.type === 'station');
+    let html = `<div class="sys-panel"><div>`;
+    if (!stationObjs.length) html += '<div class="panel"><div class="panel-title">No stations</div></div>';
+    html += `</div><div>
+      <div class="panel"><div class="panel-title">System Info</div>
+        <div class="stat-row"><span class="label">Type</span><span class="value">${sys.type||''}</span></div>
+        <div class="stat-row"><span class="label">Security</span><span class="value"><span class="badge badge-${sys.security}">${sys.security}</span></span></div>
+        <div class="stat-row"><span class="label">Objects</span><span class="value">${objects.length}</span></div>
+        <div class="stat-row"><span class="label">Ships here</span><span class="value">${shipsHere.length}</span></div>
+      </div>
+      <div class="panel"><div class="panel-title">Ships in System (${shipsHere.length})</div>
+        ${shipsHere.map(s=>`<div style="padding:2px 0;font-size:12px"><span class="badge" style="background:${s.role==='miner'?'#ab47bc22':'#4fc3f722'};color:${s.role==='miner'?'#ab47bc':'#4fc3f7'}">${s.role}</span> ${s.name} <span style="color:#8aa0b8">(${s.state})</span></div>`).join('')||'<div style="color:#8aa0b8">None</div>'}
+      </div>
+    </div></div>`;
+    document.getElementById('sysContent').innerHTML = html;
+  });
 }
 
 document.getElementById('sysSelect').addEventListener('change', e => {
   selectedSystem = e.target.value;
-  renderSystems();
+  loadSystemDetail();
 });
 
 // ── Nuke ────────────────────────────────────────────────────────────────────

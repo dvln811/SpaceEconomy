@@ -156,6 +156,9 @@ class Supervisor:
             'ships': self.sim.ships,
             'region_cache': self._region_cache,
             'ship_index': self._ship_index,
+            'events': self.sim.events,
+            'trade_volume': self.sim.trade_volume,
+            'start_time': self.sim.start_time,
         }
 
         # Signal all workers

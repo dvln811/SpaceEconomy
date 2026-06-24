@@ -431,169 +431,26 @@ def api_ship_model(class_id):
 
 @app.route("/api/debug")
 def api_debug():
-    """Debug summary for the monitor page."""
-    from server.simulation import COMMODITIES as COMS
-    summary = sim.get_state_summary()
-
-    since_tick = request.args.get('since_tick', type=int)
-    tracker = supervisor.change_tracker if supervisor else None
-    is_delta = since_tick is not None and tracker and tracker.has_tick(since_tick)
-    changes = tracker.get_changes_since(since_tick) if is_delta else None
-
-    # Per-system station production details
-    systems_detail = {}
-    for sid, sys_obj in sim.universe.items():
-        if is_delta and sid not in changes["systems"]:
-            continue
-        stations_info = []
-        for st in sys_obj.stations:
-            # Calculate production health for each output
-            prod_status = []
-            for prod_id in st.produces:
-                com = COMS.get(prod_id)
-                if not com or not com.recipe:
-                    continue
-                # How much can we produce right now?
-                can_produce = st.production_rate
-                inputs_status = []
-                for inp_id, qty_needed in com.recipe.items():
-                    avail = st.inventory.get(inp_id, 0)
-                    possible = avail / qty_needed if qty_needed > 0 else 999
-                    can_produce = min(can_produce, possible)
-                    inputs_status.append({"id": inp_id, "name": COMS[inp_id].name, "need": qty_needed * st.production_rate, "have": round(avail, 1)})
-                prod_status.append({
-                    "output": prod_id, "name": com.name,
-                    "rate": st.production_rate, "actual": round(min(can_produce, st.production_rate), 2),
-                    "halted": can_produce <= 0, "inputs": inputs_status,
-                    "stock": round(st.inventory.get(prod_id, 0), 1),
-                })
-            # Get project buy orders for this system
-            global _project_orders_cache, _project_orders_tick
-            if sim.tick_count - _project_orders_tick > 60:
-                _project_orders_cache = _get_project_buy_orders()
-                _project_orders_tick = sim.tick_count
-            proj_orders = _project_orders_cache.get(sid, [])
-            stations_info.append({
-                "name": st.name, "type": st.station_type,
-                "production": prod_status,
-                "inventory": {k: round(v, 1) for k, v in st.inventory.items() if v > 0.1},
-                "sell_orders": _build_order_book(st)[0][:10],
-                "buy_orders": (_build_order_book(st)[1] + proj_orders)[:20],
-            })
-        ships_in_sys = sum(1 for s in sim.ships if s.location == sid)
-        systems_detail[sid] = {
-            "name": sys_obj.name, "cluster": sys_obj.cluster, "security": sys_obj.security,
-            "faction": sys_obj.faction, "region": getattr(sys_obj, 'region', ''),
-            "type": sys_obj.system_type, "stations": stations_info, "ships_count": ships_in_sys,
-            "connections": sys_obj.connections,
-            "belts": [{"name": b.name, "yields": b.yields, "density": b.density} for b in sys_obj.asteroid_fields],
-        }
-    summary["systems"] = systems_detail
-
-    # Price data (top entries per commodity)
-    prices = {}
-    for sid, sys_obj in sim.universe.items():
-        for st in sys_obj.stations:
-            for commodity, price in st.price_cache.items():
-                if st.inventory.get(commodity, 0) > 0.1:
-                    prices.setdefault(commodity, []).append({"system": sys_obj.name, "system_id": sid, "station": st.name, "price": round(price, 1), "stock": round(st.inventory.get(commodity, 0), 1)})
-    summary["prices"] = prices
-
-    # Ship details with full info
-    ships = []
-    for s in sim.ships:
-        if is_delta and s.id not in changes["ships"]:
-            continue
-        loc_name = sim.universe[s.location].name if s.location in sim.universe else s.location or "-"
-        dest_name = sim.universe[s.destination].name if s.destination in sim.universe else s.destination or "-"
-        ships.append({
-            "id": s.id, "name": s.name, "state": s.state, "role": s.role,
-            "ship_class": s.ship_class, "faction": s.faction, "timer": s.state_timer,
-            "location": loc_name, "location_id": s.location,
-            "destination": dest_name, "destination_id": s.destination,
-            "cargo": s.cargo, "cargo_capacity": s.cargo_capacity,
-            "cargo_used": round(sum(s.cargo.values()), 1),
-            "progress": round(s.progress, 3),
-            "risk_tolerance": s.risk_tolerance,
-            "route_path": [sim.universe[r].name for r in s.route_path if r in sim.universe],
-            "intra_position": s.intra_position, "intra_destination": s.intra_destination,
-            "intra_progress": round(s.intra_progress, 3),
-        })
-    summary["ships"] = ships
-
-    # Demand data: what the economy needs vs what it has
-    demand_data = {}
-    for sid, sys_obj in sim.universe.items():
-        for st in sys_obj.stations:
-            for prod_id in st.produces:
-                com = COMS.get(prod_id)
-                if not com or not com.recipe:
-                    continue
-                for inp_id, qty_needed in com.recipe.items():
-                    demand_data.setdefault(inp_id, {"demand_per_tick": 0, "total_supply": 0, "name": COMS[inp_id].name})
-                    demand_data[inp_id]["demand_per_tick"] += qty_needed * st.production_rate
-    # Add supply totals
-    for sid, sys_obj in sim.universe.items():
-        for st in sys_obj.stations:
-            for commodity, qty in st.inventory.items():
-                if commodity in demand_data:
-                    demand_data[commodity]["total_supply"] += qty
-    # Calculate deficit (how many ticks of supply remain)
-    for k, v in demand_data.items():
-        v["ticks_remaining"] = round(v["total_supply"] / v["demand_per_tick"], 1) if v["demand_per_tick"] > 0 else 9999
-        v["deficit"] = round(v["demand_per_tick"] * 100 - v["total_supply"], 1)  # shortfall for 100 ticks
-    summary["demand"] = demand_data
-    # Get warfare status from battle worker
-    warfare_status = {"fleet_strength": {}, "ships_destroyed": 0, "ships_built": 0}
+    """Pre-computed dashboard summary (~15KB). Updated every 10 ticks by dashboard worker."""
+    # Find the dashboard worker's cache
+    data = {}
     if supervisor:
         for w in supervisor.workers:
-            if w.name == "battle_sim":
-                warfare_status = w.get_status()
+            if w.name == "dashboard":
+                data = w.cache.data
                 break
-    summary["warfare"] = warfare_status
+    if not data:
+        return jsonify({"tick": 0, "error": "cache not ready"})
 
-    # Faction status + build projects + corps + decisions
-    from server.game_data_db import get_data_db
-    _emblem_map = {'corsairs':'the_corsairs.png','free_states':'frontier_alliance.png','iron_compact':'iron_compact.png','merchants_guild':'merchants_guild.png','science_collective':'nexus_collective.png','terran_fed':'terran_federation.png'}
-    _name_map = {'corsairs':'The Corsairs','free_states':'Frontier Alliance','iron_compact':'Iron Compact','merchants_guild':'Merchants Guild','science_collective':'Nexus Collective','terran_fed':'Terran Federation'}
-    try:
-        fconn = get_data_db()
-        faction_status = {}
-        for fs in fconn.execute("SELECT faction_id, aggression, expansion_drive, economic_focus FROM faction_state").fetchall():
-            fid = fs['faction_id']
-            sys_count = sum(1 for s in sim.universe.values() if s.faction == fid)
-            faction_status[fid] = {"name": _name_map.get(fid, fid), "systems": sys_count, "emblem": _emblem_map.get(fid, ''), "aggression": fs['aggression'], "expansion": fs['expansion_drive'], "economic": fs['economic_focus'], "projects": [], "fleet_builds": [], "corporations": [], "decisions": []}
-        for p in fconn.execute("SELECT faction_id, project_type, project_name, target_system, requirements, accumulated, status, phase FROM build_projects").fetchall():
-            reqs = json.loads(p['requirements'])
-            acc = json.loads(p['accumulated'])
-            total_needed = sum(reqs.values())
-            total_have = sum(min(acc.get(k, 0), v) for k, v in reqs.items())
-            pct = round(100 * total_have / total_needed) if total_needed > 0 else 0
-            if p['faction_id'] not in faction_status:
-                continue
-            if p['project_type'] == 'fleet_build':
-                faction_status[p['faction_id']]["fleet_builds"].append({"name": p['project_name'], "phase": p['phase'] or 'requisitioning', "progress": pct, "status": p['status']})
-            else:
-                faction_status[p['faction_id']]["projects"].append({"name": p['project_name'], "type": p['project_type'], "phase": p['phase'] or 'constructing', "target": p['target_system'], "progress": pct, "status": p['status']})
-        for c in fconn.execute("SELECT name, faction_id, specialty, activity FROM corporations WHERE status='active'").fetchall():
-            if c['faction_id'] not in faction_status:
-                continue
-            act = json.loads(c['activity']) if c['activity'] else {}
-            faction_status[c['faction_id']]["corporations"].append({"name": c['name'], "specialty": c['specialty'] or '', "activity": act.get('task', 'idle'), "target": act.get('target', '')})
-        for d in fconn.execute("SELECT faction_id, tick, decision, reasoning FROM faction_decisions ORDER BY id DESC").fetchall():
-            if d['faction_id'] in faction_status and len(faction_status[d['faction_id']]["decisions"]) < 5:
-                faction_status[d['faction_id']]["decisions"].append({"tick": d['tick'], "decision": d['decision'], "reasoning": d['reasoning'] or ''})
-        fconn.close()
-        summary["factions"] = faction_status
-    except:
-        summary["factions"] = {}
-
-    # Performance metrics from supervisor
+    # Inject live performance metrics and warfare status
+    result = dict(data)
     if supervisor:
-        summary["performance"] = supervisor.metrics
-
-    summary["delta"] = is_delta
-    return jsonify(summary)
+        result["performance"] = supervisor.metrics
+        for w in supervisor.workers:
+            if w.name == "battle_sim":
+                result["warfare"] = w.get_status()
+                break
+    return jsonify(result)
 
 
 @app.route("/api/system/<system_id>")
