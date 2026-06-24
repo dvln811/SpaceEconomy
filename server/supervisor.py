@@ -13,9 +13,9 @@ from server.change_tracker import ChangeTracker
 
 log = logging.getLogger("supervisor")
 
-LOADING_TICKS = 3
-UNLOADING_TICKS = 2
-MINING_TICKS = 20
+LOADING_TICKS = 10    # Docking + loading time
+UNLOADING_TICKS = 25  # Docking + drone unload (scales with cargo later)
+MINING_TICKS = 50     # Scan + approach + extract cycle
 
 
 class WorkerThread:
@@ -398,7 +398,10 @@ class Supervisor:
             ship.state = "idle"
             return
         commodity = rnd.choice(field.yields)
-        amount = min(ship.cargo_capacity - sum(ship.cargo.values()), 100 * field.density)
+        # Extract 20-40 units per cycle (based on field density, ship fills over multiple cycles)
+        max_extract = int(25 * field.density)
+        remaining_cap = ship.cargo_capacity - sum(ship.cargo.values())
+        amount = min(remaining_cap, max_extract)
         if amount > 0:
             ship.cargo[commodity] = ship.cargo.get(commodity, 0) + amount
         if sum(ship.cargo.values()) >= ship.cargo_capacity * 0.8:

@@ -204,21 +204,26 @@ class NPCDecisionWorker(WorkerThread):
         if not loc:
             return
 
-        # If cargo heavy, sell at local station
+        # If cargo heavy, sell at local station or travel to one
         if sum(ship.cargo.values()) >= ship.cargo_capacity * 0.8:
-            station_objs = [o for o in loc.objects if o.obj_type == "station"]
-            at_station = any(ship.intra_position == o.id for o in station_objs)
-            if not at_station and station_objs:
-                self.emit(ShipIntraIntent(ship_id=ship.id, dest_obj_id=station_objs[0].id))
-                return
-            # Sell ALL cargo at local station
             if loc.stations and ship.cargo:
+                # Sell ALL cargo at first available station
                 for commodity, qty in list(ship.cargo.items()):
                     self.emit(ShipSellIntent(
                         ship_id=ship.id, system_id=ship.location,
                         station_name=loc.stations[0].name,
                         commodity_id=commodity, quantity=qty
                     ))
+                return
+            # No station here - travel to assigned system or nearest with one
+            if ship.assigned_system and ship.assigned_system != ship.location:
+                self.emit(ShipMoveIntent(ship_id=ship.id, destination=ship.assigned_system))
+                return
+            for neighbor in loc.connections:
+                nsys = universe.get(neighbor)
+                if nsys and nsys.stations:
+                    self.emit(ShipMoveIntent(ship_id=ship.id, destination=neighbor))
+                    return
             return
 
         # Mine if local belts exist

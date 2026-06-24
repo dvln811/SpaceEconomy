@@ -137,7 +137,7 @@ class Simulation:
 
         # --- Miners: 2 per mining system (~400 miners) ---
         miner_idx = 0
-        mining_systems = [sid for sid, s in self.universe.items() if s.asteroid_fields]
+        mining_systems = [sid for sid, s in self.universe.items() if s.asteroid_fields and s.stations]
         random.shuffle(mining_systems)
         for sys_id in mining_systems[:200]:
             sys = self.universe[sys_id]
