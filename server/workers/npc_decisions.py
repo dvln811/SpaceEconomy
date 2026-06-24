@@ -5,10 +5,9 @@ from server.intents import (
     ShipMoveIntent, ShipIntraIntent, ShipBuyIntent, ShipSellIntent,
     ShipMineIntent, EventLog,
 )
-from server.models import SECURITY_LEVEL
 
 
-BATCH_SIZE = 50  # Process N idle ships per tick (round-robin)
+BATCH_SIZE = 150  # Process N idle ships per tick (round-robin)
 
 
 class NPCDecisionWorker(WorkerThread):
@@ -87,7 +86,6 @@ class NPCDecisionWorker(WorkerThread):
                 continue
             for inp_id, qty in c.recipe.items():
                 stock = target.inventory.get(inp_id, 0)
-                # Always want more inputs - haul if below 500 ticks of supply
                 want = qty * target.production_rate * 500
                 if stock < want and stock < lowest:
                     lowest = stock
@@ -105,8 +103,9 @@ class NPCDecisionWorker(WorkerThread):
         for src_sys_id, src_station_name, qty in sources:
             if src_station_name == ship.assigned_station:
                 continue
-            danger = 1.0 - SECURITY_LEVEL.get(universe[src_sys_id].security, 0.0)
-            if danger > ship.risk_tolerance:
+            # Use sec_level directly - ship won't enter if sec_level below threshold
+            sys_sec = getattr(universe.get(src_sys_id), 'sec_level', 0.5)
+            if sys_sec < (1.0 - ship.risk_tolerance):
                 continue
             hops = self._estimate_hops(ship.location, src_sys_id, universe)
             if hops < best_hops:
@@ -164,8 +163,8 @@ class NPCDecisionWorker(WorkerThread):
         for commodity_id, sources in region_items.items():
             for src_sys_id, src_station_name, qty in sources:
                 if qty > best_qty and src_sys_id != ship.location:
-                    danger = 1.0 - SECURITY_LEVEL.get(universe.get(src_sys_id, loc).security, 0.0)
-                    if danger <= ship.risk_tolerance:
+                    sys_sec = getattr(universe.get(src_sys_id, loc), 'sec_level', 0.5)
+                    if sys_sec >= (1.0 - ship.risk_tolerance):
                         best = (src_sys_id, src_station_name, commodity_id, qty)
                         best_qty = qty
 
@@ -185,7 +184,7 @@ class NPCDecisionWorker(WorkerThread):
             return
 
         # Wander
-        neighbors = [n for n in loc.connections if (1.0 - SECURITY_LEVEL.get(universe.get(n, loc).security, 0.0)) <= ship.risk_tolerance]
+        neighbors = [n for n in loc.connections if getattr(universe.get(n, loc), 'sec_level', 0.5) >= (1.0 - ship.risk_tolerance)]
         if neighbors:
             self.emit(ShipMoveIntent(ship_id=ship.id, destination=random.choice(neighbors)))
 
@@ -201,14 +200,14 @@ class NPCDecisionWorker(WorkerThread):
             if not at_station and station_objs:
                 self.emit(ShipIntraIntent(ship_id=ship.id, dest_obj_id=station_objs[0].id))
                 return
-            # Sell first cargo item at local station
+            # Sell ALL cargo at local station
             if loc.stations and ship.cargo:
-                commodity = next(iter(ship.cargo))
-                self.emit(ShipSellIntent(
-                    ship_id=ship.id, system_id=ship.location,
-                    station_name=loc.stations[0].name,
-                    commodity_id=commodity, quantity=ship.cargo[commodity]
-                ))
+                for commodity, qty in list(ship.cargo.items()):
+                    self.emit(ShipSellIntent(
+                        ship_id=ship.id, system_id=ship.location,
+                        station_name=loc.stations[0].name,
+                        commodity_id=commodity, quantity=qty
+                    ))
             return
 
         # Mine if local belts exist
@@ -227,7 +226,7 @@ class NPCDecisionWorker(WorkerThread):
         mining_systems = [
             sid for sid, s in universe.items()
             if s.asteroid_fields and s.region == loc.region
-            and (1.0 - SECURITY_LEVEL.get(s.security, 0.0)) <= ship.risk_tolerance
+            and getattr(s, 'sec_level', 0.5) >= (1.0 - ship.risk_tolerance)
         ]
         if mining_systems:
             self.emit(ShipMoveIntent(ship_id=ship.id, destination=random.choice(mining_systems)))
@@ -252,8 +251,8 @@ class NPCDecisionWorker(WorkerThread):
             for neighbor in universe[current].connections:
                 if neighbor in visited:
                     continue
-                danger = 1.0 - SECURITY_LEVEL.get(universe[neighbor].security, 0.0)
-                if neighbor != to_id and danger > risk_tolerance:
+                sys_sec = getattr(universe.get(neighbor), 'sec_level', 0.5)
+                if neighbor != to_id and sys_sec < (1.0 - risk_tolerance):
                     continue
                 new_path = path + [neighbor]
                 if neighbor == to_id:

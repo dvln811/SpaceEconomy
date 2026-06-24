@@ -124,7 +124,7 @@ class Simulation:
                     fuel=float(st.fuel_capacity), location=sys_id,
                     speed=st.speed, state="idle",
                     role=role, ship_class=st.id, intra_speed=st.intra_speed,
-                    risk_tolerance=random.uniform(0.3, 0.8), faction=sys.faction or "independent",
+                    risk_tolerance=random.uniform(0.6, 0.95), faction=sys.faction or "independent",
                     align_time=st.align_time,
                     assigned_station=station.name if role == "hauler" else "",
                     assigned_system=sys_id if role == "hauler" else "",
@@ -149,7 +149,7 @@ class Simulation:
                     fuel=float(st.fuel_capacity), location=sys_id,
                     speed=st.speed, state="idle",
                     role="miner", ship_class=st.id, intra_speed=st.intra_speed,
-                    risk_tolerance=random.uniform(0.2, 0.7), faction=sys.faction or "independent",
+                    risk_tolerance=random.uniform(0.5, 0.9), faction=sys.faction or "independent",
                     align_time=st.align_time,
                 )
                 station_objs = [o for o in sys.objects if o.obj_type == "station"]
