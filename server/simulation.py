@@ -119,7 +119,7 @@ class Simulation:
                 role = "freelance" if random.random() < 0.2 else "hauler"
                 station = sys.stations[i % len(sys.stations)]
                 ship = NPCShip(
-                    id=f"hlr_{ship_idx}", name=f"{random.choice(NPC_TRADER_NAMES)} {random.randint(100,999)}",
+                    id=f"hlr_{ship_idx}", name=f"{st.name} {random.randint(100,999)}",
                     cargo_capacity=st.cargo_capacity + random.randint(-20, 20),
                     fuel=float(st.fuel_capacity), location=sys_id,
                     speed=st.speed, state="idle",
@@ -144,7 +144,7 @@ class Simulation:
             for i in range(2):
                 st = miner_types[miner_idx % len(miner_types)]
                 ship = NPCShip(
-                    id=f"mnr_{miner_idx}", name=f"{random.choice(NPC_MINER_NAMES)} {random.randint(100,999)}",
+                    id=f"mnr_{miner_idx}", name=f"{st.name} {random.randint(100,999)}",
                     cargo_capacity=st.cargo_capacity + random.randint(-10, 10),
                     fuel=float(st.fuel_capacity), location=sys_id,
                     speed=st.speed, state="idle",
