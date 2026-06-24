@@ -215,10 +215,16 @@ class NPCDecisionWorker(WorkerThread):
                         commodity_id=commodity, quantity=qty
                     ))
                 return
-            # No station here - travel to assigned system or nearest with one
-            if ship.assigned_system and ship.assigned_system != ship.location:
-                self.emit(ShipMoveIntent(ship_id=ship.id, destination=ship.assigned_system))
-                return
+            # No station here - deep miner needs to travel to sell
+            # Find target: assigned_station's system (search for it) or nearest with station
+            if ship.assigned_station:
+                # Find which system has this station
+                for nsid in loc.connections:
+                    ns = universe.get(nsid)
+                    if ns and any(st.name == ship.assigned_station for st in ns.stations):
+                        self.emit(ShipMoveIntent(ship_id=ship.id, destination=nsid))
+                        return
+            # Fallback: any neighbor with a station
             for neighbor in loc.connections:
                 nsys = universe.get(neighbor)
                 if nsys and nsys.stations:

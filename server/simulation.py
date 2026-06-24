@@ -159,6 +159,40 @@ class Simulation:
                 self.ships.append(ship)
                 miner_idx += 1
 
+        # --- Deep miners: work remote exotic fields, sell at nearby stations ---
+        exotic_ids = {'helium3','xenon_gas','quartz_crystal','lithium_crystal','beryllium_crystal',
+                      'gold_ore','platinum_ore','palladium_ore','kraxolite','void_shard','neutronium','tungsten_ore'}
+        remote_exotic = []
+        for sid, s in self.universe.items():
+            if s.asteroid_fields and not s.stations:
+                ores = set()
+                for f in s.asteroid_fields:
+                    ores.update(f.yields)
+                if ores & exotic_ids:
+                    # Find nearest system with a station
+                    for n in s.connections:
+                        ns = self.universe.get(n)
+                        if ns and ns.stations:
+                            remote_exotic.append((sid, n, ns.stations[0].name))
+                            break
+        random.shuffle(remote_exotic)
+        deep_idx = 0
+        for field_sys, home_sys, home_station in remote_exotic[:100]:
+            st = miner_types[deep_idx % len(miner_types)]
+            faction = self.universe[field_sys].faction or self.universe[home_sys].faction or "independent"
+            ship = NPCShip(
+                id=f"deep_{deep_idx}", name=f"{st.name} D-{random.randint(100,999)}",
+                cargo_capacity=st.cargo_capacity + random.randint(0, 30),
+                fuel=float(st.fuel_capacity), location=field_sys,
+                speed=st.speed, state="idle",
+                role="miner", ship_class=st.id, intra_speed=st.intra_speed,
+                risk_tolerance=random.uniform(0.8, 1.0), faction=faction,
+                align_time=st.align_time,
+                assigned_system=field_sys, assigned_station=home_station,
+            )
+            self.ships.append(ship)
+            deep_idx += 1
+
         # --- Military ships: faction fleets ---
         from server.game_data_db import get_data_db
         conn = get_data_db()
