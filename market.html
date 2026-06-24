@@ -68,8 +68,8 @@ tr:hover td{background:#0a1020}
 </div>
 <div class="main-content">
   <div class="toolbar">
-    <label>Region:</label>
-    <select id="regionSelect"><option value="">All Regions</option></select>
+    <label id="regionLabel" style="display:none">Region:</label>
+    <select id="regionSelect" style="display:none"><option value="">All Regions</option></select>
     <label>Group by:</label>
     <select id="groupBy"><option value="none">None</option><option value="item">Item</option><option value="region">Region</option><option value="system">System</option><option value="station">Station</option></select>
     <span id="filterLabel" style="color:#4fc3f7;font-size:11px"></span>
@@ -102,8 +102,12 @@ let sellSortCol = 'price', sellSortDir = -1;
 let lastTick = 0, expanded = {};
 let jumpMap = {};
 let currentRegion = 'The Forge'; // default: player home region
+const isDebug = new URLSearchParams(window.location.search).has('debug');
 
 async function loadRegions(){
+  if(!isDebug) return;
+  document.getElementById('regionLabel').style.display='';
+  document.getElementById('regionSelect').style.display='';
   const regions = await fetch('/api/market/regions').then(r=>r.json());
   const sel = document.getElementById('regionSelect');
   sel.innerHTML = '<option value="">All Regions</option>' + regions.map(r=>`<option value="${r}"${r===currentRegion?' selected':''}>${r}</option>`).join('');
