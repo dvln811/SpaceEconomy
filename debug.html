@@ -307,9 +307,11 @@ function renderFactions() {
 }
 
 function renderOverview() {
-  // Don't re-render if user is typing in a search box
+  // Don't re-render if user is typing in a search box or has text selected
   const focused = document.activeElement;
   if(focused && (focused.id==='invSearch'||focused.id==='conSearch')) return;
+  const sel = window.getSelection();
+  if(sel && sel.toString().length > 0) return;
   const s = D.ships_by_state || {};
   const uptime = D.uptime_seconds;
   const h = Math.floor(uptime/3600), m = Math.floor((uptime%3600)/60), sec = uptime%60;
