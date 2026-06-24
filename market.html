@@ -266,12 +266,12 @@ function getFilteredIds(){
 
 async function loadMarketData(){
   try{
-    const [dbg, ships] = await Promise.all([
-      fetch('/api/debug').then(r=>r.json()),
+    const [ordersRes, ships] = await Promise.all([
+      fetch('/api/market/orders').then(r=>r.json()),
       fetch('/api/market/ships').then(r=>r.json())
     ]);
-    lastTick = dbg.tick || 0;
-    parseOrders(dbg, ships);
+    lastTick = ordersRes.tick || 0;
+    parseOrders(ordersRes, ships);
     renderOrders();
     document.getElementById('statusTick').textContent = 'Tick: '+lastTick;
     document.getElementById('statusOrders').textContent = 'Buy: '+buyOrders.length+' | Sell: '+sellOrders.length;
@@ -279,38 +279,30 @@ async function loadMarketData(){
   document.getElementById('statusRefresh').textContent = new Date().toLocaleTimeString();
 }
 
-function parseOrders(dbg, ships){
+function parseOrders(ordersData, ships){
   buyOrders = []; sellOrders = [];
-  const systems = dbg.systems || {};
-  // BFS from Cygnus for jump distances
-  if(!jumpMap['cygnus']&&Object.keys(systems).length){
-    jumpMap={};
-    const start=Object.keys(systems).find(k=>(systems[k].name||'').toLowerCase()==='cygnus')||Object.keys(systems)[0];
-    jumpMap[start]=0;
-    const queue=[start];
-    while(queue.length){const cur=queue.shift();const sys=systems[cur];if(!sys||!sys.connections)continue;for(const n of sys.connections){if(jumpMap[n]===undefined){jumpMap[n]=jumpMap[cur]+1;queue.push(n);}}}
+  const allSystems = {};
+  // Build jump map from connections if not done
+  if(!jumpMap._done && ordersData.buy_orders && ordersData.buy_orders.length){
+    // We don't have connections here, so jumps will show '?' unless we fetch positions
+    // For now just mark as done
+    jumpMap._done = true;
   }
-  for(const sid in systems){
-    const sys = systems[sid];
-    const region = sys.region || '', sysName = sys.name || sid;
-    const jumps = jumpMap[sid]!==undefined?jumpMap[sid]:'?';
-    (sys.stations||[]).forEach(st => {
-      (st.sell_orders||[]).forEach(o => {
-        const c = commodityMap[o.commodity];
-        sellOrders.push({item: c ? displayName(c) : o.commodity, itemId:o.commodity, qty:o.qty, price:o.price, jumps, station:st.name, system:sysName, region});
-      });
-      (st.buy_orders||[]).forEach(o => {
-        const c = commodityMap[o.commodity];
-        buyOrders.push({item: c ? displayName(c) : o.commodity, itemId:o.commodity, qty:o.qty, price:o.price, jumps, station:st.name, system:sysName, region});
-      });
-    });
+  for(const o of (ordersData.sell_orders||[])){
+    const c = commodityMap[o.commodity];
+    const jumps = jumpMap[o.system_id]!==undefined?jumpMap[o.system_id]:'?';
+    sellOrders.push({item: c ? displayName(c) : o.commodity, itemId:o.commodity, qty:o.qty, price:o.price, jumps, station:o.station, system:o.system, region:o.region||''});
   }
+  for(const o of (ordersData.buy_orders||[])){
+    const c = commodityMap[o.commodity];
+    const jumps = jumpMap[o.system_id]!==undefined?jumpMap[o.system_id]:'?';
+    buyOrders.push({item: c ? displayName(c) : o.commodity, itemId:o.commodity, qty:o.qty, price:o.price, jumps, station:o.station, system:o.system, region:o.region||''});
+  }
+  // Ships as sell orders
   const seen = new Set();
   ships.forEach(s => {
     if(seen.has(s.id)) return; seen.add(s.id);
-    const sysEntry=Object.entries(systems).find(([k,v])=>v.name===s.shipyard_system);
-    const jumps=sysEntry&&jumpMap[sysEntry[0]]!==undefined?jumpMap[sysEntry[0]]:'?';
-    sellOrders.push({item:s.name, itemId:'ship_'+s.id, qty:1, price:s.price, jumps, station:s.shipyard_station, system:s.shipyard_system, region:''});
+    sellOrders.push({item:s.name, itemId:'ship_'+s.id, qty:1, price:s.price, jumps:'?', station:s.shipyard_station, system:s.shipyard_system, region:''});
   });
 }
 

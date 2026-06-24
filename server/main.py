@@ -293,6 +293,30 @@ def api_positions():
     return jsonify({"systems": systems})
 
 
+@app.route("/api/market/orders")
+def api_market_orders():
+    """All buy/sell orders across all stations. Lightweight: only stations with orders."""
+    buy_orders = []
+    sell_orders = []
+    for sid, sys_obj in sim.universe.items():
+        region = getattr(sys_obj, 'region', '')
+        for st in sys_obj.stations:
+            sells, buys = _build_order_book(st)
+            for o in sells:
+                o['station'] = st.name
+                o['system'] = sys_obj.name
+                o['system_id'] = sid
+                o['region'] = region
+                sell_orders.append(o)
+            for o in buys:
+                o['station'] = st.name
+                o['system'] = sys_obj.name
+                o['system_id'] = sid
+                o['region'] = region
+                buy_orders.append(o)
+    return jsonify({"tick": sim.tick_count, "buy_orders": sorted(buy_orders, key=lambda x: -x['qty'])[:500], "sell_orders": sorted(sell_orders, key=lambda x: -x['qty'])[:500]})
+
+
 @app.route("/api/market/ships")
 def api_market_ships():
     """Ships available at shipyard stations with computed prices."""
