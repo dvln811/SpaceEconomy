@@ -1,0 +1,64 @@
+{
+  "category": "wing",
+  "style": "existing_mining_arm",
+  "size": 1.0,
+  "parts": [
+    {
+      "type": "box",
+      "pos": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "x": 0.04,
+        "y": 0.04,
+        "z": 0.04
+      },
+      "material": "hull"
+    },
+    {
+      "type": "cylinder",
+      "pos": [
+        0,
+        0,
+        0.2
+      ],
+      "rot": [
+        1.5708,
+        0,
+        0
+      ],
+      "params": {
+        "r_top": 0.025,
+        "r_bot": 0.035,
+        "length": 0.35
+      },
+      "material": "mining"
+    },
+    {
+      "type": "box",
+      "pos": [
+        0,
+        0,
+        0.38
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "x": 0.05,
+        "y": 0.05,
+        "z": 0.05
+      },
+      "material": "mining"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "category": "connector",
+  "style": "existing_collar",
+  "size": 1.0,
+  "parts": [
+    {
+      "type": "cylinder",
+      "pos": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "r_top": 0.12,
+        "r_bot": 0.14,
+        "length": 0.1
+      },
+      "material": "hull"
+    }
+  ]
+}

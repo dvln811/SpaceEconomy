@@ -1,0 +1,21 @@
+{
+  "category": "connector",
+  "style": "existing_spine",
+  "size": 1.0,
+  "parts": [
+    {
+      "type": "spine",
+      "pos": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "length": 0.25,
+        "radius": 0.15,
+        "flange_r": 0.19
+      },
+      "material": "hull"
+    }
+  ]
+}

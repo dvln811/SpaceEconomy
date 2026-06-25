@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gallery</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#05080f;color:#c8d4e0;font-family:'Segoe UI',system-ui,sans-serif;font-size:13px}
+.tab-bar{background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;gap:4px;padding:6px 12px;position:sticky;top:0;z-index:10}
+.tab-bar a{padding:5px 14px;border:1px solid #1a2844;color:#5a7a9a;border-radius:3px;text-decoration:none;font-size:11px}
+.tab-bar a.active{background:#0d1a2f;border-color:#4fc3f7;color:#4fc3f7;font-weight:600}
+.controls{padding:8px 12px;display:flex;gap:8px;align-items:center;border-bottom:1px solid #1a2844;position:sticky;top:38px;background:#05080f;z-index:9}
+.controls label{font-size:11px;color:#8aa0b8}
+.controls select{background:#0a1020;border:1px solid #1a3050;color:#c8d4e0;padding:4px 8px;border-radius:3px;font-size:11px}
+.controls button{padding:5px 12px;border:1px solid #4fc3f7;background:#0d1a2f;color:#4fc3f7;border-radius:3px;cursor:pointer;font-size:11px}
+.controls button:hover{background:#4fc3f7;color:#05080f}
+.grid{padding:12px;display:flex;flex-wrap:wrap;gap:10px}
+.card{background:#0a0e18;border:1px solid #1a2844;border-radius:6px;overflow:hidden;cursor:pointer;transition:border-color .1s;width:380px}
+.card:hover{border-color:#4fc3f7}
+.card canvas{display:block;width:380px;height:280px}
+.card-info{padding:6px 10px;border-top:1px solid #1a2844}
+.card-info .name{color:#e0e8f0;font-weight:500;font-size:12px}
+.card-info .meta{color:#5a7a9a;font-size:10px}
+.card-tag{padding:6px 10px;border-top:1px solid #1a2844;display:flex;flex-direction:column;gap:4px}
+.card-tag label{font-size:10px;color:#8aa0b8;display:flex;align-items:center;gap:6px;cursor:pointer}
+.card-tag input[type=checkbox]{accent-color:#4fc3f7}
+.card-tag textarea{width:100%;height:50px;min-height:50px;max-height:120px;resize:vertical;background:#0a1020;border:1px solid #1a3050;color:#c8d4e0;padding:4px 6px;border-radius:3px;font-family:inherit;font-size:11px;overflow-y:auto}
+</style>
+</head>
+<body>
+<div class="tab-bar">
+  <a href="/">Ship Generator</a>
+  <a href="/gallery" class="active">Component Library</a>
+  <a href="/review">Review</a>
+</div>
+<div class="controls">
+  <label>Category:</label>
+  <select id="catFilter">
+    <option value="">All</option>
+  </select>
+  <button id="refreshBtn">Refresh</button>
+  <button id="exportBtn" style="margin-left:auto;border-color:#66bb6a;color:#66bb6a">Export Selected</button>
+</div>
+<div class="grid" id="grid"></div>
+
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+const W=380,H=280;
+const MATS={
+  hull:()=>new THREE.MeshPhongMaterial({color:0x0a1428,emissive:0x0a1428,shininess:0,transparent:true,opacity:0.7}),
+  engine:()=>new THREE.MeshPhongMaterial({color:0x0a1428,emissive:0x0a1020,shininess:0,transparent:true,opacity:0.7}),
+  cargo:()=>new THREE.MeshPhongMaterial({color:0x1a1808,emissive:0x0a0a05,shininess:0,transparent:true,opacity:0.7}),
+  weapon:()=>new THREE.MeshPhongMaterial({color:0x1a1018,emissive:0x100508,shininess:0,transparent:true,opacity:0.7}),
+  accent:()=>new THREE.MeshPhongMaterial({color:0x1a2040,emissive:0x0a0a1a,shininess:0,transparent:true,opacity:0.7}),
+};
+const ECOL={hull:0x4fc3f7,engine:0x5a7a9a,cargo:0xffd54f,weapon:0xef5350,accent:0xef5350};
+
+function buildParts(scene,parts){
+  const g=new THREE.Group();
+  for(const c of parts){
+    const mat=(MATS[c.material]||MATS.hull)();
+    const [px,py,pz]=c.pos;const [rx,ry,rz]=c.rot||[0,0,0];let m=null;
+    switch(c.type){
+      case'pod':{const{length,height,width}=c.params;const b=0.02,hw=width/2,hh=height/2;const s=new THREE.Shape();s.moveTo(-hw+b,-hh);s.lineTo(hw-b,-hh);s.lineTo(hw,-hh+b);s.lineTo(hw,hh-b);s.lineTo(hw-b,hh);s.lineTo(-hw+b,hh);s.lineTo(-hw,hh-b);s.lineTo(-hw,-hh+b);s.closePath();const geo=new THREE.ExtrudeGeometry(s,{depth:length,bevelEnabled:true,bevelThickness:0.005,bevelSize:0.005});geo.center();m=new THREE.Mesh(geo,mat);if(!rx&&!ry&&!rz)m.rotation.y=Math.PI/2;break;}
+      case'cylinder':{const{r_top,r_bot,length}=c.params;m=new THREE.Mesh(new THREE.CylinderGeometry(r_top,r_bot,length,8),mat);if(!rx&&!ry&&!rz)m.rotation.z=Math.PI/2;break;}
+      case'cone':{const{radius,length}=c.params;m=new THREE.Mesh(new THREE.ConeGeometry(radius,length,8),mat);if(!rx&&!ry&&!rz)m.rotation.z=Math.PI/2;break;}
+      case'box':{const{x,y,z}=c.params;m=new THREE.Mesh(new THREE.BoxGeometry(x,y,z),mat);break;}
+      case'sphere':{const{radius,half}=c.params;const geo=half?new THREE.SphereGeometry(radius,8,6,0,Math.PI*2,0,Math.PI/2):new THREE.SphereGeometry(radius,8,6);m=new THREE.Mesh(geo,mat);break;}
+      case'torus':{const{radius,tube}=c.params;m=new THREE.Mesh(new THREE.TorusGeometry(radius,tube,6,12),mat);if(!rx&&!ry&&!rz)m.rotation.y=Math.PI/2;break;}
+      case'wedge':{const{profile,depth}=c.params;const s=new THREE.Shape();profile.forEach((p,i)=>i===0?s.moveTo(p[0],p[1]):s.lineTo(p[0],p[1]));s.closePath();const geo=new THREE.ExtrudeGeometry(s,{depth,bevelEnabled:true,bevelThickness:0.005,bevelSize:0.005});geo.center();m=new THREE.Mesh(geo,mat);break;}
+      case'spine':{const{length,radius,flange_r}=c.params;const sg=new THREE.Group();const s=new THREE.Shape();for(let i=0;i<=6;i++){const a=Math.PI*2*i/6;if(i===0)s.moveTo(Math.cos(a)*radius,Math.sin(a)*radius);else s.lineTo(Math.cos(a)*radius,Math.sin(a)*radius);}const bg=new THREE.ExtrudeGeometry(s,{depth:length,bevelEnabled:false});bg.center();const body=new THREE.Mesh(bg,mat);body.rotation.y=Math.PI/2;sg.add(body);sg.position.set(px,py,pz);g.add(sg);sg.traverse(ch=>{if(ch.isMesh){ch.add(new THREE.LineSegments(new THREE.EdgesGeometry(ch.geometry,15),new THREE.LineBasicMaterial({color:ECOL[c.material]||0x4fc3f7,transparent:true,opacity:0.5})));}});continue;}
+      default:continue;
+    }
+    if(m){m.position.set(px,py,pz);m.rotation.x+=rx;m.rotation.y+=ry;m.rotation.z+=rz;g.add(m);m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry,15),new THREE.LineBasicMaterial({color:ECOL[c.material]||0x4fc3f7,transparent:true,opacity:0.5})));}
+  }
+  scene.add(g);return g;
+}
+
+function createThumbnail(canvas,parts){
+  canvas.width=W;canvas.height=H;
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+  renderer.setSize(W,H,false);
+  renderer.setClearColor(0x060a12);
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(40,W/H,0.001,10);
+  scene.add(new THREE.AmbientLight(0x1a2a4a,0.6));
+  const key=new THREE.DirectionalLight(0x4fc3f7,0.4);key.position.set(2,3,1);scene.add(key);
+  const group=buildParts(scene,parts);
+  const box=new THREE.Box3().setFromObject(group);
+  const sz=box.getSize(new THREE.Vector3());
+  const md=Math.max(sz.x,sz.y,sz.z)||0.2;
+  const center=box.getCenter(new THREE.Vector3());
+  camera.position.set(center.x+md*1.8,center.y+md*1.2,center.z+md*1.8);
+  camera.lookAt(center);
+  function spin(){requestAnimationFrame(spin);group.rotation.y+=0.008;renderer.render(scene,camera);}
+  spin();
+}
+
+async function loadAll(){
+  const catFilter=document.getElementById('catFilter').value;
+  const grid=document.getElementById('grid');
+  grid.innerHTML='';
+  const r=await fetch('/api/all_components');
+  const items=await r.json();
+  // Populate category filter once
+  const cf=document.getElementById('catFilter');
+  if(cf.options.length<=1){
+    const cats=[...new Set(items.map(i=>i.category))].sort();
+    for(const c of cats) cf.innerHTML+=`<option value="${c}">${c}</option>`;
+  }
+  const pending=[];
+  for(const item of items){
+    if(catFilter&&item.category!==catFilter) continue;
+    pending.push(addCard(grid,item.name,item.category,item.parts));
+  }
+  for(const{canvas,parts}of pending) createThumbnail(canvas,parts);
+}
+
+function addCard(grid,name,meta,parts){
+  const card=document.createElement('div');card.className='card';card.dataset.name=name;
+  const canvas=document.createElement('canvas');
+  const info=document.createElement('div');info.className='card-info';
+  info.innerHTML=`<div class="name">${name}</div><div class="meta">${meta}</div>`;
+  const tag=document.createElement('div');tag.className='card-tag';
+  tag.innerHTML=`<label><input type="checkbox" class="card-select"> Select</label><textarea class="card-notes" placeholder="Notes..."></textarea>`;
+  card.appendChild(canvas);card.appendChild(info);card.appendChild(tag);grid.appendChild(card);
+  return{canvas,parts};
+}
+
+document.getElementById('catFilter').addEventListener('change',loadAll);
+document.getElementById('refreshBtn').addEventListener('click',loadAll);
+document.getElementById('exportBtn').addEventListener('click',async()=>{
+  const selected=[];
+  document.querySelectorAll('.card').forEach(card=>{
+    const cb=card.querySelector('.card-select');
+    if(cb&&cb.checked){
+      selected.push({name:card.dataset.name,notes:card.querySelector('.card-notes').value});
+    }
+  });
+  if(!selected.length){alert('Nothing selected');return;}
+  const r=await fetch('/api/export_tagged',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(selected)});
+  const d=await r.json();
+  alert(`Exported ${d.count} items to tagged_feedback.json`);
+});
+loadAll();
+</script>
+</body>
+</html>

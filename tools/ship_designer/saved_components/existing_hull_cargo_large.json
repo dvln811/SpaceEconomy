@@ -1,0 +1,83 @@
+{
+  "category": "hull_section",
+  "style": "existing_cargo_large",
+  "size": 1.0,
+  "parts": [
+    {
+      "type": "pod",
+      "pos": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "length": 0.8,
+        "height": 0.45,
+        "width": 0.7
+      },
+      "material": "hull"
+    },
+    {
+      "type": "pod",
+      "pos": [
+        0,
+        0.2,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "length": 0.6,
+        "height": 0.08,
+        "width": 0.5
+      },
+      "material": "hull"
+    },
+    {
+      "type": "box",
+      "pos": [
+        0.25,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "x": 0.03,
+        "y": 0.3,
+        "z": 0.5
+      },
+      "material": "hull"
+    },
+    {
+      "type": "box",
+      "pos": [
+        -0.25,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "x": 0.03,
+        "y": 0.3,
+        "z": 0.5
+      },
+      "material": "hull"
+    }
+  ]
+}

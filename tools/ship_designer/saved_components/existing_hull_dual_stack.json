@@ -1,0 +1,121 @@
+{
+  "category": "hull_section",
+  "style": "existing_dual_stack",
+  "size": 1.0,
+  "parts": [
+    {
+      "type": "pod",
+      "pos": [
+        0,
+        0.12,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "length": 0.7,
+        "height": 0.2,
+        "width": 0.45
+      },
+      "material": "hull"
+    },
+    {
+      "type": "pod",
+      "pos": [
+        0,
+        -0.12,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "length": 0.7,
+        "height": 0.2,
+        "width": 0.45
+      },
+      "material": "hull"
+    },
+    {
+      "type": "box",
+      "pos": [
+        -0.2,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "x": 0.04,
+        "y": 0.2,
+        "z": 0.04
+      },
+      "material": "hull"
+    },
+    {
+      "type": "box",
+      "pos": [
+        0.2,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "x": 0.04,
+        "y": 0.2,
+        "z": 0.04
+      },
+      "material": "hull"
+    },
+    {
+      "type": "box",
+      "pos": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "x": 0.04,
+        "y": 0.2,
+        "z": 0.04
+      },
+      "material": "hull"
+    },
+    {
+      "type": "pod",
+      "pos": [
+        0,
+        0.22,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "length": 0.5,
+        "height": 0.04,
+        "width": 0.35
+      },
+      "material": "hull"
+    }
+  ]
+}

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Component Library</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#05080f;color:#c8d4e0;font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.tab-bar{background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;gap:4px;padding:6px 12px;flex-shrink:0}
+.tab-bar a{padding:5px 14px;border:1px solid #1a2844;color:#5a7a9a;border-radius:3px;text-decoration:none;font-size:11px}
+.tab-bar a.active{background:#0d1a2f;border-color:#4fc3f7;color:#4fc3f7;font-weight:600}
+.page{display:flex;flex:1;overflow:hidden}
+.sidebar{width:260px;background:#0a0e18;border-right:1px solid #1a2844;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.sidebar h1{font-size:15px;color:#4fc3f7;margin-bottom:4px}
+.sidebar h2{font-size:11px;color:#5a7a9a;text-transform:uppercase;letter-spacing:1px;margin-top:6px}
+label{display:block;font-size:11px;color:#8aa0b8;margin-bottom:2px}
+select,input{width:100%;background:#0a1020;border:1px solid #1a3050;color:#c8d4e0;padding:5px 8px;border-radius:3px;font-family:inherit;font-size:12px}
+.btn{display:block;width:100%;padding:9px;border:1px solid #4fc3f7;background:#0d1a2f;color:#4fc3f7;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;transition:all .12s}
+.btn:hover{background:#4fc3f7;color:#05080f}
+.btn-green{border-color:#66bb6a;color:#66bb6a;background:#0a1a0a}
+.btn-green:hover{background:#66bb6a;color:#05080f}
+.btn-row{display:flex;gap:6px}
+.btn-row .btn{flex:1}
+.viewer{flex:1;position:relative}
+.info-bar{position:absolute;top:10px;left:10px;background:#0a0e18cc;border:1px solid #1a2844;border-radius:4px;padding:8px 12px;font-size:11px;color:#8aa0b8}
+.info-bar span{color:#4fc3f7;font-weight:500}
+.nav-link{display:inline-block;font-size:11px;color:#5a7a9a;text-decoration:none;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;margin-bottom:8px}
+.nav-link:hover{color:#4fc3f7;border-color:#4fc3f7}
+.saved-list{max-height:140px;overflow-y:auto;border:1px solid #1a2844;border-radius:3px}
+.saved-item{padding:4px 8px;cursor:pointer;font-size:11px;border-bottom:1px solid #0f1a28}
+.saved-item:hover{background:#0d1a2f;color:#4fc3f7}
+.desc{font-size:10px;color:#5a7a9a;margin-top:2px;font-style:italic}
+</style>
+</head>
+<body>
+<div class="tab-bar">
+  <a href="/">Ship Generator</a>
+  <a href="/components" class="active">Component Library</a>
+  <a href="/gallery">Gallery</a>
+</div>
+<div class="page">
+<div class="sidebar">
+  <h1>Component Library</h1>
+  <div>
+    <label>Category</label>
+    <select id="category"></select>
+    <div class="desc" id="catDesc"></div>
+  </div>
+  <div>
+    <label>Style</label>
+    <select id="style"></select>
+  </div>
+  <div>
+    <label>Size</label>
+    <input type="range" id="size" min="0.5" max="3" step="0.1" value="1">
+    <span id="sizeVal" style="font-size:10px;color:#4fc3f7">1.0</span>
+  </div>
+  <div>
+    <label>Seed (blank = random)</label>
+    <input type="number" id="seed" placeholder="random">
+  </div>
+  <div class="btn-row">
+    <button class="btn" id="genBtn">Generate</button>
+    <button class="btn" style="border-color:#ef5350;color:#ef5350" id="randBtn">Random</button>
+  </div>
+  <h2>Save Component</h2>
+  <div>
+    <label>Name</label>
+    <input type="text" id="saveName" placeholder="cockpit_angular_01">
+  </div>
+  <button class="btn btn-green" id="saveBtn">Save to Library</button>
+  <h2>Saved Components</h2>
+  <div class="saved-list" id="savedList"></div>
+  <button class="btn" id="copyBtn" style="margin-top:6px">Copy JSON</button>
+</div>
+<div class="viewer" id="viewer">
+  <div class="info-bar" id="infoBar">Select a category and click <span>Generate</span></div>
+</div>
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const container = document.getElementById('viewer');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x05080f);
+const camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight, 0.001, 50);
+camera.position.set(0.5, 0.4, 0.5);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(container.clientWidth, container.clientHeight);
+container.appendChild(renderer.domElement);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+scene.add(new THREE.AmbientLight(0x1a2a4a, 0.6));
+const key = new THREE.DirectionalLight(0x4fc3f7, 0.4); key.position.set(2,3,1); scene.add(key);
+scene.add(new THREE.DirectionalLight(0x2a1a4a, 0.2));
+const grid = new THREE.GridHelper(1, 10, 0x1a2844, 0x0f1a28); scene.add(grid);
+function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);}
+animate();
+window.addEventListener('resize',()=>{camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();renderer.setSize(container.clientWidth,container.clientHeight);});
+
+const MATS = {
+  hull:()=>new THREE.MeshPhongMaterial({color:0x0a1428,emissive:0x0a1428,shininess:0,transparent:true,opacity:0.7}),
+  engine:()=>new THREE.MeshPhongMaterial({color:0x0a1428,emissive:0x0a1020,shininess:0,transparent:true,opacity:0.7}),
+  cargo:()=>new THREE.MeshPhongMaterial({color:0x1a1808,emissive:0x0a0a05,shininess:0,transparent:true,opacity:0.7}),
+  weapon:()=>new THREE.MeshPhongMaterial({color:0x1a1018,emissive:0x100508,shininess:0,transparent:true,opacity:0.7}),
+  accent:()=>new THREE.MeshPhongMaterial({color:0x1a2040,emissive:0x0a0a1a,shininess:0,transparent:true,opacity:0.7}),
+};
+const ECOL={hull:0x4fc3f7,engine:0x5a7a9a,cargo:0xffd54f,weapon:0xef5350,accent:0xef5350};
+
+function addEdges(m,mat){const c=ECOL[mat]||0x4fc3f7;m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry,15),new THREE.LineBasicMaterial({color:c,transparent:true,opacity:0.5})));}
+
+let currentGroup=null, currentData=null;
+
+function buildParts(parts){
+  if(currentGroup) scene.remove(currentGroup);
+  const g=new THREE.Group();
+  for(const c of parts){
+    const mat=(MATS[c.material]||MATS.hull)();
+    const [px,py,pz]=c.pos;
+    const [rx,ry,rz]=c.rot||[0,0,0];
+    let m=null;
+    switch(c.type){
+      case'pod':{const{length,height,width}=c.params;const b=0.02,hw=width/2,hh=height/2;const s=new THREE.Shape();s.moveTo(-hh+b,-hw);s.lineTo(hh-b,-hw);s.lineTo(hh,-hw+b);s.lineTo(hh,hw-b);s.lineTo(hh-b,hw);s.lineTo(-hh+b,hw);s.lineTo(-hh,hw-b);s.lineTo(-hh,-hw+b);s.closePath();const geo=new THREE.ExtrudeGeometry(s,{depth:length,bevelEnabled:true,bevelThickness:0.005,bevelSize:0.005});geo.center();m=new THREE.Mesh(geo,mat);if(!rx&&!ry&&!rz)m.rotation.y=Math.PI/2;break;}
+      case'cylinder':{const{r_top,r_bot,length}=c.params;m=new THREE.Mesh(new THREE.CylinderGeometry(r_top,r_bot,length,8),mat);if(!rx&&!ry&&!rz)m.rotation.z=Math.PI/2;break;}
+      case'cone':{const{radius,length}=c.params;m=new THREE.Mesh(new THREE.ConeGeometry(radius,length,8),mat);if(!rx&&!ry&&!rz)m.rotation.z=Math.PI/2;break;}
+      case'box':{const{x,y,z}=c.params;m=new THREE.Mesh(new THREE.BoxGeometry(x,y,z),mat);break;}
+      case'sphere':{const{radius,half}=c.params;const geo=half?new THREE.SphereGeometry(radius,8,6,0,Math.PI*2,0,Math.PI/2):new THREE.SphereGeometry(radius,8,6);m=new THREE.Mesh(geo,mat);break;}
+      case'torus':{const{radius,tube}=c.params;m=new THREE.Mesh(new THREE.TorusGeometry(radius,tube,6,12),mat);if(!rx&&!ry&&!rz)m.rotation.y=Math.PI/2;break;}
+      case'wedge':{const{profile,depth}=c.params;const s=new THREE.Shape();profile.forEach((p,i)=>i===0?s.moveTo(p[0],p[1]):s.lineTo(p[0],p[1]));s.closePath();const geo=new THREE.ExtrudeGeometry(s,{depth,bevelEnabled:true,bevelThickness:0.005,bevelSize:0.005});geo.center();m=new THREE.Mesh(geo,mat);break;}
+      case'spine':{const{length,radius,flange_r}=c.params;const sg=new THREE.Group();const s=new THREE.Shape();for(let i=0;i<=6;i++){const a=Math.PI*2*i/6;if(i===0)s.moveTo(Math.cos(a)*radius,Math.sin(a)*radius);else s.lineTo(Math.cos(a)*radius,Math.sin(a)*radius);}const bg=new THREE.ExtrudeGeometry(s,{depth:length,bevelEnabled:false});bg.center();const body=new THREE.Mesh(bg,mat);body.rotation.y=Math.PI/2;sg.add(body);const fg=new THREE.CylinderGeometry(flange_r,flange_r,0.02,8);sg.add(Object.assign(new THREE.Mesh(fg,mat),{rotation:{x:0,y:0,z:Math.PI/2},position:{x:-length/2-0.01,y:0,z:0}}));sg.position.set(px,py,pz);g.add(sg);sg.traverse(ch=>{if(ch.isMesh)addEdges(ch,c.material);});continue;}
+      default:continue;
+    }
+    if(m){m.position.set(px,py,pz);m.rotation.x+=rx;m.rotation.y+=ry;m.rotation.z+=rz;g.add(m);addEdges(m,c.material);}
+  }
+  scene.add(g);
+  currentGroup=g;
+  const box=new THREE.Box3().setFromObject(g);
+  const sz=box.getSize(new THREE.Vector3());
+  const md=Math.max(sz.x,sz.y,sz.z)||0.3;
+  camera.position.set(md*2,md*1.5,md*2);
+  controls.target.copy(box.getCenter(new THREE.Vector3()));
+  controls.update();
+}
+
+// ── UI ──────────────────────────────────────────────────────────────────────
+let categories={};
+async function init(){
+  const r=await fetch('/api/component_categories');
+  categories=await r.json();
+  const sel=document.getElementById('category');
+  for(const k of Object.keys(categories)) sel.innerHTML+=`<option value="${k}">${k}</option>`;
+  sel.addEventListener('change',updateStyles);
+  updateStyles();
+  loadSaved();
+}
+function updateStyles(){
+  const cat=document.getElementById('category').value;
+  const info=categories[cat];
+  document.getElementById('catDesc').textContent=info?.description||'';
+  const sel=document.getElementById('style');
+  sel.innerHTML='<option value="">random</option>';
+  for(const s of (info?.styles||[])) sel.innerHTML+=`<option value="${s}">${s}</option>`;
+}
+document.getElementById('size').addEventListener('input',e=>{document.getElementById('sizeVal').textContent=parseFloat(e.target.value).toFixed(1);});
+
+async function generate(){
+  const body={category:document.getElementById('category').value,style:document.getElementById('style').value||null,size:parseFloat(document.getElementById('size').value),seed:document.getElementById('seed').value};
+  const r=await fetch('/api/generate_component',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  currentData=await r.json();
+  buildParts(currentData.parts);
+  document.getElementById('infoBar').innerHTML=`<span>${currentData.category}</span> / ${currentData.style} | ${currentData.parts.length} parts | size: ${currentData.size}`;
+  document.getElementById('saveName').value=`${currentData.category}_${currentData.style}_${Date.now()%1000}`;
+}
+
+document.getElementById('genBtn').addEventListener('click',generate);
+document.getElementById('randBtn').addEventListener('click',()=>{document.getElementById('seed').value='';document.getElementById('style').value='';generate();});
+document.getElementById('saveBtn').addEventListener('click',async()=>{
+  if(!currentData)return;
+  const name=document.getElementById('saveName').value||'unnamed';
+  await fetch('/api/save_component',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,component:currentData})});
+  loadSaved();
+});
+document.getElementById('copyBtn').addEventListener('click',()=>{
+  if(!currentData)return;
+  navigator.clipboard.writeText(JSON.stringify(currentData,null,2));
+  document.getElementById('infoBar').innerHTML='<span>Copied!</span>';
+});
+
+async function loadSaved(){
+  const r=await fetch('/api/saved_components');
+  const names=await r.json();
+  const el=document.getElementById('savedList');
+  el.innerHTML=names.map(n=>`<div class="saved-item" data-n="${n}">${n}</div>`).join('')||'<div style="padding:6px;color:#3a5a7a">None yet</div>';
+  el.querySelectorAll('.saved-item').forEach(item=>{
+    item.addEventListener('click',async()=>{
+      const r=await fetch(`/api/load_component/${item.dataset.n}`);
+      currentData=await r.json();
+      buildParts(currentData.parts);
+      document.getElementById('saveName').value=item.dataset.n;
+      document.getElementById('infoBar').innerHTML=`Loaded: <span>${item.dataset.n}</span>`;
+    });
+  });
+}
+init();
+</script>
+</body>
+</html>

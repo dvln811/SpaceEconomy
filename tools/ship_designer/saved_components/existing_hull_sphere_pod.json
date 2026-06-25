@@ -1,0 +1,25 @@
+{
+  "category": "hull_section",
+  "style": "existing_sphere",
+  "size": 1.0,
+  "parts": [
+    {
+      "type": "sphere",
+      "pos": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "radius": 0.32,
+        "half": false
+      },
+      "material": "hull"
+    }
+  ]
+}

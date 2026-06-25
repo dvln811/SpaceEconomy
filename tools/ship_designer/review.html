@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ship Review</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#05080f;color:#c8d4e0;font-family:'Segoe UI',system-ui,sans-serif;font-size:13px}
+.tab-bar{background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;gap:4px;padding:6px 12px;position:sticky;top:0;z-index:10}
+.tab-bar a{padding:5px 14px;border:1px solid #1a2844;color:#5a7a9a;border-radius:3px;text-decoration:none;font-size:11px}
+.tab-bar a.active{background:#0d1a2f;border-color:#4fc3f7;color:#4fc3f7;font-weight:600}
+.controls{padding:8px 12px;display:flex;gap:8px;align-items:center;border-bottom:1px solid #1a2844;position:sticky;top:38px;background:#05080f;z-index:9}
+.controls label{font-size:11px;color:#8aa0b8}
+.controls select,.controls input{background:#0a1020;border:1px solid #1a3050;color:#c8d4e0;padding:4px 8px;border-radius:3px;font-size:11px}
+.controls button{padding:5px 12px;border:1px solid #4fc3f7;background:#0d1a2f;color:#4fc3f7;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600}
+.controls button:hover{background:#4fc3f7;color:#05080f}
+.controls .btn-green{border-color:#66bb6a;color:#66bb6a}
+.controls .btn-green:hover{background:#66bb6a;color:#05080f}
+.grid{padding:12px;display:flex;flex-wrap:wrap;gap:10px}
+.card{background:#0a0e18;border:2px solid #1a2844;border-radius:6px;overflow:hidden;width:380px;transition:border-color .15s}
+.card.kept{border-color:#66bb6a}
+.card canvas{display:block;width:380px;height:260px}
+.card-info{padding:6px 10px;border-top:1px solid #1a2844;display:flex;justify-content:space-between;align-items:center}
+.card-info .name{color:#e0e8f0;font-weight:500;font-size:11px}
+.card-info .seed{color:#5a7a9a;font-size:10px}
+.card-actions{padding:6px 10px;border-top:1px solid #1a2844;display:flex;gap:6px}
+.card-actions button{padding:4px 10px;border-radius:3px;cursor:pointer;font-size:10px;font-weight:600;border:1px solid}
+.btn-keep{border-color:#66bb6a;color:#66bb6a;background:#0a1a0a}
+.btn-keep:hover,.btn-keep.active{background:#66bb6a;color:#05080f}
+.btn-regen{border-color:#ffd54f;color:#ffd54f;background:#1a1a0a}
+.btn-regen:hover{background:#ffd54f;color:#05080f}
+</style>
+</head>
+<body>
+<div class="tab-bar">
+  <a href="/">Ship Generator</a>
+  <a href="/gallery">Component Library</a>
+  <a href="/review" class="active">Review</a>
+</div>
+<div class="controls">
+  <label>Hull Class:</label>
+  <select id="hullClass">
+    <option value="fighter">Fighter</option>
+    <option value="frigate">Frigate</option>
+    <option value="destroyer">Destroyer</option>
+    <option value="cruiser">Cruiser</option>
+    <option value="battlecruiser">Battlecruiser</option>
+    <option value="battleship">Battleship</option>
+    <option value="carrier">Carrier</option>
+    <option value="dreadnought">Dreadnought</option>
+    <option value="industrial">Industrial</option>
+    <option value="mining_barge">Mining Barge</option>
+  </select>
+  <label>Per faction:</label>
+  <input type="number" id="count" value="4" min="1" max="10" style="width:50px">
+  <button id="genBtn">Generate Batch</button>
+  <button id="exportBtn" class="btn-green" style="margin-left:auto">Export Kept</button>
+</div>
+<div class="grid" id="grid"></div>
+
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const W=380,H=260;
+const MATS={
+  hull:()=>new THREE.MeshPhongMaterial({color:0x0a1428,emissive:0x0a1428,shininess:0,transparent:true,opacity:0.7}),
+  engine:()=>new THREE.MeshPhongMaterial({color:0x0a1428,emissive:0x0a1020,shininess:0,transparent:true,opacity:0.7}),
+};
+const ECOL={hull:0x4fc3f7,engine:0x5a7a9a};
+
+function buildParts(scene,parts){
+  const g=new THREE.Group();
+  for(const c of parts){
+    const mat=(MATS[c.material]||MATS.hull)();
+    const [px,py,pz]=c.pos;const [rx,ry,rz]=c.rot||[0,0,0];let m=null;
+    switch(c.type){
+      case'pod':{const{length,height,width}=c.params;const b=0.02,hw=width/2,hh=height/2;const s=new THREE.Shape();s.moveTo(-hw+b,-hh);s.lineTo(hw-b,-hh);s.lineTo(hw,-hh+b);s.lineTo(hw,hh-b);s.lineTo(hw-b,hh);s.lineTo(-hw+b,hh);s.lineTo(-hw,hh-b);s.lineTo(-hw,-hh+b);s.closePath();const geo=new THREE.ExtrudeGeometry(s,{depth:length,bevelEnabled:true,bevelThickness:0.005,bevelSize:0.005});geo.center();m=new THREE.Mesh(geo,mat);if(!rx&&!ry&&!rz)m.rotation.y=Math.PI/2;break;}
+      case'cylinder':{const{r_top,r_bot,length}=c.params;m=new THREE.Mesh(new THREE.CylinderGeometry(r_top,r_bot,length,8),mat);if(!rx&&!ry&&!rz)m.rotation.z=Math.PI/2;break;}
+      case'cone':{const{radius,length}=c.params;m=new THREE.Mesh(new THREE.ConeGeometry(radius,length,8),mat);if(!rx&&!ry&&!rz)m.rotation.z=Math.PI/2;break;}
+      case'box':{const{x,y,z}=c.params;m=new THREE.Mesh(new THREE.BoxGeometry(x,y,z),mat);break;}
+      case'sphere':{const{radius,half}=c.params;const geo=half?new THREE.SphereGeometry(radius,8,6,0,Math.PI*2,0,Math.PI/2):new THREE.SphereGeometry(radius,8,6);m=new THREE.Mesh(geo,mat);break;}
+      case'torus':{const{radius,tube}=c.params;m=new THREE.Mesh(new THREE.TorusGeometry(radius,tube,6,12),mat);if(!rx&&!ry&&!rz)m.rotation.y=Math.PI/2;break;}
+      case'spine':{const{length,radius,flange_r}=c.params;const sg=new THREE.Group();const s=new THREE.Shape();for(let i=0;i<=6;i++){const a=Math.PI*2*i/6;if(i===0)s.moveTo(Math.cos(a)*radius,Math.sin(a)*radius);else s.lineTo(Math.cos(a)*radius,Math.sin(a)*radius);}const bg=new THREE.ExtrudeGeometry(s,{depth:length,bevelEnabled:false});bg.center();const body=new THREE.Mesh(bg,mat);body.rotation.y=Math.PI/2;sg.add(body);sg.position.set(px,py,pz);g.add(sg);sg.traverse(ch=>{if(ch.isMesh)ch.add(new THREE.LineSegments(new THREE.EdgesGeometry(ch.geometry,15),new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.5})));});continue;}
+      default:continue;
+    }
+    if(m){m.position.set(px,py,pz);m.rotation.x+=rx;m.rotation.y+=ry;m.rotation.z+=rz;g.add(m);m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry,15),new THREE.LineBasicMaterial({color:ECOL[c.material]||0x4fc3f7,transparent:true,opacity:0.5})));}
+  }
+  scene.add(g);return g;
+}
+
+function renderCard(canvas,parts){
+  canvas.width=W;canvas.height=H;
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+  renderer.setSize(W,H,false);renderer.setClearColor(0x060a12);
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(40,W/H,0.001,100);
+  scene.add(new THREE.AmbientLight(0x1a2a4a,0.6));
+  const key=new THREE.DirectionalLight(0x4fc3f7,0.4);key.position.set(2,3,1);scene.add(key);
+  const group=buildParts(scene,parts);
+  // Normalize: scale group to fit in a 1-unit box
+  const box=new THREE.Box3().setFromObject(group);
+  const sz=box.getSize(new THREE.Vector3());
+  const md=Math.max(sz.x,sz.y,sz.z)||0.2;
+  const scale=1.0/md;
+  group.scale.setScalar(scale);
+  // Recompute bounds after scale
+  const box2=new THREE.Box3().setFromObject(group);
+  const center=box2.getCenter(new THREE.Vector3());
+  camera.position.set(center.x+1.2,center.y+0.8,center.z+1.2);
+  camera.lookAt(center);
+  const controls=new OrbitControls(camera,canvas);
+  controls.target.copy(center);
+  controls.enableDamping=true;
+  controls.autoRotate=true;
+  controls.autoRotateSpeed=2;
+  function spin(){requestAnimationFrame(spin);controls.update();renderer.render(scene,camera);}
+  spin();
+}
+
+let ships=[];
+let kept=new Set();
+
+async function generateBatch(){
+  const hull_class=document.getElementById('hullClass').value;
+  const count=parseInt(document.getElementById('count').value);
+  const r=await fetch('/api/batch_generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({hull_class,count})});
+  ships=await r.json();
+  kept.clear();
+  renderGrid();
+}
+
+function renderGrid(){
+  const grid=document.getElementById('grid');
+  grid.innerHTML='';
+  for(let i=0;i<ships.length;i++){
+    const s=ships[i];
+    const card=document.createElement('div');
+    card.className='card'+(kept.has(i)?' kept':'');
+    const canvas=document.createElement('canvas');
+    const info=document.createElement('div');info.className='card-info';
+    info.innerHTML=`<span class="name">${s.faction} / ${s.hull_class}</span><span class="seed">seed: ${s.seed}</span>`;
+    const actions=document.createElement('div');actions.className='card-actions';
+    actions.innerHTML=`<button class="btn-keep ${kept.has(i)?'active':''}" data-i="${i}">Keep</button><button class="btn-regen" data-i="${i}">Regenerate</button>`;
+    card.appendChild(canvas);card.appendChild(info);card.appendChild(actions);
+    grid.appendChild(card);
+    renderCard(canvas,s.components);
+  }
+  // Event delegation
+  grid.onclick=async(e)=>{
+    const btn=e.target.closest('button');
+    if(!btn)return;
+    const i=parseInt(btn.dataset.i);
+    const card=btn.closest('.card');
+    if(btn.classList.contains('btn-keep')){
+      if(kept.has(i)){kept.delete(i);card.classList.remove('kept');btn.classList.remove('active');}
+      else{kept.add(i);card.classList.add('kept');btn.classList.add('active');}
+    }else if(btn.classList.contains('btn-regen')){
+      const s=ships[i];
+      const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({faction:s.faction,hull_class:s.hull_class})});
+      const newShip=await r.json();
+      ships[i]={name:`${s.faction}/${s.hull_class}/${newShip.meta.seed}`,faction:s.faction,hull_class:s.hull_class,seed:newShip.meta.seed,components:newShip.components,meta:newShip.meta};
+      kept.delete(i);
+      // Replace just this card's canvas and info
+      card.classList.remove('kept');
+      card.querySelector('.card-info').innerHTML=`<span class="name">${s.faction} / ${s.hull_class}</span><span class="seed">seed: ${newShip.meta.seed}</span>`;
+      card.querySelector('.btn-keep').classList.remove('active');
+      const oldCanvas=card.querySelector('canvas');
+      const newCanvas=document.createElement('canvas');
+      oldCanvas.replaceWith(newCanvas);
+      renderCard(newCanvas,newShip.components);
+    }
+  };
+}
+
+document.getElementById('genBtn').addEventListener('click',generateBatch);
+document.getElementById('exportBtn').addEventListener('click',async()=>{
+  const exported=ships.filter((_,i)=>kept.has(i));
+  if(!exported.length){alert('No ships kept yet');return;}
+  const r=await fetch('/api/export_tagged',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(exported)});
+  const d=await r.json();
+  alert(`Exported ${d.count} ships to tagged_feedback.json`);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+{
+  "category": "hull_section",
+  "style": "existing_armored",
+  "size": 1.0,
+  "parts": [
+    {
+      "type": "pod",
+      "pos": [
+        0,
+        0,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "length": 0.5,
+        "height": 0.3,
+        "width": 0.4
+      },
+      "material": "hull"
+    },
+    {
+      "type": "pod",
+      "pos": [
+        0,
+        0.12,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "length": 0.35,
+        "height": 0.06,
+        "width": 0.3
+      },
+      "material": "hull"
+    },
+    {
+      "type": "pod",
+      "pos": [
+        0,
+        -0.12,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "length": 0.4,
+        "height": 0.05,
+        "width": 0.35
+      },
+      "material": "hull"
+    },
+    {
+      "type": "box",
+      "pos": [
+        0,
+        0,
+        0.19
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "x": 0.4,
+        "y": 0.15,
+        "z": 0.02
+      },
+      "material": "hull"
+    },
+    {
+      "type": "box",
+      "pos": [
+        0,
+        0,
+        -0.19
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "x": 0.4,
+        "y": 0.15,
+        "z": 0.02
+      },
+      "material": "hull"
+    }
+  ]
+}

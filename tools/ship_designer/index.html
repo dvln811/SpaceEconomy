@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ship Designer</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#05080f;color:#c8d4e0;font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.tab-bar{background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;gap:4px;padding:6px 12px;flex-shrink:0}
+.tab-bar a{padding:5px 14px;border:1px solid #1a2844;color:#5a7a9a;border-radius:3px;text-decoration:none;font-size:11px}
+.tab-bar a.active{background:#0d1a2f;border-color:#4fc3f7;color:#4fc3f7;font-weight:600}
+.page{display:flex;flex:1;overflow:hidden}
+.sidebar{width:280px;background:#0a0e18;border-right:1px solid #1a2844;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.sidebar h1{font-size:16px;color:#4fc3f7;letter-spacing:1px;margin-bottom:4px}
+.sidebar h2{font-size:11px;color:#5a7a9a;text-transform:uppercase;letter-spacing:1px;margin-top:8px}
+label{display:block;font-size:11px;color:#8aa0b8;margin-bottom:3px}
+select,input[type=number],input[type=text]{width:100%;background:#0a1020;border:1px solid #1a3050;color:#c8d4e0;padding:6px 8px;border-radius:3px;font-family:inherit;font-size:12px}
+select:focus,input:focus{outline:none;border-color:#4fc3f7}
+.btn{display:block;width:100%;padding:10px;border:1px solid #4fc3f7;background:#0d1a2f;color:#4fc3f7;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;transition:all .15s}
+.btn:hover{background:#4fc3f7;color:#05080f}
+.btn-red{border-color:#ef5350;color:#ef5350;background:#1a0a0a}
+.btn-red:hover{background:#ef5350;color:#fff}
+.btn-green{border-color:#66bb6a;color:#66bb6a;background:#0a1a0a}
+.btn-green:hover{background:#66bb6a;color:#05080f}
+.btn-row{display:flex;gap:6px}
+.btn-row .btn{flex:1}
+.viewer{flex:1;position:relative}
+.viewer canvas{display:block}
+.info-bar{position:absolute;top:10px;left:10px;background:#0a0e18cc;border:1px solid #1a2844;border-radius:4px;padding:8px 12px;font-size:11px;color:#8aa0b8}
+.info-bar span{color:#4fc3f7;font-weight:500}
+.saved-list{max-height:150px;overflow-y:auto;border:1px solid #1a2844;border-radius:3px;margin-top:4px}
+.saved-item{padding:4px 8px;cursor:pointer;font-size:11px;border-bottom:1px solid #0f1a28}
+.saved-item:hover{background:#0d1a2f;color:#4fc3f7}
+.desc{font-size:10px;color:#5a7a9a;margin-top:2px;font-style:italic}
+</style>
+</head>
+<body>
+<div class="tab-bar">
+  <a href="/" class="active">Ship Generator</a>
+  <a href="/gallery">Component Library</a>
+  <a href="/review">Review</a>
+</div>
+<div class="page">
+<div class="sidebar">
+  <h1>Ship Generator</h1>
+  <div>
+    <label>Faction Style</label>
+    <select id="faction"></select>
+    <div class="desc" id="factionDesc"></div>
+  </div>
+  <div>
+    <label>Hull Class</label>
+    <select id="hullClass"></select>
+  </div>
+  <div>
+    <label>Seed (blank = random)</label>
+    <input type="number" id="seed" placeholder="random">
+  </div>
+  <div class="btn-row">
+    <button class="btn" id="generateBtn">Generate</button>
+    <button class="btn btn-red" id="randomBtn">Random</button>
+  </div>
+  <h2>Save Design</h2>
+  <div>
+    <label>Name</label>
+    <input type="text" id="saveName" placeholder="my_ship">
+  </div>
+  <button class="btn btn-green" id="saveBtn">Save</button>
+  <h2>Saved Designs</h2>
+  <div class="saved-list" id="savedList"></div>
+  <h2>Export</h2>
+  <button class="btn" id="exportBtn">Copy JSON to Clipboard</button>
+</div>
+<div class="viewer" id="viewer">
+  <div class="info-bar" id="infoBar">Click <span>Generate</span> to create a ship</div>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ── Three.js setup ──────────────────────────────────────────────────────────
+const container = document.getElementById('viewer');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x05080f);
+const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.01, 100);
+camera.position.set(2, 1.5, 2);
+const renderer = new THREE.WebGLRenderer({antialias: true});
+renderer.setSize(container.clientWidth, container.clientHeight);
+container.appendChild(renderer.domElement);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+// Lighting
+scene.add(new THREE.AmbientLight(0x1a2a4a, 0.6));
+const key = new THREE.DirectionalLight(0x4fc3f7, 0.4);
+key.position.set(3, 4, 2);
+scene.add(key);
+scene.add(new THREE.DirectionalLight(0x2a1a4a, 0.2).position.set(-2, -1, -3));
+
+// Grid
+const grid = new THREE.GridHelper(4, 20, 0x1a2844, 0x0f1a28);
+grid.rotation.x = 0;
+scene.add(grid);
+
+function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
+animate();
+window.addEventListener('resize', () => {
+  camera.aspect = container.clientWidth / container.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(container.clientWidth, container.clientHeight);
+});
+
+// ── Renderer (same logic as ship_renderer.js) ───────────────────────────────
+const MATERIALS = {
+  hull: () => new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1428, shininess:0, transparent:true, opacity:0.7}),
+  engine: () => new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1020, shininess:0, transparent:true, opacity:0.7}),
+  cargo: () => new THREE.MeshPhongMaterial({color:0x1a1808, emissive:0x0a0a05, shininess:0, transparent:true, opacity:0.7}),
+  mining: () => new THREE.MeshPhongMaterial({color:0x1a1028, emissive:0x0a0818, shininess:0, transparent:true, opacity:0.7}),
+  weapon: () => new THREE.MeshPhongMaterial({color:0x1a1018, emissive:0x100508, shininess:0, transparent:true, opacity:0.7}),
+  shield: () => new THREE.MeshPhongMaterial({color:0x0a1a0a, emissive:0x050a05, shininess:0, transparent:true, opacity:0.7}),
+  accent: () => new THREE.MeshPhongMaterial({color:0x1a2040, emissive:0x0a0a1a, shininess:0, transparent:true, opacity:0.7}),
+};
+const EDGE_COL = {hull:0x4fc3f7, engine:0x5a7a9a, cargo:0xffd54f, mining:0xab47bc, weapon:0xef5350, shield:0x66bb6a, accent:0xef5350, utility:0x4fc3f7};
+const HP_COL = {weapon:0xef5350, utility:0x4fc3f7, defense:0x66bb6a, industrial:0xffd54f, mining:0xab47bc};
+
+function addEdges(mesh, mat) {
+  const col = EDGE_COL[mat] || 0x4fc3f7;
+  const edges = new THREE.EdgesGeometry(mesh.geometry, 15);
+  mesh.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color:col, transparent:true, opacity:0.5})));
+}
+
+let currentGroup = null;
+let currentData = null;
+
+function buildShip(data) {
+  if (currentGroup) scene.remove(currentGroup);
+  const group = new THREE.Group();
+  for (const comp of data.components) {
+    const mat = (MATERIALS[comp.material] || MATERIALS.hull)();
+    const [px, py, pz] = comp.pos;
+    const [rx, ry, rz] = comp.rot || [0,0,0];
+    let mesh = null;
+    switch(comp.type) {
+      case 'pod': {
+        const {length, height, width} = comp.params;
+        const b=0.04, hw=width/2, hh=height/2;
+        const s = new THREE.Shape();
+        s.moveTo(-hw+b,-hh); s.lineTo(hw-b,-hh); s.lineTo(hw,-hh+b);
+        s.lineTo(hw,hh-b); s.lineTo(hw-b,hh); s.lineTo(-hw+b,hh);
+        s.lineTo(-hw,hh-b); s.lineTo(-hw,-hh+b); s.closePath();
+        const g = new THREE.ExtrudeGeometry(s, {depth:length, bevelEnabled:true, bevelThickness:0.01, bevelSize:0.01});
+        g.center(); mesh = new THREE.Mesh(g, mat);
+        if (!rx && !ry && !rz) mesh.rotation.y = Math.PI/2;
+        break;
+      }
+      case 'cylinder': {
+        const {r_top, r_bot, length} = comp.params;
+        mesh = new THREE.Mesh(new THREE.CylinderGeometry(r_top, r_bot, length, 8), mat);
+        if (!rx && !ry && !rz) mesh.rotation.z = Math.PI/2;
+        break;
+      }
+      case 'cone': {
+        const {radius, length} = comp.params;
+        mesh = new THREE.Mesh(new THREE.ConeGeometry(radius, length, 8), mat);
+        if (!rx && !ry && !rz) mesh.rotation.z = Math.PI/2;
+        break;
+      }
+      case 'spine': {
+        const {length, radius, flange_r} = comp.params;
+        const grp = new THREE.Group();
+        const s = new THREE.Shape();
+        for(let i=0;i<=6;i++){const a=Math.PI*2*i/6; if(i===0)s.moveTo(Math.cos(a)*radius,Math.sin(a)*radius); else s.lineTo(Math.cos(a)*radius,Math.sin(a)*radius);}
+        const bg = new THREE.ExtrudeGeometry(s,{depth:length,bevelEnabled:false}); bg.center();
+        const body = new THREE.Mesh(bg, mat); body.rotation.y=Math.PI/2; grp.add(body);
+        const fg = new THREE.CylinderGeometry(flange_r,flange_r,0.04,8);
+        const fA = new THREE.Mesh(fg, mat); fA.rotation.z=Math.PI/2; fA.position.x=-length/2-0.02; grp.add(fA);
+        const fB = new THREE.Mesh(fg.clone(), mat); fB.rotation.z=Math.PI/2; fB.position.x=length/2+0.02; grp.add(fB);
+        grp.position.set(px, py, pz); group.add(grp);
+        grp.traverse(c => { if(c.isMesh) addEdges(c, comp.material); });
+        continue;
+      }
+      case 'box': {
+        const {x, y, z} = comp.params;
+        mesh = new THREE.Mesh(new THREE.BoxGeometry(x, y, z), mat);
+        break;
+      }
+      case 'sphere': {
+        const {radius, half} = comp.params;
+        const g = half ? new THREE.SphereGeometry(radius,8,6,0,Math.PI*2,0,Math.PI/2) : new THREE.SphereGeometry(radius,8,6);
+        mesh = new THREE.Mesh(g, mat); break;
+      }
+      case 'torus': {
+        const {radius, tube} = comp.params;
+        mesh = new THREE.Mesh(new THREE.TorusGeometry(radius, tube, 6, 12), mat);
+        if (!rx && !ry && !rz) mesh.rotation.y = Math.PI/2;
+        break;
+      }
+      case 'wedge': {
+        const {profile, depth} = comp.params;
+        const s = new THREE.Shape();
+        profile.forEach((p,i) => i===0 ? s.moveTo(p[0],p[1]) : s.lineTo(p[0],p[1]));
+        s.closePath();
+        const g = new THREE.ExtrudeGeometry(s, {depth, bevelEnabled:true, bevelThickness:0.01, bevelSize:0.01});
+        g.center(); mesh = new THREE.Mesh(g, mat); break;
+      }
+      case 'hardpoint': {
+        const {slot_type} = comp.params;
+        const col = HP_COL[slot_type] || 0xffffff;
+        mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.04), new THREE.MeshBasicMaterial({color:col, wireframe:true, transparent:true, opacity:0.7}));
+        break;
+      }
+      default: continue;
+    }
+    if (mesh) {
+      mesh.position.set(px, py, pz);
+      mesh.rotation.x += rx; mesh.rotation.y += ry; mesh.rotation.z += rz;
+      group.add(mesh);
+      if (comp.type !== 'hardpoint') addEdges(mesh, comp.material);
+    }
+  }
+  scene.add(group);
+  currentGroup = group;
+  currentData = data;
+  // Auto-frame to fill frustum
+  const box = new THREE.Box3().setFromObject(group);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+  const fov = camera.fov * (Math.PI / 180);
+  const dist = maxDim / (2 * Math.tan(fov / 2)) * 1.1;
+  camera.position.set(center.x + dist * 0.6, center.y + dist * 0.4, center.z + dist * 0.6);
+  controls.target.copy(center);
+  controls.update();
+}
+
+// ── UI Logic ────────────────────────────────────────────────────────────────
+let factions = {};
+async function init() {
+  const [facRes, hullRes] = await Promise.all([fetch('/api/factions'), fetch('/api/hull_classes')]);
+  factions = await facRes.json();
+  const hulls = await hullRes.json();
+  const facSel = document.getElementById('faction');
+  const hullSel = document.getElementById('hullClass');
+  for (const [k, desc] of Object.entries(factions)) {
+    facSel.innerHTML += `<option value="${k}">${k}</option>`;
+  }
+  for (const h of hulls) hullSel.innerHTML += `<option value="${h}">${h}</option>`;
+  facSel.addEventListener('change', () => {
+    document.getElementById('factionDesc').textContent = factions[facSel.value] || '';
+  });
+  facSel.dispatchEvent(new Event('change'));
+  loadSaved();
+}
+
+async function generate() {
+  const body = {
+    faction: document.getElementById('faction').value,
+    hull_class: document.getElementById('hullClass').value,
+    seed: document.getElementById('seed').value,
+  };
+  const res = await fetch('/api/generate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+  const data = await res.json();
+  buildShip(data);
+  const m = data.meta;
+  document.getElementById('infoBar').innerHTML = `<span>${m.faction}</span> ${m.hull_class} | ${data.components.length} components | seed: <span>${m.seed ?? 'random'}</span>`;
+}
+
+async function loadSaved() {
+  const res = await fetch('/api/saved');
+  const names = await res.json();
+  const list = document.getElementById('savedList');
+  list.innerHTML = names.map(n => `<div class="saved-item" data-name="${n}">${n}</div>`).join('') || '<div style="padding:6px;color:#3a5a7a">No saved designs</div>';
+  list.querySelectorAll('.saved-item').forEach(el => {
+    el.addEventListener('click', async () => {
+      const res = await fetch(`/api/load/${el.dataset.name}`);
+      const data = await res.json();
+      buildShip(data);
+      document.getElementById('saveName').value = el.dataset.name;
+      document.getElementById('infoBar').innerHTML = `Loaded: <span>${el.dataset.name}</span>`;
+    });
+  });
+}
+
+document.getElementById('generateBtn').addEventListener('click', generate);
+document.getElementById('randomBtn').addEventListener('click', () => {
+  document.getElementById('seed').value = '';
+  generate();
+});
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  if (!currentData) return;
+  const name = document.getElementById('saveName').value || 'unnamed';
+  await fetch('/api/save', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name, design: currentData})});
+  loadSaved();
+});
+document.getElementById('exportBtn').addEventListener('click', () => {
+  if (!currentData) return;
+  navigator.clipboard.writeText(JSON.stringify(currentData, null, 2));
+  document.getElementById('infoBar').innerHTML = '<span>JSON copied to clipboard!</span>';
+});
+
+init();
+</script>
+</body>
+</html>

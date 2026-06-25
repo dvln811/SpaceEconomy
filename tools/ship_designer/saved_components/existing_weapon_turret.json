@@ -1,0 +1,64 @@
+{
+  "category": "weapon_mount",
+  "style": "existing_turret",
+  "size": 1.0,
+  "parts": [
+    {
+      "type": "cylinder",
+      "pos": [
+        0,
+        -0.02,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "r_top": 0.05,
+        "r_bot": 0.07,
+        "length": 0.04
+      },
+      "material": "weapon"
+    },
+    {
+      "type": "pod",
+      "pos": [
+        0,
+        0.01,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "length": 0.06,
+        "height": 0.04,
+        "width": 0.06
+      },
+      "material": "weapon"
+    },
+    {
+      "type": "cylinder",
+      "pos": [
+        0.07,
+        0.01,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "params": {
+        "r_top": 0.01,
+        "r_bot": 0.01,
+        "length": 0.1
+      },
+      "material": "weapon"
+    }
+  ]
+}
