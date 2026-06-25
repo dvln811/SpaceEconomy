@@ -3,6 +3,7 @@ Optimized: consumption every tick at 2x, skip idle stations, only emit non-zero 
 from server.supervisor import WorkerThread
 from server.intents import InventoryDelta, PriceUpdate, EventLog
 from server.models import calculate_price
+from server.economy_config import PASSIVE
 
 # Trade good IDs for population consumption
 TRADE_GOOD_IDS = [
@@ -41,9 +42,9 @@ class EconomyWorker(WorkerThread):
                 # Passive ore generation (only mining colonies with fields)
                 if station.station_type == 'mining_colony' and sys.asteroid_fields:
                     for field in sys.asteroid_fields:
-                        rate = 50.0 * field.density
+                        rate = PASSIVE['rate_multiplier'] * field.density
                         for ore in field.yields:
-                            if station.inventory.get(ore, 0) < 500000:
+                            if station.inventory.get(ore, 0) < PASSIVE['inventory_cap']:
                                 deltas[ore] = deltas.get(ore, 0) + rate
 
                 # Recipe-based production (skip if station produces nothing)

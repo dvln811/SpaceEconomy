@@ -32,8 +32,9 @@ NPC_MINER_NAMES = [
 ]
 
 LOADING_TICKS = 3
-UNLOADING_TICKS = 2
-MINING_TICKS = 5
+from server.economy_config import MINING as _MCFG
+UNLOADING_TICKS = _MCFG.get('unload_ticks', 25)
+MINING_TICKS = _MCFG.get('cycle_ticks', 50)
 
 
 class Simulation:
@@ -136,12 +137,13 @@ class Simulation:
                 ship_idx += 1
 
         # --- Miners: 2 per mining system (~400 miners) ---
+        from server.economy_config import MINING as MINING_CFG
         miner_idx = 0
         mining_systems = [sid for sid, s in self.universe.items() if s.asteroid_fields and s.stations]
         random.shuffle(mining_systems)
-        for sys_id in mining_systems[:200]:
+        for sys_id in mining_systems[:MINING_CFG['max_mining_systems']]:
             sys = self.universe[sys_id]
-            for i in range(2):
+            for i in range(MINING_CFG['regular_miners_per_system']):
                 st = miner_types[miner_idx % len(miner_types)]
                 ship = NPCShip(
                     id=f"mnr_{miner_idx}", name=f"{st.name} {random.randint(100,999)}",
@@ -177,7 +179,7 @@ class Simulation:
                             break
         random.shuffle(remote_exotic)
         deep_idx = 0
-        for field_sys, home_sys, home_station in remote_exotic[:100]:
+        for field_sys, home_sys, home_station in remote_exotic[:MINING_CFG['deep_miner_limit']]:
             st = miner_types[deep_idx % len(miner_types)]
             faction = self.universe[field_sys].faction or self.universe[home_sys].faction or "independent"
             ship = NPCShip(

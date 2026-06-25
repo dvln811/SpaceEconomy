@@ -1,0 +1,26 @@
+# Economy Configuration - tweak and rerun without code changes
+# Usage: python analyze.py 10000 2500
+
+mining:
+  # Miner fleet
+  regular_miners_per_system: 5       # miners spawned per mining system with stations
+  max_mining_systems: 250            # cap on how many systems get miners
+  deep_miner_limit: 100              # max deep miners (exotic ore haulers)
+
+  # Mining cycle
+  cycle_ticks: 50                    # ticks per mining extraction cycle
+  yield_multiplier: 40               # ore per cycle = yield_multiplier * field_density
+  unload_ticks: 25                   # ticks to unload cargo at station
+
+passive_generation:
+  # Station-based ore generation (mining colonies)
+  rate_multiplier: 1.0               # ore/tick = rate_multiplier * field_density per ore type
+  inventory_cap: 5000                # max ore stockpile per type per station before gen stops
+
+economy:
+  # Production
+  production_rate: 1.0               # base station production rate
+  baseline_trickle_mult: 0.3         # recipe input trickle (fraction of production_rate)
+
+  # Pricing (updates every N ticks)
+  price_update_interval: 60          # ticks between price recalculations

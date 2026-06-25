@@ -10,12 +10,13 @@ from server.intents import (
     SpawnCommand, FactionOrder, PriceUpdate, EventLog,
 )
 from server.change_tracker import ChangeTracker
+from server.economy_config import MINING
 
 log = logging.getLogger("supervisor")
 
 LOADING_TICKS = 10    # Docking + loading time
-UNLOADING_TICKS = 25  # Docking + drone unload (scales with cargo later)
-MINING_TICKS = 50     # Scan + approach + extract cycle
+UNLOADING_TICKS = MINING.get('unload_ticks', 25)
+MINING_TICKS = MINING.get('cycle_ticks', 50)
 
 
 class WorkerThread:
@@ -389,6 +390,7 @@ class Supervisor:
 
     def _complete_mining(self, ship, random):
         import random as rnd
+        from server.simulation import COMMODITIES
         loc = self.sim.universe[ship.location]
         if not loc.asteroid_fields:
             ship.state = "idle"
@@ -397,9 +399,15 @@ class Supervisor:
         if not field.yields:
             ship.state = "idle"
             return
-        commodity = rnd.choice(field.yields)
-        # Extract 20-40 units per cycle (based on field density, ship fills over multiple cycles)
-        max_extract = int(25 * field.density)
+        # Price-weighted ore selection: weight by base_price to prefer valuable ores
+        # In common belts (6-10 ISK range), this creates mild but meaningful bias
+        weights = []
+        for ore_id in field.yields:
+            c = COMMODITIES.get(ore_id)
+            weights.append(c.base_price if c else 1.0)
+        commodity = rnd.choices(field.yields, weights=weights, k=1)[0]
+        # Extract based on config yield_multiplier * field density
+        max_extract = int(MINING['yield_multiplier'] * field.density)
         remaining_cap = ship.cargo_capacity - sum(ship.cargo.values())
         amount = min(remaining_cap, max_extract)
         if amount > 0:

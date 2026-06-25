@@ -78,8 +78,12 @@ class NPCDecisionWorker(WorkerThread):
         if not target:
             return
 
-        needed = None
-        lowest = float('inf')
+        # Build deficit list - only items that are sourceable in region
+        import random as _rnd
+        region = home_sys.region
+        region_items = region_cache.get(region, {})
+
+        candidates = []
         for prod_id in target.produces:
             c = self.commodities.get(prod_id)
             if not c or not c.recipe:
@@ -87,16 +91,18 @@ class NPCDecisionWorker(WorkerThread):
             for inp_id, qty in c.recipe.items():
                 stock = target.inventory.get(inp_id, 0)
                 want = qty * target.production_rate * 500
-                if stock < want and stock < lowest:
-                    lowest = stock
-                    needed = inp_id
+                if stock < want and inp_id in region_items:
+                    deficit = (want - stock) / max(want, 1)
+                    candidates.append((inp_id, deficit))
 
-        if not needed:
+        if not candidates:
             return
 
-        # Use region cache for O(1) lookup instead of iterating systems
-        region = home_sys.region
-        sources = region_cache.get(region, {}).get(needed, [])
+        # Weighted random by deficit - spreads haulers across needs, prevents clustering
+        weights = [d for _, d in candidates]
+        needed = _rnd.choices([c[0] for c in candidates], weights=weights, k=1)[0]
+
+        sources = region_items.get(needed, [])
 
         best_src = None
         best_hops = 999
