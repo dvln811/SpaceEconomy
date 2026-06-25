@@ -102,6 +102,25 @@ let sellSortCol = 'price', sellSortDir = -1;
 let lastTick = 0, expanded = {};
 let jumpMap = {};
 let currentRegion = 'The Forge'; // default: player home region
+
+async function buildJumpMap(){
+  try{
+    const r = await fetch('/api/positions');
+    const systems = await r.json();
+    // BFS from Cygnus
+    const start = Object.keys(systems).find(k=>systems[k].name==='Cygnus')||Object.keys(systems)[0];
+    jumpMap={};jumpMap[start]=0;
+    const queue=[start];
+    while(queue.length){
+      const cur=queue.shift();
+      const sys=systems[cur];
+      if(!sys||!sys.connections)continue;
+      for(const n of sys.connections){
+        if(jumpMap[n]===undefined){jumpMap[n]=jumpMap[cur]+1;queue.push(n);}
+      }
+    }
+  }catch(e){console.error('Jump map failed',e);}
+}
 const isDebug = new URLSearchParams(window.location.search).has('debug');
 
 async function loadRegions(){
@@ -419,7 +438,7 @@ document.getElementById('treeSearch').addEventListener('input',function(){render
 document.getElementById('groupBy').addEventListener('change',renderOrders);
 document.getElementById('regionSelect').addEventListener('change',function(){currentRegion=this.value;loadMarketData();});
 loadRegions();
-loadCommodities().then(loadMarketData);
+buildJumpMap().then(()=>loadCommodities().then(loadMarketData));
 setInterval(loadMarketData,10000);
 })();
 </script>
