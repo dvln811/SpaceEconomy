@@ -1,0 +1,3569 @@
+[
+  {
+    "tick": 1000,
+    "elapsed_sec": 36.2,
+    "ticks_per_sec": 27.6,
+    "ship_states": {
+      "idle": 985,
+      "intra_traveling": 249,
+      "unloading": 41,
+      "traveling": 15,
+      "loading": 5,
+      "mining": 181
+    },
+    "active_by_role": {
+      "freelance": 87,
+      "hauler": 146,
+      "miner": 258
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7656,
+    "total_inv_qty": 50070965,
+    "trade_volume": 2706,
+    "top_inventory": [
+      [
+        "sensor_cluster",
+        4293578
+      ],
+      [
+        "hydral_ice",
+        3788448
+      ],
+      [
+        "iron_ore",
+        3692648
+      ],
+      [
+        "copper_ore",
+        3161443
+      ],
+      [
+        "carbonite",
+        2901552
+      ],
+      [
+        "shield_emitter",
+        2887121
+      ],
+      [
+        "calcite",
+        2874607
+      ],
+      [
+        "silicon_ore",
+        2846702
+      ],
+      [
+        "cap_cell",
+        2588831
+      ],
+      [
+        "targeting_array",
+        2277522
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "nanofiber_l_faction",
+        109
+      ],
+      [
+        "warp_scrambler_m_named",
+        108
+      ],
+      [
+        "ammo_railgun_javelin_s_faction",
+        106
+      ],
+      [
+        "warp_disruptor_l_t2",
+        86
+      ],
+      [
+        "ammo_gauss_cannon_standard_l_faction",
+        83
+      ],
+      [
+        "ammo_pulse_laser_scorch_s_faction",
+        80
+      ],
+      [
+        "refined_copper",
+        72
+      ],
+      [
+        "shield_hardener_th_faction",
+        72
+      ],
+      [
+        "warp_scrambler",
+        72
+      ],
+      [
+        "power_diagnostic_m_t2",
+        63
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 34.13,
+      "tick_ms": 27.3,
+      "movement_ms": 1.7,
+      "workers_ms": 20.9,
+      "merge_ms": 4.7,
+      "worker_times": {
+        "economy": 20.6,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.2,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 482
+    }
+  },
+  {
+    "tick": 2000,
+    "elapsed_sec": 73.5,
+    "ticks_per_sec": 27.2,
+    "ship_states": {
+      "idle": 990,
+      "intra_traveling": 246,
+      "traveling": 20,
+      "unloading": 36,
+      "loading": 2,
+      "mining": 182
+    },
+    "active_by_role": {
+      "freelance": 92,
+      "hauler": 150,
+      "miner": 244
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7675,
+    "total_inv_qty": 75344230,
+    "trade_volume": 5625,
+    "top_inventory": [
+      [
+        "hydral_ice",
+        6902380
+      ],
+      [
+        "iron_ore",
+        6865265
+      ],
+      [
+        "copper_ore",
+        5912363
+      ],
+      [
+        "carbonite",
+        5567072
+      ],
+      [
+        "calcite",
+        5555480
+      ],
+      [
+        "silicon_ore",
+        5410230
+      ],
+      [
+        "sensor_cluster",
+        4276848
+      ],
+      [
+        "cap_cell",
+        2585081
+      ],
+      [
+        "targeting_array",
+        2498842
+      ],
+      [
+        "shield_emitter",
+        2419988
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "titanium_alloy",
+        124
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "stasis_web_m_t2",
+        112
+      ],
+      [
+        "tractor_beam_m_faction",
+        112
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "shield_hardener_th_faction",
+        74
+      ],
+      [
+        "warp_scrambler",
+        72
+      ],
+      [
+        "power_diagnostic_m_t2",
+        70
+      ],
+      [
+        "refined_copper",
+        67
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 31.23,
+      "tick_ms": 32.1,
+      "movement_ms": 1.6,
+      "workers_ms": 26.2,
+      "merge_ms": 4.2,
+      "worker_times": {
+        "economy": 26.1,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 480
+    }
+  },
+  {
+    "tick": 3000,
+    "elapsed_sec": 110.1,
+    "ticks_per_sec": 27.3,
+    "ship_states": {
+      "idle": 975,
+      "intra_traveling": 261,
+      "unloading": 27,
+      "loading": 4,
+      "traveling": 21,
+      "mining": 188
+    },
+    "active_by_role": {
+      "freelance": 92,
+      "hauler": 153,
+      "miner": 256
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7679,
+    "total_inv_qty": 99656859,
+    "trade_volume": 8514,
+    "top_inventory": [
+      [
+        "hydral_ice",
+        9663287
+      ],
+      [
+        "iron_ore",
+        9604619
+      ],
+      [
+        "copper_ore",
+        8556141
+      ],
+      [
+        "calcite",
+        8127341
+      ],
+      [
+        "silicon_ore",
+        7972183
+      ],
+      [
+        "carbonite",
+        7925427
+      ],
+      [
+        "sensor_cluster",
+        4365474
+      ],
+      [
+        "cobalt_ore",
+        3112901
+      ],
+      [
+        "tin_ore",
+        3023942
+      ],
+      [
+        "nitrogen_ice",
+        2840951
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "warp_core_stab_faction",
+        144
+      ],
+      [
+        "shield_hardener_th_m_named",
+        140
+      ],
+      [
+        "shield_recharger_l_named",
+        134
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "titanium_alloy",
+        116
+      ],
+      [
+        "stasis_web_m_t2",
+        113
+      ],
+      [
+        "tractor_beam_m_faction",
+        112
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "refined_copper",
+        89
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 37.37,
+      "tick_ms": 25.5,
+      "movement_ms": 1.5,
+      "workers_ms": 18.9,
+      "merge_ms": 5.2,
+      "worker_times": {
+        "economy": 18.8,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 472
+    }
+  },
+  {
+    "tick": 4000,
+    "elapsed_sec": 146.2,
+    "ticks_per_sec": 27.4,
+    "ship_states": {
+      "idle": 976,
+      "intra_traveling": 249,
+      "unloading": 36,
+      "loading": 6,
+      "traveling": 23,
+      "mining": 186
+    },
+    "active_by_role": {
+      "freelance": 93,
+      "hauler": 155,
+      "miner": 252
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 122125543,
+    "trade_volume": 11489,
+    "top_inventory": [
+      [
+        "hydral_ice",
+        11975511
+      ],
+      [
+        "iron_ore",
+        11661979
+      ],
+      [
+        "copper_ore",
+        10962815
+      ],
+      [
+        "calcite",
+        10633043
+      ],
+      [
+        "silicon_ore",
+        10480563
+      ],
+      [
+        "carbonite",
+        9908868
+      ],
+      [
+        "sensor_cluster",
+        4420435
+      ],
+      [
+        "cobalt_ore",
+        4111537
+      ],
+      [
+        "tin_ore",
+        4019610
+      ],
+      [
+        "nitrogen_ice",
+        3715773
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "stasis_web_m_faction",
+        157
+      ],
+      [
+        "damage_control_faction",
+        150
+      ],
+      [
+        "warp_core_stab_faction",
+        144
+      ],
+      [
+        "shield_hardener_th_m_named",
+        140
+      ],
+      [
+        "shield_recharger_l_named",
+        134
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "titanium_alloy",
+        108
+      ],
+      [
+        "refined_copper",
+        61
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 34.57,
+      "tick_ms": 28.4,
+      "movement_ms": 1.6,
+      "workers_ms": 22.7,
+      "merge_ms": 4.0,
+      "worker_times": {
+        "economy": 22.5,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.1,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 484
+    }
+  },
+  {
+    "tick": 5000,
+    "elapsed_sec": 182.0,
+    "ticks_per_sec": 27.5,
+    "ship_states": {
+      "idle": 969,
+      "intra_traveling": 251,
+      "unloading": 31,
+      "traveling": 20,
+      "loading": 3,
+      "mining": 202
+    },
+    "active_by_role": {
+      "freelance": 94,
+      "hauler": 152,
+      "miner": 261
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 140286639,
+    "trade_volume": 14352,
+    "top_inventory": [
+      [
+        "hydral_ice",
+        13673119
+      ],
+      [
+        "iron_ore",
+        13108803
+      ],
+      [
+        "calcite",
+        12595830
+      ],
+      [
+        "copper_ore",
+        12495016
+      ],
+      [
+        "silicon_ore",
+        12333572
+      ],
+      [
+        "carbonite",
+        11211791
+      ],
+      [
+        "cobalt_ore",
+        5059244
+      ],
+      [
+        "tin_ore",
+        5010712
+      ],
+      [
+        "nitrogen_ice",
+        4530240
+      ],
+      [
+        "biomass",
+        4490225
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "shield_hardener_kin_m_faction",
+        159
+      ],
+      [
+        "stasis_web_m_faction",
+        159
+      ],
+      [
+        "damage_control_faction",
+        150
+      ],
+      [
+        "warp_core_stab_faction",
+        144
+      ],
+      [
+        "shield_hardener_th_m_named",
+        140
+      ],
+      [
+        "shield_recharger_l_named",
+        134
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "titanium_alloy",
+        102
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 31.21,
+      "tick_ms": 30.5,
+      "movement_ms": 1.9,
+      "workers_ms": 24.1,
+      "merge_ms": 4.4,
+      "worker_times": {
+        "economy": 24.0,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 470
+    }
+  },
+  {
+    "tick": 6000,
+    "elapsed_sec": 217.2,
+    "ticks_per_sec": 27.6,
+    "ship_states": {
+      "idle": 966,
+      "intra_traveling": 252,
+      "unloading": 34,
+      "traveling": 19,
+      "loading": 1,
+      "mining": 204
+    },
+    "active_by_role": {
+      "freelance": 96,
+      "hauler": 156,
+      "miner": 258
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 153561509,
+    "trade_volume": 17247,
+    "top_inventory": [
+      [
+        "hydral_ice",
+        14587203
+      ],
+      [
+        "iron_ore",
+        14221001
+      ],
+      [
+        "calcite",
+        13977303
+      ],
+      [
+        "copper_ore",
+        13602147
+      ],
+      [
+        "silicon_ore",
+        13580967
+      ],
+      [
+        "carbonite",
+        12119351
+      ],
+      [
+        "cobalt_ore",
+        5738456
+      ],
+      [
+        "tin_ore",
+        5653651
+      ],
+      [
+        "nitrogen_ice",
+        5157198
+      ],
+      [
+        "biomass",
+        5095508
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "shield_hardener_kin_m_faction",
+        159
+      ],
+      [
+        "stasis_web_m_faction",
+        159
+      ],
+      [
+        "warp_core_stab_faction",
+        144
+      ],
+      [
+        "shield_hardener_th_m_named",
+        140
+      ],
+      [
+        "shield_recharger_l_named",
+        134
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_copper",
+        83
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 35.3,
+      "tick_ms": 28.4,
+      "movement_ms": 1.7,
+      "workers_ms": 22.4,
+      "merge_ms": 4.2,
+      "worker_times": {
+        "economy": 22.4,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 474
+    }
+  },
+  {
+    "tick": 7000,
+    "elapsed_sec": 252.2,
+    "ticks_per_sec": 27.8,
+    "ship_states": {
+      "idle": 974,
+      "intra_traveling": 259,
+      "unloading": 33,
+      "loading": 4,
+      "traveling": 19,
+      "mining": 187
+    },
+    "active_by_role": {
+      "freelance": 96,
+      "hauler": 152,
+      "miner": 254
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 164550076,
+    "trade_volume": 20186,
+    "top_inventory": [
+      [
+        "hydral_ice",
+        15367182
+      ],
+      [
+        "iron_ore",
+        15233930
+      ],
+      [
+        "calcite",
+        15222247
+      ],
+      [
+        "silicon_ore",
+        14743082
+      ],
+      [
+        "copper_ore",
+        14481933
+      ],
+      [
+        "carbonite",
+        12989799
+      ],
+      [
+        "cobalt_ore",
+        6204286
+      ],
+      [
+        "tin_ore",
+        6046300
+      ],
+      [
+        "nitrogen_ice",
+        5644608
+      ],
+      [
+        "biomass",
+        5460168
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "shield_recharger_l_named",
+        183
+      ],
+      [
+        "overdrive_faction",
+        179
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        160
+      ],
+      [
+        "stasis_web_m_faction",
+        160
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_copper",
+        66
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 32.9,
+      "tick_ms": 31.1,
+      "movement_ms": 1.6,
+      "workers_ms": 24.5,
+      "merge_ms": 5.0,
+      "worker_times": {
+        "economy": 24.4,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 462
+    }
+  },
+  {
+    "tick": 8000,
+    "elapsed_sec": 287.3,
+    "ticks_per_sec": 27.8,
+    "ship_states": {
+      "idle": 980,
+      "intra_traveling": 252,
+      "unloading": 32,
+      "traveling": 23,
+      "loading": 1,
+      "mining": 188
+    },
+    "active_by_role": {
+      "freelance": 93,
+      "hauler": 152,
+      "miner": 251
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 172341106,
+    "trade_volume": 23128,
+    "top_inventory": [
+      [
+        "calcite",
+        16005715
+      ],
+      [
+        "iron_ore",
+        15936621
+      ],
+      [
+        "hydral_ice",
+        15822219
+      ],
+      [
+        "silicon_ore",
+        15467348
+      ],
+      [
+        "copper_ore",
+        15113103
+      ],
+      [
+        "carbonite",
+        13694748
+      ],
+      [
+        "cobalt_ore",
+        6515822
+      ],
+      [
+        "tin_ore",
+        6265674
+      ],
+      [
+        "nitrogen_ice",
+        6018329
+      ],
+      [
+        "biomass",
+        5723571
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "tractor_beam_t2",
+        196
+      ],
+      [
+        "overdrive_faction",
+        182
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        162
+      ],
+      [
+        "stasis_web_m_faction",
+        162
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_copper",
+        54
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 31.25,
+      "tick_ms": 33.0,
+      "movement_ms": 1.7,
+      "workers_ms": 26.6,
+      "merge_ms": 4.7,
+      "worker_times": {
+        "economy": 26.6,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 476
+    }
+  },
+  {
+    "tick": 9000,
+    "elapsed_sec": 323.1,
+    "ticks_per_sec": 27.9,
+    "ship_states": {
+      "idle": 972,
+      "intra_traveling": 252,
+      "traveling": 26,
+      "unloading": 31,
+      "loading": 3,
+      "mining": 192
+    },
+    "active_by_role": {
+      "freelance": 95,
+      "hauler": 153,
+      "miner": 256
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 177656513,
+    "trade_volume": 26021,
+    "top_inventory": [
+      [
+        "calcite",
+        16505896
+      ],
+      [
+        "iron_ore",
+        16491375
+      ],
+      [
+        "hydral_ice",
+        16211041
+      ],
+      [
+        "silicon_ore",
+        16044296
+      ],
+      [
+        "copper_ore",
+        15649348
+      ],
+      [
+        "carbonite",
+        14253861
+      ],
+      [
+        "cobalt_ore",
+        6675460
+      ],
+      [
+        "tin_ore",
+        6389045
+      ],
+      [
+        "nitrogen_ice",
+        6233742
+      ],
+      [
+        "biomass",
+        5862308
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "overdrive_faction",
+        187
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        163
+      ],
+      [
+        "stasis_web_m_faction",
+        163
+      ],
+      [
+        "refined_lithium",
+        148
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_copper",
+        55
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 30.09,
+      "tick_ms": 31.0,
+      "movement_ms": 2.0,
+      "workers_ms": 23.8,
+      "merge_ms": 5.3,
+      "worker_times": {
+        "economy": 23.7,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 458
+    }
+  },
+  {
+    "tick": 10000,
+    "elapsed_sec": 358.9,
+    "ticks_per_sec": 27.9,
+    "ship_states": {
+      "idle": 970,
+      "intra_traveling": 259,
+      "unloading": 24,
+      "traveling": 17,
+      "loading": 2,
+      "mining": 204
+    },
+    "active_by_role": {
+      "freelance": 96,
+      "hauler": 153,
+      "miner": 257
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 182179845,
+    "trade_volume": 28923,
+    "top_inventory": [
+      [
+        "calcite",
+        16929990
+      ],
+      [
+        "iron_ore",
+        16877416
+      ],
+      [
+        "silicon_ore",
+        16553580
+      ],
+      [
+        "hydral_ice",
+        16552353
+      ],
+      [
+        "copper_ore",
+        16070625
+      ],
+      [
+        "carbonite",
+        14637164
+      ],
+      [
+        "cobalt_ore",
+        6832124
+      ],
+      [
+        "tin_ore",
+        6458839
+      ],
+      [
+        "nitrogen_ice",
+        6411255
+      ],
+      [
+        "biomass",
+        5947582
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "overdrive_faction",
+        187
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        165
+      ],
+      [
+        "stasis_web_m_faction",
+        164
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "refined_platinum",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_copper",
+        82
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 33.83,
+      "tick_ms": 28.4,
+      "movement_ms": 1.7,
+      "workers_ms": 21.7,
+      "merge_ms": 5.0,
+      "worker_times": {
+        "economy": 14.9,
+        "npc_decisions": 6.7,
+        "faction_strategy": 0.1,
+        "battle_sim": 0.1,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 461
+    }
+  },
+  {
+    "tick": 11000,
+    "elapsed_sec": 395.7,
+    "ticks_per_sec": 27.8,
+    "ship_states": {
+      "idle": 976,
+      "intra_traveling": 249,
+      "unloading": 34,
+      "loading": 5,
+      "traveling": 21,
+      "mining": 191
+    },
+    "active_by_role": {
+      "freelance": 95,
+      "hauler": 146,
+      "miner": 259
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 185909854,
+    "trade_volume": 31792,
+    "top_inventory": [
+      [
+        "calcite",
+        17246194
+      ],
+      [
+        "iron_ore",
+        17187987
+      ],
+      [
+        "silicon_ore",
+        16923972
+      ],
+      [
+        "hydral_ice",
+        16852632
+      ],
+      [
+        "copper_ore",
+        16402045
+      ],
+      [
+        "carbonite",
+        14913168
+      ],
+      [
+        "cobalt_ore",
+        6984508
+      ],
+      [
+        "nitrogen_ice",
+        6521061
+      ],
+      [
+        "tin_ore",
+        6505195
+      ],
+      [
+        "biomass",
+        6016215
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "refined_lithium",
+        179
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        166
+      ],
+      [
+        "stasis_web_m_faction",
+        166
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "refined_platinum",
+        102
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_copper",
+        53
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 35.43,
+      "tick_ms": 24.2,
+      "movement_ms": 1.6,
+      "workers_ms": 17.8,
+      "merge_ms": 4.8,
+      "worker_times": {
+        "economy": 17.7,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 473
+    }
+  },
+  {
+    "tick": 12000,
+    "elapsed_sec": 430.4,
+    "ticks_per_sec": 27.9,
+    "ship_states": {
+      "idle": 968,
+      "intra_traveling": 258,
+      "loading": 5,
+      "traveling": 11,
+      "unloading": 33,
+      "mining": 201
+    },
+    "active_by_role": {
+      "freelance": 93,
+      "hauler": 156,
+      "miner": 259
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 188888061,
+    "trade_volume": 34721,
+    "top_inventory": [
+      [
+        "calcite",
+        17517593
+      ],
+      [
+        "iron_ore",
+        17402097
+      ],
+      [
+        "silicon_ore",
+        17251781
+      ],
+      [
+        "hydral_ice",
+        17096499
+      ],
+      [
+        "copper_ore",
+        16707018
+      ],
+      [
+        "carbonite",
+        15062743
+      ],
+      [
+        "cobalt_ore",
+        7086726
+      ],
+      [
+        "nitrogen_ice",
+        6590313
+      ],
+      [
+        "tin_ore",
+        6543869
+      ],
+      [
+        "biomass",
+        6085175
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "scanner_faction",
+        198
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        168
+      ],
+      [
+        "stasis_web_m_faction",
+        167
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "refined_platinum",
+        103
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_copper",
+        45
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 31.75,
+      "tick_ms": 32.2,
+      "movement_ms": 1.9,
+      "workers_ms": 25.6,
+      "merge_ms": 4.7,
+      "worker_times": {
+        "economy": 15.5,
+        "npc_decisions": 10.0,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 474
+    }
+  },
+  {
+    "tick": 13000,
+    "elapsed_sec": 467.1,
+    "ticks_per_sec": 27.8,
+    "ship_states": {
+      "idle": 976,
+      "intra_traveling": 240,
+      "traveling": 24,
+      "unloading": 38,
+      "loading": 1,
+      "mining": 197
+    },
+    "active_by_role": {
+      "freelance": 96,
+      "hauler": 153,
+      "miner": 251
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 191378325,
+    "trade_volume": 37625,
+    "top_inventory": [
+      [
+        "calcite",
+        17757945
+      ],
+      [
+        "iron_ore",
+        17577148
+      ],
+      [
+        "silicon_ore",
+        17546461
+      ],
+      [
+        "hydral_ice",
+        17305318
+      ],
+      [
+        "copper_ore",
+        17011804
+      ],
+      [
+        "carbonite",
+        15211832
+      ],
+      [
+        "cobalt_ore",
+        7156382
+      ],
+      [
+        "nitrogen_ice",
+        6659430
+      ],
+      [
+        "tin_ore",
+        6547494
+      ],
+      [
+        "biomass",
+        6154627
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "tractor_beam_t2",
+        198
+      ],
+      [
+        "scanner_faction",
+        198
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        169
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "refined_platinum",
+        108
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_copper",
+        48
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 32.81,
+      "tick_ms": 26.3,
+      "movement_ms": 1.7,
+      "workers_ms": 20.3,
+      "merge_ms": 4.4,
+      "worker_times": {
+        "economy": 20.2,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 470
+    }
+  },
+  {
+    "tick": 14001,
+    "elapsed_sec": 502.0,
+    "ticks_per_sec": 27.9,
+    "ship_states": {
+      "idle": 973,
+      "intra_traveling": 253,
+      "traveling": 16,
+      "unloading": 22,
+      "loading": 3,
+      "mining": 209
+    },
+    "active_by_role": {
+      "freelance": 95,
+      "hauler": 155,
+      "miner": 253
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 193997148,
+    "trade_volume": 40552,
+    "top_inventory": [
+      [
+        "calcite",
+        17988638
+      ],
+      [
+        "silicon_ore",
+        17808685
+      ],
+      [
+        "iron_ore",
+        17752337
+      ],
+      [
+        "hydral_ice",
+        17515866
+      ],
+      [
+        "copper_ore",
+        17316033
+      ],
+      [
+        "carbonite",
+        15334744
+      ],
+      [
+        "cobalt_ore",
+        7227244
+      ],
+      [
+        "nitrogen_ice",
+        6728551
+      ],
+      [
+        "tin_ore",
+        6551765
+      ],
+      [
+        "biomass",
+        6223868
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "tractor_beam_t2",
+        198
+      ],
+      [
+        "scanner_faction",
+        198
+      ],
+      [
+        "refined_platinum",
+        192
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        169
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_copper",
+        61
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 27.78,
+      "tick_ms": 95.1,
+      "movement_ms": 1.7,
+      "workers_ms": 82.6,
+      "merge_ms": 5.4,
+      "worker_times": {
+        "economy": 55.9,
+        "npc_decisions": 0.0,
+        "faction_strategy": 26.6,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 471
+    }
+  },
+  {
+    "tick": 15004,
+    "elapsed_sec": 537.1,
+    "ticks_per_sec": 27.9,
+    "ship_states": {
+      "idle": 980,
+      "intra_traveling": 245,
+      "unloading": 25,
+      "traveling": 25,
+      "loading": 1,
+      "mining": 200
+    },
+    "active_by_role": {
+      "freelance": 95,
+      "hauler": 154,
+      "miner": 247
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 196603414,
+    "trade_volume": 43469,
+    "top_inventory": [
+      [
+        "calcite",
+        18219701
+      ],
+      [
+        "silicon_ore",
+        18058880
+      ],
+      [
+        "iron_ore",
+        17901288
+      ],
+      [
+        "hydral_ice",
+        17695810
+      ],
+      [
+        "copper_ore",
+        17621764
+      ],
+      [
+        "carbonite",
+        15447771
+      ],
+      [
+        "cobalt_ore",
+        7296330
+      ],
+      [
+        "nitrogen_ice",
+        6798564
+      ],
+      [
+        "tin_ore",
+        6556066
+      ],
+      [
+        "biomass",
+        6293111
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "scanner_faction",
+        198
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        169
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "refined_lithium",
+        158
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "refined_platinum",
+        114
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_copper",
+        59
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 23.08,
+      "tick_ms": 26.8,
+      "movement_ms": 1.6,
+      "workers_ms": 20.8,
+      "merge_ms": 4.4,
+      "worker_times": {
+        "economy": 20.7,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 461
+    }
+  },
+  {
+    "tick": 16006,
+    "elapsed_sec": 572.9,
+    "ticks_per_sec": 27.9,
+    "ship_states": {
+      "idle": 975,
+      "intra_traveling": 249,
+      "loading": 2,
+      "traveling": 23,
+      "unloading": 27,
+      "mining": 200
+    },
+    "active_by_role": {
+      "freelance": 95,
+      "hauler": 149,
+      "miner": 257
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 199033398,
+    "trade_volume": 46410,
+    "top_inventory": [
+      [
+        "calcite",
+        18452344
+      ],
+      [
+        "silicon_ore",
+        18282753
+      ],
+      [
+        "iron_ore",
+        18008466
+      ],
+      [
+        "copper_ore",
+        17895981
+      ],
+      [
+        "hydral_ice",
+        17872242
+      ],
+      [
+        "carbonite",
+        15531737
+      ],
+      [
+        "cobalt_ore",
+        7366745
+      ],
+      [
+        "nitrogen_ice",
+        6868655
+      ],
+      [
+        "tin_ore",
+        6560073
+      ],
+      [
+        "biomass",
+        6361248
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "scanner_faction",
+        198
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        169
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "refined_copper",
+        130
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "refined_lithium",
+        121
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_platinum",
+        69
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 25.07,
+      "tick_ms": 31.1,
+      "movement_ms": 1.7,
+      "workers_ms": 24.9,
+      "merge_ms": 4.6,
+      "worker_times": {
+        "economy": 24.8,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 477
+    }
+  },
+  {
+    "tick": 17009,
+    "elapsed_sec": 608.2,
+    "ticks_per_sec": 28.0,
+    "ship_states": {
+      "idle": 991,
+      "intra_traveling": 240,
+      "unloading": 27,
+      "traveling": 25,
+      "loading": 2,
+      "mining": 191
+    },
+    "active_by_role": {
+      "freelance": 96,
+      "hauler": 149,
+      "miner": 240
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 201223162,
+    "trade_volume": 49287,
+    "top_inventory": [
+      [
+        "calcite",
+        18682414
+      ],
+      [
+        "silicon_ore",
+        18502263
+      ],
+      [
+        "copper_ore",
+        18160785
+      ],
+      [
+        "iron_ore",
+        18116358
+      ],
+      [
+        "hydral_ice",
+        18048160
+      ],
+      [
+        "carbonite",
+        15612943
+      ],
+      [
+        "cobalt_ore",
+        7435646
+      ],
+      [
+        "nitrogen_ice",
+        6938203
+      ],
+      [
+        "tin_ore",
+        6563986
+      ],
+      [
+        "biomass",
+        6430419
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "scanner_faction",
+        198
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        169
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "refined_lithium",
+        108
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_platinum",
+        91
+      ],
+      [
+        "refined_copper",
+        79
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 26.84,
+      "tick_ms": 31.0,
+      "movement_ms": 1.6,
+      "workers_ms": 24.2,
+      "merge_ms": 5.2,
+      "worker_times": {
+        "economy": 24.1,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 476
+    }
+  },
+  {
+    "tick": 18011,
+    "elapsed_sec": 642.6,
+    "ticks_per_sec": 28.0,
+    "ship_states": {
+      "idle": 981,
+      "intra_traveling": 248,
+      "traveling": 20,
+      "unloading": 38,
+      "loading": 5,
+      "mining": 184
+    },
+    "active_by_role": {
+      "freelance": 93,
+      "hauler": 149,
+      "miner": 253
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 203329128,
+    "trade_volume": 52227,
+    "top_inventory": [
+      [
+        "calcite",
+        18886757
+      ],
+      [
+        "silicon_ore",
+        18645413
+      ],
+      [
+        "copper_ore",
+        18402859
+      ],
+      [
+        "hydral_ice",
+        18223695
+      ],
+      [
+        "iron_ore",
+        18221585
+      ],
+      [
+        "carbonite",
+        15693484
+      ],
+      [
+        "cobalt_ore",
+        7505922
+      ],
+      [
+        "nitrogen_ice",
+        7007650
+      ],
+      [
+        "tin_ore",
+        6567729
+      ],
+      [
+        "biomass",
+        6499455
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "scanner_faction",
+        198
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        169
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "refined_lithium",
+        111
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_platinum",
+        99
+      ],
+      [
+        "refined_copper",
+        47
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 29.31,
+      "tick_ms": 64.1,
+      "movement_ms": 1.8,
+      "workers_ms": 52.0,
+      "merge_ms": 5.0,
+      "worker_times": {
+        "economy": 45.4,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 6.5
+      },
+      "intents_per_tick": 468
+    }
+  },
+  {
+    "tick": 19011,
+    "elapsed_sec": 677.8,
+    "ticks_per_sec": 28.0,
+    "ship_states": {
+      "idle": 982,
+      "intra_traveling": 248,
+      "traveling": 19,
+      "loading": 4,
+      "unloading": 44,
+      "mining": 179
+    },
+    "active_by_role": {
+      "freelance": 93,
+      "hauler": 153,
+      "miner": 248
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 205223765,
+    "trade_volume": 55111,
+    "top_inventory": [
+      [
+        "calcite",
+        19067909
+      ],
+      [
+        "silicon_ore",
+        18750890
+      ],
+      [
+        "copper_ore",
+        18638670
+      ],
+      [
+        "hydral_ice",
+        18384466
+      ],
+      [
+        "iron_ore",
+        18302585
+      ],
+      [
+        "carbonite",
+        15773229
+      ],
+      [
+        "cobalt_ore",
+        7575695
+      ],
+      [
+        "nitrogen_ice",
+        7077056
+      ],
+      [
+        "tin_ore",
+        6572385
+      ],
+      [
+        "biomass",
+        6568970
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "scanner_faction",
+        198
+      ],
+      [
+        "refined_lithium",
+        189
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        169
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_platinum",
+        92
+      ],
+      [
+        "refined_copper",
+        62
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 29.45,
+      "tick_ms": 66.6,
+      "movement_ms": 1.7,
+      "workers_ms": 54.1,
+      "merge_ms": 5.4,
+      "worker_times": {
+        "economy": 47.4,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 6.6
+      },
+      "intents_per_tick": 472
+    }
+  },
+  {
+    "tick": 20011,
+    "elapsed_sec": 713.1,
+    "ticks_per_sec": 28.1,
+    "ship_states": {
+      "idle": 973,
+      "intra_traveling": 250,
+      "loading": 4,
+      "unloading": 26,
+      "traveling": 16,
+      "mining": 207
+    },
+    "active_by_role": {
+      "freelance": 96,
+      "hauler": 150,
+      "miner": 257
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 206815809,
+    "trade_volume": 58021,
+    "top_inventory": [
+      [
+        "calcite",
+        19218059
+      ],
+      [
+        "copper_ore",
+        18855443
+      ],
+      [
+        "silicon_ore",
+        18830126
+      ],
+      [
+        "hydral_ice",
+        18533438
+      ],
+      [
+        "iron_ore",
+        18384685
+      ],
+      [
+        "carbonite",
+        15851741
+      ],
+      [
+        "cobalt_ore",
+        7645109
+      ],
+      [
+        "nitrogen_ice",
+        7146721
+      ],
+      [
+        "biomass",
+        6637979
+      ],
+      [
+        "tin_ore",
+        6576718
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "cloak_m_t2",
+        201
+      ],
+      [
+        "scanner_faction",
+        198
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        169
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "refined_platinum",
+        116
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_copper",
+        45
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 27.96,
+      "tick_ms": 72.6,
+      "movement_ms": 1.6,
+      "workers_ms": 61.2,
+      "merge_ms": 4.8,
+      "worker_times": {
+        "economy": 47.8,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 13.3
+      },
+      "intents_per_tick": 492
+    }
+  },
+  {
+    "tick": 21011,
+    "elapsed_sec": 748.2,
+    "ticks_per_sec": 28.1,
+    "ship_states": {
+      "idle": 977,
+      "intra_traveling": 258,
+      "traveling": 20,
+      "unloading": 22,
+      "loading": 1,
+      "mining": 198
+    },
+    "active_by_role": {
+      "freelance": 96,
+      "hauler": 154,
+      "miner": 249
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 208390348,
+    "trade_volume": 60896,
+    "top_inventory": [
+      [
+        "calcite",
+        19367333
+      ],
+      [
+        "copper_ore",
+        19072213
+      ],
+      [
+        "silicon_ore",
+        18910155
+      ],
+      [
+        "hydral_ice",
+        18682343
+      ],
+      [
+        "iron_ore",
+        18466036
+      ],
+      [
+        "carbonite",
+        15931155
+      ],
+      [
+        "cobalt_ore",
+        7715142
+      ],
+      [
+        "nitrogen_ice",
+        7216482
+      ],
+      [
+        "biomass",
+        6706817
+      ],
+      [
+        "tin_ore",
+        6581168
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "cloak_m_t2",
+        201
+      ],
+      [
+        "scanner_faction",
+        198
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        169
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_platinum",
+        97
+      ],
+      [
+        "refined_copper",
+        48
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 28.96,
+      "tick_ms": 62.6,
+      "movement_ms": 1.7,
+      "workers_ms": 51.1,
+      "merge_ms": 4.9,
+      "worker_times": {
+        "economy": 44.7,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 6.3
+      },
+      "intents_per_tick": 459
+    }
+  },
+  {
+    "tick": 22011,
+    "elapsed_sec": 782.8,
+    "ticks_per_sec": 28.1,
+    "ship_states": {
+      "idle": 964,
+      "intra_traveling": 247,
+      "unloading": 29,
+      "traveling": 24,
+      "loading": 6,
+      "mining": 206
+    },
+    "active_by_role": {
+      "freelance": 96,
+      "hauler": 154,
+      "miner": 262
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 210123336,
+    "trade_volume": 63836,
+    "top_inventory": [
+      [
+        "calcite",
+        19517042
+      ],
+      [
+        "copper_ore",
+        19289244
+      ],
+      [
+        "silicon_ore",
+        18988898
+      ],
+      [
+        "hydral_ice",
+        18831200
+      ],
+      [
+        "iron_ore",
+        18547198
+      ],
+      [
+        "carbonite",
+        16010981
+      ],
+      [
+        "cobalt_ore",
+        7786081
+      ],
+      [
+        "nitrogen_ice",
+        7285372
+      ],
+      [
+        "biomass",
+        6775602
+      ],
+      [
+        "tin_ore",
+        6585655
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "cloak_m_t2",
+        201
+      ],
+      [
+        "scanner_faction",
+        198
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        169
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "refined_platinum",
+        145
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_copper",
+        44
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 26.9,
+      "tick_ms": 66.3,
+      "movement_ms": 1.7,
+      "workers_ms": 55.6,
+      "merge_ms": 4.1,
+      "worker_times": {
+        "economy": 41.6,
+        "npc_decisions": 0.0,
+        "faction_strategy": 5.6,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 8.3
+      },
+      "intents_per_tick": 465
+    }
+  },
+  {
+    "tick": 23012,
+    "elapsed_sec": 818.7,
+    "ticks_per_sec": 28.1,
+    "ship_states": {
+      "idle": 970,
+      "intra_traveling": 260,
+      "loading": 5,
+      "traveling": 22,
+      "unloading": 37,
+      "mining": 182
+    },
+    "active_by_role": {
+      "freelance": 94,
+      "hauler": 153,
+      "miner": 259
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 211916189,
+    "trade_volume": 66767,
+    "top_inventory": [
+      [
+        "calcite",
+        19667112
+      ],
+      [
+        "copper_ore",
+        19506705
+      ],
+      [
+        "silicon_ore",
+        19067711
+      ],
+      [
+        "hydral_ice",
+        18979782
+      ],
+      [
+        "iron_ore",
+        18628794
+      ],
+      [
+        "carbonite",
+        16091933
+      ],
+      [
+        "cobalt_ore",
+        7855906
+      ],
+      [
+        "nitrogen_ice",
+        7354669
+      ],
+      [
+        "biomass",
+        6844777
+      ],
+      [
+        "tin_ore",
+        6589786
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "gauss_cannon_named",
+        204
+      ],
+      [
+        "cloak_m_t2",
+        201
+      ],
+      [
+        "scanner_faction",
+        198
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        169
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_copper",
+        67
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 29.38,
+      "tick_ms": 28.1,
+      "movement_ms": 1.6,
+      "workers_ms": 22.3,
+      "merge_ms": 4.1,
+      "worker_times": {
+        "economy": 15.0,
+        "npc_decisions": 6.8,
+        "faction_strategy": 0.2,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 486
+    }
+  },
+  {
+    "tick": 24012,
+    "elapsed_sec": 854.0,
+    "ticks_per_sec": 28.1,
+    "ship_states": {
+      "idle": 982,
+      "intra_traveling": 258,
+      "unloading": 39,
+      "traveling": 22,
+      "loading": 2,
+      "mining": 173
+    },
+    "active_by_role": {
+      "freelance": 97,
+      "hauler": 149,
+      "miner": 248
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 213757270,
+    "trade_volume": 69654,
+    "top_inventory": [
+      [
+        "calcite",
+        19815798
+      ],
+      [
+        "copper_ore",
+        19723440
+      ],
+      [
+        "silicon_ore",
+        19146044
+      ],
+      [
+        "hydral_ice",
+        19128667
+      ],
+      [
+        "iron_ore",
+        18710596
+      ],
+      [
+        "carbonite",
+        16171632
+      ],
+      [
+        "cobalt_ore",
+        7926207
+      ],
+      [
+        "nitrogen_ice",
+        7424414
+      ],
+      [
+        "biomass",
+        6913511
+      ],
+      [
+        "tin_ore",
+        6594383
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "gauss_cannon_named",
+        204
+      ],
+      [
+        "cloak_m_t2",
+        201
+      ],
+      [
+        "scanner_faction",
+        198
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        169
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_copper",
+        58
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 28.06,
+      "tick_ms": 30.8,
+      "movement_ms": 1.7,
+      "workers_ms": 23.3,
+      "merge_ms": 5.7,
+      "worker_times": {
+        "economy": 22.8,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 462
+    }
+  },
+  {
+    "tick": 25012,
+    "elapsed_sec": 889.5,
+    "ticks_per_sec": 28.1,
+    "ship_states": {
+      "idle": 970,
+      "intra_traveling": 253,
+      "loading": 3,
+      "unloading": 40,
+      "traveling": 16,
+      "mining": 194
+    },
+    "active_by_role": {
+      "freelance": 95,
+      "hauler": 150,
+      "miner": 261
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 215463126,
+    "trade_volume": 72592,
+    "top_inventory": [
+      [
+        "calcite",
+        19964616
+      ],
+      [
+        "copper_ore",
+        19939044
+      ],
+      [
+        "hydral_ice",
+        19277094
+      ],
+      [
+        "silicon_ore",
+        19225828
+      ],
+      [
+        "iron_ore",
+        18791682
+      ],
+      [
+        "carbonite",
+        16251738
+      ],
+      [
+        "cobalt_ore",
+        7996688
+      ],
+      [
+        "nitrogen_ice",
+        7494201
+      ],
+      [
+        "biomass",
+        6982376
+      ],
+      [
+        "tin_ore",
+        6598313
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "gauss_cannon_named",
+        204
+      ],
+      [
+        "cloak_m_t2",
+        201
+      ],
+      [
+        "scanner_faction",
+        198
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        169
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "refined_copper",
+        104
+      ],
+      [
+        "titanium_alloy",
+        100
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 28.07,
+      "tick_ms": 35.4,
+      "movement_ms": 1.7,
+      "workers_ms": 28.9,
+      "merge_ms": 4.8,
+      "worker_times": {
+        "economy": 28.5,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 490
+    }
+  },
+  {
+    "tick": 26015,
+    "elapsed_sec": 923.8,
+    "ticks_per_sec": 28.2,
+    "ship_states": {
+      "idle": 974,
+      "intra_traveling": 259,
+      "unloading": 30,
+      "traveling": 23,
+      "loading": 2,
+      "mining": 188
+    },
+    "active_by_role": {
+      "freelance": 95,
+      "hauler": 148,
+      "miner": 259
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 217365221,
+    "trade_volume": 75458,
+    "top_inventory": [
+      [
+        "copper_ore",
+        20155462
+      ],
+      [
+        "calcite",
+        20114641
+      ],
+      [
+        "hydral_ice",
+        19426881
+      ],
+      [
+        "silicon_ore",
+        19306044
+      ],
+      [
+        "iron_ore",
+        18873440
+      ],
+      [
+        "carbonite",
+        16332548
+      ],
+      [
+        "cobalt_ore",
+        8067005
+      ],
+      [
+        "nitrogen_ice",
+        7563369
+      ],
+      [
+        "biomass",
+        7051062
+      ],
+      [
+        "tin_ore",
+        6602304
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "gauss_cannon_named",
+        204
+      ],
+      [
+        "cloak_m_t2",
+        201
+      ],
+      [
+        "scanner_faction",
+        198
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        169
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_copper",
+        62
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 30.84,
+      "tick_ms": 27.7,
+      "movement_ms": 1.7,
+      "workers_ms": 21.5,
+      "merge_ms": 4.5,
+      "worker_times": {
+        "economy": 21.4,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 481
+    }
+  },
+  {
+    "tick": 27018,
+    "elapsed_sec": 958.8,
+    "ticks_per_sec": 28.2,
+    "ship_states": {
+      "idle": 979,
+      "intra_traveling": 255,
+      "traveling": 19,
+      "unloading": 30,
+      "loading": 5,
+      "mining": 188
+    },
+    "active_by_role": {
+      "freelance": 93,
+      "hauler": 148,
+      "miner": 256
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 219105585,
+    "trade_volume": 78406,
+    "top_inventory": [
+      [
+        "copper_ore",
+        20372208
+      ],
+      [
+        "calcite",
+        20263820
+      ],
+      [
+        "hydral_ice",
+        19577545
+      ],
+      [
+        "silicon_ore",
+        19384156
+      ],
+      [
+        "iron_ore",
+        18956245
+      ],
+      [
+        "carbonite",
+        16412301
+      ],
+      [
+        "cobalt_ore",
+        8137187
+      ],
+      [
+        "nitrogen_ice",
+        7632792
+      ],
+      [
+        "biomass",
+        7120684
+      ],
+      [
+        "zinc_ore",
+        6632126
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "gauss_cannon_named",
+        204
+      ],
+      [
+        "cloak_m_t2",
+        201
+      ],
+      [
+        "scanner_faction",
+        198
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        169
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_copper",
+        45
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 31.08,
+      "tick_ms": 26.4,
+      "movement_ms": 1.9,
+      "workers_ms": 20.3,
+      "merge_ms": 4.3,
+      "worker_times": {
+        "economy": 20.0,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.1,
+        "battle_sim": 0.1,
+        "corsair_spawn": 0.1,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 452
+    }
+  },
+  {
+    "tick": 28018,
+    "elapsed_sec": 995.6,
+    "ticks_per_sec": 28.1,
+    "ship_states": {
+      "idle": 986,
+      "intra_traveling": 254,
+      "traveling": 19,
+      "unloading": 25,
+      "loading": 4,
+      "mining": 188
+    },
+    "active_by_role": {
+      "freelance": 97,
+      "hauler": 150,
+      "miner": 243
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 220793508,
+    "trade_volume": 81295,
+    "top_inventory": [
+      [
+        "copper_ore",
+        20588693
+      ],
+      [
+        "calcite",
+        20411317
+      ],
+      [
+        "hydral_ice",
+        19726917
+      ],
+      [
+        "silicon_ore",
+        19462280
+      ],
+      [
+        "iron_ore",
+        19037810
+      ],
+      [
+        "carbonite",
+        16493062
+      ],
+      [
+        "cobalt_ore",
+        8206395
+      ],
+      [
+        "nitrogen_ice",
+        7702774
+      ],
+      [
+        "biomass",
+        7190150
+      ],
+      [
+        "zinc_ore",
+        6702441
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "cloak_m_t2",
+        201
+      ],
+      [
+        "scanner_faction",
+        198
+      ],
+      [
+        "refined_platinum",
+        195
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        169
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_copper",
+        87
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 25.77,
+      "tick_ms": 35.4,
+      "movement_ms": 1.8,
+      "workers_ms": 28.6,
+      "merge_ms": 5.0,
+      "worker_times": {
+        "economy": 16.2,
+        "npc_decisions": 12.3,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 482
+    }
+  },
+  {
+    "tick": 29020,
+    "elapsed_sec": 1030.1,
+    "ticks_per_sec": 28.2,
+    "ship_states": {
+      "idle": 971,
+      "traveling": 22,
+      "intra_traveling": 262,
+      "unloading": 34,
+      "loading": 1,
+      "mining": 186
+    },
+    "active_by_role": {
+      "hauler": 152,
+      "freelance": 93,
+      "miner": 260
+    },
+    "stations_producing": 169,
+    "stations_halted": 29,
+    "unique_inv_items": 7681,
+    "total_inv_qty": 222327700,
+    "trade_volume": 84226,
+    "top_inventory": [
+      [
+        "copper_ore",
+        20804774
+      ],
+      [
+        "calcite",
+        20561272
+      ],
+      [
+        "hydral_ice",
+        19876573
+      ],
+      [
+        "silicon_ore",
+        19541639
+      ],
+      [
+        "iron_ore",
+        19120909
+      ],
+      [
+        "carbonite",
+        16572284
+      ],
+      [
+        "cobalt_ore",
+        8276474
+      ],
+      [
+        "nitrogen_ice",
+        7772234
+      ],
+      [
+        "biomass",
+        7259562
+      ],
+      [
+        "zinc_ore",
+        6772083
+      ]
+    ],
+    "lowest_inventory": [
+      [
+        "gauss_cannon_named",
+        204
+      ],
+      [
+        "cloak_m_t2",
+        201
+      ],
+      [
+        "scanner_faction",
+        198
+      ],
+      [
+        "shield_hardener_kin_m_faction",
+        169
+      ],
+      [
+        "mwd_l_named",
+        167
+      ],
+      [
+        "warp_core_stab_t2",
+        127
+      ],
+      [
+        "nanofiber_l_t2",
+        122
+      ],
+      [
+        "nanofiber_l_faction",
+        110
+      ],
+      [
+        "titanium_alloy",
+        100
+      ],
+      [
+        "refined_copper",
+        50
+      ]
+    ],
+    "perf": {
+      "ticks_per_sec": 32.16,
+      "tick_ms": 30.9,
+      "movement_ms": 1.7,
+      "workers_ms": 25.0,
+      "merge_ms": 4.1,
+      "worker_times": {
+        "economy": 24.9,
+        "npc_decisions": 0.0,
+        "faction_strategy": 0.0,
+        "battle_sim": 0.0,
+        "corsair_spawn": 0.0,
+        "dashboard": 0.0
+      },
+      "intents_per_tick": 493
+    }
+  }
+]

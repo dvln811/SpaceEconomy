@@ -196,13 +196,31 @@ Raw ores (T1) -> Refined materials (T2) -> Manufactured (T3) -> Components (T4) 
 ## Current Status
 
 ### Working Well
-- Multi-threaded sim at 25ms/tick with 1476 ships
-- Full mining economy: 263 miners active (regular + deep), cycling continuously
-- Market with buy/sell orders across all categories (weapons, ammo, equipment, materials)
+- Multi-threaded sim at 25-27ms/tick with 1476 ships (stable over 50K ticks)
+- Mining cycle fully working: belt->station->unload->return (observable in system view)
+- 263 miners (214 regular + 49 deep), ~207 actively mining at any time
+- Market with buy/sell orders across ALL categories (weapons, ammo, equipment, materials, trade goods)
+- 35 trade goods with lore descriptions, population-based consumption
+- 8 refined exotic ores added, recipes updated to use them
 - Faction AI with decisions, corp tasks, build projects
 - Dashboard with pre-computed aggregates (25KB, <5ms)
 - Route planning with pathfinding
-- Population-based civilian demand
+- Local dev tools: `dev.py` (headless), `analyze.py` (deep state analysis), `run_local.py` (browser)
+
+### Current Analysis (in progress)
+After 50K tick analysis we identified:
+- 29 stations permanently halted (fixed: orphan IDs in station_produces, T2/T3 items now assigned to 10+ stations each)
+- Inventory grows unbounded (production > consumption) - needs tuning
+- Power Cell production low (Lithium Cell chain was bottlenecked)
+- Fixed: copper_wiring_loom wrong ID, pharmaceutical_grade wrong ID, station components assigned to shipyards
+- After fixes: 233/262 stations producing (up from 169/198)
+- Need to rerun analysis with fixes to confirm improvement
+
+### Next Steps (immediate)
+1. Run 10K tick analysis with fixed DB to confirm economy stabilization
+2. Tune production/consumption balance so inventory plateaus (not grows forever)
+3. Address remaining 29 halted stations
+4. Iron ore price crash (0.56 vs base 8.0) - oversupply, needs more consumption
 
 ### Not Yet Implemented
 - Combat system (damage model, weapons + ammo interaction)
@@ -211,14 +229,23 @@ Raw ores (T1) -> Refined materials (T2) -> Manufactured (T3) -> Components (T4) 
 - Player ship control (docking, undocking, travel, mining)
 - Player trading (buy/sell at stations)
 - Ship fitting (equipping modules)
-- Corp fleet building (ships appearing on market when built)
 - Corsair raids on deep miners
-- IPO events (new corps spawning)
+- Ship visual teleporting fix (intra-travel interpolation)
+- Ship double-click zoom in system view
+
+### Local Dev Tools
+- `python dev.py [speed] [duration]` - headless sim, console output, for quick checks
+- `python analyze.py [ticks] [interval]` - deep state dump to analysis_deep.json
+- `python run_local.py` - full server at localhost:8000, starts at 1x, use dashboard to change speed
+- `start_local.ps1` - PowerShell launcher for run_local.py
+- Max safe browser speed: ~60x. Higher causes GIL contention with Flask.
+- Headless max: ~27 ticks/sec (480x multiplier)
 
 ### Known Issues
-- Route options (Prefer Safe/Avoid Null) are UI only, not wired to pathfinding
-- Some haulers still go idle if region cache empties (rare)
-- The `_tag_portraits.html` and `_tag_emblems.html` utility files are in the repo (can clean up)
+- Worker timeout warnings at high speed (harmless, increased to 30s)
+- 240x+ with browser open causes GIL contention (use headless for high speed)
+- Route options (Prefer Safe/Avoid Null) are UI only
+- `_tag_portraits.html` and `_tag_emblems.html` utility files in repo (cleanup later)
 
 ---
 
