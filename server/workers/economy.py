@@ -4,6 +4,18 @@ from server.supervisor import WorkerThread
 from server.intents import InventoryDelta, PriceUpdate, EventLog
 from server.models import calculate_price
 
+# Trade good IDs for population consumption
+TRADE_GOOD_IDS = [
+    "food_rations", "oxygen_packs", "water_recyclers", "life_support_cartridges",
+    "housing_materials", "clothing_textiles", "radiation_meds", "emergency_beacons",
+    "personal_electronics", "entertainment_systems", "spirits_alcohol", "synthetic_tobacco",
+    "cosmetics", "comm_devices", "personal_weapons", "holovid_players", "furniture", "toys_games",
+    "ship_repair_kits", "fuel_cells", "escape_pods", "navigation_chips", "stim_packs",
+    "neural_implants", "cybernetic_parts", "drone_repair_kits", "industrial_lubricants",
+    "exotic_wines", "rare_gems", "quantum_timepieces", "zerog_perfume",
+    "synthetic_organs", "memory_crystals", "ai_companions", "art_collections",
+]
+
 
 class EconomyWorker(WorkerThread):
     def __init__(self, commodities: dict, station_consumption: dict):
@@ -87,6 +99,14 @@ class EconomyWorker(WorkerThread):
                 if do_consumption:
                     for commodity_id in station_consumption.get(station.station_type, []):
                         deltas[commodity_id] = deltas.get(commodity_id, 0) - 2.0
+
+                # Population-based trade good consumption
+                if do_consumption and station.station_type == 'trade_hub' and sys.population > 10000:
+                    pop_rate = sys.population / 10_000_000.0  # total units/tick across all goods
+                    per_good = pop_rate / len(TRADE_GOOD_IDS)
+                    for gid in TRADE_GOOD_IDS:
+                        if station.inventory.get(gid, 0) > per_good:
+                            deltas[gid] = deltas.get(gid, 0) - per_good
 
                 # Only emit if there are actual non-zero changes
                 if deltas:

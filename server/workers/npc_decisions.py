@@ -207,7 +207,14 @@ class NPCDecisionWorker(WorkerThread):
         # If cargo heavy, sell at local station or travel to one
         if sum(ship.cargo.values()) >= ship.cargo_capacity * 0.8:
             if loc.stations and ship.cargo:
-                # Sell ALL cargo at first available station
+                # Must be at a station to sell - check intra_position
+                station_objs = [o for o in loc.objects if o.obj_type == "station"]
+                at_station = any(ship.intra_position == o.id for o in station_objs)
+                if not at_station and station_objs:
+                    # Travel to station first
+                    self.emit(ShipIntraIntent(ship_id=ship.id, dest_obj_id=station_objs[0].id))
+                    return
+                # At station - sell all cargo
                 for commodity, qty in list(ship.cargo.items()):
                     self.emit(ShipSellIntent(
                         ship_id=ship.id, system_id=ship.location,
@@ -234,7 +241,7 @@ class NPCDecisionWorker(WorkerThread):
 
         # Mine if local belts exist
         if loc.asteroid_fields:
-            belt_objs = [o for o in loc.objects if o.obj_type == "asteroid_belt"]
+            belt_objs = [o for o in loc.objects if o.obj_type == "belt"]
             if belt_objs:
                 belt_id = belt_objs[0].id
                 if ship.intra_position != belt_id:

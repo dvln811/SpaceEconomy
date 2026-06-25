@@ -234,7 +234,7 @@ function renderFactions() {
       for (const p of f.projects) {
         const pc = phaseColors[p.phase]||'#8aa0b8';
         html += '<div style="margin-bottom:4px;flex-shrink:0"><div style="font-size:11px;color:#e0e8f0">'+p.name+' <span style="background:'+pc+'22;color:'+pc+';padding:1px 5px;border-radius:2px;font-size:9px;text-transform:uppercase">'+p.phase+'</span></div>';
-        html += '<div style="display:flex;align-items:center;gap:6px;margin-top:2px"><div style="flex:1;height:5px;background:#1a2844;border-radius:3px;overflow:hidden"><div style="width:'+Math.min(100,p.progress)+'%;height:100%;background:'+pc+'"></div></div><span style="font-size:10px;color:#8aa0b8">'+p.progress+'%</span></div></div>';
+        html += '<div style="display:flex;align-items:center;gap:6px;margin-top:2px"><div style="flex:1;height:5px;background:#1a2844;border-radius:3px;overflow:hidden"><div style="width:'+Math.min(100,p.progress)+'%;height:100%;background:'+pc+'"></div></div><span style="font-size:10px;color:#8aa0b8;min-width:30px;text-align:right">'+p.progress+'%</span></div></div>';
       }
     }
     // Fleet builds (scrollable)
@@ -244,7 +244,7 @@ function renderFactions() {
       for (const fb of f.fleet_builds) {
         const pc = phaseColors[fb.phase]||'#8aa0b8';
         html += '<div style="margin-bottom:4px"><div style="font-size:11px;color:#e0e8f0">'+fb.name+' <span style="background:'+pc+'22;color:'+pc+';padding:1px 5px;border-radius:2px;font-size:9px;text-transform:uppercase">'+fb.phase+'</span></div>';
-        html += '<div style="display:flex;align-items:center;gap:6px;margin-top:2px"><div style="flex:1;height:5px;background:#1a2844;border-radius:3px;overflow:hidden"><div style="width:'+Math.min(100,fb.progress)+'%;height:100%;background:'+pc+'"></div></div><span style="font-size:10px;color:#8aa0b8">'+fb.progress+'%</span></div></div>';
+        html += '<div style="display:flex;align-items:center;gap:6px;margin-top:2px"><div style="flex:1;height:5px;background:#1a2844;border-radius:3px;overflow:hidden"><div style="width:'+Math.min(100,fb.progress)+'%;height:100%;background:'+pc+'"></div></div><span style="font-size:10px;color:#8aa0b8;min-width:30px;text-align:right">'+fb.progress+'%</span></div></div>';
       }
       html += '</div>';
     }

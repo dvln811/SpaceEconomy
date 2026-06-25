@@ -27,12 +27,19 @@ class DashboardWorker(WorkerThread):
             from server.game_data_db import get_data_db
             _name_map = {'corsairs': 'The Corsairs', 'free_states': 'Frontier Alliance', 'iron_compact': 'Iron Compact', 'merchants_guild': 'Merchants Guild', 'science_collective': 'Nexus Collective', 'terran_fed': 'Terran Federation'}
             _emblem_map = {'corsairs': 'the_corsairs.png', 'free_states': 'frontier_alliance.png', 'iron_compact': 'iron_compact.png', 'merchants_guild': 'merchants_guild.png', 'science_collective': 'nexus_collective.png', 'terran_fed': 'terran_federation.png'}
+            
+            # Pre-compute faction system counts (avoid 15000 iterations)
+            faction_counts = {}
+            for s in snapshot['universe'].values():
+                if s.faction:
+                    faction_counts[s.faction] = faction_counts.get(s.faction, 0) + 1
+
             fconn = get_data_db()
+            fconn.execute("PRAGMA busy_timeout=1000")
             faction_status = {}
             for fs in fconn.execute("SELECT faction_id, aggression, expansion_drive, economic_focus FROM faction_state").fetchall():
                 fid = fs['faction_id']
-                sys_count = sum(1 for s in snapshot['universe'].values() if s.faction == fid)
-                faction_status[fid] = {"name": _name_map.get(fid, fid), "systems": sys_count, "emblem": _emblem_map.get(fid, ''), "aggression": fs['aggression'], "expansion": fs['expansion_drive'], "economic": fs['economic_focus'], "projects": [], "fleet_builds": [], "corporations": [], "decisions": []}
+                faction_status[fid] = {"name": _name_map.get(fid, fid), "systems": faction_counts.get(fid, 0), "emblem": _emblem_map.get(fid, ''), "aggression": fs['aggression'], "expansion": fs['expansion_drive'], "economic": fs['economic_focus'], "projects": [], "fleet_builds": [], "corporations": [], "decisions": []}
             for p in fconn.execute("SELECT faction_id, project_type, project_name, target_system, requirements, accumulated, status, phase FROM build_projects").fetchall():
                 reqs = json.loads(p['requirements'])
                 acc = json.loads(p['accumulated'])

@@ -169,7 +169,7 @@ class Supervisor:
         worker_times = {}
         for w in self.workers:
             wt0 = time.time()
-            if not w.wait_done(timeout=5.0):
+            if not w.wait_done(timeout=30.0):
                 log.warning(f"Worker {w.name} timed out on tick {tick}")
             worker_times[w.name] = (time.time() - wt0) * 1000
         t_workers = time.time()
