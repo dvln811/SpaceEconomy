@@ -342,6 +342,27 @@ def api_market_orders():
                             'price': round(COMS[item_id].base_price * 1.3, 2),
                             'station': st.name, 'system': sys_obj.name, 'system_id': sid, 'region': region})
 
+            # Refineries always buy ALL raw ores including exotics
+            if st.station_type == 'refinery':
+                RARE_ORES = ['gold_ore','platinum_ore','palladium_ore','tungsten_ore',
+                             'helium3','xenon_gas','quartz_crystal','lithium_crystal',
+                             'beryllium_crystal','kraxolite','void_shard','neutronium']
+                for ore_id in RARE_ORES:
+                    if ore_id in COMS:
+                        buy_orders.append({'commodity': ore_id, 'qty': 200,
+                            'price': round(COMS[ore_id].base_price * 1.2, 2),
+                            'station': st.name, 'system': sys_obj.name, 'system_id': sid, 'region': region})
+
+            # Shipyards buy exotic materials for capital construction
+            if st.station_type == 'shipyard':
+                SHIPYARD_NEEDS = ['gold_ore','platinum_ore','palladium_ore','neutronium',
+                                  'kraxolite','void_shard','titanium_ore','tungsten_ore']
+                for mat_id in SHIPYARD_NEEDS:
+                    if mat_id in COMS:
+                        buy_orders.append({'commodity': mat_id, 'qty': 500,
+                            'price': round(COMS[mat_id].base_price * 1.5, 2),
+                            'station': st.name, 'system': sys_obj.name, 'system_id': sid, 'region': region})
+
         # Civilian population demand
         pop = getattr(sys_obj, 'population', 0) or 0
         if pop > 10000:
