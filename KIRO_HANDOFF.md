@@ -243,25 +243,39 @@ After economy rebalance:
 - Ship double-click zoom in system view
 - 3D battle viewer (Three.js, ship models ready, engine supports spatial)
 
-### Combat Simulation Engine (NEW - standalone, not yet integrated)
-- **Location:** `server/combat_engine.py` (engine) + `combat_viewer.py` (browser test UI)
-- **Run:** `python combat_viewer.py` -> http://localhost:5555
+### Combat Simulation Engine (standalone + integrated viewer)
+- **Location:** `server/combat_engine.py` (engine) + `combat.html` (3D viewer at /combat)
+- **Run locally:** `python combat_viewer.py` -> http://localhost:5555 (2D version)
+- **Live:** /combat on fly.io (full 3D with ship models)
 - **Features:**
   - Full 3D spatial simulation (x/y/z positions, velocities, acceleration)
   - 4 damage types: EM, Thermal, Kinetic, Explosive
   - Shield/Armor/Hull with distinct resistance profiles
   - Per-shot resolution with true angular velocity tracking
   - Weapon size vs signature (L turrets miss small ships)
-  - Range-based damage falloff
-  - Missiles as spatial entities with lead prediction and detonation trace
+  - Range-based damage falloff + range check (can't fire beyond 2x optimal)
+  - Missiles as spatial entities with lead prediction and line-trace detonation
   - Capacitor drain per weapon shot (lasers cap-intensive, projectiles free)
   - Module HP with bleedthrough damage (5% armor, 15% hull hit chance)
   - Ammo consumption from cargo
   - Movement AI: brawl (close), orbit (maintain range), kite (back off), snipe (stay far)
   - CPU/Powergrid fitting constraints (data structure ready, not enforced yet)
+- **3D Viewer:** Three.js full viewport, actual ship models from ship_geometry.py
+  - Ship scaling by hull class (Fighter 0.5x to Dreadnought 100x)
+  - Starfield skybox, engine trails, beam/projectile weapon lines, missile spheres
+  - Camera: WASD+Space/C free fly, mouse orbit, Shift boost, R/F look-axis drive
+  - Ship cards with HP/cap bars, hover tooltips, click=select+reticule, dblclick=follow+zoom
+  - Destroyed ships stay as gray wrecks, frozen in place
+  - Pause/Restart/Stop controls (server + client side)
 - **Performance:** 50v50 = 1.8ms/tick, 200v200 = 12ms/tick
 - **Ship models:** 81 geometries in `server/ship_geometry.py`, component-based Three.js format
-- **Next:** Wire into battle_sim worker, 3D viewer with ship models, projectile travel time
+- **Next:**
+  - Ship designer: fix raycaster selection, save back to geometry file, populate dropdowns
+  - Merge geometry optimization (reduce draw calls per ship from 40 to 2-4)
+  - LOD system for distant ships
+  - Wire combat into battle_sim worker (patrol ships engage at borders)
+  - Station models for 3D system view
+  - Projectile travel time for turrets (beams instant, projectiles spatial)
 
 ### Local Dev Tools
 - `python dev.py [speed] [duration]` - headless sim, console output, for quick checks
