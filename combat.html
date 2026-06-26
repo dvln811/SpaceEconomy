@@ -322,7 +322,7 @@ function animate(now) {
     // Update engine trail
     if (!shipTrails[id]) {
       const trailGeo = new THREE.BufferGeometry();
-      const positions = new Float32Array(60 * 3); // 20 trail points
+      const positions = new Float32Array(90 * 3); // 30 trail points
       trailGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
       trailGeo.setDrawRange(0, 0);
       const trailMat = new THREE.LineBasicMaterial({ color: 0x2288ff, transparent: true, opacity: 0.4 });
@@ -333,16 +333,16 @@ function animate(now) {
     }
     const trail = shipTrails[id];
     trail.timer += dt;
-    if (trail.timer > 0.15) { // add point every 150ms
+    if (trail.timer > 0.1) { // add point every 100ms
       trail.timer = 0;
-      // Offset trail origin to rear of ship (behind based on heading and scale)
+      // Offset trail origin to rear of ship (capped so it doesn't go too far for large ships)
       const mesh = shipMeshes[id];
-      const rearOffset = mesh ? mesh.scale.x * 0.5 : 5;
+      const rearOffset = mesh ? Math.min(mesh.scale.x * 0.4, 80) : 5;
       const angle = mesh ? mesh.rotation.y : 0;
       const tx = s.pos.x - Math.cos(angle) * rearOffset;
       const tz = s.pos.y + Math.sin(angle) * rearOffset;
       trail.points.push(tx, 0, tz);
-      if (trail.points.length > 60) trail.points.splice(0, 3);
+      if (trail.points.length > 90) trail.points.splice(0, 3);
       const arr = trail.line.geometry.attributes.position.array;
       for (let j = 0; j < trail.points.length; j++) arr[j] = trail.points[j];
       trail.line.geometry.attributes.position.needsUpdate = true;
