@@ -68,6 +68,9 @@ select:focus,input:focus{outline:none;border-color:#4fc3f7}
   <button class="btn btn-green" id="saveBtn">Save</button>
   <h2>Saved Designs</h2>
   <div class="saved-list" id="savedList"></div>
+  <h2>Load from Game</h2>
+  <select id="gameShipSelect" style="margin-bottom:6px"><option value="">-- select ship --</option></select>
+  <button class="btn" id="loadGameBtn">Load Ship</button>
   <h2>Export</h2>
   <button class="btn" id="exportBtn">Copy JSON to Clipboard</button>
 </div>
@@ -105,6 +108,17 @@ scene.add(new THREE.DirectionalLight(0x2a1a4a, 0.2).position.set(-2, -1, -3));
 const grid = new THREE.GridHelper(4, 20, 0x1a2844, 0x0f1a28);
 grid.rotation.x = 0;
 scene.add(grid);
+
+// Axis gizmo: R=+X(forward), G=+Y(up), B=+Z(right)
+function makeAxis(dir, color, label) {
+  const pts = [new THREE.Vector3(0,0,0), dir.clone().multiplyScalar(1.0)];
+  const geo = new THREE.BufferGeometry().setFromPoints(pts);
+  const line = new THREE.Line(geo, new THREE.LineBasicMaterial({color, linewidth:2}));
+  scene.add(line);
+}
+makeAxis(new THREE.Vector3(1,0,0), 0xff0000, 'X');
+makeAxis(new THREE.Vector3(0,1,0), 0x00ff00, 'Y');
+makeAxis(new THREE.Vector3(0,0,1), 0x0000ff, 'Z');
 
 function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
 animate();
@@ -301,6 +315,27 @@ document.getElementById('exportBtn').addEventListener('click', () => {
   navigator.clipboard.writeText(JSON.stringify(currentData, null, 2));
   document.getElementById('infoBar').innerHTML = '<span>JSON copied to clipboard!</span>';
 });
+
+// Load game ships into dropdown
+async function loadGameShips() {
+  const res = await fetch('/api/ship_model/all');
+  const all = await res.json();
+  const sel = document.getElementById('gameShipSelect');
+  const sorted = Object.entries(all).sort((a,b) => (a[1].hull_class||'').localeCompare(b[1].hull_class||'') || a[1].name.localeCompare(b[1].name));
+  for (const [id, data] of sorted) {
+    sel.innerHTML += `<option value="${id}">${data.name} [${data.hull_class || data.role}]</option>`;
+  }
+  document.getElementById('loadGameBtn').addEventListener('click', async () => {
+    const id = sel.value;
+    if (!id) return;
+    const data = all[id];
+    if (data) {
+      buildShip(data);
+      document.getElementById('infoBar').innerHTML = `Loaded: <span>${data.name}</span> [${data.hull_class || data.role}] | ${data.components.length} components`;
+    }
+  });
+}
+loadGameShips();
 
 init();
 </script>
