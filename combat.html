@@ -234,14 +234,18 @@ let freeCamera = true; // start in free mode
 const keys = {};
 
 function updateCamera() {
-  // WASD movement relative to camera facing
-  const speed = camDist * 0.05;
-  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).setY(0).normalize();
-  const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion).setY(0).normalize();
-  if (keys['w'] || keys['W']) camTarget.add(forward.clone().multiplyScalar(speed));
-  if (keys['s'] || keys['S']) camTarget.add(forward.clone().multiplyScalar(-speed));
-  if (keys['a'] || keys['A']) camTarget.add(right.clone().multiplyScalar(-speed));
-  if (keys['d'] || keys['D']) camTarget.add(right.clone().multiplyScalar(speed));
+  // WASD movement - speed scales with distance, shift for boost
+  const boost = keys['Shift'] ? 5 : 1;
+  const speed = camDist * 0.04 * boost;
+  // Forward/back along the line from camera to target projected on XZ
+  const fwd = new THREE.Vector3();
+  camera.getWorldDirection(fwd);
+  fwd.y = 0; fwd.normalize();
+  const right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0,1,0)).normalize();
+  if (keys['w'] || keys['W']) camTarget.addScaledVector(fwd, speed);
+  if (keys['s'] || keys['S']) camTarget.addScaledVector(fwd, -speed);
+  if (keys['a'] || keys['A']) camTarget.addScaledVector(right, -speed);
+  if (keys['d'] || keys['D']) camTarget.addScaledVector(right, speed);
   if (keys['q'] || keys['Q']) camTarget.y += speed;
   if (keys['e'] || keys['E']) camTarget.y -= speed;
 
@@ -293,12 +297,12 @@ function animate(now) {
     const mesh = shipMeshes[id];
     if (mesh) {
       mesh.position.set(s.pos.x, 0, s.pos.y);
-      // Ship model forward is +X local. Movement is in Three.js XZ plane.
-      // Need rotation.y so +X local aligns with velocity direction.
-      // atan2(vx, vz) gives angle from +Z, but we need angle for +X forward:
-      // rotation.y = atan2(vz, vx) - but vz = s.pos.vy in our mapping
+      // Ship model: +X is forward (red axis in designer).
+      // Three.js: rotation.y=0 means facing +X. 
+      // Velocity in Three.js is (vx, 0, vy_engine).
+      // Angle to rotate +X toward velocity = atan2(vz, vx) but we want negative for CW
       if (Math.abs(s.pos.vx) + Math.abs(s.pos.vy) > 1) {
-        const targetRot = Math.atan2(s.pos.vx, s.pos.vy) + Math.PI/2;
+        const targetRot = Math.atan2(-s.pos.vy, s.pos.vx);
         let diff = targetRot - mesh.rotation.y;
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
