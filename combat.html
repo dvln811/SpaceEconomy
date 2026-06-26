@@ -293,11 +293,12 @@ function animate(now) {
     const mesh = shipMeshes[id];
     if (mesh) {
       mesh.position.set(s.pos.x, 0, s.pos.y);
-      // Smoothly rotate toward velocity heading
-      // Ship model forward is +X. rotation.y=0 faces +Z in Three.js default.
-      // We need: velocity direction -> rotation.y
+      // Ship model forward is +X local. Movement is in Three.js XZ plane.
+      // Need rotation.y so +X local aligns with velocity direction.
+      // atan2(vx, vz) gives angle from +Z, but we need angle for +X forward:
+      // rotation.y = atan2(vz, vx) - but vz = s.pos.vy in our mapping
       if (Math.abs(s.pos.vx) + Math.abs(s.pos.vy) > 1) {
-        const targetRot = Math.PI/2 - Math.atan2(s.pos.vy, s.pos.vx);
+        const targetRot = -Math.atan2(s.pos.vx, s.pos.vy);
         let diff = targetRot - mesh.rotation.y;
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
