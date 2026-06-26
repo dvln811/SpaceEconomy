@@ -319,7 +319,9 @@ function animate(now) {
         mesh.rotation.y += diff * Math.min(1, dt * 3);
       }
     }
-    // Update engine trail
+    // Update engine trail (skip dreadnoughts)
+    const shipHullClass = ships[id].data ? ships[id].data.hull_class : '';
+    if (shipHullClass === 'Dreadnought') continue;
     if (!shipTrails[id]) {
       const trailGeo = new THREE.BufferGeometry();
       const positions = new Float32Array(90 * 3); // 30 trail points
