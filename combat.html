@@ -5,7 +5,7 @@
 body { background: #000; color: #c0c0c0; font-family: 'Courier New', monospace; overflow: hidden; height: 100vh; }
 #viewport { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; }
-#sidebar { pointer-events: auto; width: 520px; height: 100%; display: flex; flex-direction: column; background: rgba(5,8,15,0.85); border-right: 1px solid #1a2844; overflow: hidden; }
+#sidebar { pointer-events: auto; width: 400px; height: 100%; display: flex; flex-direction: column; background: rgba(5,8,15,0.85); border-right: 1px solid #1a2844; overflow: hidden; }
 #controls { padding: 8px; display: flex; gap: 6px; border-bottom: 1px solid #1a2844; align-items: center; }
 #controls button { background: #111; color: #aaa; border: 1px solid #333; padding: 4px 10px; cursor: pointer; font-family: inherit; font-size: 10px; border-radius: 3px; }
 #controls button:hover { background: #222; color: #fff; }
@@ -16,7 +16,7 @@ body { background: #000; color: #c0c0c0; font-family: 'Courier New', monospace; 
 .fleet-hdr.f1 { color: #42a5f5; }
 .fleet-hdr.f2 { color: #ce93d8; }
 .ship-cards { display: flex; flex-wrap: wrap; gap: 3px; padding: 2px 4px; }
-.ship-card { width: 120px; padding: 3px 5px; background: rgba(10,14,24,0.9); border: 1px solid #1a2844; border-radius: 3px; font-size: 9px; cursor: pointer; }
+.ship-card { flex: 1 1 calc(33.3% - 4px); min-width: 110px; max-width: calc(33.3% - 4px); padding: 3px 5px; background: rgba(10,14,24,0.9); border: 1px solid #1a2844; border-radius: 3px; font-size: 9px; cursor: pointer; }
 .ship-card:hover { border-color: #4fc3f7; }
 .ship-card.selected { border-color: #fff; background: rgba(20,30,50,0.9); }
 .ship-card.dead { opacity: 0.3; border-color: #f44336; }
@@ -108,10 +108,29 @@ function initScene() {
   const starField = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 20, sizeAttenuation: true }));
   scene.add(starField);
 
-  // Selection reticule
-  const retGeo = new THREE.RingGeometry(30, 35, 32);
-  retGeo.rotateX(-Math.PI / 2);
-  reticule = new THREE.Mesh(retGeo, new THREE.MeshBasicMaterial({ color: 0x4fc3f7, transparent: true, opacity: 0.6, side: THREE.DoubleSide }));
+  // Selection reticule - billboard sprite (always faces camera)
+  const retCanvas = document.createElement('canvas');
+  retCanvas.width = 128; retCanvas.height = 128;
+  const rc = retCanvas.getContext('2d');
+  rc.strokeStyle = '#4fc3f7'; rc.lineWidth = 2;
+  // Outer diamond
+  rc.beginPath(); rc.moveTo(64,4); rc.lineTo(124,64); rc.lineTo(64,124); rc.lineTo(4,64); rc.closePath(); rc.stroke();
+  // Inner diamond
+  rc.lineWidth = 1; rc.strokeStyle = '#4fc3f7aa';
+  rc.beginPath(); rc.moveTo(64,24); rc.lineTo(104,64); rc.lineTo(64,104); rc.lineTo(24,64); rc.closePath(); rc.stroke();
+  // Crosshairs
+  rc.beginPath(); rc.moveTo(64,0); rc.lineTo(64,20); rc.moveTo(64,108); rc.lineTo(64,128);
+  rc.moveTo(0,64); rc.lineTo(20,64); rc.moveTo(108,64); rc.lineTo(128,64); rc.stroke();
+  // Corner ticks
+  rc.strokeStyle = '#4fc3f7';
+  rc.beginPath(); rc.moveTo(20,20); rc.lineTo(30,20); rc.moveTo(20,20); rc.lineTo(20,30);
+  rc.moveTo(108,20); rc.lineTo(98,20); rc.moveTo(108,20); rc.lineTo(108,30);
+  rc.moveTo(20,108); rc.lineTo(30,108); rc.moveTo(20,108); rc.lineTo(20,98);
+  rc.moveTo(108,108); rc.lineTo(98,108); rc.moveTo(108,108); rc.lineTo(108,98); rc.stroke();
+  const retTex = new THREE.CanvasTexture(retCanvas);
+  const retMat = new THREE.SpriteMaterial({ map: retTex, transparent: true, opacity: 0.8 });
+  reticule = new THREE.Sprite(retMat);
+  reticule.scale.set(80, 80, 1);
   reticule.visible = false;
   scene.add(reticule);
 
@@ -235,7 +254,7 @@ window.addEventListener('mousemove', e => {
   const dy = e.clientY - lastMouse.y;
   lastMouse = {x: e.clientX, y: e.clientY};
   camTheta -= dx * 0.005;
-  camPhi -= dy * 0.005;
+  camPhi += dy * 0.005;
 });
 vp.addEventListener('wheel', e => { camDist = Math.max(50, Math.min(5000, camDist + e.deltaY * 0.5)); e.preventDefault(); }, {passive:false});
 
@@ -290,8 +309,7 @@ function animate(now) {
   // Update reticule
   if (reticule && followShipId && ships[followShipId]) {
     const s = ships[followShipId];
-    reticule.position.set(s.pos.x, 1, s.pos.y);
-    reticule.rotation.z += dt * 0.5;
+    reticule.position.set(s.pos.x, 0, s.pos.y);
     reticule.visible = true;
   } else if (reticule) { reticule.visible = false; }
   updateCamera();
@@ -347,8 +365,8 @@ function initFleets(fleets) {
         <div class="bar-row bh"><span class="bl">H</span><div class="bt"><div class="bf" id="bar-h-${s.id}" style="width:100%"></div></div></div>
         <div class="bar-row bc"><span class="bl">C</span><div class="bt"><div class="bf" id="bar-c-${s.id}" style="width:100%"></div></div></div>
         </div>`;
-      card.addEventListener('click', () => { followShipId = s.id; document.querySelectorAll('.ship-card').forEach(c=>c.classList.remove('selected')); card.classList.add('selected'); });
-      card.addEventListener('dblclick', () => { followShipId = s.id; camDist = 150; });
+      card.addEventListener('click', (e) => { e.stopPropagation(); followShipId = s.id; document.querySelectorAll('.ship-card').forEach(c=>c.classList.remove('selected')); card.classList.add('selected'); });
+      card.addEventListener('dblclick', (e) => { e.stopPropagation(); camDist = 150; });
       card.addEventListener('mouseenter', ev => showTooltip(ev, s));
       card.addEventListener('mouseleave', () => { document.getElementById('tooltip').style.display = 'none'; });
       cards.appendChild(card);
