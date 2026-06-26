@@ -158,11 +158,11 @@ function createShipMesh(shipId, geometryId, faction) {
   }
   const group = new THREE.Group();
   buildShipFromData(group, geoData, { showHardpoints: false });
-  // Scale by hull class - bigger ships are substantially larger
-  const classScale = {'Fighter':0.6,'Frigate':1.0,'Destroyer':1.6,'Cruiser':2.5,'Battlecruiser':3.5,'Battleship':5.0,'Dreadnought':7.0,'Carrier':8.0};
+  // Scale by hull class - GRAND scale differences
+  const classScale = {'Fighter':0.4,'Frigate':0.8,'Destroyer':1.5,'Cruiser':3.0,'Battlecruiser':5.5,'Battleship':9.0,'Dreadnought':15.0,'Carrier':18.0};
   const baseSize = geoData.bounds ? Math.max(geoData.bounds.length, geoData.bounds.width) : 2;
   const hullMult = classScale[geoData.hull_class] || classScale[geoData.role] || 1.0;
-  const scale = (30 / baseSize) * hullMult;
+  const scale = (25 / baseSize) * hullMult;
   group.scale.set(scale, scale, scale);
   // Debug: forward axis line (red = +X local)
   const axisGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(2,0,0)]);
@@ -238,23 +238,24 @@ let freeCamera = true; // start in free mode
 const keys = {};
 
 function updateCamera() {
-  // WASD movement - speed scales with distance, shift for boost
-  const boost = keys['Shift'] ? 5 : 1;
-  const speed = camDist * 0.04 * boost;
-  // Forward/back along the line from camera to target projected on XZ
-  const fwd = new THREE.Vector3();
-  camera.getWorldDirection(fwd);
-  fwd.y = 0; fwd.normalize();
-  const right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0,1,0)).normalize();
-  if (keys['w'] || keys['W']) camTarget.addScaledVector(fwd, speed);
-  if (keys['s'] || keys['S']) camTarget.addScaledVector(fwd, -speed);
-  if (keys['a'] || keys['A']) camTarget.addScaledVector(right, -speed);
-  if (keys['d'] || keys['D']) camTarget.addScaledVector(right, speed);
-  if (keys['q'] || keys['Q']) camTarget.y += speed;
-  if (keys['e'] || keys['E']) camTarget.y -= speed;
-  // R/F = fly along camera look direction (full 3D)
-  if (keys['r'] || keys['R']) { const dir = new THREE.Vector3(); camera.getWorldDirection(dir); camTarget.addScaledVector(dir, speed); }
-  if (keys['f'] || keys['F']) { const dir = new THREE.Vector3(); camera.getWorldDirection(dir); camTarget.addScaledVector(dir, -speed); }
+  // WASD movement - only when keys pressed, speed scales with distance, shift for boost
+  const anyMove = keys['w']||keys['W']||keys['s']||keys['S']||keys['a']||keys['A']||keys['d']||keys['D']||keys['q']||keys['Q']||keys['e']||keys['E']||keys['r']||keys['R']||keys['f']||keys['F'];
+  if (anyMove) {
+    const boost = keys['Shift'] ? 5 : 1;
+    const speed = camDist * 0.03 * boost;
+    const fwd = new THREE.Vector3();
+    camera.getWorldDirection(fwd);
+    const fwdXZ = fwd.clone(); fwdXZ.y = 0; fwdXZ.normalize();
+    const right = new THREE.Vector3().crossVectors(fwdXZ, new THREE.Vector3(0,1,0)).normalize();
+    if (keys['w'] || keys['W']) camTarget.addScaledVector(fwdXZ, speed);
+    if (keys['s'] || keys['S']) camTarget.addScaledVector(fwdXZ, -speed);
+    if (keys['a'] || keys['A']) camTarget.addScaledVector(right, -speed);
+    if (keys['d'] || keys['D']) camTarget.addScaledVector(right, speed);
+    if (keys['q'] || keys['Q']) camTarget.y += speed;
+    if (keys['e'] || keys['E']) camTarget.y -= speed;
+    if (keys['r'] || keys['R']) camTarget.addScaledVector(fwd, speed);
+    if (keys['f'] || keys['F']) camTarget.addScaledVector(fwd, -speed);
+  }
 
   if (!freeCamera && followShipId && ships[followShipId]) {
     const s = ships[followShipId];
@@ -270,7 +271,7 @@ function updateCamera() {
 }
 
 // Keyboard
-window.addEventListener('keydown', e => { keys[e.key] = true; if ('wasdqeWASDQE'.includes(e.key)) { freeCamera = true; if (followShipId) selectedShipId = followShipId; } });
+window.addEventListener('keydown', e => { keys[e.key] = true; if ('wasdqerfWASDQERF'.includes(e.key)) { if (!freeCamera && followShipId) { selectedShipId = followShipId; } freeCamera = true; } });
 window.addEventListener('keyup', e => { keys[e.key] = false; });
 
 // Mouse controls
