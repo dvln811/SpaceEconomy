@@ -2,7 +2,7 @@ import os
 import threading
 import time
 import logging
-from flask import Flask, send_from_directory, jsonify, request
+from flask import Flask, send_from_directory, jsonify, request, Response
 import json
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
@@ -253,6 +253,86 @@ def docs_page():
 @app.route("/debug")
 def debug_page():
     return send_from_directory(BASE_DIR, "debug.html")
+
+
+@app.route("/combat")
+def combat_page():
+    return send_from_directory(BASE_DIR, "combat.html")
+
+
+@app.route("/combat/stream")
+def combat_stream():
+    """Serve combat simulation as SSE stream."""
+    import sys
+    sys.path.insert(0, BASE_DIR)
+    from combat_viewer import create_3faction_battle, make_fleet
+    from server.combat_engine import CombatEngine
+    import time as _time
+
+    battle_state = {"paused": False, "stop": False}
+
+    def generate():
+        fleet_tf, fleet_fs, fleet_ic = create_3faction_battle()
+        allied = fleet_tf + fleet_fs
+        engine = CombatEngine(allied, fleet_ic)
+        all_ships = allied + fleet_ic
+
+        def ship_data(s):
+            return {"id":s.id,"name":s.name,"hull_class":s.hull_class,
+                    "shield":s.shield_max,"armor":s.armor_max,"hull":s.hull_max,
+                    "cap":s.cap_max,"cap_recharge":s.cap_recharge,
+                    "weapons":[{"name":w.name,"size":w.size,"dmg":w.damage_type.value,"cycle":w.cycle_time,"cap_use":w.cap_use,"ammo":w.ammo_id} for w in s.weapons],
+                    "modules":[{"name":m.name,"type":m.slot} for m in s.modules],
+                    "ammo":dict(s.ammo)}
+
+        init_data = {"type":"init","fleets":[
+            {"faction":"Terran Federation","count":len(fleet_tf),"ally":"Free States","ships":[ship_data(s) for s in fleet_tf]},
+            {"faction":"Free States","count":len(fleet_fs),"ally":"Terran Federation","ships":[ship_data(s) for s in fleet_fs]},
+            {"faction":"Iron Compact","count":len(fleet_ic),"ships":[ship_data(s) for s in fleet_ic]},
+        ]}
+        yield f"data: {json.dumps(init_data)}\n\n"
+        _time.sleep(1)
+
+        import math
+        while not engine.finished and engine.tick < 600:
+            events = engine.step()
+            caps = {s.id: round(s.cap, 1) for s in all_ships if s.alive}
+            positions = {s.id: [round(s.x), round(s.y), round(s.vx,1), round(s.vy,1)] for s in all_ships if s.alive}
+            msls = []
+            for m in engine.missiles:
+                target = next((s for s in all_ships if s.id == m.target_id and s.alive), None)
+                if target:
+                    dx = target.x - m.x; dy = target.y - m.y
+                    d = math.sqrt(dx*dx+dy*dy) or 1
+                    msls.append({"x":round(m.x),"y":round(m.y),"vx":round(dx/d*m.speed,1),"vy":round(dy/d*m.speed,1)})
+            tick_data = {'type':'tick','tick':engine.tick,'ship_caps':caps,'pos':positions,'msls':msls}
+            yield f"data: {json.dumps(tick_data)}\n\n"
+            for e in events:
+                evt = {'tick':e.tick,'event':e.event,'source_id':e.source_id,'target_id':e.target_id,
+                       'weapon':e.weapon,'damage':e.damage,'damage_type':e.damage_type,
+                       'remaining_hp':e.remaining_hp,'detail':e.detail}
+                yield f"data: {json.dumps({'type':'event','event':evt})}\n\n"
+            _time.sleep(1)
+        result = engine.summary()
+        yield f"data: {json.dumps({'type':'end','winner':result['winner'],'ticks':engine.tick})}\n\n"
+
+    return Response(generate(), mimetype='text/event-stream',
+                    headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
+
+
+@app.route("/ship_designer")
+def ship_designer_page():
+    return send_from_directory(os.path.join(BASE_DIR, "tools", "ship_designer"), "index.html")
+
+
+@app.route("/combat/control")
+def combat_control():
+    return "ok"
+
+
+@app.route("/ship_designer/<path:filename>")
+def ship_designer_files(filename):
+    return send_from_directory(os.path.join(BASE_DIR, "tools", "ship_designer"), filename)
 
 
 @app.route("/system_view")
