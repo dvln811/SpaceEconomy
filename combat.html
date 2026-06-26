@@ -18,6 +18,7 @@ body { background: #000; color: #c0c0c0; font-family: 'Courier New', monospace; 
 .ship-cards { display: flex; flex-wrap: wrap; gap: 3px; padding: 2px 4px; }
 .ship-card { flex: 1 1 calc(33.3% - 4px); min-width: 110px; max-width: calc(33.3% - 4px); padding: 3px 5px; background: rgba(10,14,24,0.9); border: 1px solid #1a2844; border-radius: 3px; font-size: 9px; cursor: pointer; }
 .ship-card:hover { border-color: #4fc3f7; }
+.ship-card { user-select: none; -webkit-user-select: none; }
 .ship-card.selected { border-color: #fff; background: rgba(20,30,50,0.9); }
 .ship-card.dead { opacity: 0.3; border-color: #f44336; }
 .ship-card .sname { font-weight: bold; color: #ddd; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -156,9 +157,11 @@ function createShipMesh(shipId, geometryId, faction) {
   }
   const group = new THREE.Group();
   buildShipFromData(group, geoData, { showHardpoints: false });
-  // Scale ships up for visibility
-  const s = geoData.bounds ? Math.max(geoData.bounds.length, geoData.bounds.width) : 2;
-  const scale = 40 / s;
+  // Scale by hull class - bigger ships are substantially larger
+  const classScale = {'Fighter':0.6,'Frigate':1.0,'Destroyer':1.6,'Cruiser':2.5,'Battlecruiser':3.5,'Battleship':5.0,'Dreadnought':7.0,'Carrier':8.0};
+  const baseSize = geoData.bounds ? Math.max(geoData.bounds.length, geoData.bounds.width) : 2;
+  const hullMult = classScale[geoData.hull_class] || classScale[geoData.role] || 1.0;
+  const scale = (30 / baseSize) * hullMult;
   group.scale.set(scale, scale, scale);
   // Debug: forward axis line (red = +X local)
   const axisGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(2,0,0)]);
@@ -248,6 +251,9 @@ function updateCamera() {
   if (keys['d'] || keys['D']) camTarget.addScaledVector(right, speed);
   if (keys['q'] || keys['Q']) camTarget.y += speed;
   if (keys['e'] || keys['E']) camTarget.y -= speed;
+  // R/F = fly along camera look direction (full 3D)
+  if (keys['r'] || keys['R']) { const dir = new THREE.Vector3(); camera.getWorldDirection(dir); camTarget.addScaledVector(dir, speed); }
+  if (keys['f'] || keys['F']) { const dir = new THREE.Vector3(); camera.getWorldDirection(dir); camTarget.addScaledVector(dir, -speed); }
 
   if (!freeCamera && followShipId && ships[followShipId]) {
     const s = ships[followShipId];
@@ -263,7 +269,7 @@ function updateCamera() {
 }
 
 // Keyboard
-window.addEventListener('keydown', e => { keys[e.key] = true; freeCamera = true; });
+window.addEventListener('keydown', e => { keys[e.key] = true; if ('wasdqeWASDQE'.includes(e.key)) { freeCamera = true; if (followShipId) selectedShipId = followShipId; } });
 window.addEventListener('keyup', e => { keys[e.key] = false; });
 
 // Mouse controls
