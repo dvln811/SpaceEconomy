@@ -235,7 +235,7 @@ const keys = {};
 
 function updateCamera() {
   // WASD movement relative to camera facing
-  const speed = camDist * 0.01;
+  const speed = camDist * 0.05;
   const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).setY(0).normalize();
   const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion).setY(0).normalize();
   if (keys['w'] || keys['W']) camTarget.add(forward.clone().multiplyScalar(speed));
