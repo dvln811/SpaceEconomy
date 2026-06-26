@@ -455,9 +455,9 @@ def make_fleet(faction, prefix, size, style="balanced"):
     return ships
 
 
-def create_3faction_battle():
+def create_3faction_battle(fleet_size=22):
     """Build fleets from actual DB ships with proper names and geometries."""
-    import sqlite3, os
+    import sqlite3, os, random
     db_path = os.path.join(os.path.dirname(__file__), 'data', 'game_data.db')
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
@@ -520,10 +520,15 @@ def create_3faction_battle():
             ))
         return ships
 
-    # Pick ships for each faction fleet - full lineup of every class
-    tf_ships = ['tf_interceptor','tf_interceptor','tf_frigate','tf_frigate','tf_destroyer','tf_destroyer','tf_cruiser','tf_cruiser','tf_assault_battlecruiser','tf_battleship','tf_dreadnought']
+    # Pick ships for each faction fleet - randomly weighted by hull class
+    tf_available = ['tf_interceptor','tf_frigate','tf_destroyer','tf_cruiser','tf_assault_battlecruiser','tf_battleship','tf_dreadnought']
+    ic_available = ['ic_interceptor','ic_frigate','ic_heavy_frigate','ic_destroyer','ic_heavy_destroyer','ic_cruiser','ic_heavy_cruiser','ic_battlecruiser','ic_battleship','ic_dreadnought']
+    hull_weights = [30, 25, 15, 10, 8, 5, 3, 3, 2, 1]  # fighter-heavy distribution
+
+    per_side = fleet_size // 2
+    tf_ships = random.choices(tf_available, weights=hull_weights[:len(tf_available)], k=per_side)
+    ic_ships = random.choices(ic_available, weights=hull_weights[:len(ic_available)], k=per_side)
     fs_ships = []
-    ic_ships = ['ic_interceptor','ic_interceptor','ic_frigate','ic_heavy_frigate','ic_destroyer','ic_heavy_destroyer','ic_cruiser','ic_heavy_cruiser','ic_battlecruiser','ic_battleship','ic_dreadnought']
 
     fleet_tf = build_fleet('terran_fed', tf_ships)
     fleet_fs = build_fleet('free_states', fs_ships)

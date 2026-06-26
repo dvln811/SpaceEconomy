@@ -272,11 +272,14 @@ def combat_stream():
     from server.combat_engine import CombatEngine
     import time as _time
 
+    fleet_size = request.args.get('fleet_size', 22, type=int)
+    fleet_size = max(4, min(200, fleet_size))
+
     _combat_state["paused"] = False
     _combat_state["stop"] = False
 
     def generate():
-        fleet_tf, fleet_fs, fleet_ic = create_3faction_battle()
+        fleet_tf, fleet_fs, fleet_ic = create_3faction_battle(fleet_size)
         allied = fleet_tf + fleet_fs
         engine = CombatEngine(allied, fleet_ic)
         all_ships = allied + fleet_ic
@@ -315,12 +318,14 @@ def combat_stream():
                     d = math.sqrt(dx*dx+dy*dy) or 1
                     msls.append({"x":round(m.x),"y":round(m.y),"vx":round(dx/d*m.speed,1),"vy":round(dy/d*m.speed,1)})
             tick_data = {'type':'tick','tick':engine.tick,'ship_caps':caps,'pos':positions,'msls':msls}
-            yield f"data: {json.dumps(tick_data)}\n\n"
+            # Batch events into tick message
+            evts = []
             for e in events:
-                evt = {'tick':e.tick,'event':e.event,'source_id':e.source_id,'target_id':e.target_id,
+                evts.append({'tick':e.tick,'event':e.event,'source_id':e.source_id,'target_id':e.target_id,
                        'weapon':e.weapon,'damage':e.damage,'damage_type':e.damage_type,
-                       'remaining_hp':e.remaining_hp,'detail':e.detail}
-                yield f"data: {json.dumps({'type':'event','event':evt})}\n\n"
+                       'remaining_hp':e.remaining_hp,'detail':e.detail})
+            tick_data['events'] = evts
+            yield f"data: {json.dumps(tick_data)}\n\n"
             _time.sleep(1)
         result = engine.summary()
         yield f"data: {json.dumps({'type':'end','winner':result['winner'],'ticks':engine.tick})}\n\n"

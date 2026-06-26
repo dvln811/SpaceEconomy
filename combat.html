@@ -58,6 +58,7 @@ body { background: #000; color: #c0c0c0; font-family: 'Courier New', monospace; 
       <button onclick="sendCmd('pause')">Pause</button>
       <button onclick="sendCmd('restart')">Restart</button>
       <button onclick="sendCmd('stop')">Stop</button>
+      <input type="number" id="fleetSize" value="22" min="4" max="200" title="Total combatants" style="width:45px;background:#111;color:#ccc;border:1px solid #444;padding:2px 4px;font-size:11px;margin-left:6px">
       <span id="status">Connecting...</span>
     </div>
     <div id="fleets"></div>
@@ -423,7 +424,7 @@ function animate(now) {
 const log = document.getElementById('log');
 
 function connect() {
-  const es = new EventSource('/combat/stream');
+  const es = new EventSource('/combat/stream?fleet_size=' + (document.getElementById('fleetSize').value || 22));
   es.onmessage = function(e) {
     const data = JSON.parse(e.data);
     if (data.type === 'init') {
@@ -506,6 +507,8 @@ function onTick(data) {
     missileDataCurrent = data.msls.map(m => ({...m}));
     updateMissiles(missileDataCurrent);
   }
+  // Handle batched events
+  if (data.events) { for (const e of data.events) onEvent(e); }
 }
 
 function onEvent(e) {
@@ -537,7 +540,7 @@ function onEvent(e) {
   } else if (e.event === 'cap_empty') {
     msg = `<span class="lcap">${ships[e.target_id]?ships[e.target_id].data.name:'?'} CAP EMPTY</span>`;
   }
-  if (msg) { log.innerHTML += msg + '<br>'; log.scrollTop = log.scrollHeight; }
+  if (msg) { log.insertAdjacentHTML('beforeend', msg + '<br>'); while (log.childNodes.length > 300) log.removeChild(log.firstChild); log.scrollTop = log.scrollHeight; }
 }
 
 function updateHP(id, hpStr) {
