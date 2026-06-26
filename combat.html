@@ -303,24 +303,36 @@ function animate(now) {
   }
 
   updateBeams(dt);
-  // Update reticule - project selected ship to 2D screen overlay (smoothed)
+  // Update reticule - project selected ship to 2D screen, clamp to viewport edges
   const retEl = document.getElementById('reticule');
   if (selectedShipId && ships[selectedShipId] && ships[selectedShipId].pos) {
     const s = ships[selectedShipId];
     const vec = new THREE.Vector3(s.pos.x, 0, s.pos.y);
     vec.project(camera);
-    const sx = (vec.x * 0.5 + 0.5) * window.innerWidth;
-    const sy = (-vec.y * 0.5 + 0.5) * window.innerHeight;
-    if (vec.z < 1) {
-      // Smooth the position
+    // Viewport bounds (exclude sidebar)
+    const sidebarW = document.getElementById('sidebar').offsetWidth;
+    const vpW = window.innerWidth - sidebarW;
+    const vpH = window.innerHeight;
+    let sx = (vec.x * 0.5 + 0.5) * window.innerWidth;
+    let sy = (-vec.y * 0.5 + 0.5) * vpH;
+    // Clamp to viewport area (with 24px margin for the reticule half-size)
+    const behind = vec.z >= 1;
+    if (behind) { sx = window.innerWidth - sx; sy = vpH - sy; } // flip if behind camera
+    sx = Math.max(sidebarW + 24, Math.min(window.innerWidth - 24, sx));
+    sy = Math.max(24, Math.min(vpH - 24, sy));
+    // If this is the followed ship, don't smooth (camera is moving with it)
+    if (selectedShipId === followShipId) {
+      retEl.style.left = (sx - 24) + 'px';
+      retEl.style.top = (sy - 24) + 'px';
+    } else {
       const cur = retEl._pos || {x: sx, y: sy};
-      cur.x += (sx - cur.x) * 0.3;
-      cur.y += (sy - cur.y) * 0.3;
+      cur.x += (sx - cur.x) * 0.25;
+      cur.y += (sy - cur.y) * 0.25;
       retEl._pos = cur;
-      retEl.style.display = 'block';
       retEl.style.left = (cur.x - 24) + 'px';
       retEl.style.top = (cur.y - 24) + 'px';
-    } else { retEl.style.display = 'none'; }
+    }
+    retEl.style.display = 'block';
   } else { retEl.style.display = 'none'; }
   updateCamera();
   renderer.render(scene, camera);
