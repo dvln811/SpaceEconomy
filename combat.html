@@ -87,6 +87,7 @@ const ships = {};        // id -> {data, mesh, pos:{x,y,vx,vy}}
 const shipMeshes = {};   // id -> THREE.Group
 let followShipId = null;
 let selectedShipId = null;
+let clientPaused = false;
 let scene, camera, renderer;
 let mouseDown = false, lastMouse = {x:0, y:0};
 let camDist = 300;
@@ -296,6 +297,7 @@ function animate(now) {
   lastFrame = now;
 
   // Extrapolate ship positions (skip dead ships)
+  if (!clientPaused) {
   for (const [id, s] of Object.entries(ships)) {
     if (!s.pos || s.dead) continue;
     s.pos.x += s.pos.vx * dt;
@@ -336,6 +338,7 @@ function animate(now) {
     }
   }
 
+  }
   updateBeams(dt);
   // Update reticule - project selected ship to 2D screen, clamp to viewport edges
   const retEl = document.getElementById('reticule');
@@ -345,8 +348,8 @@ function animate(now) {
     const vpW = window.innerWidth - sidebarW;
     const vpH = window.innerHeight;
     let sx, sy;
-    // If this is the followed ship, pin to center of 3D viewport
-    if (selectedShipId === followShipId) {
+    // Always project - only pin to center if following AND selected is the same AND not free camera
+    if (selectedShipId === followShipId && !freeCamera) {
       sx = sidebarW + vpW / 2;
       sy = vpH / 2;
     } else {
@@ -534,7 +537,8 @@ function showTooltip(ev, s) {
 
 function sendCmd(cmd) {
   fetch('/combat/control?cmd=' + cmd);
-  if (cmd === 'restart') { location.reload(); }
+  if (cmd === 'pause') clientPaused = !clientPaused;
+  if (cmd === 'restart') { clientPaused = false; location.reload(); }
 }
 window.sendCmd = sendCmd;
 

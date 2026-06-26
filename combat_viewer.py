@@ -520,10 +520,10 @@ def create_3faction_battle():
             ))
         return ships
 
-    # Pick ships for each faction fleet
-    tf_ships = ['tf_interceptor','tf_frigate','tf_frigate','tf_destroyer','tf_destroyer','tf_cruiser','tf_battlecruiser']
-    fs_ships = ['fa_skirmisher','fa_frigate','fa_destroyer','fa_cruiser','fa_battlecruiser']
-    ic_ships = ['ic_interceptor','ic_frigate','ic_frigate','ic_heavy_frigate','ic_destroyer','ic_destroyer','ic_heavy_destroyer','ic_cruiser','ic_cruiser','ic_battlecruiser']
+    # Pick ships for each faction fleet - full lineup of every class
+    tf_ships = ['tf_interceptor','tf_interceptor','tf_frigate','tf_frigate','tf_destroyer','tf_destroyer','tf_cruiser','tf_cruiser','tf_assault_battlecruiser','tf_battleship','tf_dreadnought']
+    fs_ships = []
+    ic_ships = ['ic_interceptor','ic_interceptor','ic_frigate','ic_heavy_frigate','ic_destroyer','ic_heavy_destroyer','ic_cruiser','ic_heavy_cruiser','ic_battlecruiser','ic_battleship','ic_dreadnought']
 
     fleet_tf = build_fleet('terran_fed', tf_ships)
     fleet_fs = build_fleet('free_states', fs_ships)
