@@ -264,9 +264,9 @@ function animate(now) {
   const dt = (now - lastFrame) / 1000;
   lastFrame = now;
 
-  // Extrapolate ship positions
+  // Extrapolate ship positions (skip dead ships)
   for (const [id, s] of Object.entries(ships)) {
-    if (!s.pos) continue;
+    if (!s.pos || s.dead) continue;
     s.pos.x += s.pos.vx * dt;
     s.pos.y += s.pos.vy * dt;
     const mesh = shipMeshes[id];
@@ -326,8 +326,8 @@ function animate(now) {
       retEl.style.top = (sy - 24) + 'px';
     } else {
       const cur = retEl._pos || {x: sx, y: sy};
-      cur.x += (sx - cur.x) * 0.25;
-      cur.y += (sy - cur.y) * 0.25;
+      cur.x += (sx - cur.x) * 0.6;
+      cur.y += (sy - cur.y) * 0.6;
       retEl._pos = cur;
       retEl.style.left = (cur.x - 24) + 'px';
       retEl.style.top = (cur.y - 24) + 'px';
@@ -403,7 +403,7 @@ function onTick(data) {
   // Update positions
   if (data.pos) {
     for (const [id, p] of Object.entries(data.pos)) {
-      if (ships[id]) {
+      if (ships[id] && !ships[id].dead) {
         ships[id].pos = {x: p[0], y: p[1], vx: p[2], vy: p[3]};
         // Correct mesh position
         if (shipMeshes[id]) shipMeshes[id].position.set(p[0], 0, p[1]);
@@ -440,6 +440,7 @@ function onEvent(e) {
   } else if (e.event === 'destroyed') {
     const tgt = ships[e.target_id], src = ships[e.source_id];
     msg = `<span class="ld">** ${tgt?tgt.data.name:'?'} DESTROYED **</span>`;
+    if (tgt) tgt.dead = true;
     const card = document.getElementById('card-' + e.target_id);
     if (card) card.classList.add('dead');
     // Gray out the ship mesh instead of removing
