@@ -470,8 +470,8 @@ function initFleets(fleets) {
         </div>`;
       card.addEventListener('click', (e) => { e.stopPropagation(); selectedShipId = s.id; document.querySelectorAll('.ship-card').forEach(c=>c.classList.remove('selected')); card.classList.add('selected'); });
       card.addEventListener('dblclick', (e) => { e.stopPropagation(); followShipId = s.id; freeCamera = false; camDist = 150; });
-      card.addEventListener('mouseenter', ev => showTooltip(ev, s));
-      card.addEventListener('mouseleave', () => { document.getElementById('tooltip').style.display = 'none'; });
+      card.addEventListener('mouseenter', ev => { card._ttTimer = setTimeout(() => showTooltip(ev, s), 1500); });
+      card.addEventListener('mouseleave', () => { clearTimeout(card._ttTimer); document.getElementById('tooltip').style.display = 'none'; });
       cards.appendChild(card);
     });
     fleetsEl.appendChild(cards);
