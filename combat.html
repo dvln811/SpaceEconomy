@@ -293,11 +293,17 @@ vp.addEventListener('wheel', e => { camDist = Math.max(50, Math.min(5000, camDis
 // --- Animation Loop ---
 let lastFrame = performance.now();
 let missileDataCurrent = [];
+// FPS stats
+const _statsEl = document.createElement('div');
+_statsEl.style.cssText = 'position:fixed;top:5px;right:5px;color:#4fc3f7;font:11px monospace;background:#000a;padding:4px 8px;border-radius:3px;z-index:9999;pointer-events:none';
+document.body.appendChild(_statsEl);
+let _sf=0, _st=performance.now();
 
 function animate(now) {
   requestAnimationFrame(animate);
   const dt = (now - lastFrame) / 1000;
   lastFrame = now;
+  _sf++; if(now-_st>500){_statsEl.textContent=`${Math.round(_sf*1000/(now-_st))} FPS | ${renderer.info.render.calls} draws | ${renderer.info.render.triangles} tris`;_sf=0;_st=now;}
 
   // Extrapolate ship positions (skip dead ships)
   if (!clientPaused) {
@@ -424,7 +430,10 @@ function animate(now) {
 const log = document.getElementById('log');
 
 function connect() {
-  const es = new EventSource('/combat/stream?fleet_size=' + (document.getElementById('fleetSize').value || 22));
+  const params = new URLSearchParams(window.location.search);
+  const sz = params.get('fleet_size') || 22;
+  document.getElementById('fleetSize').value = sz;
+  const es = new EventSource('/combat/stream?fleet_size=' + sz);
   es.onmessage = function(e) {
     const data = JSON.parse(e.data);
     if (data.type === 'init') {
@@ -581,7 +590,7 @@ function showTooltip(ev, s) {
 function sendCmd(cmd) {
   fetch('/combat/control?cmd=' + cmd);
   if (cmd === 'pause') clientPaused = !clientPaused;
-  if (cmd === 'restart') { clientPaused = false; location.reload(); }
+  if (cmd === 'restart') { clientPaused = false; const sz = document.getElementById('fleetSize').value || 22; window.location.href = '/combat?fleet_size=' + sz; }
 }
 window.sendCmd = sendCmd;
 
