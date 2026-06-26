@@ -14,7 +14,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .nav h1{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#4fc3f7;letter-spacing:3px;text-transform:uppercase}
 .nav a{font-size:12px;color:#8aa0b8;text-decoration:none;padding:6px 14px;border:1px solid #1a2844;border-radius:3px;transition:all .15s;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
 .nav a:hover{color:#4fc3f7;border-color:#4fc3f7}
-.content{max-width:1100px;margin:0 auto;padding:32px 24px 96px}
+.content{margin:0;padding:16px 24px 96px}
 h2{font-family:'JetBrains Mono',monospace;font-size:16px;color:#4fc3f7;letter-spacing:2px;text-transform:uppercase;margin:32px 0 16px}
 .ship-grid{display:grid;grid-template-columns:220px 1fr 280px;gap:12px;height:calc(100vh - 120px)}
 .ship-list{overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding-right:4px}
@@ -111,7 +111,7 @@ async function init() {
       const btn = document.createElement('button');
       btn.className = 'ship-btn';
       btn.dataset.id = id;
-      btn.innerHTML = `<span class="name">${data.name}</span><span class="meta">T${data.tier} ${data.faction || ''}</span>`;
+      btn.innerHTML = `<span class="name">${data.name}</span><span class="meta">${data.hull_class || ''} T${data.tier}</span>`;
       btn.addEventListener('click', () => loadShip(id));
       sub.appendChild(btn);
     }

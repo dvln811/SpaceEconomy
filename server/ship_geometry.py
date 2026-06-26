@@ -599,7 +599,29 @@ def get_ship_geometry(class_id: str) -> dict | None:
     return SHIP_GEOMETRIES.get(class_id)
 
 def get_all_ship_geometries() -> dict:
-    return SHIP_GEOMETRIES
+    """Return all geometries with proper names from ships DB."""
+    import sqlite3, os
+    db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "game_data.db")
+    try:
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("SELECT id, name, hull_class, faction_id FROM ships")
+        db_names = {r[0]: {"name": r[1], "hull_class": r[2], "faction": r[3]} for r in c.fetchall()}
+        conn.close()
+    except Exception:
+        db_names = {}
+    result = {}
+    for ship_id, geo in SHIP_GEOMETRIES.items():
+        entry = dict(geo)
+        if ship_id in db_names:
+            entry["name"] = db_names[ship_id]["name"]
+            entry["hull_class"] = db_names[ship_id]["hull_class"]
+            entry["faction"] = db_names[ship_id].get("faction", "")
+        elif entry.get("name") == ship_id:
+            # Fallback: title-case the ID
+            entry["name"] = ship_id.replace("_", " ").title()
+        result[ship_id] = entry
+    return result
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # GENERATED FIGHTERS
