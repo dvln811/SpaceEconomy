@@ -5,7 +5,7 @@
 body { background: #000; color: #c0c0c0; font-family: 'Courier New', monospace; overflow: hidden; height: 100vh; }
 #viewport { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; }
-#sidebar { pointer-events: auto; width: 260px; height: 100%; display: flex; flex-direction: column; background: rgba(5,8,15,0.85); border-right: 1px solid #1a2844; overflow: hidden; }
+#sidebar { pointer-events: auto; width: 520px; height: 100%; display: flex; flex-direction: column; background: rgba(5,8,15,0.85); border-right: 1px solid #1a2844; overflow: hidden; }
 #controls { padding: 8px; display: flex; gap: 6px; border-bottom: 1px solid #1a2844; align-items: center; }
 #controls button { background: #111; color: #aaa; border: 1px solid #333; padding: 4px 10px; cursor: pointer; font-family: inherit; font-size: 10px; border-radius: 3px; }
 #controls button:hover { background: #222; color: #fff; }
@@ -72,6 +72,7 @@ let followShipId = null;
 let scene, camera, renderer;
 let mouseDown = false, lastMouse = {x:0, y:0};
 let camDist = 300, camTheta = 0.5, camPhi = 0.3;
+let reticule = null;
 
 // --- Three.js Setup ---
 function initScene() {
@@ -106,6 +107,13 @@ function initScene() {
   starGeo.setAttribute('position', new THREE.BufferAttribute(starVerts, 3));
   const starField = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 20, sizeAttenuation: true }));
   scene.add(starField);
+
+  // Selection reticule
+  const retGeo = new THREE.RingGeometry(30, 35, 32);
+  retGeo.rotateX(-Math.PI / 2);
+  reticule = new THREE.Mesh(retGeo, new THREE.MeshBasicMaterial({ color: 0x4fc3f7, transparent: true, opacity: 0.6, side: THREE.DoubleSide }));
+  reticule.visible = false;
+  scene.add(reticule);
 
   // Resize
   window.addEventListener('resize', () => {
@@ -227,7 +235,7 @@ window.addEventListener('mousemove', e => {
   const dy = e.clientY - lastMouse.y;
   lastMouse = {x: e.clientX, y: e.clientY};
   camTheta -= dx * 0.005;
-  camPhi = Math.max(0.05, Math.min(1.5, camPhi - dy * 0.005));
+  camPhi -= dy * 0.005;
 });
 vp.addEventListener('wheel', e => { camDist = Math.max(50, Math.min(5000, camDist + e.deltaY * 0.5)); e.preventDefault(); }, {passive:false});
 
@@ -250,7 +258,7 @@ function animate(now) {
       mesh.position.set(s.pos.x, 0, s.pos.y);
       // Smoothly rotate toward velocity heading
       if (Math.abs(s.pos.vx) + Math.abs(s.pos.vy) > 1) {
-        const targetRot = -Math.atan2(s.pos.vy, s.pos.vx);
+        const targetRot = Math.atan2(s.pos.vx, s.pos.vy);
         let diff = targetRot - mesh.rotation.y;
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
@@ -279,6 +287,13 @@ function animate(now) {
   }
 
   updateBeams(dt);
+  // Update reticule
+  if (reticule && followShipId && ships[followShipId]) {
+    const s = ships[followShipId];
+    reticule.position.set(s.pos.x, 1, s.pos.y);
+    reticule.rotation.z += dt * 0.5;
+    reticule.visible = true;
+  } else if (reticule) { reticule.visible = false; }
   updateCamera();
   renderer.render(scene, camera);
 }
@@ -332,7 +347,8 @@ function initFleets(fleets) {
         <div class="bar-row bh"><span class="bl">H</span><div class="bt"><div class="bf" id="bar-h-${s.id}" style="width:100%"></div></div></div>
         <div class="bar-row bc"><span class="bl">C</span><div class="bt"><div class="bf" id="bar-c-${s.id}" style="width:100%"></div></div></div>
         </div>`;
-      card.addEventListener('dblclick', () => { followShipId = s.id; document.querySelectorAll('.ship-card').forEach(c=>c.classList.remove('selected')); card.classList.add('selected'); camDist = 150; });
+      card.addEventListener('click', () => { followShipId = s.id; document.querySelectorAll('.ship-card').forEach(c=>c.classList.remove('selected')); card.classList.add('selected'); });
+      card.addEventListener('dblclick', () => { followShipId = s.id; camDist = 150; });
       card.addEventListener('mouseenter', ev => showTooltip(ev, s));
       card.addEventListener('mouseleave', () => { document.getElementById('tooltip').style.display = 'none'; });
       cards.appendChild(card);
@@ -386,7 +402,14 @@ function onEvent(e) {
     msg = `<span class="ld">** ${tgt?tgt.data.name:'?'} DESTROYED **</span>`;
     const card = document.getElementById('card-' + e.target_id);
     if (card) card.classList.add('dead');
-    if (shipMeshes[e.target_id]) { scene.remove(shipMeshes[e.target_id]); delete shipMeshes[e.target_id]; }
+    // Gray out the ship mesh instead of removing
+    if (shipMeshes[e.target_id]) {
+      shipMeshes[e.target_id].traverse(child => {
+        if (child.material) {
+          child.material = new THREE.MeshBasicMaterial({color: 0x333333, transparent: true, opacity: 0.4});
+        }
+      });
+    }
   } else if (e.event === 'module_disabled') {
     msg = `<span class="lmod">${ships[e.target_id]?ships[e.target_id].data.name:'?'} MODULE OFFLINE: ${e.detail}</span>`;
   } else if (e.event === 'cap_empty') {
