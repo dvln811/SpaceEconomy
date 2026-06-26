@@ -69,9 +69,10 @@ import { buildShipFromData } from '/static/ship_renderer.js';
 const ships = {};        // id -> {data, mesh, pos:{x,y,vx,vy}}
 const shipMeshes = {};   // id -> THREE.Group
 let followShipId = null;
+let selectedShipId = null;
 let scene, camera, renderer;
 let mouseDown = false, lastMouse = {x:0, y:0};
-let camDist = 300, camTheta = 0.5, camPhi = 0.3;
+let camDist = 300;
 let reticule = null;
 
 // --- Three.js Setup ---
@@ -112,17 +113,17 @@ function initScene() {
   const retCanvas = document.createElement('canvas');
   retCanvas.width = 128; retCanvas.height = 128;
   const rc = retCanvas.getContext('2d');
-  rc.strokeStyle = '#4fc3f7'; rc.lineWidth = 2;
+  rc.strokeStyle = '#ffa726'; rc.lineWidth = 2;
   // Outer diamond
   rc.beginPath(); rc.moveTo(64,4); rc.lineTo(124,64); rc.lineTo(64,124); rc.lineTo(4,64); rc.closePath(); rc.stroke();
   // Inner diamond
-  rc.lineWidth = 1; rc.strokeStyle = '#4fc3f7aa';
+  rc.lineWidth = 1; rc.strokeStyle = '#ffa726aa';
   rc.beginPath(); rc.moveTo(64,24); rc.lineTo(104,64); rc.lineTo(64,104); rc.lineTo(24,64); rc.closePath(); rc.stroke();
   // Crosshairs
   rc.beginPath(); rc.moveTo(64,0); rc.lineTo(64,20); rc.moveTo(64,108); rc.lineTo(64,128);
   rc.moveTo(0,64); rc.lineTo(20,64); rc.moveTo(108,64); rc.lineTo(128,64); rc.stroke();
   // Corner ticks
-  rc.strokeStyle = '#4fc3f7';
+  rc.strokeStyle = '#ffa726';
   rc.beginPath(); rc.moveTo(20,20); rc.lineTo(30,20); rc.moveTo(20,20); rc.lineTo(20,30);
   rc.moveTo(108,20); rc.lineTo(98,20); rc.moveTo(108,20); rc.lineTo(108,30);
   rc.moveTo(20,108); rc.lineTo(30,108); rc.moveTo(20,108); rc.lineTo(20,98);
@@ -130,7 +131,7 @@ function initScene() {
   const retTex = new THREE.CanvasTexture(retCanvas);
   const retMat = new THREE.SpriteMaterial({ map: retTex, transparent: true, opacity: 0.8 });
   reticule = new THREE.Sprite(retMat);
-  reticule.scale.set(80, 80, 1);
+  reticule.scale.set(50, 50, 1);
   reticule.visible = false;
   scene.add(reticule);
 
@@ -230,17 +231,18 @@ function updateMissiles(msls) {
   }
 }
 
-// --- Camera ---
+// --- Camera (quaternion-based, no gimbal lock) ---
+let camQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.3, 0.5, 0));
+
 function updateCamera() {
   let target = new THREE.Vector3(0, 0, 0);
   if (followShipId && ships[followShipId]) {
     const s = ships[followShipId];
     target.set(s.pos.x, 0, s.pos.y);
   }
-  const x = target.x + camDist * Math.sin(camTheta) * Math.cos(camPhi);
-  const y = target.y + camDist * Math.sin(camPhi);
-  const z = target.z + camDist * Math.cos(camTheta) * Math.cos(camPhi);
-  camera.position.set(x, y, z);
+  const offset = new THREE.Vector3(0, 0, camDist);
+  offset.applyQuaternion(camQuat);
+  camera.position.copy(target).add(offset);
   camera.lookAt(target);
 }
 
@@ -253,8 +255,11 @@ window.addEventListener('mousemove', e => {
   const dx = e.clientX - lastMouse.x;
   const dy = e.clientY - lastMouse.y;
   lastMouse = {x: e.clientX, y: e.clientY};
-  camTheta -= dx * 0.005;
-  camPhi += dy * 0.005;
+  // Rotate camera quaternion
+  const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), -dx * 0.005);
+  const right = new THREE.Vector3(1,0,0).applyQuaternion(camQuat);
+  const qX = new THREE.Quaternion().setFromAxisAngle(right, dy * 0.005);
+  camQuat.premultiply(qY).premultiply(qX);
 });
 vp.addEventListener('wheel', e => { camDist = Math.max(50, Math.min(5000, camDist + e.deltaY * 0.5)); e.preventDefault(); }, {passive:false});
 
@@ -306,9 +311,9 @@ function animate(now) {
   }
 
   updateBeams(dt);
-  // Update reticule
-  if (reticule && followShipId && ships[followShipId]) {
-    const s = ships[followShipId];
+  // Update reticule on selected (not followed) ship
+  if (reticule && selectedShipId && ships[selectedShipId]) {
+    const s = ships[selectedShipId];
     reticule.position.set(s.pos.x, 0, s.pos.y);
     reticule.visible = true;
   } else if (reticule) { reticule.visible = false; }
@@ -365,8 +370,8 @@ function initFleets(fleets) {
         <div class="bar-row bh"><span class="bl">H</span><div class="bt"><div class="bf" id="bar-h-${s.id}" style="width:100%"></div></div></div>
         <div class="bar-row bc"><span class="bl">C</span><div class="bt"><div class="bf" id="bar-c-${s.id}" style="width:100%"></div></div></div>
         </div>`;
-      card.addEventListener('click', (e) => { e.stopPropagation(); followShipId = s.id; document.querySelectorAll('.ship-card').forEach(c=>c.classList.remove('selected')); card.classList.add('selected'); });
-      card.addEventListener('dblclick', (e) => { e.stopPropagation(); camDist = 150; });
+      card.addEventListener('click', (e) => { e.stopPropagation(); selectedShipId = s.id; document.querySelectorAll('.ship-card').forEach(c=>c.classList.remove('selected')); card.classList.add('selected'); });
+      card.addEventListener('dblclick', (e) => { e.stopPropagation(); followShipId = s.id; camDist = 150; });
       card.addEventListener('mouseenter', ev => showTooltip(ev, s));
       card.addEventListener('mouseleave', () => { document.getElementById('tooltip').style.display = 'none'; });
       cards.appendChild(card);
