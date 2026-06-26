@@ -222,8 +222,9 @@ function updateMissiles(msls) {
   }
 }
 
-// --- Camera (quaternion-based, no gimbal lock) ---
-let camQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.4, 0.5, 0, 'YXZ'));
+// --- Camera (spherical, unrestricted) ---
+let camTheta = 0.8;  // horizontal angle
+let camPhi = 0.4;    // vertical angle (0=horizon, PI/2=top, -PI/2=bottom)
 
 function updateCamera() {
   let target = new THREE.Vector3(0, 0, 0);
@@ -231,9 +232,12 @@ function updateCamera() {
     const s = ships[followShipId];
     target.set(s.pos.x, 0, s.pos.y);
   }
-  const offset = new THREE.Vector3(0, 0, camDist);
-  offset.applyQuaternion(camQuat);
-  camera.position.copy(target).add(offset);
+  // Spherical to cartesian (no clamping on phi at all)
+  const x = camDist * Math.cos(camPhi) * Math.sin(camTheta);
+  const y = camDist * Math.sin(camPhi);
+  const z = camDist * Math.cos(camPhi) * Math.cos(camTheta);
+  camera.position.set(target.x + x, target.y + y, target.z + z);
+  camera.up.set(0, Math.cos(camPhi) >= 0 ? 1 : -1, 0);
   camera.lookAt(target);
 }
 
@@ -246,13 +250,8 @@ window.addEventListener('mousemove', e => {
   const dx = e.clientX - lastMouse.x;
   const dy = e.clientY - lastMouse.y;
   lastMouse = {x: e.clientX, y: e.clientY};
-  // Yaw: rotate around world Y
-  const qYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -dx * 0.005);
-  // Pitch: rotate around camera's local X axis
-  const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camQuat);
-  const qPitch = new THREE.Quaternion().setFromAxisAngle(right, -dy * 0.005);
-  camQuat.premultiply(qPitch).premultiply(qYaw);
-  camQuat.normalize();
+  camTheta -= dx * 0.005;
+  camPhi += dy * 0.005;
 });
 vp.addEventListener('wheel', e => { camDist = Math.max(50, Math.min(5000, camDist + e.deltaY * 0.5)); e.preventDefault(); }, {passive:false});
 
@@ -304,18 +303,23 @@ function animate(now) {
   }
 
   updateBeams(dt);
-  // Update reticule - project selected ship to 2D screen overlay
+  // Update reticule - project selected ship to 2D screen overlay (smoothed)
   const retEl = document.getElementById('reticule');
   if (selectedShipId && ships[selectedShipId] && ships[selectedShipId].pos) {
     const s = ships[selectedShipId];
     const vec = new THREE.Vector3(s.pos.x, 0, s.pos.y);
     vec.project(camera);
-    const x = (vec.x * 0.5 + 0.5) * window.innerWidth;
-    const y = (-vec.y * 0.5 + 0.5) * window.innerHeight;
-    if (vec.z < 1) { // in front of camera
+    const sx = (vec.x * 0.5 + 0.5) * window.innerWidth;
+    const sy = (-vec.y * 0.5 + 0.5) * window.innerHeight;
+    if (vec.z < 1) {
+      // Smooth the position
+      const cur = retEl._pos || {x: sx, y: sy};
+      cur.x += (sx - cur.x) * 0.3;
+      cur.y += (sy - cur.y) * 0.3;
+      retEl._pos = cur;
       retEl.style.display = 'block';
-      retEl.style.left = (x - 24) + 'px';
-      retEl.style.top = (y - 24) + 'px';
+      retEl.style.left = (cur.x - 24) + 'px';
+      retEl.style.top = (cur.y - 24) + 'px';
     } else { retEl.style.display = 'none'; }
   } else { retEl.style.display = 'none'; }
   updateCamera();
