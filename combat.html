@@ -549,7 +549,7 @@ function onEvent(e) {
   } else if (e.event === 'cap_empty') {
     msg = `<span class="lcap">${ships[e.target_id]?ships[e.target_id].data.name:'?'} CAP EMPTY</span>`;
   }
-  if (msg) { log.insertAdjacentHTML('beforeend', msg + '<br>'); while (log.childNodes.length > 300) log.removeChild(log.firstChild); log.scrollTop = log.scrollHeight; }
+  if (msg) { log.insertAdjacentHTML('beforeend', msg + '<br>'); while (log.childNodes.length > 50) log.removeChild(log.firstChild); log.scrollTop = log.scrollHeight; }
 }
 
 function updateHP(id, hpStr) {
