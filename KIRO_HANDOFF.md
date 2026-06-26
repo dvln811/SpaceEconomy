@@ -189,6 +189,10 @@ Raw ores (T1) -> Refined materials (T2) -> Manufactured (T3) -> Components (T4) 
 | server/models.py | Dataclass definitions (System, Station, NPCShip, etc) |
 | server/data_access.py | DB loading functions |
 | server/change_tracker.py | Delta tracking for /api/ships |
+| server/combat_engine.py | Standalone combat simulation (spatial, per-shot) |
+| server/ship_geometry.py | 81 ship 3D models (component-based, Three.js) |
+| economy_config.yaml | Tunable economy parameters (mining, passive gen) |
+| combat_viewer.py | Browser combat test UI (localhost:5555) |
 | dev.py | Local dev runner (high-speed simulation + status output) |
 
 ---
@@ -208,22 +212,26 @@ Raw ores (T1) -> Refined materials (T2) -> Manufactured (T3) -> Components (T4) 
 - Local dev tools: `dev.py` (headless), `analyze.py` (deep state analysis), `run_local.py` (browser)
 
 ### Current Analysis (in progress)
-After 50K tick analysis we identified:
-- 29 stations permanently halted (fixed: orphan IDs in station_produces, T2/T3 items now assigned to 10+ stations each)
-- Inventory grows unbounded (production > consumption) - needs tuning
-- Power Cell production low (Lithium Cell chain was bottlenecked)
-- Fixed: copper_wiring_loom wrong ID, pharmaceutical_grade wrong ID, station components assigned to shipyards
-- After fixes: 233/262 stations producing (up from 169/198)
-- Need to rerun analysis with fixes to confirm improvement
+After economy rebalance:
+- Passive ore gen reduced from 50*density to 1*density (cap 5K) via economy_config.yaml
+- Miner fleet scaled from 263 to 584 (5 per mining system), yield 40*density
+- Industrial ship recipes fixed (13 ships, all use real components with recipe chains)
+- Hauler AI: deficit-weighted random input selection (prevents clustering)
+- Result: inventory growth reduced 91% (96M -> 8.7M per 10K ticks)
+- Trade volume doubled (32K -> 66K per 10K ticks)
+- 50K run stable: 23 t/s, 333K trades, decelerating growth
+- 29 stations still halted (need recipe fixes)
+- Iron/copper ore prices show as crashed at mining colonies but healthy at refineries (spread = hauler opportunity)
 
 ### Next Steps (immediate)
-1. Run 10K tick analysis with fixed DB to confirm economy stabilization
-2. Tune production/consumption balance so inventory plateaus (not grows forever)
-3. Address remaining 29 halted stations
-4. Iron ore price crash (0.56 vs base 8.0) - oversupply, needs more consumption
+1. Wire combat engine into battle_sim worker (patrol ships engage at borders)
+2. Build 3D battle viewer with ship models (Three.js, data streaming ready)
+3. Add projectile travel time for turrets (beams instant, projectiles spatial)
+4. Tune production/consumption balance (manufactured goods still accumulating)
+5. Address remaining 29 halted stations
 
 ### Not Yet Implemented
-- Combat system (damage model, weapons + ammo interaction)
+- Combat system integration into main sim (engine built, not yet wired to battle_sim worker)
 - Faction orders actually doing things (expand builds stations, attack triggers battles)
 - Build projects completing (materials never accumulate at targets)
 - Player ship control (docking, undocking, travel, mining)
@@ -232,6 +240,27 @@ After 50K tick analysis we identified:
 - Corsair raids on deep miners
 - Ship visual teleporting fix (intra-travel interpolation)
 - Ship double-click zoom in system view
+- 3D battle viewer (Three.js, ship models ready, engine supports spatial)
+
+### Combat Simulation Engine (NEW - standalone, not yet integrated)
+- **Location:** `server/combat_engine.py` (engine) + `combat_viewer.py` (browser test UI)
+- **Run:** `python combat_viewer.py` -> http://localhost:5555
+- **Features:**
+  - Full 3D spatial simulation (x/y/z positions, velocities, acceleration)
+  - 4 damage types: EM, Thermal, Kinetic, Explosive
+  - Shield/Armor/Hull with distinct resistance profiles
+  - Per-shot resolution with true angular velocity tracking
+  - Weapon size vs signature (L turrets miss small ships)
+  - Range-based damage falloff
+  - Missiles as spatial entities with lead prediction and detonation trace
+  - Capacitor drain per weapon shot (lasers cap-intensive, projectiles free)
+  - Module HP with bleedthrough damage (5% armor, 15% hull hit chance)
+  - Ammo consumption from cargo
+  - Movement AI: brawl (close), orbit (maintain range), kite (back off), snipe (stay far)
+  - CPU/Powergrid fitting constraints (data structure ready, not enforced yet)
+- **Performance:** 50v50 = 1.8ms/tick, 200v200 = 12ms/tick
+- **Ship models:** 81 geometries in `server/ship_geometry.py`, component-based Three.js format
+- **Next:** Wire into battle_sim worker, 3D viewer with ship models, projectile travel time
 
 ### Local Dev Tools
 - `python dev.py [speed] [duration]` - headless sim, console output, for quick checks
