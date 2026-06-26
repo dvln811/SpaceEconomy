@@ -85,6 +85,7 @@ import { buildShipFromData } from '/static/ship_renderer.js';
 // --- State ---
 const ships = {};        // id -> {data, mesh, pos:{x,y,vx,vy}}
 const shipMeshes = {};   // id -> THREE.Group
+const shipTrails = {};   // id -> {positions: [], line: THREE.Line}
 let followShipId = null;
 let selectedShipId = null;
 let clientPaused = false;
@@ -164,10 +165,14 @@ function createShipMesh(shipId, geometryId, faction) {
   const hullMult = classScale[geoData.hull_class] || classScale[geoData.role] || 1.0;
   const scale = (25 / baseSize) * hullMult;
   group.scale.set(scale, scale, scale);
-  // Debug: forward axis line (red = +X local)
-  const axisGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(2,0,0)]);
-  const axisLine = new THREE.Line(axisGeo, new THREE.LineBasicMaterial({color: 0xff0000}));
-  group.add(axisLine);
+  // Engine exhaust glow (positioned at rear of ship)
+  const exhaustSize = hullMult * 0.15;
+  const exGeo = new THREE.SphereGeometry(exhaustSize, 6, 6);
+  const exMat = new THREE.MeshBasicMaterial({ color: 0x44aaff, transparent: true, opacity: 0.6 });
+  const exhaust = new THREE.Mesh(exGeo, exMat);
+  exhaust.position.set(-baseSize * 0.4, 0, 0); // rear of ship in local space
+  exhaust.name = 'exhaust';
+  group.add(exhaust);
   scene.add(group);
   return group;
 }
@@ -321,6 +326,29 @@ function animate(now) {
         while (diff < -Math.PI) diff += Math.PI * 2;
         mesh.rotation.y += diff * Math.min(1, dt * 3);
       }
+    }
+    // Update engine trail
+    if (!shipTrails[id]) {
+      const trailGeo = new THREE.BufferGeometry();
+      const positions = new Float32Array(60 * 3); // 20 trail points
+      trailGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      trailGeo.setDrawRange(0, 0);
+      const trailMat = new THREE.LineBasicMaterial({ color: 0x2288ff, transparent: true, opacity: 0.4 });
+      const trailLine = new THREE.Line(trailGeo, trailMat);
+      trailLine.frustumCulled = false;
+      scene.add(trailLine);
+      shipTrails[id] = { points: [], line: trailLine, timer: 0 };
+    }
+    const trail = shipTrails[id];
+    trail.timer += dt;
+    if (trail.timer > 0.15) { // add point every 150ms
+      trail.timer = 0;
+      trail.points.push(s.pos.x, 0, s.pos.y);
+      if (trail.points.length > 60) trail.points.splice(0, 3); // max 20 points
+      const arr = trail.line.geometry.attributes.position.array;
+      for (let j = 0; j < trail.points.length; j++) arr[j] = trail.points[j];
+      trail.line.geometry.attributes.position.needsUpdate = true;
+      trail.line.geometry.setDrawRange(0, trail.points.length / 3);
     }
   }
 
