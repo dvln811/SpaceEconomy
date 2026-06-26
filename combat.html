@@ -273,8 +273,11 @@ function animate(now) {
     if (mesh) {
       mesh.position.set(s.pos.x, 0, s.pos.y);
       // Smoothly rotate toward velocity heading
+      // Ship model forward is +X. In Three.js, rotation.y=0 faces +X.
+      // Engine (vx,vy) maps to Three.js (vx, 0, vy). 
+      // Angle from +X axis = -atan2(vz, vx) = -atan2(vy, vx)
       if (Math.abs(s.pos.vx) + Math.abs(s.pos.vy) > 1) {
-        const targetRot = Math.atan2(s.pos.vx, s.pos.vy);
+        const targetRot = -Math.atan2(s.pos.vy, s.pos.vx);
         let diff = targetRot - mesh.rotation.y;
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
@@ -307,32 +310,33 @@ function animate(now) {
   const retEl = document.getElementById('reticule');
   if (selectedShipId && ships[selectedShipId] && ships[selectedShipId].pos) {
     const s = ships[selectedShipId];
-    const vec = new THREE.Vector3(s.pos.x, 0, s.pos.y);
-    vec.project(camera);
-    // Viewport bounds (exclude sidebar)
     const sidebarW = document.getElementById('sidebar').offsetWidth;
     const vpW = window.innerWidth - sidebarW;
     const vpH = window.innerHeight;
-    let sx = (vec.x * 0.5 + 0.5) * window.innerWidth;
-    let sy = (-vec.y * 0.5 + 0.5) * vpH;
-    // Clamp to viewport area (with 24px margin for the reticule half-size)
-    const behind = vec.z >= 1;
-    if (behind) { sx = window.innerWidth - sx; sy = vpH - sy; } // flip if behind camera
-    sx = Math.max(sidebarW + 24, Math.min(window.innerWidth - 24, sx));
-    sy = Math.max(24, Math.min(vpH - 24, sy));
-    // If this is the followed ship, don't smooth (camera is moving with it)
+    let sx, sy;
+    // If this is the followed ship, pin to center of viewport (no jitter possible)
     if (selectedShipId === followShipId) {
-      retEl.style.left = (sx - 24) + 'px';
-      retEl.style.top = (sy - 24) + 'px';
+      sx = sidebarW + vpW / 2;
+      sy = vpH / 2;
     } else {
+      const vec = new THREE.Vector3(s.pos.x, 0, s.pos.y);
+      vec.project(camera);
+      sx = (vec.x * 0.5 + 0.5) * window.innerWidth;
+      sy = (-vec.y * 0.5 + 0.5) * vpH;
+      const behind = vec.z >= 1;
+      if (behind) { sx = window.innerWidth - sx; sy = vpH - sy; }
+      sx = Math.max(sidebarW + 24, Math.min(window.innerWidth - 24, sx));
+      sy = Math.max(24, Math.min(vpH - 24, sy));
+      // Smooth for non-followed ships
       const cur = retEl._pos || {x: sx, y: sy};
       cur.x += (sx - cur.x) * 0.6;
       cur.y += (sy - cur.y) * 0.6;
       retEl._pos = cur;
-      retEl.style.left = (cur.x - 24) + 'px';
-      retEl.style.top = (cur.y - 24) + 'px';
+      sx = cur.x; sy = cur.y;
     }
     retEl.style.display = 'block';
+    retEl.style.left = (sx - 24) + 'px';
+    retEl.style.top = (sy - 24) + 'px';
   } else { retEl.style.display = 'none'; }
   updateCamera();
   renderer.render(scene, camera);
