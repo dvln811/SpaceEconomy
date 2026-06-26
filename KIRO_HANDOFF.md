@@ -22,6 +22,7 @@ A browser-based space economy simulation (GCS: SpaceEconomy). Single-player with
 6. **Ask before coding** when user asks a question vs requests a change.
 7. Use `python dev.py` for local testing instead of deploying for every change.
 8. Nuke button on /debug resets runtime state after breaking changes.
+9. **ALL scrollbars must be themed** (dark track, subtle thumb) on every page. Never leave default browser scrollbars.
 
 ---
 

@@ -36,8 +36,16 @@ body { background: #000; color: #c0c0c0; font-family: 'Courier New', monospace; 
 #log { flex: 1; overflow-y: auto; padding: 4px 8px; font-size: 9px; line-height: 1.4; max-height: 170px; }
 .lh { color: #ffa726; } .lm { color: #666; } .ld { color: #f44336; font-weight: bold; }
 .lmod { color: #cc9900; } .lcap { color: #aa66ff; }
-#tooltip { display: none; position: fixed; background: rgba(8,12,24,0.95); border: 1px solid #4fc3f7; border-radius: 4px; padding: 10px; font-size: 10px; z-index: 999; width: 250px; pointer-events: none; }
-#tooltip h3 { margin: 0 0 5px; color: #4fc3f7; font-size: 12px; }
+#reticule { position: absolute; width: 48px; height: 48px; pointer-events: none; display: none; z-index: 50; }
+#reticule svg { width: 100%; height: 100%; }
+/* Scrollbars - always themed */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0a0e18; }
+::-webkit-scrollbar-thumb { background: #1a3050; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #2a4a70; }
+* { scrollbar-width: thin; scrollbar-color: #1a3050 #0a0e18; }
+#tooltip { display: none; position: fixed; background: rgba(8,12,24,0.95); border: 1px solid #ffa726; border-radius: 4px; padding: 10px; font-size: 10px; z-index: 999; width: 250px; pointer-events: none; }
+#tooltip h3 { margin: 0 0 5px; color: #ffa726; font-size: 12px; }
 #tooltip .tt-s { margin: 3px 0; color: #ccc; }
 #tooltip .tt-l { color: #888; }
 #tooltip .tt-w { color: #f44336; }
@@ -59,6 +67,14 @@ body { background: #000; color: #c0c0c0; font-family: 'Courier New', monospace; 
   </div>
 </div>
 <div id="tooltip"></div>
+<div id="reticule"><svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+  <polygon points="24,2 46,24 24,46 2,24" fill="none" stroke="#ffa726" stroke-width="1.5"/>
+  <polygon points="24,10 38,24 24,38 10,24" fill="none" stroke="#ffa72688" stroke-width="1"/>
+  <line x1="24" y1="0" x2="24" y2="8" stroke="#ffa726" stroke-width="1"/>
+  <line x1="24" y1="40" x2="24" y2="48" stroke="#ffa726" stroke-width="1"/>
+  <line x1="0" y1="24" x2="8" y2="24" stroke="#ffa726" stroke-width="1"/>
+  <line x1="40" y1="24" x2="48" y2="24" stroke="#ffa726" stroke-width="1"/>
+</svg></div>
 
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script type="module">
@@ -73,7 +89,6 @@ let selectedShipId = null;
 let scene, camera, renderer;
 let mouseDown = false, lastMouse = {x:0, y:0};
 let camDist = 300;
-let reticule = null;
 
 // --- Three.js Setup ---
 function initScene() {
@@ -109,31 +124,7 @@ function initScene() {
   const starField = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 20, sizeAttenuation: true }));
   scene.add(starField);
 
-  // Selection reticule - billboard sprite (always faces camera)
-  const retCanvas = document.createElement('canvas');
-  retCanvas.width = 128; retCanvas.height = 128;
-  const rc = retCanvas.getContext('2d');
-  rc.strokeStyle = '#ffa726'; rc.lineWidth = 2;
-  // Outer diamond
-  rc.beginPath(); rc.moveTo(64,4); rc.lineTo(124,64); rc.lineTo(64,124); rc.lineTo(4,64); rc.closePath(); rc.stroke();
-  // Inner diamond
-  rc.lineWidth = 1; rc.strokeStyle = '#ffa726aa';
-  rc.beginPath(); rc.moveTo(64,24); rc.lineTo(104,64); rc.lineTo(64,104); rc.lineTo(24,64); rc.closePath(); rc.stroke();
-  // Crosshairs
-  rc.beginPath(); rc.moveTo(64,0); rc.lineTo(64,20); rc.moveTo(64,108); rc.lineTo(64,128);
-  rc.moveTo(0,64); rc.lineTo(20,64); rc.moveTo(108,64); rc.lineTo(128,64); rc.stroke();
-  // Corner ticks
-  rc.strokeStyle = '#ffa726';
-  rc.beginPath(); rc.moveTo(20,20); rc.lineTo(30,20); rc.moveTo(20,20); rc.lineTo(20,30);
-  rc.moveTo(108,20); rc.lineTo(98,20); rc.moveTo(108,20); rc.lineTo(108,30);
-  rc.moveTo(20,108); rc.lineTo(30,108); rc.moveTo(20,108); rc.lineTo(20,98);
-  rc.moveTo(108,108); rc.lineTo(98,108); rc.moveTo(108,108); rc.lineTo(108,98); rc.stroke();
-  const retTex = new THREE.CanvasTexture(retCanvas);
-  const retMat = new THREE.SpriteMaterial({ map: retTex, transparent: true, opacity: 0.8 });
-  reticule = new THREE.Sprite(retMat);
-  reticule.scale.set(50, 50, 1);
-  reticule.visible = false;
-  scene.add(reticule);
+  // Selection reticule is a 2D overlay (see #reticule in CSS), not a 3D object
 
   // Resize
   window.addEventListener('resize', () => {
@@ -232,7 +223,7 @@ function updateMissiles(msls) {
 }
 
 // --- Camera (quaternion-based, no gimbal lock) ---
-let camQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.3, 0.5, 0));
+let camQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.4, 0.5, 0, 'YXZ'));
 
 function updateCamera() {
   let target = new THREE.Vector3(0, 0, 0);
@@ -255,11 +246,13 @@ window.addEventListener('mousemove', e => {
   const dx = e.clientX - lastMouse.x;
   const dy = e.clientY - lastMouse.y;
   lastMouse = {x: e.clientX, y: e.clientY};
-  // Rotate camera quaternion
-  const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), -dx * 0.005);
-  const right = new THREE.Vector3(1,0,0).applyQuaternion(camQuat);
-  const qX = new THREE.Quaternion().setFromAxisAngle(right, dy * 0.005);
-  camQuat.premultiply(qY).premultiply(qX);
+  // Yaw: rotate around world Y
+  const qYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -dx * 0.005);
+  // Pitch: rotate around camera's local X axis
+  const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camQuat);
+  const qPitch = new THREE.Quaternion().setFromAxisAngle(right, -dy * 0.005);
+  camQuat.premultiply(qPitch).premultiply(qYaw);
+  camQuat.normalize();
 });
 vp.addEventListener('wheel', e => { camDist = Math.max(50, Math.min(5000, camDist + e.deltaY * 0.5)); e.preventDefault(); }, {passive:false});
 
@@ -311,12 +304,20 @@ function animate(now) {
   }
 
   updateBeams(dt);
-  // Update reticule on selected (not followed) ship
-  if (reticule && selectedShipId && ships[selectedShipId]) {
+  // Update reticule - project selected ship to 2D screen overlay
+  const retEl = document.getElementById('reticule');
+  if (selectedShipId && ships[selectedShipId] && ships[selectedShipId].pos) {
     const s = ships[selectedShipId];
-    reticule.position.set(s.pos.x, 0, s.pos.y);
-    reticule.visible = true;
-  } else if (reticule) { reticule.visible = false; }
+    const vec = new THREE.Vector3(s.pos.x, 0, s.pos.y);
+    vec.project(camera);
+    const x = (vec.x * 0.5 + 0.5) * window.innerWidth;
+    const y = (-vec.y * 0.5 + 0.5) * window.innerHeight;
+    if (vec.z < 1) { // in front of camera
+      retEl.style.display = 'block';
+      retEl.style.left = (x - 24) + 'px';
+      retEl.style.top = (y - 24) + 'px';
+    } else { retEl.style.display = 'none'; }
+  } else { retEl.style.display = 'none'; }
   updateCamera();
   renderer.render(scene, camera);
 }
