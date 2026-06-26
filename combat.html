@@ -158,8 +158,8 @@ function createShipMesh(shipId, geometryId, faction) {
   }
   const group = new THREE.Group();
   buildShipFromData(group, geoData, { showHardpoints: false });
-  // Scale by hull class - GRAND scale differences
-  const classScale = {'Fighter':0.4,'Frigate':0.8,'Destroyer':1.5,'Cruiser':3.0,'Battlecruiser':5.5,'Battleship':9.0,'Dreadnought':15.0,'Carrier':18.0};
+  // Scale by hull class - GRAND scale (dread ~80x fighter)
+  const classScale = {'Fighter':0.5,'Frigate':1.2,'Destroyer':2.5,'Cruiser':5.0,'Battlecruiser':10.0,'Battleship':15.0,'Dreadnought':40.0,'Carrier':45.0};
   const baseSize = geoData.bounds ? Math.max(geoData.bounds.length, geoData.bounds.width) : 2;
   const hullMult = classScale[geoData.hull_class] || classScale[geoData.role] || 1.0;
   const scale = (25 / baseSize) * hullMult;
@@ -240,7 +240,7 @@ const keys = {};
 function updateCamera() {
   // WASD movement - only when keys pressed, speed scales with distance, shift for boost
   const anyMove = keys['w']||keys['W']||keys['s']||keys['S']||keys['a']||keys['A']||keys['d']||keys['D']||keys['q']||keys['Q']||keys['e']||keys['E']||keys['r']||keys['R']||keys['f']||keys['F'];
-  if (anyMove) {
+  if (anyMove && freeCamera) {
     const boost = keys['Shift'] ? 5 : 1;
     const speed = camDist * 0.03 * boost;
     const fwd = new THREE.Vector3();
