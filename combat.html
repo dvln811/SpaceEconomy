@@ -564,8 +564,15 @@ function showTooltip(ev, s) {
   }
   tt.innerHTML = html;
   tt.style.display = 'block';
-  tt.style.left = (ev.clientX + 15) + 'px';
-  tt.style.top = (ev.clientY + 10) + 'px';
+  // Position aware of screen edges
+  const ttRect = tt.getBoundingClientRect();
+  let x = ev.clientX + 15;
+  let y = ev.clientY + 10;
+  if (x + 260 > window.innerWidth) x = ev.clientX - 265;
+  if (y + ttRect.height > window.innerHeight) y = ev.clientY - ttRect.height - 10;
+  if (y < 0) y = 10;
+  tt.style.left = x + 'px';
+  tt.style.top = y + 'px';
 }
 
 function sendCmd(cmd) {
