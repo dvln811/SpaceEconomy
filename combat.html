@@ -298,7 +298,7 @@ function animate(now) {
       // atan2(vx, vz) gives angle from +Z, but we need angle for +X forward:
       // rotation.y = atan2(vz, vx) - but vz = s.pos.vy in our mapping
       if (Math.abs(s.pos.vx) + Math.abs(s.pos.vy) > 1) {
-        const targetRot = Math.PI + Math.atan2(s.pos.vx, s.pos.vy);
+        const targetRot = Math.atan2(s.pos.vx, s.pos.vy) + Math.PI/2;
         let diff = targetRot - mesh.rotation.y;
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
