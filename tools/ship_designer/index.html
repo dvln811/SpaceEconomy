@@ -73,6 +73,8 @@ select:focus,input:focus{outline:none;border-color:#4fc3f7}
   <button class="btn" id="loadGameBtn">Load Ship</button>
   <h2>Export</h2>
   <button class="btn" id="exportBtn">Copy JSON to Clipboard</button>
+  <h2>Component Editor</h2>
+  <div id="compEditor" style="color:#5a7a9a;font-size:11px">Click a component in the viewport to select</div>
 </div>
 <div class="viewer" id="viewer">
   <div class="info-bar" id="infoBar">Click <span>Generate</span> to create a ship</div>
@@ -232,6 +234,7 @@ function buildShip(data) {
     if (mesh) {
       mesh.position.set(px, py, pz);
       mesh.rotation.x += rx; mesh.rotation.y += ry; mesh.rotation.z += rz;
+      mesh.userData.compIndex = data.components.indexOf(comp);
       group.add(mesh);
       if (comp.type !== 'hardpoint') addEdges(mesh, comp.material);
     }
@@ -314,6 +317,87 @@ document.getElementById('exportBtn').addEventListener('click', () => {
   if (!currentData) return;
   navigator.clipboard.writeText(JSON.stringify(currentData, null, 2));
   document.getElementById('infoBar').innerHTML = '<span>JSON copied to clipboard!</span>';
+});
+
+// ── Component Selection & Positioning ───────────────────────────────────────
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let selectedMesh = null;
+let selectedIndex = -1;
+let highlightMat = new THREE.MeshBasicMaterial({color:0xffff00, wireframe:true, transparent:true, opacity:0.8});
+let highlightObj = null;
+
+renderer.domElement.addEventListener('click', (e) => {
+  if (!currentGroup) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(currentGroup.children, true);
+  // Find first mesh with compIndex
+  let hit = null;
+  for (const i of intersects) {
+    let obj = i.object;
+    while (obj && obj.userData.compIndex === undefined) obj = obj.parent;
+    if (obj && obj.userData.compIndex !== undefined) { hit = obj; break; }
+  }
+  if (hit) selectComponent(hit.userData.compIndex, hit);
+});
+
+function selectComponent(idx, mesh) {
+  selectedIndex = idx;
+  selectedMesh = mesh;
+  // Highlight
+  if (highlightObj) currentGroup.remove(highlightObj);
+  if (mesh.geometry) {
+    highlightObj = new THREE.Mesh(mesh.geometry.clone(), highlightMat);
+    highlightObj.position.copy(mesh.position);
+    highlightObj.rotation.copy(mesh.rotation);
+    highlightObj.scale.copy(mesh.scale);
+    currentGroup.add(highlightObj);
+  }
+  // Show editor
+  const comp = currentData.components[idx];
+  const ed = document.getElementById('compEditor');
+  ed.innerHTML = `
+    <div style="margin-bottom:4px"><b style="color:#ffd54f">#${idx}</b> ${comp.type} [${comp.material}]</div>
+    <div style="display:flex;gap:4px;margin:3px 0">
+      <label style="width:20px">X</label><input type="number" step="0.01" id="cx" value="${comp.pos[0].toFixed(3)}" style="width:70px">
+      <label style="width:20px">Y</label><input type="number" step="0.01" id="cy" value="${comp.pos[1].toFixed(3)}" style="width:70px">
+      <label style="width:20px">Z</label><input type="number" step="0.01" id="cz" value="${comp.pos[2].toFixed(3)}" style="width:70px">
+    </div>
+    <div style="font-size:10px;color:#5a7a9a;margin-top:4px">Arrow keys: nudge X/Z | PgUp/PgDn: nudge Y</div>
+  `;
+  ['cx','cy','cz'].forEach((id, axis) => {
+    document.getElementById(id).addEventListener('input', (e) => {
+      const v = parseFloat(e.target.value) || 0;
+      comp.pos[axis] = v;
+      mesh.position.set(comp.pos[0], comp.pos[1], comp.pos[2]);
+      if (highlightObj) highlightObj.position.copy(mesh.position);
+    });
+  });
+}
+
+// Arrow key nudge
+window.addEventListener('keydown', (e) => {
+  if (selectedIndex < 0 || !currentData) return;
+  const comp = currentData.components[selectedIndex];
+  const step = e.shiftKey ? 0.05 : 0.01;
+  let moved = false;
+  if (e.key === 'ArrowRight') { comp.pos[0] += step; moved = true; }
+  if (e.key === 'ArrowLeft') { comp.pos[0] -= step; moved = true; }
+  if (e.key === 'ArrowUp') { comp.pos[2] -= step; moved = true; }
+  if (e.key === 'ArrowDown') { comp.pos[2] += step; moved = true; }
+  if (e.key === 'PageUp') { comp.pos[1] += step; moved = true; }
+  if (e.key === 'PageDown') { comp.pos[1] -= step; moved = true; }
+  if (moved) {
+    e.preventDefault();
+    selectedMesh.position.set(comp.pos[0], comp.pos[1], comp.pos[2]);
+    if (highlightObj) highlightObj.position.copy(selectedMesh.position);
+    document.getElementById('cx').value = comp.pos[0].toFixed(3);
+    document.getElementById('cy').value = comp.pos[1].toFixed(3);
+    document.getElementById('cz').value = comp.pos[2].toFixed(3);
+  }
 });
 
 // Load game ships into dropdown
