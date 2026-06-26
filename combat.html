@@ -314,14 +314,15 @@ function animate(now) {
     const vpW = window.innerWidth - sidebarW;
     const vpH = window.innerHeight;
     let sx, sy;
-    // If this is the followed ship, pin to center of viewport (no jitter possible)
+    // If this is the followed ship, pin to center of 3D viewport
     if (selectedShipId === followShipId) {
       sx = sidebarW + vpW / 2;
       sy = vpH / 2;
     } else {
       const vec = new THREE.Vector3(s.pos.x, 0, s.pos.y);
       vec.project(camera);
-      sx = (vec.x * 0.5 + 0.5) * window.innerWidth;
+      // Map NDC to viewport pixel coords (viewport starts at sidebarW)
+      sx = sidebarW + (vec.x * 0.5 + 0.5) * vpW;
       sy = (-vec.y * 0.5 + 0.5) * vpH;
       const behind = vec.z >= 1;
       if (behind) { sx = window.innerWidth - sx; sy = vpH - sy; }
@@ -338,6 +339,15 @@ function animate(now) {
     retEl.style.left = (sx - 24) + 'px';
     retEl.style.top = (sy - 24) + 'px';
   } else { retEl.style.display = 'none'; }
+  // Render to viewport area only (right of sidebar)
+  const sbW = document.getElementById('sidebar').offsetWidth;
+  const vpW2 = window.innerWidth - sbW;
+  const vpH2 = window.innerHeight;
+  renderer.setViewport(sbW, 0, vpW2, vpH2);
+  renderer.setScissor(sbW, 0, vpW2, vpH2);
+  renderer.setScissorTest(true);
+  camera.aspect = vpW2 / vpH2;
+  camera.updateProjectionMatrix();
   updateCamera();
   renderer.render(scene, camera);
 }
