@@ -11,12 +11,18 @@ from flask import Flask, jsonify, request, send_from_directory
 from ship_generator import generate_ship, FACTION_STYLES, HULL_CLASSES
 from component_library import generate_component, GENERATORS, COMPONENT_CATEGORIES
 
-app = Flask(__name__, static_folder="static")
+app = Flask(__name__, static_folder=None)
 TOOL_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(TOOL_DIR))
 SAVE_DIR = os.path.join(TOOL_DIR, "saved_designs")
 COMP_DIR = os.path.join(TOOL_DIR, "saved_components")
 os.makedirs(SAVE_DIR, exist_ok=True)
 os.makedirs(COMP_DIR, exist_ok=True)
+
+
+@app.route("/static/<path:filename>")
+def serve_static(filename):
+    return send_from_directory(os.path.join(PROJECT_ROOT, "static"), filename)
 
 
 @app.route("/")
@@ -64,6 +70,11 @@ def api_batch_generate():
 @app.route("/review")
 def review_page():
     return send_from_directory(TOOL_DIR, "review.html")
+
+
+@app.route("/lod")
+def lod_page():
+    return send_from_directory(TOOL_DIR, "lod_viewer.html")
 
 
 @app.route("/api/factions")

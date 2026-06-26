@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LOD Viewer</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#05080f;color:#c8d4e0;font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.tab-bar{background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;gap:4px;padding:6px 12px;flex-shrink:0}
+.tab-bar a{padding:5px 14px;border:1px solid #1a2844;color:#5a7a9a;border-radius:3px;text-decoration:none;font-size:11px}
+.tab-bar a.active{background:#0d1a2f;border-color:#4fc3f7;color:#4fc3f7;font-weight:600}
+.controls{padding:8px 12px;display:flex;gap:12px;align-items:center;border-bottom:1px solid #1a2844;flex-shrink:0}
+.controls label{font-size:11px;color:#8aa0b8}
+.controls select,.controls input{background:#0a1020;border:1px solid #1a3050;color:#c8d4e0;padding:4px 8px;border-radius:3px;font-size:11px}
+.controls input[type=range]{width:200px}
+.controls span{font-size:11px;color:#4fc3f7;min-width:60px}
+.panels{flex:1;display:flex;gap:1px;overflow:hidden}
+.panel{flex:1;position:relative;border-right:1px solid #1a2844}
+.panel:last-child{border:none}
+.panel-label{position:absolute;top:8px;left:8px;background:#0a0e18cc;padding:3px 8px;border-radius:3px;font-size:10px;color:#4fc3f7;z-index:1;border:1px solid #1a2844}
+.panel canvas{width:100%;height:100%;display:block}
+</style>
+</head>
+<body>
+<div class="tab-bar">
+  <a href="/">Ship Generator</a>
+  <a href="/gallery">Component Library</a>
+  <a href="/review">Review</a>
+  <a href="/lod" class="active">LOD Viewer</a>
+</div>
+<div class="controls">
+  <label>Ship:</label>
+  <select id="shipSelect"></select>
+  <label>Distance:</label>
+  <input type="range" id="distSlider" min="0" max="4000" value="0" step="10">
+  <span id="distVal">0</span>
+  <label>LOD 0: &lt;800 | LOD 1: 800-2500 | LOD 2: &gt;2500</label>
+</div>
+<div class="panels">
+  <div class="panel"><div class="panel-label">LOD 0 - Full Mesh</div><canvas id="c0"></canvas></div>
+  <div class="panel"><div class="panel-label">LOD 1 - Bounding Box</div><canvas id="c1"></canvas></div>
+  <div class="panel"><div class="panel-label">LOD 2 - Billboard</div><canvas id="c2"></canvas></div>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { buildShipFromData } from '/static/ship_renderer.js';
+import { createShipLOD, createWreckSprite, createLootMarker, LOD_DISTANCES } from '/static/ship_lod.js';
+
+// Three panels, each with its own scene/camera/renderer
+const panels = [0,1,2].map(i => {
+  const canvas = document.getElementById('c'+i);
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+  renderer.setClearColor(0x050810);
+  const scene = new THREE.Scene();
+  scene.add(new THREE.AmbientLight(0x1a2a4a, 0.6));
+  const key = new THREE.DirectionalLight(0x4fc3f7, 0.4);
+  key.position.set(2,3,1); scene.add(key);
+  const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 5000);
+  camera.position.set(3, 2, 3);
+  const controls = new OrbitControls(camera, canvas);
+  controls.enableDamping = true;
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 1.5;
+  return {renderer, scene, camera, controls, canvas, group: null};
+});
+
+function resize() {
+  panels.forEach(p => {
+    const w = p.canvas.clientWidth, h = p.canvas.clientHeight;
+    p.renderer.setSize(w, h, false);
+    p.camera.aspect = w/h;
+    p.camera.updateProjectionMatrix();
+  });
+}
+window.addEventListener('resize', resize);
+resize();
+
+function animate() {
+  requestAnimationFrame(animate);
+  panels.forEach(p => {
+    p.controls.update();
+    p.renderer.render(p.scene, p.camera);
+  });
+}
+animate();
+
+// Load ship list
+let shipGeometries = {};
+async function loadShips() {
+  // Use the generate API to get a ship, or load from existing
+  const r = await fetch('/api/hull_classes');
+  const hulls = await r.json();
+  const sel = document.getElementById('shipSelect');
+  // Generate one of each hull class
+  for (const hull of hulls) {
+    sel.innerHTML += `<option value="${hull}">${hull}</option>`;
+  }
+  loadShip(hulls[0]);
+}
+
+async function loadShip(hullClass) {
+  const r = await fetch('/api/generate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({faction:'terran', hull_class:hullClass, seed:42})});
+  const data = await r.json();
+  displayLODs(data);
+}
+
+function displayLODs(data) {
+  const bounds = {length: data.meta.length||2, height: data.meta.height||0.5, width: data.meta.beam||1};
+  const scale = 1.0;
+
+  // Clear old
+  panels.forEach(p => { if(p.group){p.scene.remove(p.group); p.group=null;} });
+
+  // LOD 0: full mesh
+  const g0 = new THREE.Group();
+  buildShipFromData(g0, data, {showHardpoints:false});
+  panels[0].scene.add(g0);
+  panels[0].group = g0;
+
+  // LOD 1: bounding box
+  const bevel = Math.min(bounds.length, bounds.height, bounds.width) * 0.1;
+  const hw = bounds.width/2, hh = bounds.height/2;
+  const s = new THREE.Shape();
+  s.moveTo(-hw+bevel,-hh); s.lineTo(hw-bevel,-hh); s.lineTo(hw,-hh+bevel);
+  s.lineTo(hw,hh-bevel); s.lineTo(hw-bevel,hh); s.lineTo(-hw+bevel,hh);
+  s.lineTo(-hw,hh-bevel); s.lineTo(-hw,-hh+bevel); s.closePath();
+  const geo = new THREE.ExtrudeGeometry(s,{depth:bounds.length,bevelEnabled:true,bevelThickness:bevel*0.5,bevelSize:bevel*0.5});
+  geo.center();
+  const mat = new THREE.MeshPhongMaterial({color:0x0a1428,emissive:0x0a1428,shininess:0,transparent:true,opacity:0.7});
+  const mesh1 = new THREE.Mesh(geo, mat);
+  mesh1.rotation.y = Math.PI/2;
+  const edges = new THREE.EdgesGeometry(geo,15);
+  mesh1.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.5})));
+  const g1 = new THREE.Group(); g1.add(mesh1);
+  panels[1].scene.add(g1);
+  panels[1].group = g1;
+
+  // LOD 2: billboard sprite
+  const canvas2d = document.createElement('canvas');
+  canvas2d.width=32; canvas2d.height=32;
+  const ctx = canvas2d.getContext('2d');
+  ctx.fillStyle='#4fc3f7'; ctx.globalAlpha=0.8;
+  ctx.beginPath(); ctx.moveTo(16,2); ctx.lineTo(30,16); ctx.lineTo(16,30); ctx.lineTo(2,16); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='#4fc3f7'; ctx.globalAlpha=1; ctx.lineWidth=1; ctx.stroke();
+  const tex = new THREE.CanvasTexture(canvas2d);
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true}));
+  sprite.scale.set(1.5,1.5,1);
+  const g2 = new THREE.Group(); g2.add(sprite);
+  panels[2].scene.add(g2);
+  panels[2].group = g2;
+
+  // Frame cameras
+  panels.forEach((p,i) => {
+    const box = new THREE.Box3().setFromObject(p.group);
+    const sz = box.getSize(new THREE.Vector3());
+    const md = Math.max(sz.x,sz.y,sz.z)||1;
+    const center = box.getCenter(new THREE.Vector3());
+    const fov = p.camera.fov*(Math.PI/180);
+    const dist = md/(2*Math.tan(fov/2))*1.2;
+    p.camera.position.set(center.x+dist*0.6, center.y+dist*0.4, center.z+dist*0.6);
+    p.controls.target.copy(center);
+  });
+}
+
+// Distance slider - highlights which LOD is active
+const distSlider = document.getElementById('distSlider');
+const distVal = document.getElementById('distVal');
+distSlider.addEventListener('input', () => {
+  const d = parseInt(distSlider.value);
+  distVal.textContent = d;
+  // Highlight active panel
+  document.querySelectorAll('.panel-label').forEach((lbl,i) => {
+    const active = (i===0 && d<800) || (i===1 && d>=800 && d<2500) || (i===2 && d>=2500);
+    lbl.style.borderColor = active ? '#4fc3f7' : '#1a2844';
+    lbl.style.color = active ? '#fff' : '#4fc3f7';
+    lbl.style.background = active ? '#4fc3f7' : '#0a0e18cc';
+  });
+});
+
+document.getElementById('shipSelect').addEventListener('change', e => loadShip(e.target.value));
+loadShips();
+</script>
+</body>
+</html>
