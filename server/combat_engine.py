@@ -122,6 +122,7 @@ class CombatShip:
     # State
     alive: bool = True
     target_id: str = ""
+    geometry_id: str = ""  # links to ship_geometry for 3D rendering
 
 
 @dataclass
@@ -639,9 +640,9 @@ def make_ship(id: str, name: str, faction: str, hull_class: str,
               weapons: list[Weapon], speed: float = 100, signature: float = 50,
               cap: float = 500, cap_recharge: float = 5.0,
               modules: list[Module] = None, ammo: dict = None,
-              accel: float = 0) -> CombatShip:
+              accel: float = 0, geometry_id: str = "") -> CombatShip:
     if accel <= 0:
-        accel = speed * 0.25  # default: reaches top speed in ~4 ticks
+        accel = speed * 0.25
     return CombatShip(
         id=id, name=name, faction=faction, hull_class=hull_class,
         shield_hp=shield, shield_max=shield,
@@ -649,4 +650,5 @@ def make_ship(id: str, name: str, faction: str, hull_class: str,
         hull_hp=hull, hull_max=hull,
         cap=cap, cap_max=cap, cap_recharge=cap_recharge,
         weapons=weapons, modules=modules or [], ammo=ammo or {},
-        speed=speed, signature=signature, accel=accel)
+        speed=speed, signature=signature, accel=accel,
+        geometry_id=geometry_id or id)

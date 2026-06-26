@@ -456,9 +456,79 @@ def make_fleet(faction, prefix, size, style="balanced"):
 
 
 def create_3faction_battle():
-    fleet_tf = make_fleet("Terran Federation", "tf", 7, "shield_heavy")
-    fleet_fs = make_fleet("Free States", "fs", 5, "balanced")
-    fleet_ic = make_fleet("Iron Compact", "ic", 10, "armor_heavy")
+    """Build fleets from actual DB ships with proper names and geometries."""
+    import sqlite3, os
+    db_path = os.path.join(os.path.dirname(__file__), 'data', 'game_data.db')
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+
+    # Weapon stats by ID
+    wpn_stats = {
+        'autocannon': ('Autocannon','Kinetic',30,2,'S',0,'Fusion Shell S'),
+        'autocannon_m': ('Autocannon','Kinetic',50,3,'M',0,'Fusion Shell M'),
+        'autocannon_l': ('Autocannon','Kinetic',80,4,'L',0,'Fusion Shell L'),
+        'autocannon_c': ('Autocannon','Kinetic',150,5,'C',0,'Fusion Shell C'),
+        'railgun': ('Railgun','Kinetic',55,4,'S',12,'Antimatter Charge S'),
+        'railgun_m': ('Railgun','Kinetic',70,5,'M',12,'Antimatter Charge M'),
+        'railgun_l': ('Railgun','Kinetic',100,6,'L',12,'Antimatter Charge L'),
+        'railgun_c': ('Railgun','Kinetic',180,7,'C',12,'Antimatter Charge C'),
+        'pulse_laser': ('Pulse Laser','Thermal',25,2,'S',10,''),
+        'pulse_laser_m': ('Pulse Laser','Thermal',45,3,'M',14,''),
+        'pulse_laser_l': ('Pulse Laser','Thermal',70,4,'L',18,''),
+        'beam_laser': ('Beam Laser','EM',40,3,'S',12,''),
+        'beam_laser_m': ('Beam Laser','EM',60,4,'M',16,''),
+        'beam_laser_l': ('Beam Laser','EM',90,5,'L',20,''),
+        'missile_launcher': ('Missile Launcher','Kinetic',45,6,'S',4,'Scourge Missile S'),
+        'missile_launcher_m': ('Missile Launcher','Kinetic',65,7,'M',5,'Scourge Missile M'),
+        'missile_launcher_l': ('Torpedo Launcher','Explosive',90,10,'L',8,'Nova Torpedo L'),
+        'flak_battery': ('Flak Battery','Explosive',20,1,'S',0,'Fusion Shell S'),
+    }
+
+    range_table = {'S': 2500, 'M': 7500, 'L': 20000, 'C': 40000}
+    tracking_table = {'S': 80, 'M': 50, 'L': 25, 'C': 10}
+    sig_table = {'Fighter': 25, 'Frigate': 40, 'Destroyer': 65, 'Cruiser': 85, 'Battlecruiser': 110, 'Battleship': 140, 'Dreadnought': 200}
+    speed_table = {'Fighter': 220, 'Frigate': 140, 'Destroyer': 95, 'Cruiser': 75, 'Battlecruiser': 60, 'Battleship': 50, 'Dreadnought': 35}
+    cap_table = {'Fighter': 250, 'Frigate': 400, 'Destroyer': 550, 'Cruiser': 700, 'Battlecruiser': 900, 'Battleship': 1200, 'Dreadnought': 2000}
+
+    def build_fleet(faction_id, ship_ids):
+        ships = []
+        for idx, sid in enumerate(ship_ids):
+            row = c.execute("SELECT id, name, hull_class, shield_hp, armor_hp, hull_hp, speed, weapons FROM ships WHERE id=?", (sid,)).fetchone()
+            if not row: continue
+            hull_class = row['hull_class']
+            wpn_ids = __import__('json').loads(row['weapons']) if row['weapons'] else []
+            weapons = []
+            ammo = {}
+            for wid in wpn_ids:
+                ws = wpn_stats.get(wid)
+                if not ws: continue
+                name, dt, dmg, cyc, sz, cap_use, ammo_id = ws
+                weapons.append(make_weapon(name, dt, dmg, cyc, tracking_table.get(sz,60), range_table.get(sz,7500), sz, cap_use=cap_use, ammo_id=ammo_id))
+                if ammo_id:
+                    ammo[ammo_id] = ammo.get(ammo_id, 0) + 150
+
+            spd = speed_table.get(hull_class, 100) * row['speed']
+            sig = sig_table.get(hull_class, 60)
+            cap = cap_table.get(hull_class, 500)
+            ships.append(make_ship(
+                f"{faction_id}_{idx}", row['name'], faction_id.replace('_',' ').title(), hull_class,
+                shield=row['shield_hp'], armor=row['armor_hp'], hull=row['hull_hp'],
+                weapons=weapons, speed=spd, signature=sig,
+                cap=cap, cap_recharge=cap*0.01, ammo=ammo,
+                geometry_id=row['id']
+            ))
+        return ships
+
+    # Pick ships for each faction fleet
+    tf_ships = ['tf_interceptor','tf_frigate','tf_frigate','tf_destroyer','tf_destroyer','tf_cruiser','tf_battlecruiser']
+    fs_ships = ['fa_skirmisher','fa_frigate','fa_destroyer','fa_cruiser','fa_battlecruiser']
+    ic_ships = ['ic_interceptor','ic_frigate','ic_frigate','ic_heavy_frigate','ic_destroyer','ic_destroyer','ic_heavy_destroyer','ic_cruiser','ic_cruiser','ic_battlecruiser']
+
+    fleet_tf = build_fleet('terran_fed', tf_ships)
+    fleet_fs = build_fleet('free_states', fs_ships)
+    fleet_ic = build_fleet('iron_compact', ic_ships)
+    conn.close()
     return fleet_tf, fleet_fs, fleet_ic
 
 

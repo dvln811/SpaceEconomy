@@ -255,6 +255,9 @@ def debug_page():
     return send_from_directory(BASE_DIR, "debug.html")
 
 
+_combat_state = {"paused": False, "stop": False}
+
+
 @app.route("/combat")
 def combat_page():
     return send_from_directory(BASE_DIR, "combat.html")
@@ -263,13 +266,14 @@ def combat_page():
 @app.route("/combat/stream")
 def combat_stream():
     """Serve combat simulation as SSE stream."""
-    import sys
+    import sys, math
     sys.path.insert(0, BASE_DIR)
-    from combat_viewer import create_3faction_battle, make_fleet
+    from combat_viewer import create_3faction_battle
     from server.combat_engine import CombatEngine
     import time as _time
 
-    battle_state = {"paused": False, "stop": False}
+    _combat_state["paused"] = False
+    _combat_state["stop"] = False
 
     def generate():
         fleet_tf, fleet_fs, fleet_ic = create_3faction_battle()
@@ -279,6 +283,7 @@ def combat_stream():
 
         def ship_data(s):
             return {"id":s.id,"name":s.name,"hull_class":s.hull_class,
+                    "geometry_id": getattr(s, 'geometry_id', s.id),
                     "shield":s.shield_max,"armor":s.armor_max,"hull":s.hull_max,
                     "cap":s.cap_max,"cap_recharge":s.cap_recharge,
                     "weapons":[{"name":w.name,"size":w.size,"dmg":w.damage_type.value,"cycle":w.cycle_time,"cap_use":w.cap_use,"ammo":w.ammo_id} for w in s.weapons],
@@ -293,8 +298,12 @@ def combat_stream():
         yield f"data: {json.dumps(init_data)}\n\n"
         _time.sleep(1)
 
-        import math
-        while not engine.finished and engine.tick < 600:
+        while not engine.finished and engine.tick < 600 and not _combat_state["stop"]:
+            while _combat_state["paused"] and not _combat_state["stop"]:
+                _time.sleep(0.2)
+            if _combat_state["stop"]:
+                break
+
             events = engine.step()
             caps = {s.id: round(s.cap, 1) for s in all_ships if s.alive}
             positions = {s.id: [round(s.x), round(s.y), round(s.vx,1), round(s.vy,1)] for s in all_ships if s.alive}
@@ -327,6 +336,13 @@ def ship_designer_page():
 
 @app.route("/combat/control")
 def combat_control():
+    cmd = request.args.get('cmd', '')
+    if cmd == 'pause':
+        _combat_state['paused'] = not _combat_state['paused']
+    elif cmd == 'stop':
+        _combat_state['stop'] = True
+    elif cmd == 'restart':
+        _combat_state['stop'] = True
     return "ok"
 
 
