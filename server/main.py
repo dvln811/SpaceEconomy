@@ -273,7 +273,7 @@ def combat_stream():
     import time as _time
 
     fleet_size = request.args.get('fleet_size', 22, type=int)
-    fleet_size = max(4, min(200, fleet_size))
+    fleet_size = max(4, min(1000, fleet_size))
 
     _combat_state["paused"] = False
     _combat_state["stop"] = False

@@ -5,33 +5,27 @@
 body { background: #000; color: #c0c0c0; font-family: 'Courier New', monospace; overflow: hidden; height: 100vh; }
 #viewport { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; }
-#sidebar { pointer-events: auto; width: 400px; height: 100%; display: flex; flex-direction: column; background: rgba(5,8,15,0.85); border-right: 1px solid #1a2844; overflow: hidden; }
-#controls { padding: 8px; display: flex; gap: 6px; border-bottom: 1px solid #1a2844; align-items: center; }
-#controls button { background: #111; color: #aaa; border: 1px solid #333; padding: 4px 10px; cursor: pointer; font-family: inherit; font-size: 10px; border-radius: 3px; }
+#sidebar { pointer-events: auto; width: 300px; height: 100%; display: flex; flex-direction: column; background: rgba(5,8,15,0.9); border-right: 1px solid #1a2844; overflow: hidden; }
+#controls { padding: 6px 8px; display: flex; gap: 4px; border-bottom: 1px solid #1a2844; align-items: center; flex-wrap: wrap; }
+#controls button { background: #111; color: #aaa; border: 1px solid #333; padding: 3px 8px; cursor: pointer; font-family: inherit; font-size: 10px; border-radius: 3px; }
 #controls button:hover { background: #222; color: #fff; }
-#status { padding: 4px 8px; font-size: 11px; color: #4fc3f7; border-bottom: 1px solid #1a2844; }
-#fleets { flex: 1; overflow-y: auto; padding: 4px; }
-.fleet-hdr { font-size: 10px; font-weight: bold; padding: 4px 6px; text-transform: uppercase; letter-spacing: 1px; }
+#status { padding: 3px 8px; font-size: 10px; color: #4fc3f7; border-bottom: 1px solid #1a2844; }
+#filters { padding: 4px 8px; display: flex; gap: 4px; border-bottom: 1px solid #1a2844; }
+#filters button { background: none; border: 1px solid #1a2844; color: #5a7a9a; padding: 2px 8px; font-size: 9px; cursor: pointer; border-radius: 2px; font-family: inherit; }
+#filters button.active { border-color: #4fc3f7; color: #4fc3f7; }
+#fleets { flex: 1; overflow-y: auto; padding: 0; }
+.list-item { display: flex; align-items: center; padding: 3px 8px; border-bottom: 1px solid #0f1a28; font-size: 10px; cursor: pointer; gap: 6px; }
+.list-item:hover { background: rgba(79,195,247,0.05); }
+.list-item.selected { background: rgba(79,195,247,0.1); border-left: 2px solid #4fc3f7; }
+.list-item.dead { opacity: 0.4; }
+.list-item .li-icon { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.list-item .li-name { flex: 1; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list-item .li-class { color: #666; font-size: 9px; width: 50px; text-align: right; }
+.list-item .li-dist { color: #4a6a8a; font-size: 9px; width: 40px; text-align: right; }
+.fleet-hdr { font-size: 9px; font-weight: bold; padding: 4px 8px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #1a2844; background: rgba(10,14,24,0.8); }
 .fleet-hdr.f0 { color: #4caf50; }
 .fleet-hdr.f1 { color: #42a5f5; }
 .fleet-hdr.f2 { color: #ce93d8; }
-.ship-cards { display: flex; flex-wrap: wrap; gap: 3px; padding: 2px 4px; }
-.ship-card { flex: 1 1 calc(33.3% - 4px); min-width: 110px; max-width: calc(33.3% - 4px); padding: 3px 5px; background: rgba(10,14,24,0.9); border: 1px solid #1a2844; border-radius: 3px; font-size: 9px; cursor: pointer; }
-.ship-card:hover { border-color: #4fc3f7; }
-.ship-card { user-select: none; -webkit-user-select: none; }
-.ship-card.selected { border-color: #fff; background: rgba(20,30,50,0.9); }
-.ship-card.dead { opacity: 0.3; border-color: #f44336; }
-.ship-card .sname { font-weight: bold; color: #ddd; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ship-card .sclass { color: #888; }
-.ship-card .bars { margin-top: 2px; }
-.bar-row { display: flex; align-items: center; gap: 2px; margin: 1px 0; }
-.bar-row .bl { width: 7px; font-size: 7px; font-weight: bold; }
-.bar-row .bt { flex: 1; height: 3px; background: #111; border-radius: 1px; overflow: hidden; }
-.bar-row .bf { height: 100%; transition: width 0.3s; }
-.bs { color: #42a5f5; } .bs .bf { background: #42a5f5; }
-.ba { color: #ffa726; } .ba .bf { background: #ffa726; }
-.bh { color: #ef5350; } .bh .bf { background: #ef5350; }
-.bc { color: #aa66ff; } .bc .bf { background: #aa66ff; }
 #log-wrap { pointer-events: auto; position: absolute; bottom: 10px; right: 10px; width: 350px; max-height: 200px; background: rgba(5,8,15,0.85); border: 1px solid #1a2844; border-radius: 4px; overflow: hidden; display: flex; flex-direction: column; }
 #log-hdr { padding: 4px 8px; font-size: 10px; color: #ffa726; border-bottom: 1px solid #1a2844; }
 #log { flex: 1; overflow-y: auto; padding: 4px 8px; font-size: 9px; line-height: 1.4; max-height: 170px; }
@@ -58,8 +52,13 @@ body { background: #000; color: #c0c0c0; font-family: 'Courier New', monospace; 
       <button onclick="sendCmd('pause')">Pause</button>
       <button onclick="sendCmd('restart')">Restart</button>
       <button onclick="sendCmd('stop')">Stop</button>
-      <input type="number" id="fleetSize" value="22" min="4" max="200" title="Total combatants" style="width:45px;background:#111;color:#ccc;border:1px solid #444;padding:2px 4px;font-size:11px;margin-left:6px">
+      <input type="number" id="fleetSize" value="22" min="4" max="1000" title="Total combatants" style="width:45px;background:#111;color:#ccc;border:1px solid #444;padding:2px 4px;font-size:11px;margin-left:6px">
       <span id="status">Connecting...</span>
+    </div>
+    <div id="filters">
+      <button class="active" data-filter="all">All</button>
+      <button data-filter="alive">Alive</button>
+      <button data-filter="wreck">Wrecks</button>
     </div>
     <div id="fleets"></div>
   </div>
@@ -93,7 +92,7 @@ let clientPaused = false;
 let scene, camera, renderer;
 let mouseDown = false, lastMouse = {x:0, y:0};
 let camDist = 300;
-const MAX_RENDERED_SHIPS = 60;  // viewport cap
+const MAX_RENDERED_SHIPS = parseInt(new URLSearchParams(window.location.search).get('max_ships') || '1000');  // viewport cap, configurable via ?max_ships=
 const HULL_PRIORITY = {'Dreadnought':100,'Carrier':90,'Battleship':80,'Battlecruiser':70,'Cruiser':60,'Destroyer':50,'Frigate':40,'Fighter':30,'Industrial':20,'Mining Barge':10};
 
 // --- Three.js Setup ---
@@ -115,11 +114,12 @@ function initScene() {
   dir2.position.set(-300, -100, -400);
   scene.add(dir2);
 
-  // Starfield as skybox (moves with camera so always visible)
+  // Starfield - large scale to match battle area
   const starGeo = new THREE.BufferGeometry();
-  const starVerts = new Float32Array(9000);
-  for (let i = 0; i < 9000; i += 3) {
-    const r = 50000 + Math.random() * 30000;
+  const starCount = 6000;
+  const starVerts = new Float32Array(starCount * 3);
+  for (let i = 0; i < starCount * 3; i += 3) {
+    const r = 80000 + Math.random() * 120000;
     const th = Math.random() * Math.PI * 2;
     const ph = Math.acos(2 * Math.random() - 1);
     starVerts[i] = r * Math.sin(ph) * Math.cos(th);
@@ -127,7 +127,7 @@ function initScene() {
     starVerts[i+2] = r * Math.cos(ph);
   }
   starGeo.setAttribute('position', new THREE.BufferAttribute(starVerts, 3));
-  const starField = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 20, sizeAttenuation: true }));
+  const starField = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 40, sizeAttenuation: true }));
   scene.add(starField);
 
   // Selection reticule is a 2D overlay (see #reticule in CSS), not a 3D object
@@ -520,36 +520,42 @@ function initFleets(fleets) {
   fleets.forEach((f, fi) => {
     const hdr = document.createElement('div');
     hdr.className = 'fleet-hdr f' + fi;
-    hdr.textContent = f.faction + ' (' + f.count + ')' + (f.ally ? ' + ' + f.ally : '');
+    hdr.textContent = f.faction + ' (' + f.count + ')';
     fleetsEl.appendChild(hdr);
-    const cards = document.createElement('div');
-    cards.className = 'ship-cards';
     f.ships.forEach(s => {
       ships[s.id] = { data: s, pos: {x:0, y:0, vx:0, vy:0} };
-      // Determine geometry ID from ship name/class
       const geoId = s.geometry_id || s.id;
       const mesh = createShipMesh(s.id, geoId, f.faction);
       shipMeshes[s.id] = mesh;
 
-      const card = document.createElement('div');
-      card.className = 'ship-card';
-      card.id = 'card-' + s.id;
-      const wpnList = s.weapons.map(w => w.name + '[' + w.size + ']').join(', ');
-      const modList = s.modules.length ? s.modules.map(m => m.name).join(', ') : '';
-      card.innerHTML = `<div class="sname">${s.name}</div><div class="sclass">${s.hull_class} | ${wpnList}</div>
-        <div class="bars">
-        <div class="bar-row bs"><span class="bl">S</span><div class="bt"><div class="bf" id="bar-s-${s.id}" style="width:100%"></div></div></div>
-        <div class="bar-row ba"><span class="bl">A</span><div class="bt"><div class="bf" id="bar-a-${s.id}" style="width:100%"></div></div></div>
-        <div class="bar-row bh"><span class="bl">H</span><div class="bt"><div class="bf" id="bar-h-${s.id}" style="width:100%"></div></div></div>
-        <div class="bar-row bc"><span class="bl">C</span><div class="bt"><div class="bf" id="bar-c-${s.id}" style="width:100%"></div></div></div>
-        </div>`;
-      card.addEventListener('click', (e) => { e.stopPropagation(); selectedShipId = s.id; document.querySelectorAll('.ship-card').forEach(c=>c.classList.remove('selected')); card.classList.add('selected'); });
-      card.addEventListener('dblclick', (e) => { e.stopPropagation(); followShipId = s.id; freeCamera = false; camDist = 150; });
-      card.addEventListener('mouseenter', ev => { card._ttTimer = setTimeout(() => showTooltip(ev, s), 1500); });
-      card.addEventListener('mouseleave', () => { clearTimeout(card._ttTimer); document.getElementById('tooltip').style.display = 'none'; });
-      cards.appendChild(card);
+      const item = document.createElement('div');
+      item.className = 'list-item';
+      item.id = 'card-' + s.id;
+      item.dataset.id = s.id;
+      item.dataset.type = 'ship';
+      const fColor = ['#4caf50','#42a5f5','#ce93d8'][fi] || '#888';
+      item.innerHTML = `<div class="li-icon" style="background:${fColor}"></div><span class="li-name">${s.name}</span><span class="li-class">${s.hull_class}</span><span class="li-dist">--</span>`;
+      item.addEventListener('click', (e) => { e.stopPropagation(); selectedShipId = s.id; document.querySelectorAll('.list-item').forEach(c=>c.classList.remove('selected')); item.classList.add('selected'); });
+      item.addEventListener('dblclick', (e) => { e.stopPropagation(); followShipId = s.id; freeCamera = false; camDist = 150; });
+      item.addEventListener('mouseenter', ev => showTooltip(ev, s));
+      item.addEventListener('mouseleave', () => { document.getElementById('tooltip').style.display = 'none'; });
+      fleetsEl.appendChild(item);
     });
-    fleetsEl.appendChild(cards);
+  });
+  // Filter tabs
+  document.querySelectorAll('#filters button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#filters button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const filter = btn.dataset.filter;
+      document.querySelectorAll('.list-item').forEach(item => {
+        const id = item.dataset.id;
+        const isDead = ships[id] && ships[id].dead;
+        if (filter === 'all') item.style.display = '';
+        else if (filter === 'alive') item.style.display = isDead ? 'none' : '';
+        else if (filter === 'wreck') item.style.display = isDead ? '' : 'none';
+      });
+    });
   });
   document.getElementById('status').textContent = 'Battle started';
 }
@@ -600,7 +606,7 @@ function onEvent(e) {
     msg = `<span class="ld">** ${tgt?tgt.data.name:'?'} DESTROYED **</span>`;
     if (tgt) { tgt.dead = true; tgt.pos.vx = 0; tgt.pos.vy = 0; }
     const card = document.getElementById('card-' + e.target_id);
-    if (card) card.classList.add('dead');
+    if (card) { card.classList.add('dead'); card.dataset.type = 'wreck'; }
     // Replace mesh with billboard or gray wreck based on hull class
     if (shipMeshes[e.target_id]) {
       const mesh = shipMeshes[e.target_id];
@@ -612,8 +618,19 @@ function onEvent(e) {
           if (child.material) child.material = new THREE.MeshBasicMaterial({color:0x333333,transparent:true,opacity:0.4});
         });
       } else {
-        // Small ships: replace with gray billboard quad
+        // Small ships: dispose geometry and replace with gray billboard
+        mesh.traverse(child => {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) { if (child.material.map) child.material.map.dispose(); child.material.dispose(); }
+        });
         scene.remove(mesh);
+        // Clean up trail
+        if (shipTrails[e.target_id]) {
+          scene.remove(shipTrails[e.target_id].line);
+          shipTrails[e.target_id].line.geometry.dispose();
+          shipTrails[e.target_id].line.material.dispose();
+          delete shipTrails[e.target_id];
+        }
         const size = ({'Fighter':8,'Frigate':12,'Destroyer':18,'Cruiser':25}[hullClass]) || 12;
         const canvas2d = document.createElement('canvas');
         canvas2d.width=16; canvas2d.height=16;
