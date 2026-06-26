@@ -93,6 +93,8 @@ let clientPaused = false;
 let scene, camera, renderer;
 let mouseDown = false, lastMouse = {x:0, y:0};
 let camDist = 300;
+const MAX_RENDERED_SHIPS = 60;  // viewport cap
+const HULL_PRIORITY = {'Dreadnought':100,'Carrier':90,'Battleship':80,'Battlecruiser':70,'Cruiser':60,'Destroyer':50,'Frigate':40,'Fighter':30,'Industrial':20,'Mining Barge':10};
 
 // --- Three.js Setup ---
 function initScene() {
@@ -304,6 +306,15 @@ function animate(now) {
   const dt = (now - lastFrame) / 1000;
   lastFrame = now;
   _sf++; if(now-_st>500){_statsEl.textContent=`${Math.round(_sf*1000/(now-_st))} FPS | ${renderer.info.render.calls} draws | ${renderer.info.render.triangles} tris`;_sf=0;_st=now;}
+
+  // Viewport cap: only show MAX_RENDERED_SHIPS, prioritize by hull size
+  const aliveIds = Object.keys(ships).filter(id => !ships[id].dead && shipMeshes[id]);
+  if (aliveIds.length > MAX_RENDERED_SHIPS) {
+    aliveIds.sort((a,b) => (HULL_PRIORITY[ships[b].data?.hull_class]||0) - (HULL_PRIORITY[ships[a].data?.hull_class]||0));
+    for (let i = 0; i < aliveIds.length; i++) {
+      if (shipMeshes[aliveIds[i]]) shipMeshes[aliveIds[i]].visible = (i < MAX_RENDERED_SHIPS);
+    }
+  }
 
   // Extrapolate ship positions (skip dead ships)
   if (!clientPaused) {
@@ -536,13 +547,42 @@ function onEvent(e) {
     if (tgt) { tgt.dead = true; tgt.pos.vx = 0; tgt.pos.vy = 0; }
     const card = document.getElementById('card-' + e.target_id);
     if (card) card.classList.add('dead');
-    // Gray out the ship mesh instead of removing
+    // Replace mesh with billboard or gray wreck based on hull class
     if (shipMeshes[e.target_id]) {
-      shipMeshes[e.target_id].traverse(child => {
-        if (child.material) {
-          child.material = new THREE.MeshBasicMaterial({color: 0x333333, transparent: true, opacity: 0.4});
-        }
-      });
+      const mesh = shipMeshes[e.target_id];
+      const hullClass = tgt ? tgt.data.hull_class : '';
+      const bigShip = ['Battlecruiser','Battleship','Carrier','Dreadnought'].includes(hullClass);
+      if (bigShip) {
+        // Large ships: keep geometry, gray out
+        mesh.traverse(child => {
+          if (child.material) child.material = new THREE.MeshBasicMaterial({color:0x333333,transparent:true,opacity:0.4});
+        });
+      } else {
+        // Small ships: replace with gray billboard quad
+        scene.remove(mesh);
+        const size = ({'Fighter':8,'Frigate':12,'Destroyer':18,'Cruiser':25}[hullClass]) || 12;
+        const canvas2d = document.createElement('canvas');
+        canvas2d.width=16; canvas2d.height=16;
+        const ctx=canvas2d.getContext('2d');
+        ctx.fillStyle='#444'; ctx.globalAlpha=0.7; ctx.fillRect(2,2,12,12);
+        const tex = new THREE.CanvasTexture(canvas2d);
+        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true}));
+        sprite.scale.set(size,size,1);
+        sprite.position.copy(mesh.position);
+        scene.add(sprite);
+        shipMeshes[e.target_id] = sprite;
+      }
+      // Add loot marker
+      const lootCanvas = document.createElement('canvas');
+      lootCanvas.width=8; lootCanvas.height=8;
+      const lctx=lootCanvas.getContext('2d');
+      lctx.fillStyle='#ffd54f'; lctx.globalAlpha=0.9;
+      lctx.beginPath(); lctx.arc(4,4,3,0,Math.PI*2); lctx.fill();
+      const lootTex = new THREE.CanvasTexture(lootCanvas);
+      const lootSprite = new THREE.Sprite(new THREE.SpriteMaterial({map:lootTex,transparent:true}));
+      lootSprite.scale.set(10,10,1);
+      lootSprite.position.set(mesh.position.x, 5, mesh.position.z);
+      scene.add(lootSprite);
     }
   } else if (e.event === 'module_disabled') {
     msg = `<span class="lmod">${ships[e.target_id]?ships[e.target_id].data.name:'?'} MODULE OFFLINE: ${e.detail}</span>`;
