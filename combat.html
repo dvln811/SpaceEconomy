@@ -150,7 +150,6 @@ async function loadGeometries() {
 function createShipMesh(shipId, geometryId, faction) {
   const geoData = shipGeometries[geometryId];
   if (!geoData) {
-    // Fallback: simple triangle
     const geo = new THREE.ConeGeometry(5, 15, 4);
     const mat = new THREE.MeshPhongMaterial({ color: factionColor(faction), transparent: true, opacity: 0.7 });
     const mesh = new THREE.Mesh(geo, mat);
@@ -160,16 +159,71 @@ function createShipMesh(shipId, geometryId, faction) {
     scene.add(group);
     return group;
   }
-  const group = new THREE.Group();
-  buildShipFromData(group, geoData, { showHardpoints: false });
-  // Scale by hull class - GRAND scale (dread ~80x fighter)
+  // Build full mesh, then merge all child geometries into one for fewer draw calls
+  const tempGroup = new THREE.Group();
+  buildShipFromData(tempGroup, geoData, { showHardpoints: false });
+
   const classScale = {'Fighter':0.5,'Frigate':1.2,'Destroyer':2.5,'Cruiser':5.0,'Battlecruiser':10.0,'Battleship':25.0,'Carrier':32.0,'Dreadnought':100.0};
   const baseSize = geoData.bounds ? Math.max(geoData.bounds.length, geoData.bounds.width) : 2;
   const hullMult = classScale[geoData.hull_class] || classScale[geoData.role] || 1.0;
   const scale = (25 / baseSize) * hullMult;
+
+  // Merge all mesh geometries into one
+  const geometries = [];
+  tempGroup.updateMatrixWorld(true);
+  tempGroup.traverse(child => {
+    if (child.isMesh && child.geometry) {
+      const cloned = child.geometry.clone();
+      cloned.applyMatrix4(child.matrixWorld);
+      geometries.push(cloned);
+    }
+  });
+
+  const group = new THREE.Group();
+  if (geometries.length > 0) {
+    const merged = mergeBufferGeometries(geometries);
+    if (merged) {
+      const mat = new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1428, shininess:0, transparent:true, opacity:0.7});
+      const mesh = new THREE.Mesh(merged, mat);
+      // Edge wireframe on merged mesh
+      const edges = new THREE.EdgesGeometry(merged, 15);
+      mesh.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color:0x4fc3f7, transparent:true, opacity:0.5})));
+      group.add(mesh);
+    }
+  }
   group.scale.set(scale, scale, scale);
   scene.add(group);
+
+  // Dispose temp
+  geometries.forEach(g => g.dispose());
   return group;
+}
+
+// Simple buffer geometry merge (avoids importing BufferGeometryUtils)
+function mergeBufferGeometries(geos) {
+  let totalVerts = 0, totalIdx = 0;
+  const indexed = geos.filter(g => g.index);
+  const nonIndexed = geos.filter(g => !g.index);
+  // Convert all to non-indexed for simplicity
+  const all = geos.map(g => {
+    if (g.index) { return g.toNonIndexed(); }
+    return g;
+  });
+  all.forEach(g => { totalVerts += g.attributes.position.count; });
+  if (totalVerts === 0) return null;
+  const positions = new Float32Array(totalVerts * 3);
+  const normals = new Float32Array(totalVerts * 3);
+  let offset = 0;
+  for (const g of all) {
+    const pos = g.attributes.position.array;
+    positions.set(pos, offset * 3);
+    if (g.attributes.normal) normals.set(g.attributes.normal.array, offset * 3);
+    offset += g.attributes.position.count;
+  }
+  const merged = new THREE.BufferGeometry();
+  merged.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  merged.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+  return merged;
 }
 
 function factionColor(faction) {
