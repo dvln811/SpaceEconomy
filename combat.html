@@ -273,11 +273,10 @@ function animate(now) {
     if (mesh) {
       mesh.position.set(s.pos.x, 0, s.pos.y);
       // Smoothly rotate toward velocity heading
-      // Ship model forward is +X. In Three.js, rotation.y=0 faces +X.
-      // Engine (vx,vy) maps to Three.js (vx, 0, vy). 
-      // Angle from +X axis = -atan2(vz, vx) = -atan2(vy, vx)
+      // Ship model forward is +X. rotation.y=0 faces +Z in Three.js default.
+      // We need: velocity direction -> rotation.y
       if (Math.abs(s.pos.vx) + Math.abs(s.pos.vy) > 1) {
-        const targetRot = -Math.atan2(s.pos.vy, s.pos.vx);
+        const targetRot = Math.PI/2 - Math.atan2(s.pos.vy, s.pos.vx);
         let diff = targetRot - mesh.rotation.y;
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
