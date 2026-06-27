@@ -173,13 +173,13 @@ class CombatEngine:
         for i, s in enumerate(self.fleet_a):
             s.x = -15000.0 + random.uniform(-500, 500)
             s.y = (i - len(self.fleet_a)/2) * 600 + random.uniform(-200, 200)
-            s.z = random.uniform(-300, 300)
+            s.z = random.uniform(-2000, 2000)
             s.role_ai = role_map.get(s.hull_class, "brawl")
             s.orbit_range = orbit_ranges.get(s.role_ai, 3000)
         for i, s in enumerate(self.fleet_b):
             s.x = 15000.0 + random.uniform(-500, 500)
             s.y = (i - len(self.fleet_b)/2) * 600 + random.uniform(-200, 200)
-            s.z = random.uniform(-300, 300)
+            s.z = random.uniform(-2000, 2000)
             s.role_ai = role_map.get(s.hull_class, "brawl")
             s.orbit_range = orbit_ranges.get(s.role_ai, 3000)
 
@@ -210,45 +210,52 @@ class CombatEngine:
                     # Approach
                     ship.vx += (dx/dist) * ship.accel
                     ship.vy += (dy/dist) * ship.accel
-                    ship.vz += (dz/dist) * ship.accel * 0.3
+                    ship.vz += (dz/dist) * ship.accel
                 else:
                     # Orbit perpendicular
                     ship.vx += (-dy/dist) * ship.accel * 0.8
                     ship.vy += (dx/dist) * ship.accel * 0.8
-                    ship.vz += random.uniform(-1, 1) * ship.accel * 0.2
+                    ship.vz += random.uniform(-1, 1) * ship.accel * 0.5
 
             elif ship.role_ai == "orbit":
                 # Maintain orbit_range, fast perpendicular movement
                 if dist > ship.orbit_range + 500:
                     ship.vx += (dx/dist) * ship.accel
                     ship.vy += (dy/dist) * ship.accel
+                    ship.vz += (dz/dist) * ship.accel * 0.5
                 elif dist < ship.orbit_range - 500:
                     ship.vx -= (dx/dist) * ship.accel * 0.5
                     ship.vy -= (dy/dist) * ship.accel * 0.5
                 # Always orbit
                 ship.vx += (-dy/dist) * ship.accel * 1.2
                 ship.vy += (dx/dist) * ship.accel * 1.2
-                ship.vz += random.uniform(-2, 2)
+                ship.vz += random.uniform(-1, 1) * ship.accel * 0.6
 
             elif ship.role_ai == "kite":
                 # Keep at orbit_range, back off if too close
                 if dist < ship.orbit_range - 1000:
                     ship.vx -= (dx/dist) * ship.accel * 1.5
                     ship.vy -= (dy/dist) * ship.accel * 1.5
+                    ship.vz -= (dz/dist) * ship.accel * 0.5
                 elif dist > ship.orbit_range + 1000:
                     ship.vx += (dx/dist) * ship.accel * 0.5
                     ship.vy += (dy/dist) * ship.accel * 0.5
+                    ship.vz += (dz/dist) * ship.accel * 0.3
                 ship.vx += (-dy/dist) * ship.accel * 0.5
                 ship.vy += (dx/dist) * ship.accel * 0.5
+                ship.vz += random.uniform(-1, 1) * ship.accel * 0.4
 
             elif ship.role_ai == "snipe":
                 # Stay far, minimal movement
                 if dist < ship.orbit_range - 2000:
                     ship.vx -= (dx/dist) * ship.accel
                     ship.vy -= (dy/dist) * ship.accel
+                    ship.vz -= (dz/dist) * ship.accel * 0.3
                 elif dist > ship.orbit_range + 2000:
                     ship.vx += (dx/dist) * ship.accel * 0.3
                     ship.vy += (dy/dist) * ship.accel * 0.3
+                    ship.vz += (dz/dist) * ship.accel * 0.2
+                ship.vz += random.uniform(-1, 1) * ship.accel * 0.3
 
             # Clamp speed
             spd = math.sqrt(ship.vx**2 + ship.vy**2 + ship.vz**2)

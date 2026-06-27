@@ -256,8 +256,8 @@ function addBeam(srcId, tgtId, dmgType) {
   if (!src || !tgt) return;
   const colors = { 'EM': 0x6666ff, 'Thermal': 0xff8800, 'Kinetic': 0xaaaaaa, 'Explosive': 0xff4444 };
   const geo = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(src.pos.x, 0, src.pos.y),
-    new THREE.Vector3(tgt.pos.x, 0, tgt.pos.y)
+    new THREE.Vector3(src.pos.x, src.pos.z||0, src.pos.y),
+    new THREE.Vector3(tgt.pos.x, tgt.pos.z||0, tgt.pos.y)
   ]);
   const mat = new THREE.LineBasicMaterial({ color: colors[dmgType] || 0xffffff, transparent: true, opacity: 0.8 });
   const line = new THREE.Line(geo, mat);
@@ -294,7 +294,7 @@ function updateMissiles(msls) {
   }
   // Update positions
   for (let i = 0; i < msls.length; i++) {
-    missileMeshes[i].position.set(msls[i].x, 0, msls[i].y);
+    missileMeshes[i].position.set(msls[i].x, msls[i].z||0, msls[i].y);
   }
 }
 
@@ -327,7 +327,7 @@ function updateCamera() {
 
   if (!freeCamera && followShipId && ships[followShipId]) {
     const s = ships[followShipId];
-    camTarget.set(s.pos.x, 0, s.pos.y);
+    camTarget.set(s.pos.x, s.pos.z||0, s.pos.y);
   }
 
   const x = camDist * Math.cos(camPhi) * Math.sin(camTheta);
@@ -390,9 +390,10 @@ function animate(now) {
     if (!s.pos || s.dead) continue;
     s.pos.x += s.pos.vx * dt;
     s.pos.y += s.pos.vy * dt;
+    s.pos.z += (s.pos.vz||0) * dt;
     const mesh = shipMeshes[id];
     if (mesh) {
-      mesh.position.set(s.pos.x, 0, s.pos.y);
+      mesh.position.set(s.pos.x, s.pos.z||0, s.pos.y);
       // Ship model: +X is forward (red axis in designer).
       // Three.js: rotation.y=0 means facing +X. 
       // Velocity in Three.js is (vx, 0, vy_engine).
@@ -429,7 +430,7 @@ function animate(now) {
       const angle = mesh ? mesh.rotation.y : 0;
       const tx = s.pos.x - Math.cos(angle) * rearOffset;
       const tz = s.pos.y + Math.sin(angle) * rearOffset;
-      trail.points.push(tx, 0, tz);
+      trail.points.push(tx, s.pos.z||0, tz);
       if (trail.points.length > 90) trail.points.splice(0, 3);
       const arr = trail.line.geometry.attributes.position.array;
       for (let j = 0; j < trail.points.length; j++) arr[j] = trail.points[j];
@@ -443,12 +444,13 @@ function animate(now) {
     const md = missileDataCurrent[i];
     md.x += md.vx * dt;
     md.y += md.vy * dt;
-    if (missileMeshes[i]) missileMeshes[i].position.set(md.x, 0, md.y);
+    md.z = (md.z||0) + (md.vz||0) * dt;
+    if (missileMeshes[i]) missileMeshes[i].position.set(md.x, md.z||0, md.y);
     // Check proximity to any ship - remove if within 50 units
     for (const [sid, s] of Object.entries(ships)) {
       if (!s.pos) continue;
-      const dx = md.x - s.pos.x, dy = md.y - s.pos.y;
-      if (dx*dx + dy*dy < 2500) { // 50^2
+      const dx = md.x - s.pos.x, dy = md.y - s.pos.y, dz = (md.z||0) - (s.pos.z||0);
+      if (dx*dx + dy*dy + dz*dz < 2500) { // 50^2
         scene.remove(missileMeshes[i]);
         missileMeshes.splice(i, 1);
         missileDataCurrent.splice(i, 1);
@@ -473,7 +475,7 @@ function animate(now) {
       sx = sidebarW + vpW / 2;
       sy = vpH / 2;
     } else {
-      const vec = new THREE.Vector3(s.pos.x, 0, s.pos.y);
+      const vec = new THREE.Vector3(s.pos.x, s.pos.z||0, s.pos.y);
       vec.project(camera);
       // Map NDC to viewport pixel coords (viewport starts at sidebarW)
       sx = sidebarW + (vec.x * 0.5 + 0.5) * vpW;
@@ -531,58 +533,17 @@ function connect() {
   };
 }
 
-let regroupActive = false;
-let regroupLeader = null;
-let regroupPhase = 0; // 0=converge, 1=orbit
-
 function startRegroupOrbit() {
-  // Find largest surviving ship as leader
-  const alive = Object.entries(ships).filter(([id,s]) => !s.dead);
-  if (!alive.length) return;
-  alive.sort((a,b) => (HULL_PRIORITY[b[1].data?.hull_class]||0) - (HULL_PRIORITY[a[1].data?.hull_class]||0));
-  regroupLeader = alive[0][0];
-  regroupActive = true;
-  regroupPhase = 0;
-  // Set all surviving ships to converge on leader
-  const ldr = ships[regroupLeader].pos;
-  for (const [id, s] of alive) {
-    if (id === regroupLeader) { s.pos.vx = 0; s.pos.vy = 0; continue; }
-    const dx = ldr.x - s.pos.x, dy = ldr.y - s.pos.y;
-    const dist = Math.sqrt(dx*dx + dy*dy) || 1;
-    const speed = 40 + Math.random() * 20;
-    s.pos.vx = (dx/dist) * speed;
-    s.pos.vy = (dy/dist) * speed;
+  // Hold position: just zero out velocities so ships stay where they are
+  for (const [id, s] of Object.entries(ships)) {
+    if (s.dead || !s.pos) continue;
+    s.pos.vx = 0;
+    s.pos.vy = 0;
+    s.pos.vz = 0;
   }
-  // After 5s switch to orbit
-  setTimeout(() => {
-    if (!regroupActive) return;
-    regroupPhase = 1;
-    const ldr = ships[regroupLeader].pos;
-    const alive2 = Object.entries(ships).filter(([id,s]) => !s.dead);
-    alive2.forEach(([id,s], i) => {
-      const angle = (2*Math.PI*i) / alive2.length;
-      const orbitR = 200 + Math.random() * 100;
-      const speed = 20;
-      // Set velocity tangent to orbit
-      s._orbitAngle = angle;
-      s._orbitR = orbitR;
-      s._orbitSpeed = speed;
-      s._orbitCenter = {x: ldr.x, y: ldr.y};
-    });
-  }, 5000);
 }
 
-function updateRegroup(dt) {
-  if (!regroupActive || regroupPhase !== 1) return;
-  for (const [id, s] of Object.entries(ships)) {
-    if (s.dead || !s._orbitAngle) continue;
-    s._orbitAngle += s._orbitSpeed * dt / s._orbitR;
-    s.pos.x = s._orbitCenter.x + Math.cos(s._orbitAngle) * s._orbitR;
-    s.pos.y = s._orbitCenter.y + Math.sin(s._orbitAngle) * s._orbitR;
-    s.pos.vx = -Math.sin(s._orbitAngle) * s._orbitSpeed;
-    s.pos.vy = Math.cos(s._orbitAngle) * s._orbitSpeed;
-  }
-}
+function updateRegroup(dt) {}
 
 function initFleets(fleets) {
   const fleetsEl = document.getElementById('fleets');
@@ -593,7 +554,7 @@ function initFleets(fleets) {
     hdr.textContent = f.faction + ' (' + f.count + ')';
     fleetsEl.appendChild(hdr);
     f.ships.forEach(s => {
-      ships[s.id] = { data: s, pos: {x:0, y:0, vx:0, vy:0} };
+      ships[s.id] = { data: s, pos: {x:0, y:0, z:0, vx:0, vy:0, vz:0} };
       const geoId = s.geometry_id || s.id;
       const mesh = createShipMesh(s.id, geoId, f.faction);
       shipMeshes[s.id] = mesh;
@@ -645,9 +606,9 @@ function onTick(data) {
   if (data.pos) {
     for (const [id, p] of Object.entries(data.pos)) {
       if (ships[id] && !ships[id].dead) {
-        ships[id].pos = {x: p[0], y: p[1], vx: p[2], vy: p[3]};
-        // Correct mesh position
-        if (shipMeshes[id]) shipMeshes[id].position.set(p[0], 0, p[1]);
+        ships[id].pos = {x: p[0], y: p[1], vx: p[2], vy: p[3], z: p[4]||0, vz: p[5]||0};
+        // Correct mesh position (engine x->three x, engine y->three z, engine z->three y)
+        if (shipMeshes[id]) shipMeshes[id].position.set(p[0], p[4]||0, p[1]);
       }
     }
   }
@@ -696,6 +657,13 @@ function onEvent(e) {
         mesh.traverse(child => {
           if (child.material) child.material = new THREE.MeshBasicMaterial({color:0x333333,transparent:true,opacity:0.4});
         });
+        // Remove engine trail
+        if (shipTrails[e.target_id]) {
+          scene.remove(shipTrails[e.target_id].line);
+          shipTrails[e.target_id].line.geometry.dispose();
+          shipTrails[e.target_id].line.material.dispose();
+          delete shipTrails[e.target_id];
+        }
       } else {
         // Small ships: dispose geometry and replace with gray billboard
         mesh.traverse(child => {
@@ -731,7 +699,7 @@ function onEvent(e) {
       const lootTex = new THREE.CanvasTexture(lootCanvas);
       const lootSprite = new THREE.Sprite(new THREE.SpriteMaterial({map:lootTex,transparent:true}));
       lootSprite.scale.set(10,10,1);
-      lootSprite.position.set(mesh.position.x, 5, mesh.position.z);
+      lootSprite.position.set(mesh.position.x, mesh.position.y + 5, mesh.position.z);
       scene.add(lootSprite);
     }
   } else if (e.event === 'module_disabled') {

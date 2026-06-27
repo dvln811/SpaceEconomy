@@ -309,14 +309,16 @@ def combat_stream():
 
             events = engine.step()
             caps = {s.id: round(s.cap, 1) for s in all_ships if s.alive}
-            positions = {s.id: [round(s.x), round(s.y), round(s.vx,1), round(s.vy,1)] for s in all_ships if s.alive}
+            positions = {s.id: [round(s.x), round(s.y), round(s.vx,1), round(s.vy,1), round(s.z), round(s.vz,1)] for s in all_ships if s.alive}
             msls = []
             for m in engine.missiles:
                 target = next((s for s in all_ships if s.id == m.target_id and s.alive), None)
                 if target:
-                    dx = target.x - m.x; dy = target.y - m.y
-                    d = math.sqrt(dx*dx+dy*dy) or 1
-                    msls.append({"x":round(m.x),"y":round(m.y),"vx":round(dx/d*m.speed,1),"vy":round(dy/d*m.speed,1)})
+                    dx = target.x - m.x; dy = target.y - m.y; dz = target.z - m.z
+                    d = math.sqrt(dx*dx+dy*dy+dz*dz) or 1
+                    msls.append({"x":round(m.x),"y":round(m.y),"z":round(m.z),"vx":round(dx/d*m.speed,1),"vy":round(dy/d*m.speed,1),"vz":round(dz/d*m.speed,1)})
+                else:
+                    msls.append({"x":round(m.x),"y":round(m.y),"z":round(m.z),"vx":0,"vy":0,"vz":0})
             tick_data = {'type':'tick','tick':engine.tick,'ship_caps':caps,'pos':positions,'msls':msls}
             # Batch events into tick message
             evts = []

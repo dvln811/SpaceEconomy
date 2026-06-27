@@ -594,17 +594,18 @@ def stream():
 
             # Send cap state + positions + velocities for all alive ships each tick
             caps = {s.id: round(s.cap, 1) for s in all_ships if s.alive}
-            positions = {s.id: [round(s.x), round(s.y), round(s.vx,1), round(s.vy,1)] for s in all_ships if s.alive}
+            positions = {s.id: [round(s.x), round(s.y), round(s.vx,1), round(s.vy,1), round(s.z), round(s.vz,1)] for s in all_ships if s.alive}
             msls = []
             for m in engine.missiles:
                 target = next((s for s in all_ships if s.id == m.target_id), None)
                 if target:
                     dx = target.x - m.x
                     dy = target.y - m.y
-                    d = (dx*dx+dy*dy)**0.5 or 1
-                    msls.append({"x":round(m.x),"y":round(m.y),"vx":round(dx/d*m.speed,1),"vy":round(dy/d*m.speed,1)})
+                    dz = target.z - m.z
+                    d = (dx*dx+dy*dy+dz*dz)**0.5 or 1
+                    msls.append({"x":round(m.x),"y":round(m.y),"z":round(m.z),"vx":round(dx/d*m.speed,1),"vy":round(dy/d*m.speed,1),"vz":round(dz/d*m.speed,1)})
                 else:
-                    msls.append({"x":round(m.x),"y":round(m.y),"vx":0,"vy":0})
+                    msls.append({"x":round(m.x),"y":round(m.y),"z":round(m.z),"vx":0,"vy":0,"vz":0})
             tick_data = {'type':'tick','tick':engine.tick,'ship_caps':caps,'pos':positions,'msls':msls}
             yield f"data: {json.dumps(tick_data)}\n\n"
 
