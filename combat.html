@@ -10,9 +10,14 @@ body { background: #000; color: #c0c0c0; font-family: 'Courier New', monospace; 
 #controls button { background: #111; color: #aaa; border: 1px solid #333; padding: 3px 8px; cursor: pointer; font-family: inherit; font-size: 10px; border-radius: 3px; }
 #controls button:hover { background: #222; color: #fff; }
 #status { padding: 3px 8px; font-size: 10px; color: #4fc3f7; border-bottom: 1px solid #1a2844; }
-#filters { padding: 4px 8px; display: flex; gap: 4px; border-bottom: 1px solid #1a2844; }
+#filters { padding: 4px 8px; display: flex; gap: 4px; border-bottom: 1px solid #1a2844; position: relative; }
 #filters button { background: none; border: 1px solid #1a2844; color: #5a7a9a; padding: 2px 8px; font-size: 9px; cursor: pointer; border-radius: 2px; font-family: inherit; }
 #filters button.active { border-color: #4fc3f7; color: #4fc3f7; }
+#filter-dropdown { position: absolute; top: 100%; left: 8px; background: #0a0e18; border: 1px solid #1a2844; border-radius: 4px; padding: 6px; z-index: 100; display: none; min-width: 160px; }
+#filter-dropdown.open { display: block; }
+#filter-dropdown label { display: flex; align-items: center; gap: 6px; padding: 3px 4px; font-size: 10px; color: #aaa; cursor: pointer; }
+#filter-dropdown label:hover { color: #4fc3f7; }
+#filter-dropdown input { accent-color: #4fc3f7; }
 #fleets { flex: 1; overflow-y: auto; padding: 0; }
 .list-item { display: flex; align-items: center; padding: 3px 8px; border-bottom: 1px solid #0f1a28; font-size: 10px; cursor: pointer; gap: 6px; user-select: none; -webkit-user-select: none; }
 .list-item:hover { background: rgba(79,195,247,0.05); }
@@ -52,13 +57,22 @@ body { background: #000; color: #c0c0c0; font-family: 'Courier New', monospace; 
       <button onclick="sendCmd('pause')">Pause</button>
       <button onclick="sendCmd('restart')">Restart</button>
       <button onclick="sendCmd('stop')">Stop</button>
-      <input type="number" id="fleetSize" value="22" min="4" max="1000" title="Total combatants" style="width:60px;background:#111;color:#ccc;border:1px solid #444;padding:2px 4px;font-size:11px;margin-left:6px">
+      <input type="number" id="fleetSize" value="22" min="4" max="1000" title="Total combatants" style="width:80px;background:#111;color:#ccc;border:1px solid #444;padding:2px 4px;font-size:11px;margin-left:6px">
     </div>
     <div id="status">Connecting...</div>
     <div id="filters">
-      <button class="active" data-filter="all">All</button>
-      <button data-filter="alive">Alive</button>
-      <button data-filter="wreck">Wrecks</button>
+      <button id="filterBtn">Filter ▾</button>
+      <div id="filter-dropdown">
+        <label><input type="checkbox" checked data-class="Fighter">Fighter</label>
+        <label><input type="checkbox" checked data-class="Frigate">Frigate</label>
+        <label><input type="checkbox" checked data-class="Destroyer">Destroyer</label>
+        <label><input type="checkbox" checked data-class="Cruiser">Cruiser</label>
+        <label><input type="checkbox" checked data-class="Battlecruiser">Battlecruiser</label>
+        <label><input type="checkbox" checked data-class="Battleship">Battleship</label>
+        <label><input type="checkbox" checked data-class="Carrier">Carrier</label>
+        <label><input type="checkbox" checked data-class="Dreadnought">Dreadnought</label>
+        <label><input type="checkbox" checked data-class="Wreck">Loot Containers</label>
+      </div>
     </div>
     <div id="fleets"></div>
   </div>
@@ -445,6 +459,7 @@ function animate(now) {
 
   }
   updateBeams(dt);
+  updateRegroup(dt);
   // Update reticule - project selected ship to 2D screen, clamp to viewport edges
   const retEl = document.getElementById('reticule');
   if (selectedShipId && ships[selectedShipId] && ships[selectedShipId].pos) {
@@ -510,8 +525,63 @@ function connect() {
     } else if (data.type === 'end') {
       document.getElementById('status').textContent = 'OVER: ' + data.winner + ' wins (T' + data.ticks + ')';
       es.close();
+      // Regroup survivors to largest ship, then orbit
+      startRegroupOrbit();
     }
   };
+}
+
+let regroupActive = false;
+let regroupLeader = null;
+let regroupPhase = 0; // 0=converge, 1=orbit
+
+function startRegroupOrbit() {
+  // Find largest surviving ship as leader
+  const alive = Object.entries(ships).filter(([id,s]) => !s.dead);
+  if (!alive.length) return;
+  alive.sort((a,b) => (HULL_PRIORITY[b[1].data?.hull_class]||0) - (HULL_PRIORITY[a[1].data?.hull_class]||0));
+  regroupLeader = alive[0][0];
+  regroupActive = true;
+  regroupPhase = 0;
+  // Set all surviving ships to converge on leader
+  const ldr = ships[regroupLeader].pos;
+  for (const [id, s] of alive) {
+    if (id === regroupLeader) { s.pos.vx = 0; s.pos.vy = 0; continue; }
+    const dx = ldr.x - s.pos.x, dy = ldr.y - s.pos.y;
+    const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+    const speed = 40 + Math.random() * 20;
+    s.pos.vx = (dx/dist) * speed;
+    s.pos.vy = (dy/dist) * speed;
+  }
+  // After 5s switch to orbit
+  setTimeout(() => {
+    if (!regroupActive) return;
+    regroupPhase = 1;
+    const ldr = ships[regroupLeader].pos;
+    const alive2 = Object.entries(ships).filter(([id,s]) => !s.dead);
+    alive2.forEach(([id,s], i) => {
+      const angle = (2*Math.PI*i) / alive2.length;
+      const orbitR = 200 + Math.random() * 100;
+      const speed = 20;
+      // Set velocity tangent to orbit
+      s._orbitAngle = angle;
+      s._orbitR = orbitR;
+      s._orbitSpeed = speed;
+      s._orbitCenter = {x: ldr.x, y: ldr.y};
+    });
+  }, 5000);
+}
+
+function updateRegroup(dt) {
+  if (!regroupActive || regroupPhase !== 1) return;
+  for (const [id, s] of Object.entries(ships)) {
+    if (s.dead || !s._orbitAngle) continue;
+    s._orbitAngle += s._orbitSpeed * dt / s._orbitR;
+    s.pos.x = s._orbitCenter.x + Math.cos(s._orbitAngle) * s._orbitR;
+    s.pos.y = s._orbitCenter.y + Math.sin(s._orbitAngle) * s._orbitR;
+    s.pos.vx = -Math.sin(s._orbitAngle) * s._orbitSpeed;
+    s.pos.vy = Math.cos(s._orbitAngle) * s._orbitSpeed;
+  }
 }
 
 function initFleets(fleets) {
@@ -542,18 +612,27 @@ function initFleets(fleets) {
       fleetsEl.appendChild(item);
     });
   });
-  // Filter tabs
-  document.querySelectorAll('#filters button').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#filters button').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      const filter = btn.dataset.filter;
+  // Filter dropdown
+  document.getElementById('filterBtn').addEventListener('click', () => {
+    document.getElementById('filter-dropdown').classList.toggle('open');
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#filters')) document.getElementById('filter-dropdown').classList.remove('open');
+  });
+  document.querySelectorAll('#filter-dropdown input').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const checked = {};
+      document.querySelectorAll('#filter-dropdown input').forEach(c => { checked[c.dataset.class] = c.checked; });
       document.querySelectorAll('.list-item').forEach(item => {
         const id = item.dataset.id;
-        const isDead = ships[id] && ships[id].dead;
-        if (filter === 'all') item.style.display = '';
-        else if (filter === 'alive') item.style.display = isDead ? 'none' : '';
-        else if (filter === 'wreck') item.style.display = isDead ? '' : 'none';
+        const s = ships[id];
+        if (!s) return;
+        if (s.dead) {
+          item.style.display = checked['Wreck'] ? '' : 'none';
+        } else {
+          const hc = s.data ? s.data.hull_class : '';
+          item.style.display = checked[hc] !== false ? '' : 'none';
+        }
       });
     });
   });
@@ -606,7 +685,7 @@ function onEvent(e) {
     msg = `<span class="ld">** ${tgt?tgt.data.name:'?'} DESTROYED **</span>`;
     if (tgt) { tgt.dead = true; tgt.pos.vx = 0; tgt.pos.vy = 0; }
     const card = document.getElementById('card-' + e.target_id);
-    if (card) { card.classList.add('dead'); card.dataset.type = 'wreck'; }
+    if (card) { card.classList.add('dead'); card.dataset.type = 'wreck'; card.querySelector('.li-name').textContent = 'Loot Container'; }
     // Replace mesh with billboard or gray wreck based on hull class
     if (shipMeshes[e.target_id]) {
       const mesh = shipMeshes[e.target_id];
