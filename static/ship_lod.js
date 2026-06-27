@@ -20,11 +20,11 @@ export const LOD_THRESHOLDS = {
 };
 
 /**
- * Calculate screen size fraction for an object.
+ * Calculate screen size fraction (0-1). Fraction of screen height the object spans.
  */
 export function getScreenSize(objectRadius, distance, fovRad, screenHeight) {
   if (distance <= 0) return 1;
-  return (objectRadius * screenHeight) / (distance * 2 * Math.tan(fovRad / 2));
+  return objectRadius / (distance * Math.tan(fovRad / 2));
 }
 
 /**
