@@ -486,34 +486,6 @@ SHIP_GEOMETRIES["excavator"] = {
     ],
 }
 
-# ── VIPER INTERCEPTOR (T2 Military) ───────────────────────────────────────────
-SHIP_GEOMETRIES["viper_interceptor"] = {
-    "name": "Viper Interceptor", "role": "military", "tier": 2,
-    "bounds": {"length": 76.4, "height": 19.9, "width": 32.7},
-    "components": [
-        # Angular fuselage (shorter)
-        _wedge([0, 0, 0], [[0,-0.08],[0.16,-0.06],[0.12,0.08],[0,0.14],[-0.12,0.08],[-0.16,-0.06]], 0.8, "hull", [0, 1.5708, 0]),
-        # Nose
-        _wedge([0.55, 0.01, 0], [[0,-0.05],[0.1,-0.03],[0.06,0.05],[0,0.08],[-0.06,0.05],[-0.1,-0.03]], 0.3, "hull", [0, 1.5708, 0]),
-        _cone([0.8, 0.01, 0], 0.025, 0.12, "hull", [0, 0, -1.5708]),
-        # Engines (rectangular, integrated)
-        _box([-0.45, -0.02, -0.16], 0.22, 0.09, 0.1, "engine"),
-        _box([-0.45, -0.02, 0.16], 0.22, 0.09, 0.1, "engine"),
-        _box([-0.58, -0.02, -0.16], 0.04, 0.1, 0.12, "engine"),
-        _box([-0.58, -0.02, 0.16], 0.04, 0.1, 0.12, "engine"),
-        # Wing pylons
-        _box([-0.05, -0.04, -0.3], 0.4, 0.02, 0.035, "hull", [0, 0.25, 0]),
-        _box([-0.05, -0.04, 0.3], 0.4, 0.02, 0.035, "hull", [0, -0.25, 0]),
-        # Weapon pods
-        _box([0.15, -0.08, -0.22], 0.15, 0.03, 0.05, "weapon"),
-        _box([0.15, -0.08, 0.22], 0.15, 0.03, 0.05, "weapon"),
-        # Hardpoints
-        _hardpoint([0.15, -0.08, -0.22], "weapon", "wpn_1"),
-        _hardpoint([0.15, -0.08, 0.22], "weapon", "wpn_2"),
-        _hardpoint([0.0, -0.08, 0], "shield", "shield_1"),
-    ],
-}
-
 # ── SENTINEL CORVETTE (T3 Military) ───────────────────────────────────────────
 SHIP_GEOMETRIES["sentinel_corvette"] = {
     "name": "Sentinel Corvette", "role": "military", "tier": 3,
@@ -545,51 +517,6 @@ SHIP_GEOMETRIES["sentinel_corvette"] = {
         _hardpoint([0.35, 0.16, 0.23], "utility", "util_1"),
     ],
 }
-
-# ── WARDEN FRIGATE (T3 Military) ──────────────────────────────────────────────
-SHIP_GEOMETRIES["warden_frigate"] = {
-    "name": "Warden Frigate", "role": "military", "tier": 3,
-    "bounds": {"length": 81.8, "height": 31.7, "width": 42.3},
-    "components": [
-        # Quad engines
-        _cyl([-2.5, 0.2, 0.15], 0.12, 0.15, 0.5, "engine"),
-        _cyl([-2.5, 0.2, -0.15], 0.12, 0.15, 0.5, "engine"),
-        _cyl([-2.5, -0.2, 0.15], 0.12, 0.15, 0.5, "engine"),
-        _cyl([-2.5, -0.2, -0.15], 0.12, 0.15, 0.5, "engine"),
-        _cone([-2.82, 0.2, 0.15], 0.09, 0.14, "engine"),
-        _cone([-2.82, 0.2, -0.15], 0.09, 0.14, "engine"),
-        _cone([-2.82, -0.2, 0.15], 0.09, 0.14, "engine"),
-        _cone([-2.82, -0.2, -0.15], 0.09, 0.14, "engine"),
-        # Engine frame
-        _box([-2.5, 0, 0], 0.1, 0.55, 0.08, "hull"),
-        _box([-2.5, 0.2, 0], 0.1, 0.08, 0.45, "hull"),
-        _box([-2.5, -0.2, 0], 0.1, 0.08, 0.45, "hull"),
-        # Heavy spine
-        _spine([-2.0, 0, 0], 0.3, 0.18, 0.22),
-        # Modular armored hull (3 sections)
-        _pod([-1.4, 0, 0], 0.6, 0.45, 0.55, "hull"),
-        _spine([-1.0, 0, 0], 0.12, 0.14, 0.18),
-        _pod([-0.6, 0, 0], 0.7, 0.5, 0.6, "hull"),
-        _spine([-0.15, 0, 0], 0.12, 0.14, 0.18),
-        _pod([0.25, 0, 0], 0.55, 0.42, 0.5, "hull"),
-        # Spine to bridge
-        _spine([0.65, 0, 0], 0.15, 0.12, 0.16),
-        # Bridge (dome for large warship)
-        *_bridge_dome([0.95, 0, 0], scale=0.6),
-        # Weapon turrets (4)
-        _hardpoint([-1.4, 0.25, 0], "weapon", "wpn_1"),
-        _hardpoint([-0.6, 0.28, 0], "weapon", "wpn_2"),
-        _hardpoint([-1.4, -0.25, 0], "weapon", "wpn_3"),
-        _hardpoint([-0.6, -0.28, 0], "weapon", "wpn_4"),
-        # Shield emitters (3)
-        _hardpoint([-1.1, -0.24, -0.28], "shield", "shield_1"),
-        _hardpoint([-0.3, -0.22, -0.26], "shield", "shield_2"),
-        _hardpoint([-0.3, -0.22, 0.26], "shield", "shield_3"),
-        # Utility
-        _hardpoint([0.25, 0.22, 0.26], "utility", "util_1"),
-    ],
-}
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PUBLIC API

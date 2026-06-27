@@ -151,7 +151,7 @@ function show(filter, btn) {
     else if (filter.startsWith('class_')) ships = allShips.filter(s => s.hull_class === filter.replace('class_',''));
     ships = ships.filter(match);
     el.innerHTML = `<table><thead><tr>
-      <th>Name</th><th>Class</th><th>Faction</th><th>Speed</th><th>Shield</th><th>Armor</th><th>Hull</th><th>CPU</th><th>PG</th><th>Slots (H/M/L)</th><th>Turr/Lnch</th><th>Cargo</th><th>Weapons</th><th>Description</th>
+      <th>Name</th><th>Class</th><th>Faction</th><th>Manufacturer</th><th>Speed</th><th>Shield</th><th>Armor</th><th>Hull</th><th>CPU</th><th>PG</th><th>Slots (H/M/L)</th><th>Turr/Lnch</th><th>Cargo</th><th>Weapons</th><th>Description</th>
     </tr></thead><tbody>${ships.map(s => {
       const fname = factions[s.faction_id] ? factions[s.faction_id].name : (s.faction_id ? s.faction_id : '—');
       const hp = typeof s.hardpoints === 'string' ? JSON.parse(s.hardpoints) : (s.hardpoints||{});
@@ -159,6 +159,7 @@ function show(filter, btn) {
       <td style="color:#e0e8f0">${s.name}</td>
       <td>${s.hull_class}</td>
       <td class="${factionColors[s.faction_id]||''}">${fname}</td>
+      <td style="color:#8aa0b8">${s.manufacturer||'—'}</td>
       <td>${s.speed} m/s</td>
       <td>${s.shield_hp||0}</td>
       <td>${s.armor_hp||0}</td>
