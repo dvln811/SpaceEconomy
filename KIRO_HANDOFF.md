@@ -292,8 +292,23 @@ After economy rebalance:
 - `python analyze.py [ticks] [interval]` - deep state dump to analysis_deep.json
 - `python run_local.py` - full server at localhost:8000, starts at 1x, use dashboard to change speed
 - `start_local.ps1` - PowerShell launcher for run_local.py
+- `python tools/ship_designer/app.py` - Ship designer tool at localhost:5050
 - Max safe browser speed: ~60x. Higher causes GIL contention with Flask.
 - Headless max: ~27 ticks/sec (480x multiplier)
+
+### Ship Designer Tool (tools/ship_designer/)
+- **Run:** `python tools/ship_designer/app.py` -> http://localhost:5050
+- **Tabs:** Ship Generator | Component Library | Review | LOD Viewer
+- **Ship Generator:** Attachment-point based assembly, faction styles, hull class scaling
+  - Three-pass: skeleton (zones) -> mass (hull density clusters) -> details
+  - Hull class overrides for fighters (flat horizontal shapes)
+  - Generates 10-100 components depending on class
+- **Component Library:** 43 procedural styles + 15 extracted from existing ships, category filter
+- **Review:** Batch generate per faction, keep/regenerate workflow, export to ship_geometry.py
+- **LOD Viewer:** Screen-size-based LOD (UE5 style), dropdown for Auto/LOD0/1/2/3
+  - Formula: screenFrac = radius / (distance * tan(fov/2))
+  - LOD0 >0.5%, LOD1 0.1-0.5%, LOD2 0.03-0.1%, LOD3 <0.03%
+- **81 ship models generated** for all non-corsair vessels
 
 ### Known Issues
 - Worker timeout warnings at high speed (harmless, increased to 30s)
