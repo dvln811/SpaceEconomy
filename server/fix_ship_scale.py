@@ -1,134 +1,115 @@
-"""Fix ship build cost scaling - use class-based multipliers instead of flat 10x.
+"""Update ship_geometry.py bounds to real-world scale and DB speed to m/s."""
+import sqlite3, json, os, re, random
 
-The 5x recipe multiplier already compounds through the chain (~5^4 = 625x at T5).
-Ship build costs need gentler scaling, varying by hull class.
-"""
-import sqlite3
-import json
-import os
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+DB = os.path.join(BASE_DIR, 'data', 'game_data.db')
+GEO_FILE = os.path.join(BASE_DIR, 'server', 'ship_geometry.py')
 
-DB = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "game_data.db")
-
-# Multipliers relative to CURRENT state (which is already 10x from original)
-# So we need to divide by 10 first, then apply class-based multiplier
-# Original build costs -> /10 to undo -> then apply new multiplier
-
-# Target iron ore per class (with 5x recipe scaling already in place):
-# Fighter: ~20-50K -> needs multiplier ~1x on original (the 5x recipes do the work)
-# Frigate: same as fighter basically
-# Destroyer: ~2x original
-# Cruiser: ~3-4x original  
-# Battlecruiser: ~5-6x
-# Battleship: ~8-10x
-# Dreadnought: ~15-20x
-
-HULL_CLASS_MULTIPLIER = {
-    'fighter': 1,
-    'frigate': 1,
-    'destroyer': 2,
-    'cruiser': 4,
-    'battlecruiser': 6,
-    'battleship': 10,
-    'carrier': 12,
-    'dreadnought': 20,
+# --- Dimension ranges per hull class (meters) ---
+# Based on Eve Online proportions
+DIM_RANGES = {
+    'Fighter':       {'length': (30, 50),    'width': (15, 30),   'height': (8, 18)},
+    'Frigate':       {'length': (60, 110),   'width': (25, 55),   'height': (15, 35)},
+    'Destroyer':     {'length': (120, 200),  'width': (40, 90),   'height': (25, 55)},
+    'Cruiser':       {'length': (300, 500),  'width': (80, 180),  'height': (50, 120)},
+    'Battlecruiser': {'length': (450, 700),  'width': (120, 250), 'height': (80, 170)},
+    'Battleship':    {'length': (750, 1200), 'width': (200, 400), 'height': (120, 280)},
+    'Carrier':       {'length': (1200, 2000),'width': (400, 800), 'height': (250, 500)},
+    'Dreadnought':   {'length': (2200, 3800),'width': (500, 1000),'height': (350, 700)},
+    'Industrial':    {'length': (200, 450),  'width': (60, 150),  'height': (50, 120)},
+    'Mining Barge':  {'length': (150, 300),  'width': (60, 130),  'height': (40, 90)},
 }
 
-# Civilian ships by tier
-CIV_TIER_MULTIPLIER = {
-    1: 1,   # Pinto Runner, Prospect Skiff
-    2: 2,   # Bison, Strip Miner
-    3: 4,   # Mammoth, Ox, Excavator, Deep Core
-    4: 8,   # Clydesdale
+# --- Speed ranges per hull class (m/s) ---
+SPEED_RANGES = {
+    'Fighter':       (380, 450),
+    'Frigate':       (300, 380),
+    'Destroyer':     (220, 290),
+    'Cruiser':       (160, 210),
+    'Battlecruiser': (130, 160),
+    'Battleship':    (95, 125),
+    'Carrier':       (60, 80),
+    'Dreadnought':   (50, 65),
+    'Industrial':    (95, 130),
+    'Mining Barge':  (85, 110),
 }
 
+# --- Update ship_geometry.py bounds ---
+print("Updating ship_geometry.py bounds...")
 
-def fix():
-    conn = sqlite3.connect(DB)
-    conn.row_factory = sqlite3.Row
+with open(GEO_FILE, 'r', encoding='utf-8') as f:
+    content = f.read()
 
-    # Military ships: undo the 10x, apply class-based
-    mil_ships = conn.execute("SELECT id, hull_class, build_cost FROM military_ships").fetchall()
-    for s in mil_ships:
-        bc = json.loads(s['build_cost'])
-        # Undo the 10x
-        bc = {k: v / 10 for k, v in bc.items()}
-        # Apply class multiplier
-        mult = HULL_CLASS_MULTIPLIER.get(s['hull_class'], 5)
-        bc = {k: int(v * mult) for k, v in bc.items()}
-        conn.execute("UPDATE military_ships SET build_cost=? WHERE id=?", (json.dumps(bc), s['id']))
-    print(f"Fixed {len(mil_ships)} military ship build costs (class-based scaling)")
+# Get hull_class mapping from DB for each geometry ID
+conn = sqlite3.connect(DB)
+ship_classes = {}
+rows = conn.execute('SELECT id, hull_class FROM ships').fetchall()
+for r in rows:
+    ship_classes[r[0]] = r[1]
 
-    # Civilian ships: undo the 10x, apply tier-based
-    civ_ships = conn.execute("SELECT id, tier, build_cost FROM ship_types").fetchall()
-    for s in civ_ships:
-        bc = json.loads(s['build_cost'])
-        # Undo the 10x
-        bc = {k: v / 10 for k, v in bc.items()}
-        # Apply tier multiplier
-        mult = CIV_TIER_MULTIPLIER.get(s['tier'], 2)
-        bc = {k: int(v * mult) for k, v in bc.items()}
-        conn.execute("UPDATE ship_types SET build_cost=? WHERE id=?", (json.dumps(bc), s['id']))
-    print(f"Fixed {len(civ_ships)} civilian ship build costs (tier-based scaling)")
+# Find all bounds entries and replace with proper dimensions
+# Pattern: "bounds": {"length": X, "height": Y, "width": Z}
+def replace_bounds(match):
+    # Find which ship this belongs to by searching backwards for the geometry ID
+    start = match.start()
+    # Look for the nearest SHIP_GEOMETRIES["xxx"] before this match
+    preceding = content[:start]
+    id_match = re.findall(r'SHIP_GEOMETRIES\["([^"]+)"\]', preceding)
+    if not id_match:
+        return match.group(0)
+    ship_id = id_match[-1]
+    hull_class = ship_classes.get(ship_id)
+    if not hull_class:
+        # Try to infer from the geometry data
+        role_match = re.search(r'"role":\s*"([^"]+)"', content[start-200:start])
+        if role_match:
+            role = role_match.group(1)
+            hull_class = role.replace('battlecruiser', 'Battlecruiser').replace('battleship', 'Battleship').replace('cruiser', 'Cruiser').replace('destroyer', 'Destroyer').replace('frigate', 'Frigate').replace('fighter', 'Fighter').replace('carrier', 'Carrier').replace('dreadnought', 'Dreadnought').replace('industrial', 'Industrial').replace('mining_barge', 'Mining Barge')
+            # Capitalize first letter
+            hull_class = hull_class[0].upper() + hull_class[1:]
+    if not hull_class or hull_class not in DIM_RANGES:
+        return match.group(0)
 
-    conn.commit()
+    dims = DIM_RANGES[hull_class]
+    # Use a seeded random based on ship_id for consistency
+    rng = random.Random(ship_id)
+    length = round(rng.uniform(*dims['length']), 1)
+    width = round(rng.uniform(*dims['width']), 1)
+    height = round(rng.uniform(*dims['height']), 1)
+    return f'"bounds": {{"length": {length}, "height": {height}, "width": {width}}}'
 
-    # Verify
-    print("\n=== VERIFICATION ===")
-    commodities = {}
-    for row in conn.execute("SELECT * FROM commodities").fetchall():
-        cid = row['id']
-        recs = conn.execute("SELECT input_id, quantity FROM recipes WHERE commodity_id=?", (cid,)).fetchall()
-        commodities[cid] = {'name': row['name'], 'recipe': {r['input_id']: r['quantity'] for r in recs}}
+bounds_pattern = r'"bounds":\s*\{[^}]+\}'
+new_content = re.sub(bounds_pattern, replace_bounds, content)
 
-    def get_raw_totals(item_id, qty, depth=0):
-        if depth > 15:
-            return {item_id: qty}
-        com = commodities.get(item_id)
-        if not com or not com['recipe']:
-            return {item_id: qty}
-        totals = {}
-        for inp_id, inp_qty in com['recipe'].items():
-            sub = get_raw_totals(inp_id, inp_qty * qty, depth + 1)
-            for k, v in sub.items():
-                totals[k] = totals.get(k, 0) + v
-        return totals
+with open(GEO_FILE, 'w', encoding='utf-8') as f:
+    f.write(new_content)
 
-    def calc_iron(table, id_col, bc_col, label):
-        row = conn.execute(f"SELECT {bc_col} FROM {table} WHERE {id_col}=?", (label,)).fetchone()
-        if not row:
-            return
-        bc = json.loads(row[bc_col])
-        all_raws = {}
-        for item_id, qty in bc.items():
-            sub = get_raw_totals(item_id, qty)
-            for k, v in sub.items():
-                all_raws[k] = all_raws.get(k, 0) + v
-        iron = all_raws.get('iron_ore', 0)
-        total = sum(v for k, v in all_raws.items())
-        return iron, total
+# Count changes
+orig_count = len(re.findall(bounds_pattern, content))
+print(f"  Updated {orig_count} bounds entries")
 
-    ships_to_check = [
-        ('ship_types', 'id', 'build_cost', 'pinto_runner', 'Pinto Runner (T1 hauler)'),
-        ('ship_types', 'id', 'build_cost', 'clydesdale', 'Clydesdale (T4 hauler)'),
-        ('military_ships', 'id', 'build_cost', 'tf_interceptor', 'Aquila (fighter)'),
-        ('military_ships', 'id', 'build_cost', 'tf_frigate', 'Centurion (frigate)'),
-        ('military_ships', 'id', 'build_cost', 'tf_destroyer', 'Tribune (destroyer)'),
-        ('military_ships', 'id', 'build_cost', 'tf_cruiser', 'Praetor (cruiser)'),
-        ('military_ships', 'id', 'build_cost', 'tf_battlecruiser', 'Consul (battlecruiser)'),
-        ('military_ships', 'id', 'build_cost', 'tf_battleship', 'Imperator (battleship)'),
-        ('military_ships', 'id', 'build_cost', 'tf_dreadnought', 'Sovereign (dreadnought)'),
-    ]
+# --- Update DB speeds ---
+print("Updating ship speeds to m/s...")
 
-    print(f"{'Ship':<35} {'Iron Ore':>12} {'Total Raw':>12}")
-    print("-" * 62)
-    for table, id_col, bc_col, sid, name in ships_to_check:
-        result = calc_iron(table, id_col, bc_col, sid)
-        if result:
-            iron, total = result
-            print(f"{name:<35} {iron:>12,.0f} {total:>12,.0f}")
+rows = conn.execute('SELECT id, hull_class, speed FROM ships').fetchall()
+for r in rows:
+    sid, hc, old_speed = r
+    if hc not in SPEED_RANGES:
+        continue
+    lo, hi = SPEED_RANGES[hc]
+    # Use the old speed multiplier to position within the range
+    # old_speed was typically 0.7-1.8, normalize to 0-1
+    norm = max(0, min(1, (old_speed - 0.7) / (1.8 - 0.7)))
+    new_speed = round(lo + norm * (hi - lo))
+    conn.execute('UPDATE ships SET speed=? WHERE id=?', (new_speed, sid))
 
-    conn.close()
+conn.commit()
 
+# Verify
+print("\n--- Speed verification (sample) ---")
+rows = conn.execute('SELECT name, hull_class, speed FROM ships ORDER BY hull_class, speed DESC LIMIT 20').fetchall()
+for r in rows:
+    print(f"  {r[1]:15s} {r[0]:20s} {int(r[2]):>4} m/s")
 
-if __name__ == "__main__":
-    fix()
+conn.close()
+print("\nDone.")
