@@ -264,18 +264,28 @@ After economy rebalance:
   - Ship scaling by hull class (Fighter 0.5x to Dreadnought 100x)
   - Starfield skybox, engine trails, beam/projectile weapon lines, missile spheres
   - Camera: WASD+Space/C free fly, mouse orbit, Shift boost, R/F look-axis drive
-  - Ship cards with HP/cap bars, hover tooltips, click=select+reticule, dblclick=follow+zoom
-  - Destroyed ships stay as gray wrecks, frozen in place
-  - Pause/Restart/Stop controls (server + client side)
+  - Eve-style compact ship list (name, class, distance), filter tabs (All/Alive/Wrecks)
+  - Hover tooltip for ship details, click=select, dblclick=follow+zoom
+  - Destroyed small ships become billboard sprites (near-zero GPU cost)
+  - Destroyed large ships (BC+) stay as gray wrecks
+  - Gold loot markers at kill locations
+  - Resizable battle log
+  - Pause/Restart/Stop controls, fleet size input (up to 1000)
+  - ?max_ships= URL param for render cap on weaker hardware
+- **Render Optimizations (feature/combat-render-optimization branch):**
+  - Merged geometry: all ship components merged into single BufferGeometry (2 draw calls per ship instead of ~30)
+  - Viewport cap: priority-based visibility (larger ships always rendered)
+  - Memory cleanup: dispose geometry/material/trails on ship death
+  - LOD system: static/ship_lod.js (full mesh / bounding box / billboard), viewer in ship designer tool
+  - Result: 500 ships at 44fps / 200 ships at 60fps on RTX 4060 Ti
 - **Performance:** 50v50 = 1.8ms/tick, 200v200 = 12ms/tick
 - **Ship models:** 81 geometries in `server/ship_geometry.py`, component-based Three.js format
 - **Next:**
-  - Ship designer: fix raycaster selection, save back to geometry file, populate dropdowns
-  - Merge geometry optimization (reduce draw calls per ship from 40 to 2-4)
-  - LOD system for distant ships
   - Wire combat into battle_sim worker (patrol ships engage at borders)
   - Station models for 3D system view
   - Projectile travel time for turrets (beams instant, projectiles spatial)
+  - Settings page: render cap slider, graphics quality
+  - M&B-style reinforcement streaming for 1000+ ship battles
 
 ### Local Dev Tools
 - `python dev.py [speed] [duration]` - headless sim, console output, for quick checks

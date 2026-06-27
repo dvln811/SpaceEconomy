@@ -14,7 +14,7 @@ body { background: #000; color: #c0c0c0; font-family: 'Courier New', monospace; 
 #filters button { background: none; border: 1px solid #1a2844; color: #5a7a9a; padding: 2px 8px; font-size: 9px; cursor: pointer; border-radius: 2px; font-family: inherit; }
 #filters button.active { border-color: #4fc3f7; color: #4fc3f7; }
 #fleets { flex: 1; overflow-y: auto; padding: 0; }
-.list-item { display: flex; align-items: center; padding: 3px 8px; border-bottom: 1px solid #0f1a28; font-size: 10px; cursor: pointer; gap: 6px; }
+.list-item { display: flex; align-items: center; padding: 3px 8px; border-bottom: 1px solid #0f1a28; font-size: 10px; cursor: pointer; gap: 6px; user-select: none; -webkit-user-select: none; }
 .list-item:hover { background: rgba(79,195,247,0.05); }
 .list-item.selected { background: rgba(79,195,247,0.1); border-left: 2px solid #4fc3f7; }
 .list-item.dead { opacity: 0.4; }
@@ -26,9 +26,9 @@ body { background: #000; color: #c0c0c0; font-family: 'Courier New', monospace; 
 .fleet-hdr.f0 { color: #4caf50; }
 .fleet-hdr.f1 { color: #42a5f5; }
 .fleet-hdr.f2 { color: #ce93d8; }
-#log-wrap { pointer-events: auto; position: absolute; bottom: 10px; right: 10px; width: 350px; max-height: 200px; background: rgba(5,8,15,0.85); border: 1px solid #1a2844; border-radius: 4px; overflow: hidden; display: flex; flex-direction: column; }
+#log-wrap { pointer-events: auto; position: absolute; bottom: 10px; right: 10px; width: 350px; max-height: 400px; min-height: 80px; background: rgba(5,8,15,0.85); border: 1px solid #1a2844; border-radius: 4px; overflow: hidden; display: flex; flex-direction: column; resize: vertical; }
 #log-hdr { padding: 4px 8px; font-size: 10px; color: #ffa726; border-bottom: 1px solid #1a2844; }
-#log { flex: 1; overflow-y: auto; padding: 4px 8px; font-size: 9px; line-height: 1.4; max-height: 170px; }
+#log { flex: 1; overflow-y: auto; padding: 4px 8px; font-size: 9px; line-height: 1.4; }
 .lh { color: #ffa726; } .lm { color: #666; } .ld { color: #f44336; font-weight: bold; }
 .lmod { color: #cc9900; } .lcap { color: #aa66ff; }
 #reticule { position: absolute; width: 48px; height: 48px; pointer-events: none; display: none; z-index: 50; }
@@ -52,9 +52,9 @@ body { background: #000; color: #c0c0c0; font-family: 'Courier New', monospace; 
       <button onclick="sendCmd('pause')">Pause</button>
       <button onclick="sendCmd('restart')">Restart</button>
       <button onclick="sendCmd('stop')">Stop</button>
-      <input type="number" id="fleetSize" value="22" min="4" max="1000" title="Total combatants" style="width:45px;background:#111;color:#ccc;border:1px solid #444;padding:2px 4px;font-size:11px;margin-left:6px">
-      <span id="status">Connecting...</span>
+      <input type="number" id="fleetSize" value="22" min="4" max="1000" title="Total combatants" style="width:60px;background:#111;color:#ccc;border:1px solid #444;padding:2px 4px;font-size:11px;margin-left:6px">
     </div>
+    <div id="status">Connecting...</div>
     <div id="filters">
       <button class="active" data-filter="all">All</button>
       <button data-filter="alive">Alive</button>
