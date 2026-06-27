@@ -2,177 +2,193 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Space Economy - Ship Fitting &amp; Stats</title>
+<title>Space Economy - Fitting Mechanics</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:15px;}
-h1{font-family:'JetBrains Mono',monospace;color:#4fc3f7;font-size:22px;letter-spacing:3px;margin-bottom:24px}
-h2{font-family:'JetBrains Mono',monospace;color:#4fc3f7;font-size:15px;letter-spacing:2px;margin:32px 0 16px;border-bottom:1px solid #1a2844;padding-bottom:8px}
+body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:15px}
+h1{color:#4fc3f7;font-size:22px;letter-spacing:3px;margin-bottom:24px}
+h2{color:#4fc3f7;font-size:15px;letter-spacing:2px;margin:32px 0 16px;border-bottom:1px solid #1a2844;padding-bottom:8px}
 h3{color:#ffd54f;font-size:12px;margin:16px 0 8px}
 p{color:#8aa0b8;line-height:1.6;margin-bottom:12px}
 table{width:100%;border-collapse:collapse;margin:12px 0 24px}
-th{font-family:'JetBrains Mono',monospace;font-size:12px;color:#8aa0b8;letter-spacing:1px;text-transform:uppercase;text-align:left;padding:8px;border-bottom:1px solid #1a2844}
+th{font-size:11px;color:#8aa0b8;letter-spacing:1px;text-transform:uppercase;text-align:left;padding:8px;border-bottom:1px solid #1a2844}
 td{padding:6px 8px;border-bottom:1px solid #0f1a28;font-size:12px}
-a{color:#4fc3f7;text-decoration:none}
-a:hover{text-decoration:underline}
-.nav{margin-bottom:24px;font-size:12px}
 .note{background:#0a1020;border:1px solid #1a2844;border-radius:4px;padding:12px;margin:12px 0;font-size:12px;color:#8aa0b8}
-.slot-h{color:#ef5350}.slot-m{color:#ffd54f}.slot-l{color:#66bb6a}.slot-e{color:#ab47bc}.slot-r{color:#4fc3f7}
-
-#docnav .dnl{font-size:12px;color:#8aa0b8;text-decoration:none;padding:6px 10px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;transition:all .15s;border-bottom:2px solid transparent}
+.slot-h{color:#ef5350}.slot-m{color:#ffd54f}.slot-l{color:#66bb6a}
+.formula{background:#0d1520;border:1px solid #1a3050;border-radius:4px;padding:10px 14px;font-size:13px;color:#4fc3f7;margin:8px 0;display:inline-block}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:#0a0e18}::-webkit-scrollbar-thumb{background:#1a3050;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#2a4a70}
+*{scrollbar-width:thin;scrollbar-color:#1a3050 #0a0e18}
+#docnav .dnl{font-size:12px;color:#8aa0b8;text-decoration:none;padding:6px 10px;letter-spacing:1px;text-transform:uppercase;transition:all .15s;border-bottom:2px solid transparent}
 #docnav .dnl:hover{color:#4fc3f7;border-bottom-color:#4fc3f7}
 #docnav .dnl.active{color:#4fc3f7;border-bottom-color:#4fc3f7}
 #docnav .dnl-drop{position:relative;display:inline-block}
 #docnav .dnl-drop .dnl-menu{display:none;position:absolute;top:100%;left:0;background:#0a0f1a;border:1px solid #1a2844;border-radius:4px;padding:4px 0;min-width:120px;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,0.5)}
 #docnav .dnl-drop:hover .dnl-menu{display:block}
-#docnav .dnl-menu a{display:block;padding:5px 12px;color:#8aa0b8;text-decoration:none;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:0.5px}
+#docnav .dnl-menu a{display:block;padding:5px 12px;color:#8aa0b8;text-decoration:none;font-size:11px;letter-spacing:0.5px}
 #docnav .dnl-menu a:hover{color:#4fc3f7;background:#0d1a2f}
 #docnav .dnl-sep{display:inline-block;width:1px;height:20px;background:#1a2844;margin:0 8px;vertical-align:middle}
 </style>
 </head>
 <body>
 <div id="docnav" style="position:sticky;top:0;z-index:100;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:0 24px;height:48px;gap:12px;flex-wrap:wrap">
-<a href="/docs" class="dnl">Hub</a><a href="/universe" class="dnl">Universe</a><a href="/items" class="dnl">Items DB</a><a href="/chain" class="dnl">Chain Calc</a><div class="dnl-drop"><a href="/ships_db" class="dnl active">Ships ▾</a><div class="dnl-menu"><a href="/ships_db">Ships DB</a><a href="/ships">Ships 3D</a><a href="/fitting">Fitting</a></div></div><div class="dnl-drop"><a href="/resources" class="dnl">Materials ▾</a><div class="dnl-menu"><a href="/resources">Resources</a><a href="/materials">Materials</a><a href="/products">Products</a></div></div><span class="dnl-sep"></span><a href="/design" class="dnl">Design</a>
+<a href="/docs" class="dnl">Hub</a><a href="/universe" class="dnl">Universe</a><a href="/items" class="dnl">Items DB</a><a href="/chain" class="dnl">Chain Calc</a><div class="dnl-drop"><a href="/ships_db" class="dnl active">Ships &#9662;</a><div class="dnl-menu"><a href="/ships_db">Ships DB</a><a href="/ships">Ships 3D</a><a href="/fitting">Fitting</a></div></div><div class="dnl-drop"><a href="/resources" class="dnl">Materials &#9662;</a><div class="dnl-menu"><a href="/resources">Resources</a><a href="/materials">Materials</a><a href="/products">Products</a></div></div><span class="dnl-sep"></span><a href="/design" class="dnl">Design</a>
 </div>
-<div style="max-width:1200px;margin:0 auto;padding:0 40px">
-<h1>Ship Fitting &amp; Stats</h1>
-<p>Every ship has a set of base stats and module slots. Fitting modules consumes CPU and Power Grid. Choosing what to fit is the core of ship customization.</p>
+<div style="max-width:1100px;margin:0 auto;padding:0 40px 60px">
+<h1>Fitting Mechanics</h1>
+<p>Every ship has module slots constrained by CPU and Power Grid. Choosing what to fit defines your ship's role.</p>
 
-<h2>Base Ship Stats</h2>
-
-<h3>Resource Capacities</h3>
+<h2>Slot Types</h2>
 <table>
-<tr><th>Stat</th><th>Description</th><th>Affected By</th></tr>
-<tr><td><strong>CPU</strong></td><td>Processing capacity. Electronics, sensors, and utility modules consume CPU.</td><td>Ship hull, CPU upgrades</td></tr>
-<tr><td><strong>Power Grid (PG)</strong></td><td>Energy output. Weapons, shields, and propulsion consume Power Grid.</td><td>Ship hull, reactor upgrades</td></tr>
-<tr><td><strong>Capacitor (Cap)</strong></td><td>Energy pool that recharges over time. Active modules drain cap when used.</td><td>Ship hull, cap batteries, cap rechargers</td></tr>
-<tr><td><strong>Cargo Hold (m3)</strong></td><td>Volume-based storage for ores, materials, modules, ammo.</td><td>Ship hull, cargo expanders</td></tr>
+<tr><th>Slot</th><th>Color</th><th>Fits</th><th>Resource Bias</th></tr>
+<tr><td><span class="slot-h">High Slot</span></td><td class="slot-h">Red</td><td>Weapons, mining lasers, salvagers, tractor beams, remote repair, cloaks, energy warfare</td><td>PG-heavy</td></tr>
+<tr><td><span class="slot-m">Mid Slot</span></td><td class="slot-m">Yellow</td><td>Shield mods, propulsion (AB/MWD), EWAR (ECM, damps, painters), tackle (webs, scrams), cap boosters, scanners</td><td>CPU-heavy</td></tr>
+<tr><td><span class="slot-l">Low Slot</span></td><td class="slot-l">Green</td><td>Armor plates/repairers/hardeners, damage mods, engineering (co-processors, reactor controls), cargo expanders, navigation passives</td><td>Mixed</td></tr>
 </table>
 
-<h3>Combat Stats</h3>
-<table>
-<tr><th>Stat</th><th>Description</th><th>Affected By</th></tr>
-<tr><td><strong>Hull HP</strong></td><td>Structural integrity. When this hits 0, ship is destroyed.</td><td>Ship hull, hull reinforcements</td></tr>
-<tr><td><strong>Armor HP</strong></td><td>Outer layer. Absorbs damage before hull. Repairable.</td><td>Armor plates, armor repairers</td></tr>
-<tr><td><strong>Shield HP</strong></td><td>Energy barrier. Regenerates passively. First damage layer.</td><td>Shield generators, shield boosters</td></tr>
-<tr><td><strong>Signature Radius</strong></td><td>How easy to target/hit. Smaller = harder to lock, missiles less accurate.</td><td>Ship class, shield extenders (increase it)</td></tr>
-</table>
-
-<h3>Navigation Stats</h3>
-<table>
-<tr><th>Stat</th><th>Description</th><th>Affected By</th></tr>
-<tr><td><strong>Max Speed</strong></td><td>Top velocity in normal space (m/s equivalent, relative).</td><td>Engine module, afterburner</td></tr>
-<tr><td><strong>Warp Speed</strong></td><td>Inter-system travel speed (LY/s). Determines jump duration.</td><td>Jump drive module, warp stabilizers</td></tr>
-<tr><td><strong>Intra Speed</strong></td><td>In-system travel speed (AU/s). Gate-to-station transit.</td><td>Engine module, afterburner</td></tr>
-<tr><td><strong>Agility</strong></td><td>How quickly the ship accelerates/turns. Affects align time.</td><td>Maneuvering rig, mass (armor adds mass)</td></tr>
-<tr><td><strong>Mass</strong></td><td>Total ship mass. Affects agility and warp fuel cost.</td><td>Hull base, armor plates (add mass)</td></tr>
-</table>
-
-<h3>Sensor Stats</h3>
-<table>
-<tr><th>Stat</th><th>Description</th><th>Affected By</th></tr>
-<tr><td><strong>Scan Resolution</strong></td><td>How quickly you lock targets. Higher = faster lock.</td><td>Sensor boosters, ship class</td></tr>
-<tr><td><strong>Sensor Strength</strong></td><td>Resistance to electronic warfare (jamming).</td><td>ECCM modules, ship class</td></tr>
-<tr><td><strong>Targeting Range</strong></td><td>Maximum distance to lock a target.</td><td>Sensor boosters, signal amplifiers</td></tr>
-<tr><td><strong>Max Locked Targets</strong></td><td>How many targets can be locked simultaneously.</td><td>Ship class (2-8 depending on role)</td></tr>
-</table>
-
-<h2>Module Slots</h2>
-<p>Ships have 5 slot types. Each module fits into exactly one slot type. Larger ships have more slots.</p>
-
-<table>
-<tr><th>Slot Type</th><th>Color</th><th>Modules That Fit</th></tr>
-<tr><td><span class="slot-h">High Slot</span></td><td class="slot-h">Red</td><td>Weapons (lasers, railguns, missiles, autocannons), mining lasers, tractor beams, remote repair</td></tr>
-<tr><td><span class="slot-m">Mid Slot</span></td><td class="slot-m">Yellow</td><td>Shield modules, ECM, sensor boosters, propulsion (afterburner, maneuvering rig), scanners, warp stabilizers</td></tr>
-<tr><td><span class="slot-l">Low Slot</span></td><td class="slot-l">Green</td><td>Armor modules (plates, repairers), cargo expanders, hull reinforcements, damage upgrades, CPU/PG upgrades</td></tr>
-<tr><td><span class="slot-e">Engine Slot</span></td><td class="slot-e">Purple</td><td>Main engine, jump drive (one engine required, optional jump drive)</td></tr>
-<tr><td><span class="slot-r">Rig Slot</span></td><td class="slot-r">Cyan</td><td>Permanent modifications. Boost one stat at cost of another. Cannot be removed once installed.</td></tr>
-</table>
-
-<h3>Drone Bay</h3>
-<p>Separate from module slots. Ships with drone capability have a drone bay (measured in m3). Each drone is 5 m3. A ship with 25 m3 drone bay can deploy 5 drones simultaneously.</p>
-
-<h2>Ship Classes &amp; Slot Layouts</h2>
-
-<h3>Frigates (Small, Fast, Cheap)</h3>
-<table>
-<tr><th>Hull</th><th>Role</th><th>High</th><th>Mid</th><th>Low</th><th>Eng</th><th>Rig</th><th>CPU</th><th>PG</th><th>Cargo</th><th>Drone</th></tr>
-<tr><td>Pinto Runner</td><td>Fast Courier</td><td>1</td><td>2</td><td>2</td><td>1</td><td>2</td><td>120</td><td>40</td><td>80 m3</td><td>0</td></tr>
-<tr><td>Prospect Skiff</td><td>Mining Frigate</td><td>1</td><td>1</td><td>2</td><td>1</td><td>2</td><td>100</td><td>35</td><td>120 m3</td><td>10 m3</td></tr>
-<tr><td>Viper Interceptor</td><td>Combat Frigate</td><td>3</td><td>2</td><td>1</td><td>1</td><td>2</td><td>140</td><td>50</td><td>30 m3</td><td>0</td></tr>
-</table>
-
-<h3>Destroyers (Anti-Frigate, Glass Cannon)</h3>
-<table>
-<tr><th>Hull</th><th>Role</th><th>High</th><th>Mid</th><th>Low</th><th>Eng</th><th>Rig</th><th>CPU</th><th>PG</th><th>Cargo</th><th>Drone</th></tr>
-<tr><td>Rock Hopper</td><td>Mining Destroyer</td><td>2</td><td>2</td><td>2</td><td>1</td><td>2</td><td>150</td><td>55</td><td>200 m3</td><td>15 m3</td></tr>
-<tr><td>Sentinel Corvette</td><td>Patrol Destroyer</td><td>5</td><td>2</td><td>2</td><td>1</td><td>2</td><td>180</td><td>70</td><td>50 m3</td><td>10 m3</td></tr>
-</table>
-
-<h3>Cruisers (Versatile, Backbone)</h3>
-<table>
-<tr><th>Hull</th><th>Role</th><th>High</th><th>Mid</th><th>Low</th><th>Eng</th><th>Rig</th><th>CPU</th><th>PG</th><th>Cargo</th><th>Drone</th></tr>
-<tr><td>Mule Freighter</td><td>Transport</td><td>1</td><td>2</td><td>4</td><td>1</td><td>3</td><td>200</td><td>60</td><td>400 m3</td><td>0</td></tr>
-<tr><td>Bison Mk.III</td><td>Multi-role Hauler</td><td>2</td><td>3</td><td>3</td><td>1</td><td>3</td><td>250</td><td>80</td><td>500 m3</td><td>15 m3</td></tr>
-<tr><td>Strip Miner</td><td>Mining Cruiser</td><td>3</td><td>2</td><td>3</td><td>1</td><td>3</td><td>220</td><td>70</td><td>350 m3</td><td>25 m3</td></tr>
-<tr><td>Warden Frigate</td><td>Combat Cruiser</td><td>4</td><td>4</td><td>3</td><td>1</td><td>3</td><td>300</td><td>120</td><td>100 m3</td><td>25 m3</td></tr>
-</table>
-
-<h3>Battlecruisers (Heavy Combat, Fleet)</h3>
-<table>
-<tr><th>Hull</th><th>Role</th><th>High</th><th>Mid</th><th>Low</th><th>Eng</th><th>Rig</th><th>CPU</th><th>PG</th><th>Cargo</th><th>Drone</th></tr>
-<tr><td>Ox Hauler</td><td>Armored Transport</td><td>2</td><td>3</td><td>5</td><td>1</td><td>3</td><td>280</td><td>100</td><td>700 m3</td><td>10 m3</td></tr>
-<tr><td>Excavator</td><td>Heavy Miner</td><td>4</td><td>3</td><td>4</td><td>1</td><td>3</td><td>260</td><td>90</td><td>500 m3</td><td>40 m3</td></tr>
-</table>
-
-<h3>Capital Ships (Slow, Massive, Endgame)</h3>
-<table>
-<tr><th>Hull</th><th>Role</th><th>High</th><th>Mid</th><th>Low</th><th>Eng</th><th>Rig</th><th>CPU</th><th>PG</th><th>Cargo</th><th>Drone</th></tr>
-<tr><td>Clydesdale</td><td>Bulk Freighter</td><td>1</td><td>3</td><td>6</td><td>2</td><td>4</td><td>350</td><td>120</td><td>1500 m3</td><td>0</td></tr>
-<tr><td>Mammoth</td><td>Industrial Capital</td><td>2</td><td>4</td><td>5</td><td>2</td><td>4</td><td>400</td><td>150</td><td>1200 m3</td><td>25 m3</td></tr>
-<tr><td>Deep Core Borer</td><td>Capital Miner</td><td>5</td><td>3</td><td>5</td><td>2</td><td>4</td><td>380</td><td>130</td><td>800 m3</td><td>50 m3</td></tr>
-</table>
-
-<h2>Fitting Rules</h2>
+<h2>Hardpoints</h2>
+<p>Within High Slots, <strong>Turret Hardpoints</strong> limit how many turret weapons (lasers, railguns, autocannons, blasters) can be fitted. <strong>Launcher Hardpoints</strong> limit missile/torpedo launchers. Remaining highs can fit utility modules.</p>
 <div class="note">
-<strong>CPU/PG Budget:</strong> Every module has a CPU and PG requirement. Total fitted modules cannot exceed ship's CPU or PG capacity. This forces trade-offs: fit a big shield OR a big weapon, not both on a small ship.<br><br>
-<strong>Slot Restrictions:</strong> A weapon only fits in a High Slot. You cannot mount a railgun in a Low Slot. Engine Slots require at least one engine module (ship cannot move without one).<br><br>
-<strong>Rigs are Permanent:</strong> Once installed, rigs cannot be removed (only destroyed). They provide a bonus at a penalty. Example: "Mining Yield Rig: +15% mining output, -10% shield HP."<br><br>
-<strong>Stacking Penalties:</strong> Fitting multiple of the same module type has diminishing returns. First module = 100%, second = 87%, third = 57%, fourth = 28%.<br><br>
-<strong>Mass Matters:</strong> Armor plates and cargo expanders add mass, reducing agility and increasing warp fuel cost. Shield modules don't add mass but increase signature radius (easier to hit).
+Example: A Cruiser with 5 High Slots, 4 Turret HP, 3 Launcher HP can fit:<br>
+- 4 turrets + 1 utility<br>
+- 3 launchers + 2 turrets<br>
+- 2 turrets + 2 launchers + 1 utility<br>
+But never more than 4 turrets or 3 launchers.
 </div>
 
-<h2>Module CPU/PG Requirements (Examples)</h2>
+<h2>Fitting Resources</h2>
 <table>
-<tr><th>Module</th><th>Slot</th><th>CPU</th><th>PG</th><th>Notes</th></tr>
-<tr><td>Pulse Laser Mk.I</td><td class="slot-h">High</td><td>25</td><td>15</td><td>Low PG, moderate CPU</td></tr>
-<tr><td>Railgun Mk.I</td><td class="slot-h">High</td><td>35</td><td>25</td><td>High both, big damage</td></tr>
-<tr><td>Mining Laser Mk.I</td><td class="slot-h">High</td><td>20</td><td>10</td><td>Light on resources</td></tr>
-<tr><td>Shield Generator Mk.I</td><td class="slot-m">Mid</td><td>30</td><td>30</td><td>PG-heavy</td></tr>
-<tr><td>Afterburner</td><td class="slot-m">Mid</td><td>15</td><td>20</td><td>Moderate</td></tr>
-<tr><td>Scanner Array</td><td class="slot-m">Mid</td><td>25</td><td>5</td><td>CPU-heavy</td></tr>
-<tr><td>ECM Jammer</td><td class="slot-m">Mid</td><td>40</td><td>10</td><td>Very CPU-heavy</td></tr>
-<tr><td>Armor Plates (Heavy)</td><td class="slot-l">Low</td><td>5</td><td>20</td><td>PG cost, adds mass</td></tr>
-<tr><td>Cargo Expander</td><td class="slot-l">Low</td><td>15</td><td>5</td><td>+cargo, -structure</td></tr>
-<tr><td>Damage Mod (Weapon Upgrade)</td><td class="slot-l">Low</td><td>20</td><td>5</td><td>+10% weapon damage</td></tr>
-<tr><td>Standard Engine Mk.I</td><td class="slot-e">Engine</td><td>10</td><td>30</td><td>Required, base speed</td></tr>
-<tr><td>Jump Drive Mk.I</td><td class="slot-e">Engine</td><td>30</td><td>40</td><td>Enables fast warp</td></tr>
+<tr><th>Resource</th><th>Description</th><th>Upgradeable?</th></tr>
+<tr><td><strong>CPU (tf)</strong></td><td>Processing capacity. EWAR, electronics, and tackle modules are CPU-intensive.</td><td>Co-Processors (low slot)</td></tr>
+<tr><td><strong>Power Grid (MW)</strong></td><td>Energy output. Weapons, shields, and propulsion are PG-intensive.</td><td>Reactor Controls (low slot)</td></tr>
+<tr><td><strong>Capacitor (GJ)</strong></td><td>Energy pool. Active modules drain cap per cycle. Recharges passively over time.</td><td>Cap Batteries, Cap Rechargers</td></tr>
 </table>
 
-<h2>Design Notes</h2>
+<h2>Hull Class Fitting Budget</h2>
+<table>
+<tr><th>Class</th><th>CPU</th><th>PG</th><th>Cap</th><th>Cap Rech/s</th><th>High</th><th>Mid</th><th>Low</th><th>Turret HP</th><th>Launch HP</th></tr>
+<tr><td>Fighter</td><td>125</td><td>40</td><td>250</td><td>5.0</td><td>2</td><td>2</td><td>2</td><td>2</td><td>1</td></tr>
+<tr><td>Frigate</td><td>200</td><td>60</td><td>400</td><td>7.5</td><td>3</td><td>3</td><td>2</td><td>2</td><td>2</td></tr>
+<tr><td>Destroyer</td><td>275</td><td>100</td><td>550</td><td>10.0</td><td>5</td><td>3</td><td>3</td><td>4</td><td>3</td></tr>
+<tr><td>Cruiser</td><td>350</td><td>150</td><td>800</td><td>15.0</td><td>5</td><td>4</td><td>4</td><td>4</td><td>3</td></tr>
+<tr><td>Battlecruiser</td><td>450</td><td>250</td><td>1200</td><td>20.0</td><td>6</td><td>5</td><td>5</td><td>5</td><td>4</td></tr>
+<tr><td>Battleship</td><td>550</td><td>400</td><td>1800</td><td>25.0</td><td>7</td><td>5</td><td>6</td><td>6</td><td>5</td></tr>
+<tr><td>Carrier</td><td>600</td><td>350</td><td>2500</td><td>30.0</td><td>4</td><td>6</td><td>5</td><td>2</td><td>2</td></tr>
+<tr><td>Dreadnought</td><td>700</td><td>600</td><td>3500</td><td>35.0</td><td>8</td><td>6</td><td>6</td><td>6</td><td>4</td></tr>
+<tr><td>Industrial</td><td>250</td><td>80</td><td>500</td><td>8.0</td><td>2</td><td>3</td><td>4</td><td>1</td><td>1</td></tr>
+<tr><td>Mining Barge</td><td>225</td><td>70</td><td>450</td><td>7.0</td><td>3</td><td>2</td><td>3</td><td>1</td><td>0</td></tr>
+</table>
+<p>Variants within a class may deviate +/-1 slot to define sub-roles (e.g., heavy destroyer with 6 highs but only 2 mids).</p>
+
+<h2>Sensor &amp; Targeting</h2>
+<table>
+<tr><th>Class</th><th>Signature (m)</th><th>Scan Res (mm)</th><th>Sensor Str</th><th>Target Range (km)</th><th>Max Targets</th></tr>
+<tr><td>Fighter</td><td>25</td><td>900</td><td>8</td><td>30</td><td>2</td></tr>
+<tr><td>Frigate</td><td>40</td><td>700</td><td>12</td><td>50</td><td>3</td></tr>
+<tr><td>Destroyer</td><td>65</td><td>550</td><td>16</td><td>60</td><td>4</td></tr>
+<tr><td>Cruiser</td><td>120</td><td>400</td><td>20</td><td>70</td><td>5</td></tr>
+<tr><td>Battlecruiser</td><td>250</td><td>300</td><td>24</td><td>80</td><td>6</td></tr>
+<tr><td>Battleship</td><td>400</td><td>200</td><td>28</td><td>90</td><td>7</td></tr>
+<tr><td>Carrier</td><td>450</td><td>250</td><td>32</td><td>100</td><td>8</td></tr>
+<tr><td>Dreadnought</td><td>550</td><td>150</td><td>36</td><td>100</td><td>8</td></tr>
+<tr><td>Industrial</td><td>150</td><td>350</td><td>10</td><td>50</td><td>3</td></tr>
+<tr><td>Mining Barge</td><td>100</td><td>400</td><td>10</td><td>40</td><td>2</td></tr>
+</table>
+
+<h2>Stacking Penalties</h2>
+<p>Fitting multiple modules of the same effect type gives diminishing returns:</p>
+<div class="formula">effectiveness(n) = 0.5 ^ ((n-1) / 2.22)^2</div>
+<table>
+<tr><th>#</th><th>Effectiveness</th><th>Example: +10% damage mod</th></tr>
+<tr><td>1st</td><td>100%</td><td>+10.0%</td></tr>
+<tr><td>2nd</td><td>87%</td><td>+8.7%</td></tr>
+<tr><td>3rd</td><td>57%</td><td>+5.7%</td></tr>
+<tr><td>4th</td><td>28%</td><td>+2.8%</td></tr>
+<tr><td>5th</td><td>10%</td><td>+1.0%</td></tr>
+</table>
 <div class="note">
-<strong>Progression Path:</strong><br>
-- New player: Pinto Runner (fast, tiny cargo, cheap to lose)<br>
-- Early hauler: Mule Freighter (400 m3 cargo, defenseless)<br>
-- Established: Bison Mk.III (500 m3, some defense, versatile)<br>
-- Late game: Clydesdale (1500 m3, slow, needs escort in low-sec)<br><br>
-<strong>Tank Archetypes:</strong><br>
-- Shield tank: Mid slots, no mass penalty, bigger sig radius<br>
-- Armor tank: Low slots, adds mass (slower), smaller sig radius<br>
-- Hull tank: Cheap, last resort (hull reinforcements in Low)<br><br>
-<strong>Future: Named/Faction Variants:</strong><br>
-Standard Mk.I, Advanced Mk.II (better stats, rarer inputs), Prototype Mk.III (exotic materials, best stats). Faction variants with unique bonuses from corp loyalty.
+<strong>Applies to:</strong> damage mods, hardeners, propulsion mods, sensor boosters, tracking enhancers<br>
+<strong>Does NOT apply to:</strong> armor plates (flat HP), shield extenders (flat HP), active repairers, weapons
+</div>
+
+<h2>Module Fitting Costs</h2>
+<h3>Weapons (High Slot)</h3>
+<table>
+<tr><th>Type</th><th>S (CPU/PG)</th><th>M (CPU/PG)</th><th>L (CPU/PG)</th><th>C (CPU/PG)</th></tr>
+<tr><td>Autocannon</td><td>8 / 5</td><td>18 / 12</td><td>30 / 25</td><td>50 / 45</td></tr>
+<tr><td>Railgun</td><td>20 / 8</td><td>35 / 18</td><td>55 / 35</td><td>80 / 60</td></tr>
+<tr><td>Beam Laser</td><td>12 / 12</td><td>25 / 25</td><td>40 / 45</td><td>65 / 75</td></tr>
+<tr><td>Pulse Laser</td><td>10 / 8</td><td>20 / 18</td><td>35 / 32</td><td>55 / 55</td></tr>
+<tr><td>Missile Launcher</td><td>25 / 5</td><td>40 / 12</td><td>60 / 22</td><td>90 / 40</td></tr>
+<tr><td>Mining Laser</td><td>10 / 5</td><td>20 / 12</td><td>35 / 22</td><td>-</td></tr>
+<tr><td>Energy Neutralizer</td><td>20 / 10</td><td>35 / 20</td><td>55 / 35</td><td>-</td></tr>
+<tr><td>Energy Nosferatu</td><td>15 / 8</td><td>28 / 16</td><td>45 / 28</td><td>-</td></tr>
+<tr><td>Remote Armor Rep</td><td>20 / 15</td><td>35 / 30</td><td>55 / 50</td><td>-</td></tr>
+<tr><td>Remote Shield Boost</td><td>25 / 12</td><td>40 / 25</td><td>60 / 45</td><td>-</td></tr>
+</table>
+
+<h3>Shield &amp; Propulsion (Mid Slot)</h3>
+<table>
+<tr><th>Type</th><th>S (CPU/PG)</th><th>M (CPU/PG)</th><th>L (CPU/PG)</th></tr>
+<tr><td>Shield Booster</td><td>20 / 15</td><td>35 / 30</td><td>55 / 55</td></tr>
+<tr><td>Shield Extender</td><td>25 / 20</td><td>40 / 35</td><td>60 / 55</td></tr>
+<tr><td>Shield Hardener</td><td>20 / 1</td><td>30 / 1</td><td>45 / 1</td></tr>
+<tr><td>Shield Recharger</td><td>15 / 1</td><td>25 / 1</td><td>40 / 1</td></tr>
+<tr><td>Afterburner</td><td>10 / 15</td><td>18 / 30</td><td>28 / 55</td></tr>
+<tr><td>Microwarpdrive</td><td>15 / 25</td><td>25 / 50</td><td>40 / 90</td></tr>
+<tr><td>Capacitor Booster</td><td>10 / 5</td><td>18 / 10</td><td>28 / 18</td></tr>
+</table>
+
+<h3>EWAR &amp; Tackle (Mid Slot)</h3>
+<table>
+<tr><th>Type</th><th>S (CPU/PG)</th><th>M (CPU/PG)</th><th>L (CPU/PG)</th></tr>
+<tr><td>ECM</td><td>30 / 1</td><td>50 / 1</td><td>75 / 1</td></tr>
+<tr><td>Sensor Dampener</td><td>25 / 1</td><td>40 / 1</td><td>60 / 1</td></tr>
+<tr><td>Target Painter</td><td>20 / 1</td><td>35 / 1</td><td>50 / 1</td></tr>
+<tr><td>Tracking Disruptor</td><td>25 / 1</td><td>40 / 1</td><td>60 / 1</td></tr>
+<tr><td>Stasis Webifier</td><td>20 / 1</td><td>35 / 1</td><td>55 / 1</td></tr>
+<tr><td>Warp Disruptor</td><td>20 / 1</td><td>30 / 1</td><td>45 / 1</td></tr>
+<tr><td>Warp Scrambler</td><td>25 / 1</td><td>40 / 1</td><td>60 / 1</td></tr>
+</table>
+
+<h3>Armor &amp; Engineering (Low Slot)</h3>
+<table>
+<tr><th>Type</th><th>S (CPU/PG)</th><th>M (CPU/PG)</th><th>L (CPU/PG)</th></tr>
+<tr><td>Armor Plate</td><td>5 / 15</td><td>8 / 30</td><td>12 / 55</td></tr>
+<tr><td>Armor Repairer</td><td>10 / 12</td><td>18 / 25</td><td>28 / 45</td></tr>
+<tr><td>Armor Hardener</td><td>15 / 1</td><td>25 / 1</td><td>40 / 1</td></tr>
+<tr><td>Damage Control</td><td>10 / 5</td><td>15 / 8</td><td>22 / 12</td></tr>
+<tr><td>Cargo Expander</td><td>15 / 1</td><td>25 / 1</td><td>40 / 1</td></tr>
+<tr><td>Co-Processor</td><td>1 / 5</td><td>1 / 10</td><td>1 / 18</td></tr>
+<tr><td>Reactor Control</td><td>5 / 1</td><td>8 / 1</td><td>12 / 1</td></tr>
+<tr><td>Inertial Stabilizer</td><td>12 / 1</td><td>20 / 1</td><td>30 / 1</td></tr>
+<tr><td>Overdrive Injector</td><td>8 / 5</td><td>15 / 10</td><td>22 / 18</td></tr>
+</table>
+
+<h2>Quality Tiers</h2>
+<table>
+<tr><th>Quality</th><th>CPU/PG Cost</th><th>Stat Bonus</th><th>Availability</th></tr>
+<tr><td>Standard</td><td>1.00x</td><td>1.00x</td><td>Common, manufactured</td></tr>
+<tr><td>Named (Compact)</td><td>0.85x</td><td>1.15x</td><td>Uncommon, manufactured</td></tr>
+<tr><td>T2</td><td>1.20x</td><td>1.35x</td><td>Rare, advanced manufacturing</td></tr>
+<tr><td>Faction</td><td>0.90x</td><td>1.25x</td><td>Very rare, faction loyalty</td></tr>
+</table>
+
+<h2>Resistances</h2>
+<table>
+<tr><th>Layer</th><th>EM</th><th>Thermal</th><th>Kinetic</th><th>Explosive</th></tr>
+<tr><td>Shield</td><td>0%</td><td>20%</td><td>40%</td><td>50%</td></tr>
+<tr><td>Armor</td><td>60%</td><td>35%</td><td>25%</td><td>0%</td></tr>
+<tr><td>Hull</td><td>0%</td><td>0%</td><td>0%</td><td>0%</td></tr>
+</table>
+<p>Damage flows: Shield (first, regenerates) -> Armor (repairable) -> Hull (destruction at 0).</p>
+
+<h2>Tank Archetypes</h2>
+<div class="note">
+<strong>Shield Tank:</strong> Mid slots. No mass penalty. Increases signature radius (easier to hit). Best against EM/Thermal.<br><br>
+<strong>Armor Tank:</strong> Low slots. Adds mass (slower, worse agility). Keeps signature small. Best against Kinetic/Explosive.<br><br>
+<strong>Hull Tank:</strong> Low slots. Cheapest option. No resists. Last resort or bait fits.
+</div>
 </div>
 </body>
 </html>
