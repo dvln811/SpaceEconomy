@@ -33,6 +33,8 @@ tr:hover td{background:#0d1525}
 td.desc{color:#8aa0b8;font-size:11px;white-space:normal;width:100%}
 .faction-tf{color:#4fc3f7}.faction-nc{color:#ab47bc}.faction-mg{color:#ffd54f}.faction-fs{color:#66bb6a}.faction-ic{color:#ff8a65}.faction-crs{color:#ef5350}
 .loading{color:#8aa0b8;padding:24px;text-align:center}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:#0a0e18}::-webkit-scrollbar-thumb{background:#1a3050;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#2a4a70}
+*{scrollbar-width:thin;scrollbar-color:#1a3050 #0a0e18}
 </style>
 </head>
 <body>
@@ -124,10 +126,10 @@ function show(filter, btn) {
     const milMatched = military.filter(match);
     let html = '';
     if (civMatched.length) {
-      html += `<table><thead><tr><th>Name</th><th>Hull Class</th><th>Tier</th><th>Cargo</th><th>Fuel</th><th>Speed</th><th>Hull HP</th><th>Align</th><th>Hardpoints</th><th>Recipe</th><th>Build Time</th><th>Description</th></tr></thead><tbody>${civMatched.map(s => `<tr><td style="color:#e0e8f0">${s.name}</td><td>${s.hull_class||s.role}</td><td>T${s.tier}</td><td style="color:#ffd54f">${s.cargo_capacity}</td><td>${s.fuel_capacity}</td><td>${s.speed}x</td><td>${s.hull_hp}</td><td>${s.align_time}</td><td style="font-size:11px">${Object.entries(s.hardpoints).map(([k,v])=>v+'x '+k).join('<br>')}</td><td style="font-size:11px;color:#66bb6a">${Object.entries(s.build_cost).map(([k,v])=>v+'x '+n(k)).join('<br>')}</td><td>${s.build_time?fmtTime(s.build_time):'-'}</td><td class="desc">${s.description}</td></tr>`).join('')}</tbody></table>`;
+      html += `<table><thead><tr><th>Name</th><th>Hull Class</th><th>Tier</th><th>Cargo</th><th>Speed</th><th>Hull HP</th><th>CPU</th><th>PG</th><th>Slots (H/M/L)</th><th>Turr/Lnch</th><th>Recipe</th><th>Build Time</th><th>Description</th></tr></thead><tbody>${civMatched.map(s => `<tr><td style="color:#e0e8f0">${s.name}</td><td>${s.hull_class||s.role}</td><td>T${s.tier}</td><td style="color:#ffd54f">${s.cargo_capacity}</td><td>${s.speed}x</td><td>${s.hull_hp}</td><td>${s.cpu||0}</td><td>${s.powergrid||0}</td><td style="font-size:11px"><span style="color:#ef5350">${s.hardpoints.high_slots||0}H</span> / <span style="color:#ffd54f">${s.hardpoints.mid_slots||0}M</span> / <span style="color:#66bb6a">${s.hardpoints.low_slots||0}L</span></td><td style="font-size:11px">${s.hardpoints.turret_hardpoints||0}T / ${s.hardpoints.launcher_hardpoints||0}L</td><td style="font-size:11px;color:#66bb6a">${Object.entries(s.build_cost).map(([k,v])=>v+'x '+n(k)).join('<br>')}</td><td>${s.build_time?fmtTime(s.build_time):'-'}</td><td class="desc">${s.description}</td></tr>`).join('')}</tbody></table>`;
     }
     if (milMatched.length) {
-      html += `<table style="margin-top:12px"><thead><tr><th>Name</th><th>Class</th><th>Faction</th><th>Hull</th><th>Armor</th><th>Shield</th><th>Total HP</th><th>Crew</th><th>Weapons</th><th>Utility</th><th>Core</th><th>Recipe</th><th>Build Time</th><th>Description</th></tr></thead><tbody>${milMatched.map(s => {const fname=factions[s.faction_id]?factions[s.faction_id].name:s.faction_id;const mods=typeof s.modules==='string'?JSON.parse(s.modules):(s.modules||[]);return `<tr><td style="color:#e0e8f0">${s.name}</td><td>${s.hull_class}</td><td class="${factionColors[s.faction_id]||''}">${fname}</td><td>${s.hull_hp}</td><td>${s.armor_hp}</td><td>${s.shield_hp}</td><td style="color:#ffd54f">${s.hull_hp+s.armor_hp+s.shield_hp}</td><td>${s.crew}</td><td style="font-size:11px">${grpList(s.weapons)}</td><td style="font-size:11px">${grpList(mods.filter(m=>isUtility(m)))}</td><td style="font-size:11px">${grpList(mods.filter(m=>!isUtility(m)))}</td><td style="font-size:11px;color:#66bb6a">${grpList(Object.entries(s.build_cost).map(([k,v])=>Array(v).fill(k)).flat())}</td><td>${s.build_time?fmtTime(s.build_time):'-'}</td><td class="desc">${s.description}</td></tr>`;}).join('')}</tbody></table>`;
+      html += `<table style="margin-top:12px"><thead><tr><th>Name</th><th>Class</th><th>Faction</th><th>Hull</th><th>Armor</th><th>Shield</th><th>Total HP</th><th>CPU</th><th>PG</th><th>Slots (H/M/L)</th><th>Turr/Lnch</th><th>Weapons</th><th>Recipe</th><th>Build Time</th><th>Description</th></tr></thead><tbody>${milMatched.map(s => {const fname=factions[s.faction_id]?factions[s.faction_id].name:s.faction_id;const hp=typeof s.hardpoints==='string'?JSON.parse(s.hardpoints):(s.hardpoints||{});return `<tr><td style="color:#e0e8f0">${s.name}</td><td>${s.hull_class}</td><td class="${factionColors[s.faction_id]||''}">${fname}</td><td>${s.hull_hp}</td><td>${s.armor_hp}</td><td>${s.shield_hp}</td><td style="color:#ffd54f">${s.hull_hp+s.armor_hp+s.shield_hp}</td><td>${s.cpu||0}</td><td>${s.powergrid||0}</td><td style="font-size:11px"><span style="color:#ef5350">${hp.high_slots||0}H</span> / <span style="color:#ffd54f">${hp.mid_slots||0}M</span> / <span style="color:#66bb6a">${hp.low_slots||0}L</span></td><td style="font-size:11px">${hp.turret_hardpoints||0}T / ${hp.launcher_hardpoints||0}L</td><td style="font-size:11px">${grpList(s.weapons)}</td><td style="font-size:11px;color:#66bb6a">${grpList(Object.entries(s.build_cost).map(([k,v])=>Array(v).fill(k)).flat())}</td><td>${s.build_time?fmtTime(s.build_time):'-'}</td><td class="desc">${s.description}</td></tr>`;}).join('')}</tbody></table>`;
     }
     if (!html) html = '<div style="color:#8aa0b8;padding:24px">No matches</div>';
     el.innerHTML = html;
@@ -140,7 +142,7 @@ function show(filter, btn) {
     if (filter === 'miners') ships = civilian.filter(s => s.hull_class === 'Mining Barge');
     ships = ships.filter(match);
     el.innerHTML = `<table><thead><tr>
-      <th>Name</th><th>Hull Class</th><th>Tier</th><th>Cargo (m3)</th><th>Fuel</th><th>Speed</th><th>Hull HP</th><th>Align (s)</th><th>Hardpoints</th><th>Recipe</th><th>Build Time</th><th>Description</th>
+      <th>Name</th><th>Hull Class</th><th>Tier</th><th>Cargo (m3)</th><th>Speed</th><th>Hull HP</th><th>CPU</th><th>PG</th><th>Slots (H/M/L)</th><th>Turr/Lnch</th><th>Recipe</th><th>Build Time</th><th>Description</th>
     </tr></thead><tbody>${ships.map(s => {
       const hp = typeof s.hardpoints === 'string' ? JSON.parse(s.hardpoints) : (s.hardpoints||{});
       return `<tr>
@@ -148,11 +150,12 @@ function show(filter, btn) {
       <td>${s.hull_class || s.role}</td>
       <td>T${s.tier}</td>
       <td style="color:#ffd54f">${s.cargo_capacity}</td>
-      <td>${s.fuel_capacity}</td>
       <td>${s.speed}x</td>
       <td>${s.hull_hp}</td>
-      <td>${s.align_time}</td>
-      <td style="font-size:11px">${hp.weapon_mounts||0}W / ${hp.utility_bays||0}U / ${hp.core_slots||0}C</td>
+      <td>${s.cpu||0}</td>
+      <td>${s.powergrid||0}</td>
+      <td style="font-size:11px"><span style="color:#ef5350">${hp.high_slots||0}H</span> / <span style="color:#ffd54f">${hp.mid_slots||0}M</span> / <span style="color:#66bb6a">${hp.low_slots||0}L</span></td>
+      <td style="font-size:11px">${hp.turret_hardpoints||0}T / ${hp.launcher_hardpoints||0}L</td>
       <td style="font-size:11px;color:#66bb6a">${Object.entries(s.build_cost).map(([k,v])=>v+'x '+n(k)).join('<br>')}</td>
       <td>${s.build_time?fmtTime(s.build_time):'-'}</td>
       <td class="desc">${s.description}</td>
@@ -163,7 +166,7 @@ function show(filter, btn) {
     if (filter.startsWith('class_')) ships = military.filter(s => s.hull_class === filter.replace('class_',''));
     ships = ships.filter(match);
     el.innerHTML = `<table><thead><tr>
-      <th>Name</th><th>Class</th><th>Faction</th><th>Hull</th><th>Armor</th><th>Shield</th><th>Total HP</th><th>Crew</th><th>Hardpoints</th><th>Weapons</th><th>Utility</th><th>Core</th><th>Recipe</th><th>Build Time</th><th>Description</th>
+      <th>Name</th><th>Class</th><th>Faction</th><th>Hull</th><th>Armor</th><th>Shield</th><th>Total HP</th><th>CPU</th><th>PG</th><th>Slots (H/M/L)</th><th>Turr/Lnch</th><th>Weapons</th><th>Recipe</th><th>Build Time</th><th>Description</th>
     </tr></thead><tbody>${ships.map(s => {
       const fname = factions[s.faction_id] ? factions[s.faction_id].name : s.faction_id;
       const hp = typeof s.hardpoints === 'string' ? JSON.parse(s.hardpoints) : (s.hardpoints||{});
@@ -176,11 +179,11 @@ function show(filter, btn) {
       <td>${s.armor_hp}</td>
       <td>${s.shield_hp}</td>
       <td style="color:#ffd54f">${s.hull_hp+s.armor_hp+s.shield_hp}</td>
-      <td>${s.crew}</td>
-      <td style="font-size:11px">${hp.weapon_mounts||0}W / ${hp.utility_bays||0}U / ${hp.core_slots||0}C</td>
+      <td>${s.cpu||0}</td>
+      <td>${s.powergrid||0}</td>
+      <td style="font-size:11px"><span style="color:#ef5350">${hp.high_slots||0}H</span> / <span style="color:#ffd54f">${hp.mid_slots||0}M</span> / <span style="color:#66bb6a">${hp.low_slots||0}L</span></td>
+      <td style="font-size:11px">${hp.turret_hardpoints||0}T / ${hp.launcher_hardpoints||0}L</td>
       <td style="font-size:11px">${grpList(s.weapons)}</td>
-      <td style="font-size:11px">${grpList(mods.filter(m=>isUtility(m)))}</td>
-      <td style="font-size:11px">${grpList(mods.filter(m=>!isUtility(m)))}</td>
       <td style="font-size:11px;color:#66bb6a">${grpList(Object.entries(s.build_cost).map(([k,v])=>Array(v).fill(k)).flat())}</td>
       <td>${s.build_time?fmtTime(s.build_time):'-'}</td>
       <td class="desc">${s.description}</td>
