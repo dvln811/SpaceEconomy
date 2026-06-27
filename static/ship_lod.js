@@ -13,10 +13,10 @@ import * as THREE from 'three';
 import { buildShipFromData } from '/static/ship_renderer.js';
 
 export const LOD_THRESHOLDS = {
-  lod0: 0.05,   // > 5% screen = full detail
-  lod1: 0.01,   // 1-5% = simplified
-  lod2: 0.002,  // 0.2-1% = billboard
-  // below 0.2% = dot or hidden
+  lod0: 0.005,   // > 0.5% screen = full detail
+  lod1: 0.001,   // 0.1-0.5% = simplified
+  lod2: 0.0003,  // 0.03-0.1% = billboard
+  // below 0.03% = dot
 };
 
 /**
@@ -64,7 +64,7 @@ export function createLOD1(bounds, scale, color) {
  * Create LOD 2: billboard sprite (diamond).
  */
 export function createLOD2(scale, color) {
-  const size = scale * 8;
+  const size = scale * 1.5;
   const canvas = document.createElement('canvas');
   canvas.width=32; canvas.height=32;
   const ctx = canvas.getContext('2d');
@@ -90,7 +90,7 @@ export function createLOD3(color) {
   ctx.fillRect(0,0,4,4);
   const tex = new THREE.CanvasTexture(canvas);
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, opacity:0.6}));
-  sprite.scale.set(4, 4, 1);
+  sprite.scale.set(0.5, 0.5, 1);
   const group = new THREE.Group(); group.add(sprite);
   return group;
 }
