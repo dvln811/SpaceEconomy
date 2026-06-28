@@ -187,6 +187,22 @@ class NPCDecisionWorker(WorkerThread):
                 best_source = closest_src
 
         if not best_contract or not best_source:
+            # Fallback: find ANY contract with a reachable source
+            import random as _rnd2
+            _rnd2.shuffle(active)
+            for c in active[:200]:
+                commodity_id = c['commodity_id']
+                for r, items in region_cache.items():
+                    sources = items.get(commodity_id, [])
+                    if sources:
+                        src = sources[0]
+                        best_contract = c
+                        best_source = src
+                        break
+                if best_contract:
+                    break
+
+        if not best_contract or not best_source:
             return
 
         # Claim portion
