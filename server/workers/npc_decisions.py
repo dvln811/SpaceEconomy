@@ -49,7 +49,7 @@ class NPCDecisionWorker(WorkerThread):
                 self._hauler_contract_decision(ship, universe, region_cache)
 
     def _refresh_contracts(self, universe, region_cache):
-        """Add new contracts for station deficits. Don't touch existing in-flight contracts."""
+        """Add new contracts for station deficits. Sized for 500 ticks of demand."""
         from server.simulation import STATION_CONSUMPTION
         # Track existing contracts by (sys_id, station, commodity) to avoid duplicates
         existing = set()
@@ -60,8 +60,9 @@ class NPCDecisionWorker(WorkerThread):
 
         added = 0
         for sys_id, sys in universe.items():
+            pop_mult = max(0.5, sys.population / 100_000_000.0)
             for st in sys.stations:
-                # Recipe input deficits
+                # Recipe input deficits - sized for 500 ticks of production
                 for prod_id in st.produces:
                     c = self.commodities.get(prod_id)
                     if not c or not c.recipe:
@@ -70,24 +71,25 @@ class NPCDecisionWorker(WorkerThread):
                         if (sys_id, st.name, inp_id) in existing:
                             continue
                         stock = st.inventory.get(inp_id, 0)
-                        want = qty * st.production_rate * 100
-                        if stock < want:
+                        want = qty * st.production_rate * 500
+                        if stock < want * 0.5:
                             self._contracts.append({
                                 'sys_id': sys_id, 'station': st.name, 'region': sys.region,
-                                'commodity_id': inp_id, 'qty_remaining': want - stock,
+                                'commodity_id': inp_id, 'qty_remaining': want - stock, '_claims': 0,
                             })
                             existing.add((sys_id, st.name, inp_id))
                             added += 1
 
-                # Consumption deficits
+                # Consumption deficits - sized for 500 ticks of consumption
                 for commodity_id in STATION_CONSUMPTION.get(st.station_type, []):
                     if (sys_id, st.name, commodity_id) in existing:
                         continue
                     stock = st.inventory.get(commodity_id, 0)
-                    if stock < 200:
+                    want = 2.0 * pop_mult * 500
+                    if stock < want * 0.5:
                         self._contracts.append({
                             'sys_id': sys_id, 'station': st.name, 'region': sys.region,
-                            'commodity_id': commodity_id, 'qty_remaining': 500 - stock,
+                            'commodity_id': commodity_id, 'qty_remaining': want - stock, '_claims': 0,
                         })
                         existing.add((sys_id, st.name, commodity_id))
                         added += 1
@@ -162,7 +164,7 @@ class NPCDecisionWorker(WorkerThread):
             closest_hops = 999
             for r, items in region_cache.items():
                 for src_sys_id, src_station_name, qty in items.get(commodity_id, []):
-                    if qty < 10:
+                    if qty < 1:
                         continue
                     hops = self._estimate_hops(ship.location, src_sys_id, universe)
                     if hops < closest_hops:
@@ -174,9 +176,11 @@ class NPCDecisionWorker(WorkerThread):
                 continue
 
             # Score: (value) / (distance + 1) / (1 + claims)
+            # Ship-size matching: penalize if contract is tiny relative to cargo capacity
             value = com.base_price
             claims = c.get('_claims', 0)
-            score = value / (closest_hops + 1) / (1 + claims)
+            qty_match = min(1.0, c['qty_remaining'] * com.volume / max(1, ship.cargo_capacity))
+            score = value * (0.3 + 0.7 * qty_match) / (closest_hops + 1) / (1 + claims)
 
             if c['region'] == region:
                 score *= 2
