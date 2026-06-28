@@ -1,64 +1,45 @@
-30K TICK SIMULATION RESULTS
-Ticks: 10004 | Wall time: 1253s | 8 t/s | Game days: 41.7
+ECONOMY SIM RESULTS | 10004 ticks | 41.7 days | 7 t/s
 ======================================================================
 
-PRICE STABILITY (11,750 price points)
-  Within +/-15%: 29 (0.2%)
-  Range: 0.500x - 2.000x
-  Median: 2.000x
+PRICE STABILITY (12,023 points)
+  Within +/-15%: 41 (0.3%)
+  Range: 0.500x - 2.000x | Median: 2.000x
 
   Distribution:
          <0.5x:      0 (  0.0%)
-     0.5-0.85x:   5137 ( 43.7%)
-    0.85-1.15x:     29 (  0.2%)
-     1.15-2.0x:   6584 ( 56.0%)
+     0.5-0.85x:   5408 ( 45.0%)
+    0.85-1.15x:     41 (  0.3%)
+     1.15-2.0x:   6574 ( 54.7%)
          >2.0x:      0 (  0.0%)
 
-  Most inflated (top 10):
-    Processed Protein              max:2.00x avg:1.36x
-    Methane Fuel                   max:2.00x avg:1.10x
-    Hydrogen Fuel                  max:2.00x avg:1.10x
-    Purified Water                 max:2.00x avg:1.31x
-    Iron Ore                       max:2.00x avg:1.46x
-    Silicon Ore                    max:2.00x avg:1.52x
-    Carbonite                      max:2.00x avg:1.52x
-    Copper Ore                     max:2.00x avg:1.59x
-    Lithium Crystal                max:2.00x avg:1.91x
-    Cobalt Ore                     max:2.00x avg:1.67x
-
-  Most crashed (bottom 10):
-    Processed Protein              min:0.500x avg:1.36x
-    Methane Fuel                   min:0.500x avg:1.10x
-    Hydrogen Fuel                  min:0.500x avg:1.10x
-    Purified Water                 min:0.500x avg:1.31x
-    Iron Ore                       min:0.500x avg:1.46x
-    Silicon Ore                    min:0.500x avg:1.52x
-    Carbonite                      min:0.500x avg:1.52x
-    Copper Ore                     min:0.500x avg:1.59x
-    Lithium Crystal                min:0.500x avg:1.91x
-    Cobalt Ore                     min:0.500x avg:1.67x
+  Inflated (top 5):
+    Ceramic Plate                  avg:2.00x
+    Neutronium Flake               avg:1.98x
+    Palladium Ore                  avg:1.96x
+    Gold Ore                       avg:1.96x
+    Quartz Crystal                 avg:1.96x
+  Crashed (bottom 5):
+    Void Charge II                 avg:0.50x
+    Navy Shrapnel Shell            avg:0.50x
+    Microwave Crystal II           avg:0.50x
+    Null Charge                    avg:0.50x
+    Drone Control Unit Compact     avg:0.50x
 
 
-ECONOMY SUMMARY
-  Total inventory: 93,079,206 units
-  Growth rate: 9304 units/tick
+ECONOMY HEALTH
+  Inventory: 93,052,060 | Growth: 9301/tick
+  Ships destroyed: 1468 | Ships built: 1339
+  Destruction rate: 14.7 per 100 ticks
+  Fleet strength: 45 ships across 6 factions
 
-  Military bases:
-    Rigel Garrison                 pop:     945,518 ammo:4509 wpn:9519 fuel:1002
-    Aldebaran Military Base        pop:     581,858 ammo:4509 wpn:9519 fuel:1002
-    Canopus Fleet Command          pop:     452,417 ammo:4509 wpn:9519 fuel:1002
-    Mira Military Base             pop:     539,903 ammo:4509 wpn:9519 fuel:1002
-    Haven Fleet Command            pop:     641,262 ammo:4509 wpn:9519 fuel:1002
-    Epsilon Eridani Garrison       pop:     691,453 ammo:4509 wpn:9519 fuel:1002
-    Lalande Naval Station          pop:     481,029 ammo:4509 wpn:9519 fuel:1002
-    Struve Garrison                pop:     921,527 ammo:4509 wpn:9519 fuel:1002
-    Gliese Fleet Command           pop:      16,814 ammo:4509 wpn:9519 fuel:1002
+  Fleet (2757 ships): {'hauler': 1270, 'freelance': 330, 'miner': 584, 'patrol': 573}
+  States: {'intra_traveling': 1052, 'idle': 1108, 'unloading': 141, 'loading': 26, 'traveling': 24, 'mining': 406}
+  Haulers w/cargo: 1157 | Cargo in transit: 5,859,959
 
-  Fleet (2757 ships):
-    Roles: {'freelance': 328, 'hauler': 1272, 'miner': 584, 'patrol': 573}
-    States: {'intra_traveling': 1069, 'loading': 41, 'unloading': 130, 'idle': 1076, 'traveling': 28, 'mining': 413}
-    Haulers carrying cargo: 1164
-    Total cargo in transit: 5,673,840 units
-    Hauler capacity range: 100 - 100,020 m3
-    Hauler avg capacity: 23,624 m3
-    Total fleet capacity: 30,049,510 m3
+  Shipyards:
+    Kepler Drydock                 inv:56,238 (corsairs)
+    Tau Ceti Dockyard              inv:47,144 (corsairs)
+    Apogee Drydock                 inv:91,936 (science_collective)
+    Argent Drydock                 inv:42,049 (merchants_guild)
+    Breakwater Drydock             inv:41,837 (free_states)
+    Anvil Shipyard                 inv:48,348 (iron_compact)

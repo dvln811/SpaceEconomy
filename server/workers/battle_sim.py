@@ -22,18 +22,19 @@ class BattleSimWorker(WorkerThread):
             ("iron_compact", "free_states"),
             ("corsairs", "merchants_guild"),
             ("corsairs", "terran_fed"),
+            ("corsairs", "science_collective"),
         ]
 
     def process(self, tick: int, snapshot):
         universe = snapshot['universe']
 
-        # Run skirmishes
+        # Run skirmishes every 20 ticks - moderate probability
         for attacker_id, defender_id in self.conflicts:
-            if random.random() < 0.4:
+            if random.random() < 0.3:
                 self._run_skirmish(attacker_id, defender_id, tick)
 
-        # Try to build replacement ships every 50 ticks
-        if tick % 50 == 0:
+        # Try to build replacement ships every 10 ticks (faster rebuild)
+        if tick % 10 == 0:
             self._try_build(universe, tick)
 
     def _run_skirmish(self, attacker_id: str, defender_id: str, tick: int):
@@ -45,7 +46,7 @@ class BattleSimWorker(WorkerThread):
         a_losses = 0
         d_losses = 0
 
-        for _ in range(random.randint(1, 3)):
+        for _ in range(random.randint(1, 2)):
             available = [(k, v) for k, v in a_fleet.items() if v > 0]
             if available:
                 weights = [v * (3 if MILITARY_SHIPS[k].hull_class in ('fighter', 'frigate') else 1) for k, v in available]
@@ -54,7 +55,7 @@ class BattleSimWorker(WorkerThread):
                 a_losses += 1
                 self.emit(ShipDestroyedEvent(faction_id=attacker_id, ship_class_id=chosen[0]))
 
-        for _ in range(random.randint(1, 3)):
+        for _ in range(random.randint(1, 2)):
             available = [(k, v) for k, v in d_fleet.items() if v > 0]
             if available:
                 weights = [v * (3 if MILITARY_SHIPS[k].hull_class in ('fighter', 'frigate') else 1) for k, v in available]
