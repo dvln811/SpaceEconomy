@@ -2,10 +2,12 @@
 
 ## What This Is
 
-A browser-based space economy simulation (GCS: SpaceEconomy). Single-player with a living, agent-driven commodity market across 2,500 star systems. 6 NPC factions mine, trade, build, expand, and will eventually wage war autonomously. The player participates as one actor in this economy. Built on assets from the developer's prior game (GCS: Salvage Rat, previously on Steam).
+A browser-based space economy simulation. Single-player (Devlyn) with a living, agent-driven commodity market across 2,500 star systems. 6 NPC factions mine, trade, build, expand, and wage war autonomously. The player participates as one actor - flying ships, trading, building a corporation, eventually leading a faction. Built on assets from GCS: Salvage Rat (previously on Steam).
+
+**Goal:** A 24/7/365 persistent simulation that self-sustains over months/years without collapsing (unlike X4 Foundations). Eve Online economy depth + Mount & Blade delegation + actual working long-term sustainability.
 
 **Owner:** Devlyn Napoli
-**Repo:** https://github.com/dvln811/SpaceEconomy
+**Repo:** https://github.com/dvln811/SpaceEconomy (PRIVATE, Pro plan $4/mo, 3000 Actions min/month)
 **Live:** https://spaceeconomy.fly.dev
 **Debug:** https://spaceeconomy.fly.dev/debug
 **Local Dev:** `python dev.py [speed] [duration]` (e.g., `python dev.py 120 60`)
@@ -14,15 +16,16 @@ A browser-based space economy simulation (GCS: SpaceEconomy). Single-player with
 
 ## WORKFLOW RULES
 
-1. **Commit and push after completing each task/change.**
+1. **Batch pushes** - commit locally as we work, only push when validated/milestone reached (saves Actions minutes)
 2. Read this file at the start of every session.
 3. **NO M-DASHES in replies.**
 4. **No raw IDs displayed anywhere** - always title case or lookup names.
 5. Item names must NOT include size labels (size is a separate column/badge).
 6. **Ask before coding** when user asks a question vs requests a change.
-7. Use `python dev.py` for local testing instead of deploying for every change.
+7. Use `python dev.py` or `python _sim.py` for local testing.
 8. Nuke button on /debug resets runtime state after breaking changes.
-9. **ALL scrollbars must be themed** (dark track, subtle thumb) on every page. Never leave default browser scrollbars.
+9. **ALL scrollbars must be themed** (dark track, subtle thumb) on every page.
+10. **1 tick = 6 minutes** of game time (10 ticks/hour, 240 ticks/day, ~87,600 ticks/year).
 
 ---
 
@@ -31,29 +34,40 @@ A browser-based space economy simulation (GCS: SpaceEconomy). Single-player with
 ### Tech Stack
 - **Backend:** Python (Flask + gunicorn), fly.io (shared-cpu-2x, 1GB RAM)
 - **Frontend:** Vanilla JS + Three.js (3D maps), single-page app with left nav panel
-- **Simulation:** Multi-threaded Supervisor + 6 Workers, ~25ms/tick with 1476 ships
+- **Simulation:** Multi-threaded Supervisor + 6 Workers, ~8 t/s headless with 2757 ships
 - **Databases:** SQLite (game_data.db in git, game.db runtime on volume)
-
-### Navigation Structure
-- Left nav panel (persistent): Map | Ship (stub) | Inventory (stub) | Market | Encyclopedia | Settings (stub) | Dashboard (red)
-- Clicking nav loads content in iframe overlay on the map area
-- Encyclopedia loads /docs hub, which has tab navigation to all doc pages
-- Market opens filtered to player's region (The Forge), debug version has region dropdown
+- **Performance ceiling:** ~8-16 t/s headless (Python GIL limits true parallelism). Live server runs 1 tick/sec with ~80ms budget - plenty of headroom.
 
 ### Simulation Architecture
-- **Supervisor** - tick clock (1/sec), snapshot distribution, intent merge, station index
-- **Economy Worker** - production, consumption (2/tick), ore generation, price updates (every 60 ticks)
-- **NPC Decision Worker** - hauler/miner/freelance AI, batched 200/tick
-- **Faction Strategy Worker** - decisions every 100 ticks, corp task assignment, project phases
-- **Battle Sim Worker** - fleet combat (every 20 ticks)
-- **Dashboard Worker** - pre-computes all dashboard aggregates every 10 ticks (25KB response vs former 3MB)
-- Performance: ~25ms/tick, ~40 ticks/sec at 120x
+- **Supervisor** - tick clock (1/sec), snapshot distribution, intent merge, station index, ship movement
+- **Economy Worker** (every tick) - production, population-scaled consumption, ore generation, price updates (every 60 ticks)
+- **NPC Decision Worker** (every tick) - contract-based hauler AI, miner AI, freelance AI, batched 200/tick
+- **Faction Strategy Worker** (every 100 ticks) - decisions, corp tasks, build project material consumption
+- **Battle Sim Worker** (every 20 ticks) - faction skirmishes, ship destruction, shipyard rebuilding
+- **Corsair Spawn Worker** - corsair raid generation
+- **Dashboard Worker** (every 10 ticks) - pre-computed dashboard aggregates
 
-### Key Performance Design
-- `/api/debug` returns pre-computed 25KB summary (NOT raw data)
-- `/api/market/orders` builds order book on request, filtered by region
-- Delta mode on `/api/ships` for game map (only changed ships sent)
-- Station index in supervisor for O(1) intent application
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| server/main.py | Flask app, all API endpoints, simulation startup |
+| server/supervisor.py | Tick loop, intent merge, station index, ship movement |
+| server/simulation.py | Universe init, ship spawning (~2757 NPCs) |
+| server/workers/economy.py | Production/consumption/prices with population scaling |
+| server/workers/npc_decisions.py | Contract-based hauler AI, miner AI |
+| server/workers/faction_strategy.py | Faction decisions, build project material consumption |
+| server/workers/battle_sim.py | Faction skirmishes, ship destruction/rebuilding |
+| server/combat_engine.py | Standalone 3D combat simulation (spatial, per-shot) |
+| server/ship_geometry.py | 79 ship 3D models (component-based, Three.js) |
+| server/models.py | Dataclass definitions (System, Station, NPCShip, etc) |
+| server/data_access.py | DB loading functions |
+| economy_config.yaml | Tunable economy parameters |
+| dev.py | Local dev runner (headless, high-speed) |
+| _sim.py | Economy simulation with progress bar + results dump |
+| _telemetry.py | Detailed per-100-tick telemetry for economy analysis |
+| sim_events.py | Event injection stress tester |
+| tuning_log.txt | History of all economy tuning rounds |
 
 ---
 
@@ -61,267 +75,259 @@ A browser-based space economy simulation (GCS: SpaceEconomy). Single-player with
 
 | Table | Purpose |
 |-------|---------|
-| commodities (1540) | Items with category/subcategory/group_name, stats JSON, recipes |
-| recipes (3399) | Production chain inputs |
-| ships (79) | 14 civilian + 42 original military + 37 new variants |
-| systems (2500) | Positions, sec_level (0.0-1.0), faction_id, region, population |
-| stations (435) | Types: mining_colony, refinery, component_works, factory, trade_hub, military_base, shipyard |
-| station_produces (1540) | What each station manufactures |
-| station_consumption (56) | Passive demand per station type |
-| build_projects (10+) | Faction construction projects (stations, dreadnoughts, fleets) |
-| corporations (45) | Sub-factions with emblems, heads, specialties, history |
-| faction_agents (72) | Named agents with portraits, traits, bios |
-| faction_state (6) | Personality values, treasury, priorities |
-| faction_decisions | Rolling decision log with reasoning |
+| commodities (1540) | Items with category/subcategory/group_name, stats JSON (includes cpu_cost, pg_cost), recipes |
+| recipes (3399) | Production chain inputs (commodity_id, input_id, quantity) |
+| ships (91) | All ships with full fitting stats (cpu, powergrid, high/mid/low slots, turret/launcher hardpoints, signature, scan_res, etc.) |
+| systems (2500) | Positions, sec_level (0.0-1.0), faction_id, region, population (up to 2B) |
+| stations (535) | Types: mining_colony(93), refinery(185), component_works(60), factory(82), trade_hub(100), military_base(9), shipyard(6) |
+| station_produces (1586) | What each station manufactures |
+| station_consumption (117) | Passive demand per station type (includes weapons/ammo for military, fuel for trade hubs) |
+| fleet_targets (42) | Target fleet composition per faction for battle_sim rebuilding |
+| build_projects (10+) | Faction construction projects - now actually consume materials |
+| corporations (45) | Sub-factions with specialties |
+| faction_agents (72) | Named agents with traits |
+| faction_state (6) | Personality values |
+| faction_decisions | Rolling decision log |
 
 ---
 
-## Economy
+## Ship Fitting System (NEW - June 27)
+
+### Slot System
+- **High Slots** (red) - Weapons, mining lasers, salvagers, tractor beams, remote repair, cloaks
+- **Mid Slots** (yellow) - Shield mods, propulsion (AB/MWD), EWAR, tackle, cap boosters, scanners
+- **Low Slots** (green) - Armor plates/repairers/hardeners, damage mods, engineering, cargo expanders
+
+### Hardpoints (sub-limit within High Slots)
+- **Turret Hardpoints** - max turrets (lasers, railguns, autocannons, blasters)
+- **Launcher Hardpoints** - max missile/torpedo launchers
+
+### Fitting Resources
+- CPU (tf) - processing capacity, EWAR/electronics intensive
+- Power Grid (MW) - energy output, weapons/shields/propulsion intensive
+- Capacitor (GJ) - energy pool, active modules drain per cycle
+
+### Ships (91 total, 79 geometries)
+- Removed: Viper Interceptor, Warden Frigate (prototypes)
+- Hull classes: Fighter(12), Frigate(12), Destroyer(13), Cruiser(12), Battlecruiser(12), Battleship(12), Carrier(2), Dreadnought(5), Industrial(6), Mining Barge(5)
+- Each has: CPU, PG, cap, cap_recharge, signature, scan_res, sensor_strength, target_range, max_targets, high/mid/low slots, turret/launcher hardpoints, manufacturer
+- Realistic dimensions: Fighter 30-50m, Frigate 60-110m, Cruiser 300-500m, Dreadnought 2200-3800m
+- Realistic speeds (m/s): Fighter ~400, Frigate ~330, Cruiser ~175, BS ~103, Dread ~54
+- Cargo: Fighter 15, Frigate 50, Destroyer 120, Cruiser 300, BC 500, BS 800, Carrier 2500, Dread 1500
+- Industrials: Pinto 120, Mule 1500, Bison 5000, Ox 15000, Mammoth 30000, Clydesdale 100000
+- Mining Barges: Prospect 500, Rock Hopper 800, Strip Miner 2500, Excavator 4000, Deep Core 10000
+
+### Module Fitting Costs
+- All 940 Ship Equipment + Weapons items have cpu_cost and pg_cost in stats JSON
+- Quality modifiers: Standard 1.0x, Named 0.85x, T2 1.20x, Faction 0.90x
+- Stacking penalty: effectiveness(n) = 0.5 ^ ((n-1) / 2.22)^2
+
+### Manufacturers
+- Terran Fed: Apex Fleet
+- Free States: Nova Logistics
+- Iron Compact: Meridian Collective
+- Merchants Guild: Talon Solutions
+- Science Collective: Citadel Syndicate
+- Corsairs: Black Shipwrights
+- Civilian: Frontier Shipworks
+
+### Reference Docs
+- `docs/FITTING_SPEC.md` - Complete fitting specification
+- `/fitting` page - Mechanics reference (no ship lists)
+- `/ships_db` - All ships with fitting stats from DB
+- `/ships` - 3D viewer with spec panel showing CPU/PG/slots/defense/nav/sensors
+
+---
+
+## Economy System (MAJOR REBALANCE - June 27-28)
+
+### Timescale
+- 1 tick = 6 minutes game time
+- 240 ticks = 1 game day
+- 87,600 ticks = 1 game year
+
+### Population-Driven Consumption
+- `consumption_rate = 2.0 * max(0.5, system_population / 100,000,000)`
+- 1B population system: 20x base consumption per commodity per tick
+- 500K population (null-sec): 1x base (floor of 0.5 * 2 = 1.0/tick)
+- Creates natural demand hotspots in high-sec
+
+### Station Consumption (117 entries)
+- Refineries: 22 ore types (recipe inputs)
+- Component Works: 16 refined materials
+- Factories: 11 manufactured inputs
+- Military Bases: 32 items (weapons, ammo, equipment, fuel, materials)
+- Shipyards: 77 items (ALL ship build materials + hull components)
+- Trade Hubs: 4 items (fuel, water, protein)
+- Mining Colonies: 2 items (food, water only - NO fuel)
+
+### Military Self-Supply
+- Military bases and shipyards generate consumed items at 1.5x consumption rate
+- Capped at 500 units per item (prevents hoarding)
+- Represents internal manufacturing/logistics
 
 ### Pricing
-- Base prices calibrated: S Standard weapon ~3,500, C Faction ~16M
-- Ships: Pinto Runner 8K, Frigates 3.5M, Destroyers 15M, Dreads 65B
-- Ammo: S=10, M=30, L=90, C=300
-- Buy orders capped at 2x base price, sell never below base
+- Soft price anchor: pulls back 70% when above 1.5x or below 0.67x base
+- Absolute safety cap: 0.33x - 3.0x (rarely hit)
+- Pressure: +/-0.2 per 60-tick update, cap +/-15, decay 0.90
+- Still being tuned (see Economy Tuning Status below)
 
-### Production Chain
-Raw ores (T1) -> Refined materials (T2) -> Manufactured (T3) -> Components (T4) -> Final products (T5)
-- Mining colonies generate ore passively
-- Baseline input trickle keeps stations from permanently stalling
-- 197 producing stations, ~1490 active at any time
+### Mining & Production
+```yaml
+mining:
+  yield_multiplier: 400          # ore per cycle = 400 * field_density
+  cycle_ticks: 50
+  unload_ticks: 25
+passive_generation:
+  rate_multiplier: 3.0           # ore/tick = 3 * density per type per colony
+  inventory_cap: 500000
+economy:
+  production_rate: 1.0           # (refineries: 3.0 in DB)
+  baseline_trickle_mult: 0.3
+  price_update_interval: 60
+```
 
-### Market Orders
-- Production demand: stations buy inputs when below 100-tick buffer
-- Station consumption: 56 entries, 2/tick passive drain
-- Population demand: civilian buy orders at all stations in populated systems
-- Military demand: military bases buy weapons/ammo/drones at 1.3x
-- Build project demand: cascaded material needs for faction construction
-- Sell orders: any inventory with price > base_price
+### NPC Fleet (2757 ships)
+- **Haulers (~1300)**: Contract-based AI, 72% utilization, 6M units in transit
+- **Freelancers (~320)**: Profit-seeking, buy cheap sell expensive
+- **Miners (584)**: 5 per mining system, yield 400*density/cycle
+- **Military patrol (573)**: Idle (patrol routes not yet implemented)
 
-### NPC Fleet (1476 ships)
-- **Haulers (507)**: assigned to stations, haul needed inputs from region
-- **Freelancers (133)**: profit-seeking, buy cheap sell expensive
-- **Regular miners (214)**: mine at station systems, sell locally
-- **Deep miners (49-100)**: mine exotic ores at remote systems, haul to nearby stations
-- **Military patrol (573)**: idle (combat AI not yet implemented)
+### Hauler AI: Contract System (NEW)
+- Every 50 ticks: scans ALL stations for deficits (recipe inputs + consumption items)
+- Builds sorted contract list (biggest deficits first)
+- Haulers claim cargo-capacity-sized slices, find nearest source, buy, deliver
+- Inter-regional hauling as fallback
+- Load balancing via qty_claimed prevents dogpiling
+- Replaces old assigned-station system (which left 85% idle)
 
-### Mining Cycle
-- Regular: mine(50t) -> unload(25t) -> mine again (same system)
-- Deep: mine(50t) -> travel to station(15-30t) -> unload(25t) -> travel back(15-30t) -> mine
-- Yield: ~25 * field_density per 50-tick cycle
-- Ships fill over 3-4 cycles before selling
+### Combat Attrition (demand sink)
+- Battle Sim Worker: 4 faction conflict pairs
+- Skirmishes every 20 ticks at 0.3 probability, 1-2 losses per side
+- ~14-15 ships destroyed per 100 ticks
+- Shipyards rebuild from inventory (consuming real materials)
+- ~1300 ships rebuilt per 10K ticks
+- Fleet strength maintains at ~45 ships across factions
+
+### Faction Build Projects (NOW CONSUMING MATERIALS)
+- Station expansion: requires station_hull_plating, reactor_module, life_support, etc.
+- Fleet builds: uses REAL ship build costs from DB (battleships = 23K materials)
+- During "constructing" phase, pulls materials from faction shipyards/factories
+- Completes when accumulated >= requirements
+- New projects auto-created on expand/attack decisions
 
 ---
 
-## Factions & Territory
+## Economy Tuning Status (IN PROGRESS)
 
-### 6 Factions
-| Faction | Systems | Avg Sec | Archetype |
-|---------|---------|---------|-----------|
-| Merchants Guild | 170 | 0.55 | Corporate |
-| Free States | 152 | 0.55 | Military |
-| Science Collective | 150 | 0.45 | Corporate |
-| Iron Compact | 140 | 0.45 | Military |
-| Terran Federation | 90 | 0.44 | Military (boxed in) |
-| Corsairs | 71 | 0.44 | Renegade |
+### What's Working
+- Fuel economy stable (avg 1.10x base)
+- Military bases stocked (4500 ammo, 9500 weapons, 1000 fuel)
+- Hauler utilization 72% (1200/1600 carrying cargo)
+- 6M units actively in transit
+- Combat attrition consuming ~1400 ships/10K ticks
+- Faction build projects consuming materials from shipyards
+- Production chains functional (ore -> refined -> manufactured -> components)
 
-- 10 border zones between factions (up to 44 connections at major fronts)
-- 70% unclaimed space for expansion
-- Security: 0.3+ in all claimed space, gradient from border (low) to core (high)
-- Population: high-sec ~1B, mid ~23M, low ~520K, null ~2500
+### Known Issues Being Investigated
+- **Ore prices elevated** (Iron 1.46x, Copper 1.60x, rare ores at 3x) - 185 refineries demanding ore from 93 mining colonies, logistics bottleneck
+- **Weapons crashing** (0.49x) - Military self-supply generates faster than consumption (no real combat drain from station inventory yet)
+- **Refined intermediates oversupplied** - Lithium Cell, Chromium Plate, etc. produced by 25+ stations, consumed by nobody
+- **Growth rate 9,300 units/tick** - ore stockpiling at mining colonies (will self-limit at 500K cap)
+- **Price distribution** - 52% at 3x ceiling, 35% below 0.5x floor. Soft anchor not strong enough for current imbalance.
 
-### Faction AI
-- Decisions every 100 ticks with reasoning logged
-- Corp task assignment (mining, hauling, patrol, production)
-- Build projects: station expansion + dreadnought programs per faction
-- Project phases: scouting -> staging -> constructing
+### Root Causes Identified
+1. Refinery count (185) too high relative to ore supply (93 colonies) - each colony must feed 2 refineries
+2. Military self-supply at 1.5x consumption creates surplus (should be < 1.0x or conditional on market availability)
+3. Rare ores (Palladium, Neutronium, Quartz Crystal) only generated at 1 colony each, consumed by 185 refineries
+4. Weapons produced via trickle at military bases but never actually consumed (combat doesn't drain station ammo inventory)
 
-### Corporations (45)
-- Each has: emblem, head agent (portrait), specialty, history, members, stations
-- Assigned tasks by faction leadership
-- Head agent regenerates with faction
+### Telemetry System
+- `_telemetry.py` - detailed per-100-tick logging of ore flow, hauler activity, miner states, refinery throughput, military inventory, price history
+- Outputs to `sim_telemetry.json` (large file, ~5-50MB)
+- Use for tracing exactly WHERE supply chain breaks down
+
+### Next Tuning Steps
+1. Analyze telemetry data to trace exact breakdown points
+2. Fix military self-supply (conditional on market, not always-on)
+3. Add more mining colonies for rare ores
+4. Consider reducing refinery count or lowering their production rate
+5. May need to revert to hard price clamp until structural issues fixed
+
+---
+
+## Combat System
+
+### 3D Combat Viewer (/combat)
+- Full 3D spatial simulation with ship models
+- 4 damage types: EM, Thermal, Kinetic, Explosive with resistance profiles
+- Per-shot resolution, angular velocity tracking, range falloff
+- Missiles as spatial entities with lead prediction
+- Movement in full 3D (x/y/z) - ships use vertical space
+- Post-battle: ships hold position (no orbit/fly-off)
+- Destroyed BC+ ships: gray wrecks with trails removed
+- Camera: WASD free fly, orbit, follow ship
+- Ship models from ship_geometry.py (79 geometries)
+- Performance: 200 ships at 60fps, 500 at 44fps (RTX 4060 Ti)
+
+### Battle Sim (abstract, in-sim)
+- Fleet targets per faction in DB
+- Skirmishes at faction borders (4 conflict pairs)
+- Ships destroyed -> ShipDestroyedEvent -> supervisor decrements fleet
+- Ships rebuilt when shipyard has materials -> ShipBuiltEvent -> supervisor increments fleet
+- ~14.7 destroyed per 100 ticks, maintains ~45 fleet strength
 
 ---
 
 ## Frontend Pages
 
-| Nav Button | URL | Purpose |
-|-----------|-----|---------|
-| Map | / (game.html) | 3D star map, system view, route planning |
-| Ship | /ship | Stub - player ship status |
-| Inventory | /inventory | Stub - cargo/assets |
-| Market | /market | Live market (treeview, buy/sell, right-click actions) |
-| Encyclopedia | /docs | Hub -> Items DB, Ships DB, Chain Calc, Ships 3D, Fitting, Universe, Resources, Materials, Products, Design |
-| Settings | /settings | Stub |
-| Dashboard | /debug | Overview, Factions, Stations, Ships, Combat, Market |
-
-### Star Map Features
-- Color modes: Star Type, Faction, Security, Region
-- System search box (Enter to zoom)
-- Right-click: Set Route, Add Waypoint, View System
-- Route planning: BFS pathfinding, green-yellow path overlay
-- Route panel in right sidebar (CURR/WPT/DEST badges)
-- System info panel shows sec_level, faction, region, constellation
-- Hover tooltip: faction, security (color-coded), region, constellation
-
-### Market Features
-- Treeview: category > subcategory > group_name > individual items (4 levels deep)
-- Buy/sell panes with sortable columns (item, qty, price, jumps, station, system, region)
-- Item info panel with stats when selected
-- Right-click context menu: Buy/Sell (stubs), Navigate, Set Route, Add Waypoint, Copy
-- Region filter (debug mode only shows dropdown)
-- Size prefix in item names (S Beam Laser, C Autocannon)
+| URL | Purpose |
+|-----|---------|
+| / (game.html) | 3D star map, system view, route planning |
+| /ship | Stub - player ship status |
+| /inventory | Stub - cargo/assets |
+| /market | Live market (treeview, buy/sell, right-click) |
+| /docs | Encyclopedia hub |
+| /ships_db | All ships - unified by class, shows CPU/PG/slots/hardpoints |
+| /ships | 3D ship viewer with full spec panel from DB |
+| /fitting | Fitting mechanics reference |
+| /items | Items database |
+| /chain | Production chain calculator |
+| /universe | Universe/systems info |
+| /combat | 3D combat viewer |
+| /design | Game design document |
+| /debug | Dashboard (overview, factions, stations, ships, combat, market) |
+| /settings | Stub |
 
 ---
 
-## Key Files
+## Design Vision (from /design page)
 
-| File | Purpose |
-|------|---------|
-| server/main.py | Flask app, all API endpoints |
-| server/supervisor.py | Tick loop, intent merge, station index, ship movement |
-| server/simulation.py | Universe init, ship spawning (_populate_universe) |
-| server/workers/economy.py | Production/consumption/prices |
-| server/workers/npc_decisions.py | Hauler/miner/freelance AI |
-| server/workers/faction_strategy.py | Faction decisions, corp tasks |
-| server/workers/dashboard.py | Pre-computed dashboard cache |
-| server/dashboard_cache.py | DashboardCache class |
-| server/persistence.py | Save/load game.db |
-| server/models.py | Dataclass definitions (System, Station, NPCShip, etc) |
-| server/data_access.py | DB loading functions |
-| server/change_tracker.py | Delta tracking for /api/ships |
-| server/combat_engine.py | Standalone combat simulation (spatial, per-shot) |
-| server/ship_geometry.py | 81 ship 3D models (component-based, Three.js) |
-| economy_config.yaml | Tunable economy parameters (mining, passive gen) |
-| combat_viewer.py | Browser combat test UI (localhost:5555) |
-| dev.py | Local dev runner (high-speed simulation + status output) |
-
----
-
-## Current Status
-
-### Working Well
-- Multi-threaded sim at 25-27ms/tick with 1476 ships (stable over 50K ticks)
-- Mining cycle fully working: belt->station->unload->return (observable in system view)
-- 263 miners (214 regular + 49 deep), ~207 actively mining at any time
-- Market with buy/sell orders across ALL categories (weapons, ammo, equipment, materials, trade goods)
-- 35 trade goods with lore descriptions, population-based consumption
-- 8 refined exotic ores added, recipes updated to use them
-- Faction AI with decisions, corp tasks, build projects
-- Dashboard with pre-computed aggregates (25KB, <5ms)
-- Route planning with pathfinding
-- Local dev tools: `dev.py` (headless), `analyze.py` (deep state analysis), `run_local.py` (browser)
-
-### Current Analysis (in progress)
-After economy rebalance:
-- Passive ore gen reduced from 50*density to 1*density (cap 5K) via economy_config.yaml
-- Miner fleet scaled from 263 to 584 (5 per mining system), yield 40*density
-- Industrial ship recipes fixed (13 ships, all use real components with recipe chains)
-- Hauler AI: deficit-weighted random input selection (prevents clustering)
-- Result: inventory growth reduced 91% (96M -> 8.7M per 10K ticks)
-- Trade volume doubled (32K -> 66K per 10K ticks)
-- 50K run stable: 23 t/s, 333K trades, decelerating growth
-- 29 stations still halted (need recipe fixes)
-- Iron/copper ore prices show as crashed at mining colonies but healthy at refineries (spread = hauler opportunity)
-
-### Next Steps (immediate)
-1. Wire combat engine into battle_sim worker (patrol ships engage at borders)
-2. Build 3D battle viewer with ship models (Three.js, data streaming ready)
-3. Add projectile travel time for turrets (beams instant, projectiles spatial)
-4. Tune production/consumption balance (manufactured goods still accumulating)
-5. Address remaining 29 halted stations
-
-### Not Yet Implemented
-- Combat system integration into main sim (engine built, not yet wired to battle_sim worker)
-- Faction orders actually doing things (expand builds stations, attack triggers battles)
-- Build projects completing (materials never accumulate at targets)
-- Player ship control (docking, undocking, travel, mining)
-- Player trading (buy/sell at stations)
-- Ship fitting (equipping modules)
-- Corsair raids on deep miners
-- Ship visual teleporting fix (intra-travel interpolation)
-- Ship double-click zoom in system view
-- 3D battle viewer (Three.js, ship models ready, engine supports spatial)
-
-### Combat Simulation Engine (standalone + integrated viewer)
-- **Location:** `server/combat_engine.py` (engine) + `combat.html` (3D viewer at /combat)
-- **Run locally:** `python combat_viewer.py` -> http://localhost:5555 (2D version)
-- **Live:** /combat on fly.io (full 3D with ship models)
-- **Features:**
-  - Full 3D spatial simulation (x/y/z positions, velocities, acceleration)
-  - 4 damage types: EM, Thermal, Kinetic, Explosive
-  - Shield/Armor/Hull with distinct resistance profiles
-  - Per-shot resolution with true angular velocity tracking
-  - Weapon size vs signature (L turrets miss small ships)
-  - Range-based damage falloff + range check (can't fire beyond 2x optimal)
-  - Missiles as spatial entities with lead prediction and line-trace detonation
-  - Capacitor drain per weapon shot (lasers cap-intensive, projectiles free)
-  - Module HP with bleedthrough damage (5% armor, 15% hull hit chance)
-  - Ammo consumption from cargo
-  - Movement AI: brawl (close), orbit (maintain range), kite (back off), snipe (stay far)
-  - CPU/Powergrid fitting constraints (data structure ready, not enforced yet)
-- **3D Viewer:** Three.js full viewport, actual ship models from ship_geometry.py
-  - Ship scaling by hull class (Fighter 0.5x to Dreadnought 100x)
-  - Starfield skybox, engine trails, beam/projectile weapon lines, missile spheres
-  - Camera: WASD+Space/C free fly, mouse orbit, Shift boost, R/F look-axis drive
-  - Eve-style compact ship list (name, class, distance), filter tabs (All/Alive/Wrecks)
-  - Hover tooltip for ship details, click=select, dblclick=follow+zoom
-  - Destroyed small ships become billboard sprites (near-zero GPU cost)
-  - Destroyed large ships (BC+) stay as gray wrecks
-  - Gold loot markers at kill locations
-  - Resizable battle log
-  - Pause/Restart/Stop controls, fleet size input (up to 1000)
-  - ?max_ships= URL param for render cap on weaker hardware
-- **Render Optimizations (feature/combat-render-optimization branch):**
-  - Merged geometry: all ship components merged into single BufferGeometry (2 draw calls per ship instead of ~30)
-  - Viewport cap: priority-based visibility (larger ships always rendered)
-  - Memory cleanup: dispose geometry/material/trails on ship death
-  - LOD system: static/ship_lod.js (full mesh / bounding box / billboard), viewer in ship designer tool
-  - Result: 500 ships at 44fps / 200 ships at 60fps on RTX 4060 Ti
-- **Performance:** 50v50 = 1.8ms/tick, 200v200 = 12ms/tick
-- **Ship models:** 81 geometries in `server/ship_geometry.py`, component-based Three.js format
-- **Next:**
-  - Wire combat into battle_sim worker (patrol ships engage at borders)
-  - Station models for 3D system view
-  - Projectile travel time for turrets (beams instant, projectiles spatial)
-  - Settings page: render cap slider, graphics quality
-  - M&B-style reinforcement streaming for 1000+ ship battles
-
-### Local Dev Tools
-- `python dev.py [speed] [duration]` - headless sim, console output, for quick checks
-- `python analyze.py [ticks] [interval]` - deep state dump to analysis_deep.json
-- `python run_local.py` - full server at localhost:8000, starts at 1x, use dashboard to change speed
-- `start_local.ps1` - PowerShell launcher for run_local.py
-- `python tools/ship_designer/app.py` - Ship designer tool at localhost:5050
-- Max safe browser speed: ~60x. Higher causes GIL contention with Flask.
-- Headless max: ~27 ticks/sec (480x multiplier)
-
-### Ship Designer Tool (tools/ship_designer/)
-- **Run:** `python tools/ship_designer/app.py` -> http://localhost:5050
-- **Tabs:** Ship Generator | Component Library | Review | LOD Viewer
-- **Ship Generator:** Attachment-point based assembly, faction styles, hull class scaling
-  - Three-pass: skeleton (zones) -> mass (hull density clusters) -> details
-  - Hull class overrides for fighters (flat horizontal shapes)
-  - Generates 10-100 components depending on class
-- **Component Library:** 43 procedural styles + 15 extracted from existing ships, category filter
-- **Review:** Batch generate per faction, keep/regenerate workflow, export to ship_geometry.py
-- **LOD Viewer:** Screen-size-based LOD (UE5 style), dropdown for Auto/LOD0/1/2/3
-  - Formula: screenFrac = radius / (distance * tan(fov/2))
-  - LOD0 >0.5%, LOD1 0.1-0.5%, LOD2 0.03-0.1%, LOD3 <0.03%
-- **81 ship models generated** for all non-corsair vessels
-
-### Known Issues
-- Worker timeout warnings at high speed (harmless, increased to 30s)
-- 240x+ with browser open causes GIL contention (use headless for high speed)
-- Route options (Prefer Safe/Avoid Null) are UI only
-- `_tag_portraits.html` and `_tag_emblems.html` utility files in repo (cleanup later)
+- **Living simulation, not a game to "beat"** - runs 24/7, evolves over years
+- **Eve-scale economy** - millions of units, weeks to build capitals, real scarcity
+- **M&B delegation** - appoint governors, admirals, set policy. NPCs execute.
+- **Economy that doesn't collapse** - the core engineering challenge
+- **Warfare as demand sink** - perpetual cycle prevents stagnation
+- **Geographic friction** - 2,500 systems, rare resources far away and dangerous
+- **Player flies a ship** - trade, fight, explore. Combat is strategic (M&B auto-resolve style with visibility)
+- **Faction politics** - join/create faction, rise through ranks, get elected ruler
+- **Put game down for months** - come back, universe has evolved autonomously
 
 ---
 
 ## Build/Deploy
 
-- Push to master auto-deploys to fly.io
-- `data/game_data.db` ships with code (Dockerfile copies to volume on deploy)
-- `data/portrait_tags.json` and `data/emblem_tags.json` also copied to volume
+- Push to master auto-deploys to fly.io via GitHub Actions
+- `data/game_data.db` ships with code (Dockerfile copies to volume)
 - Nuke via /debug resets game.db + faction_decisions + corp activities
-- Local: `python dev.py 120 60` for fast simulation testing
+- Local testing: `python _sim.py 10000` (10K ticks with progress bar -> sim_results.txt)
+- Telemetry: `python _telemetry.py 10000` (detailed -> sim_telemetry.json)
+- Event injection: `python sim_events.py 10000` (stress test with faction build events)
+
+---
+
+## Revert Points
+
+- `d296047` - Last stable state before soft price anchor (hard clamp 0.5x-2.0x working)
+- `4c02998` - Soft anchor + faction strategy material consumption (current, being tested)
+- `e35258b` - Fix for conn error in faction_strategy (current HEAD)
