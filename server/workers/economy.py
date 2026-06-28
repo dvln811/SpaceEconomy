@@ -168,9 +168,18 @@ class EconomyWorker(WorkerThread):
                     supply = max(1, stock)
                     base_price = calculate_price(commodity_id, supply, demand, commodities)
                     new_price = round(base_price * (1 + pressure / 100), 2)
-                    # Hard clamp: never deviate more than 2x from base
+                    # Soft anchor: blend toward base price (stronger pull the further away)
                     bp = commodities[commodity_id].base_price
-                    new_price = max(bp * 0.5, min(bp * 2.0, new_price))
+                    deviation = new_price / bp if bp > 0 else 1.0
+                    if deviation > 1.5:
+                        # Above 1.5x: pull back harder
+                        new_price = bp * 1.5 + (new_price - bp * 1.5) * 0.3
+                    elif deviation < 0.67:
+                        # Below 0.67x: pull back harder
+                        new_price = bp * 0.67 - (bp * 0.67 - new_price) * 0.3
+                    # Absolute cap at 3x / 0.33x (safety net, not normally hit)
+                    new_price = max(bp * 0.33, min(bp * 3.0, new_price))
+                    new_price = round(new_price, 2)
                     old_price = station.price_cache.get(commodity_id)
 
                     if old_price is None or new_price != old_price:

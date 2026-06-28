@@ -67,7 +67,7 @@ class FactionStrategyWorker(WorkerThread):
             if decision:
                 self._log_decision(conn, fid, tick, decision, reasoning)
                 self._assign_corps(conn, fid, decision, tick)
-                self._update_phases(conn, fid, tick)
+                self._update_phases(conn, fid, tick, universe)
                 if decision == 'attack':
                     self._maybe_create_fleet_build(conn, fid, tick)
                 self._execute(fid, decision, assessment, tick)
@@ -180,15 +180,17 @@ class FactionStrategyWorker(WorkerThread):
             activity = json.dumps({"task": task, "target": decision, "progress": 0, "assigned_tick": tick})
             conn.execute("UPDATE corporations SET activity=? WHERE id=?", (activity, corp['id']))
 
-    def _update_phases(self, conn, fid, tick):
+    def _update_phases(self, conn, fid, tick, universe):
         projects = conn.execute(
-            "SELECT id, project_type, created_tick, phase, status FROM build_projects WHERE faction_id=? AND status='active'",
+            "SELECT id, project_type, created_tick, phase, status, requirements, accumulated, target_system FROM build_projects WHERE faction_id=? AND status='active'",
             (fid,)
         ).fetchall()
 
         for p in projects:
             age = tick - p['created_tick']
             new_phase = p['phase']
+            requirements = json.loads(p['requirements']) if p['requirements'] else {}
+            accumulated = json.loads(p['accumulated']) if p['accumulated'] else {}
 
             if p['project_type'] == 'station_expansion':
                 if age < 200:
@@ -205,28 +207,69 @@ class FactionStrategyWorker(WorkerThread):
                 else:
                     new_phase = 'constructing'
 
+            # During constructing phase, consume materials from faction shipyards
+            if new_phase == 'constructing' and requirements:
+                self._consume_for_project(fid, requirements, accumulated, universe)
+                conn.execute("UPDATE build_projects SET accumulated=? WHERE id=?",
+                             (json.dumps(accumulated), p['id']))
+
+                # Check if complete
+                complete = all(accumulated.get(k, 0) >= v for k, v in requirements.items())
+                if complete:
+                    conn.execute("UPDATE build_projects SET status='completed', phase='complete' WHERE id=?", (p['id'],))
+                    fname = FNAME.get(fid, fid)
+                    self.emit(EventLog(tick=tick, msg=f"PROJECT COMPLETE: {fname} finishes {p['project_name']}"))
+                    continue
+
             if new_phase != p['phase']:
                 conn.execute("UPDATE build_projects SET phase=? WHERE id=?", (new_phase, p['id']))
 
+    def _consume_for_project(self, fid, requirements, accumulated, universe):
+        """Pull materials from faction shipyards/stations into the build project."""
+        for sys_id, sys in universe.items():
+            if sys.faction != fid:
+                continue
+            for station in sys.stations:
+                if station.station_type not in ('shipyard', 'component_works', 'factory'):
+                    continue
+                for mat_id, qty_needed in requirements.items():
+                    already = accumulated.get(mat_id, 0)
+                    if already >= qty_needed:
+                        continue
+                    want = min(qty_needed - already, (qty_needed - already) * 0.1 + 1)
+                    available = station.inventory.get(mat_id, 0)
+                    take = min(want, available * 0.5)
+                    if take > 0:
+                        station.inventory[mat_id] = max(0, available - take)
+                        accumulated[mat_id] = already + take
+
     def _maybe_create_fleet_build(self, conn, fid, tick):
-        # Only create if fewer than 3 active fleet builds
+        # Only create if fewer than 2 active fleet/dread builds
         count = conn.execute(
-            "SELECT COUNT(*) FROM build_projects WHERE faction_id=? AND project_type='fleet_build' AND status='active'",
+            "SELECT COUNT(*) FROM build_projects WHERE faction_id=? AND project_type IN ('fleet_build','dreadnought') AND status='active'",
             (fid,)
         ).fetchone()[0]
-        if count >= 3:
+        if count >= 2:
             return
-        target = conn.execute("SELECT id FROM systems WHERE faction_id=? LIMIT 1", (fid,)).fetchone()
-        target_sys = target[0] if target else ''
-        ship_opts = [
-            ('Build 3 Frigates', {"steel_plate": 300, "electronics": 120, "fuel_cells": 60}),
-            ('Build 2 Corvettes', {"steel_plate": 600, "electronics": 250, "weapons_array": 150}),
-        ]
-        name, reqs = random.choice(ship_opts)
+        # Pick a real ship to build based on faction
+        ship_prefix = {'terran_fed':'tf_','free_states':'fa_','iron_compact':'ic_',
+                       'merchants_guild':'mg_','science_collective':'nc_','corsairs':'crs_'}
+        prefix = ship_prefix.get(fid, '')
+        # Try to build a battleship or battlecruiser (not dreadnought - too expensive early)
+        candidates = conn.execute(
+            "SELECT id, name, build_cost, hull_class FROM ships WHERE id LIKE ? AND hull_class IN ('Battleship','Battlecruiser') AND build_cost != '{}'",
+            (prefix + '%',)
+        ).fetchall()
+        if not candidates:
+            return
+        ship = random.choice(candidates)
+        build_cost = json.loads(ship['build_cost'])
+        fname = FNAME.get(fid, fid)
         conn.execute(
             "INSERT INTO build_projects (faction_id, project_type, project_name, target_system, requirements, accumulated, status, created_tick, phase) VALUES (?,?,?,?,?,?,?,?,?)",
-            (fid, 'fleet_build', name, target_sys, json.dumps(reqs), '{}', 'active', tick, 'requisitioning')
+            (fid, 'fleet_build', f"Build {ship['name']}", '', json.dumps(build_cost), '{}', 'active', tick, 'requisitioning')
         )
+        self.emit(EventLog(tick=tick, msg=f"PROJECT: {fname} begins construction of {ship['name']} ({ship['hull_class']})"))
 
     def _execute(self, fid, decision, assessment, tick):
         fname = FNAME.get(fid, fid)
@@ -237,6 +280,18 @@ class FactionStrategyWorker(WorkerThread):
             if admiral and random.random() > admiral['caution']:
                 self.emit(FactionOrder(faction_id=fid, order_type='expand', target=target))
                 self.emit(EventLog(tick=tick, msg=f"STRATEGY: {fname} orders expansion into unclaimed territory"))
+                # Create station build project if none active for this faction
+                active_stations = conn.execute(
+                    "SELECT COUNT(*) FROM build_projects WHERE faction_id=? AND project_type='station_expansion' AND status='active'", (fid,)
+                ).fetchone()[0]
+                if active_stations < 2:
+                    reqs = json.dumps({"station_hull_plating": 20, "station_reactor_module": 4, "station_life_support": 6,
+                                       "station_docking_array": 4, "station_cargo_bay": 8, "station_comms_array": 2})
+                    conn.execute(
+                        "INSERT INTO build_projects (faction_id, project_type, project_name, target_system, requirements, accumulated, status, created_tick, phase) VALUES (?,?,?,?,?,?,?,?,?)",
+                        (fid, 'station_expansion', f"{fname} Frontier Station", target, reqs, '{}', 'active', tick, 'scouting')
+                    )
+                    self.emit(EventLog(tick=tick, msg=f"PROJECT: {fname} begins station construction in {target}"))
             else:
                 self.emit(EventLog(tick=tick, msg=f"STRATEGY: {fname} considers expansion but holds back"))
 
