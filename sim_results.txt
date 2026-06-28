@@ -1,45 +1,45 @@
-ECONOMY SIM RESULTS | 10004 ticks | 41.7 days | 7 t/s
+ECONOMY SIM RESULTS | 5027 ticks | 20.9 days | 15 t/s
 ======================================================================
 
-PRICE STABILITY (12,023 points)
-  Within +/-15%: 41 (0.3%)
+PRICE STABILITY (12,022 points)
+  Within +/-15%: 56 (0.5%)
   Range: 0.500x - 2.000x | Median: 2.000x
 
   Distribution:
          <0.5x:      0 (  0.0%)
-     0.5-0.85x:   5408 ( 45.0%)
-    0.85-1.15x:     41 (  0.3%)
-     1.15-2.0x:   6574 ( 54.7%)
+     0.5-0.85x:   4664 ( 38.8%)
+    0.85-1.15x:     56 (  0.5%)
+     1.15-2.0x:   7302 ( 60.7%)
          >2.0x:      0 (  0.0%)
 
   Inflated (top 5):
-    Ceramic Plate                  avg:2.00x
-    Neutronium Flake               avg:1.98x
+    Power Cell                     avg:1.99x
+    Neutronium Flake               avg:1.97x
+    Titanium Alloy                 avg:1.97x
     Palladium Ore                  avg:1.96x
-    Gold Ore                       avg:1.96x
-    Quartz Crystal                 avg:1.96x
+    Quartz Crystal                 avg:1.95x
   Crashed (bottom 5):
-    Void Charge II                 avg:0.50x
     Navy Shrapnel Shell            avg:0.50x
-    Microwave Crystal II           avg:0.50x
-    Null Charge                    avg:0.50x
     Drone Control Unit Compact     avg:0.50x
+    Navy Artillery Cannon          avg:0.50x
+    Void Charge II                 avg:0.50x
+    Flak Battery Compact           avg:0.50x
 
 
 ECONOMY HEALTH
-  Inventory: 93,052,060 | Growth: 9301/tick
-  Ships destroyed: 1468 | Ships built: 1339
-  Destruction rate: 14.7 per 100 ticks
-  Fleet strength: 45 ships across 6 factions
+  Inventory: 60,284,551 | Growth: 11992/tick
+  Ships destroyed: 114 | Ships built: 0
+  Destruction rate: 2.3 per 100 ticks
+  Fleet strength: 60 ships across 6 factions
 
   Fleet (2757 ships): {'hauler': 1270, 'freelance': 330, 'miner': 584, 'patrol': 573}
-  States: {'intra_traveling': 1052, 'idle': 1108, 'unloading': 141, 'loading': 26, 'traveling': 24, 'mining': 406}
-  Haulers w/cargo: 1157 | Cargo in transit: 5,859,959
+  States: {'intra_traveling': 1137, 'idle': 1066, 'unloading': 101, 'traveling': 23, 'loading': 14, 'mining': 416}
+  Haulers w/cargo: 1098 | Cargo in transit: 3,924,705
 
   Shipyards:
-    Kepler Drydock                 inv:56,238 (corsairs)
-    Tau Ceti Dockyard              inv:47,144 (corsairs)
-    Apogee Drydock                 inv:91,936 (science_collective)
-    Argent Drydock                 inv:42,049 (merchants_guild)
-    Breakwater Drydock             inv:41,837 (free_states)
-    Anvil Shipyard                 inv:48,348 (iron_compact)
+    Kepler Drydock                 inv:67,147 (corsairs)
+    Tau Ceti Dockyard              inv:126,013 (corsairs)
+    Apogee Drydock                 inv:143,900 (science_collective)
+    Argent Drydock                 inv:47,357 (merchants_guild)
+    Breakwater Drydock             inv:14,823 (free_states)
+    Anvil Shipyard                 inv:51,196 (iron_compact)

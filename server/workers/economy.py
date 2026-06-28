@@ -104,13 +104,8 @@ class EconomyWorker(WorkerThread):
                         if station.inventory.get(commodity_id, 0) > rate:
                             deltas[commodity_id] = deltas.get(commodity_id, 0) - rate
 
-                # Military/shipyard self-supply: baseline production of consumed goods
-                if station.station_type in ('military_base', 'shipyard'):
-                    pop_mult_ms = max(0.5, sys.population / 100_000_000.0)
-                    for commodity_id in station_consumption.get(station.station_type, []):
-                        current = station.inventory.get(commodity_id, 0) + deltas.get(commodity_id, 0)
-                        if current < 500:
-                            deltas[commodity_id] = deltas.get(commodity_id, 0) + 2.0 * pop_mult_ms * 1.5
+                # Military/shipyard: no self-supply, relies on contract haulers
+                # (self-supply removed - was causing weapon price crashes)
 
                 # Population-based trade good consumption
                 if do_consumption and station.station_type == 'trade_hub' and sys.population > 10000:
@@ -168,18 +163,9 @@ class EconomyWorker(WorkerThread):
                     supply = max(1, stock)
                     base_price = calculate_price(commodity_id, supply, demand, commodities)
                     new_price = round(base_price * (1 + pressure / 100), 2)
-                    # Soft anchor: blend toward base price (stronger pull the further away)
+                    # Hard clamp: keep prices within reasonable bounds
                     bp = commodities[commodity_id].base_price
-                    deviation = new_price / bp if bp > 0 else 1.0
-                    if deviation > 1.5:
-                        # Above 1.5x: pull back harder
-                        new_price = bp * 1.5 + (new_price - bp * 1.5) * 0.3
-                    elif deviation < 0.67:
-                        # Below 0.67x: pull back harder
-                        new_price = bp * 0.67 - (bp * 0.67 - new_price) * 0.3
-                    # Absolute cap at 3x / 0.33x (safety net, not normally hit)
-                    new_price = max(bp * 0.33, min(bp * 3.0, new_price))
-                    new_price = round(new_price, 2)
+                    new_price = max(bp * 0.5, min(bp * 2.0, new_price))
                     old_price = station.price_cache.get(commodity_id)
 
                     if old_price is None or new_price != old_price:
