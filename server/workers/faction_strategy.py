@@ -70,7 +70,7 @@ class FactionStrategyWorker(WorkerThread):
                 self._update_phases(conn, fid, tick, universe)
                 if decision == 'attack':
                     self._maybe_create_fleet_build(conn, fid, tick)
-                self._execute(fid, decision, assessment, tick)
+                self._execute(conn, fid, decision, assessment, tick)
 
         conn.commit()
         conn.close()
@@ -271,7 +271,7 @@ class FactionStrategyWorker(WorkerThread):
         )
         self.emit(EventLog(tick=tick, msg=f"PROJECT: {fname} begins construction of {ship['name']} ({ship['hull_class']})"))
 
-    def _execute(self, fid, decision, assessment, tick):
+    def _execute(self, conn, fid, decision, assessment, tick):
         fname = FNAME.get(fid, fid)
 
         if decision == 'expand' and assessment['border_systems']:
