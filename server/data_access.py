@@ -194,6 +194,7 @@ def load_military_ships(conn=None) -> dict:
             weapons=json.loads(row["weapons"]),
             modules=json.loads(row["modules"]),
             build_cost=json.loads(row["build_cost"]),
+            fitting_cost=json.loads(row["fitting_cost"]) if row["fitting_cost"] else {},
             description=row["description"],
         )
 

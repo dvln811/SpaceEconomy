@@ -67,7 +67,8 @@ class ShipBuiltEvent:
     ship_class_id: str
     system_id: str
     station_name: str
-    cost: dict[str, float]  # materials consumed
+    cost: dict[str, float]  # hull materials consumed from shipyard
+    fitting_cost: dict[str, float] = None  # weapons/modules deducted from factories
 
 
 @dataclass

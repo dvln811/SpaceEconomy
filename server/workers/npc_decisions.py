@@ -134,79 +134,73 @@ class NPCDecisionWorker(WorkerThread):
                     ))
             return
 
-        # Find a contract - pick from top 20 randomly (weighted by qty), prefer same region
+        # Find a contract - score by value/distance/competition
+        # Sample up to 50 contracts (not all 8000+) for performance
+        import random as _rnd
         region = loc.region
-        candidates = []
-        for c in self._contracts:
-            if c['qty_remaining'] <= 0:
+        active = [c for c in self._contracts if c['qty_remaining'] > 0]
+        if not active:
+            return
+        sample = _rnd.sample(active, min(50, len(active)))
+
+        best_score = -1
+        best_contract = None
+        best_source = None
+
+        for c in sample:
+            commodity_id = c['commodity_id']
+            com = self.commodities.get(commodity_id)
+            if not com:
                 continue
-            # Check if source exists
-            sources = region_cache.get(c['region'], {}).get(c['commodity_id'], [])
-            if not sources:
-                # Try other regions
-                found = False
-                for r, items in region_cache.items():
-                    if c['commodity_id'] in items:
-                        found = True
-                        break
-                if not found:
-                    continue
-            # Prefer same region
-            priority = c['qty_remaining']
+
+            # Find nearest source (check region_cache directly)
+            closest_src = None
+            closest_hops = 999
+            for r, items in region_cache.items():
+                for src_sys_id, src_station_name, qty in items.get(commodity_id, []):
+                    if qty < 10:
+                        continue
+                    hops = self._estimate_hops(ship.location, src_sys_id, universe)
+                    if hops < closest_hops:
+                        closest_hops = hops
+                        closest_src = (src_sys_id, src_station_name, qty)
+                    break  # just check top source per region
+
+            if not closest_src or closest_hops > 20:
+                continue
+
+            # Score: (value) / (distance + 1) / (1 + claims)
+            value = com.base_price
+            claims = c.get('_claims', 0)
+            score = value / (closest_hops + 1) / (1 + claims)
+
             if c['region'] == region:
-                priority *= 3
-            candidates.append((c, priority))
-            if len(candidates) >= 30:
-                break
+                score *= 2
 
-        if not candidates:
+            if score > best_score:
+                best_score = score
+                best_contract = c
+                best_source = closest_src
+
+        if not best_contract or not best_source:
             return
 
-        # Weighted random from candidates
-        weights = [p for _, p in candidates]
-        chosen_contract = random.choices([c for c, _ in candidates], weights=weights, k=1)[0]
-
-        # Claim portion (limited by cargo capacity)
-        claim = min(ship.cargo_capacity, chosen_contract['qty_remaining'])
-        chosen_contract['qty_remaining'] -= claim
-
-        # Find source - prefer closest
-        commodity_id = chosen_contract['commodity_id']
-        all_sources = []
-        for r, items in region_cache.items():
-            for src in items.get(commodity_id, []):
-                all_sources.append(src)
-
-        if not all_sources:
-            chosen_contract['qty_remaining'] += claim  # return claim
-            return
-
-        # Sort by distance from ship
-        best_src = None
-        best_hops = 999
-        for src_sys_id, src_station_name, qty in all_sources:
-            if qty < 10:
-                continue
-            hops = self._estimate_hops(ship.location, src_sys_id, universe)
-            if hops < best_hops:
-                best_hops = hops
-                best_src = (src_sys_id, src_station_name, qty)
-
-        if not best_src:
-            chosen_contract['qty_remaining'] += claim  # return claim
-            return
+        # Claim portion
+        claim = min(ship.cargo_capacity, best_contract['qty_remaining'])
+        best_contract['qty_remaining'] -= claim
+        best_contract['_claims'] = best_contract.get('_claims', 0) + 1
 
         # Store destination
-        ship._contract_dest = (chosen_contract['sys_id'], chosen_contract['station'])
+        ship._contract_dest = (best_contract['sys_id'], best_contract['station'])
 
-        src_sys_id, src_station_name, available = best_src
+        src_sys_id, src_station_name, available = best_source
         if ship.location == src_sys_id:
             buy_qty = min(available * 0.5, ship.cargo_capacity, claim)
             if buy_qty > 1:
                 self.emit(ShipBuyIntent(
                     ship_id=ship.id, system_id=src_sys_id,
                     station_name=src_station_name,
-                    commodity_id=commodity_id, quantity=buy_qty,
+                    commodity_id=best_contract['commodity_id'], quantity=buy_qty,
                     route_home=[]
                 ))
         else:

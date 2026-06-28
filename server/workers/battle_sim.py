@@ -91,7 +91,8 @@ class BattleSimWorker(WorkerThread):
                             self.emit(ShipBuiltEvent(
                                 faction_id=faction_id, ship_class_id=ship_class_id,
                                 system_id=sys.id, station_name=station.name,
-                                cost=dict(ship.build_cost)
+                                cost=dict(ship.build_cost),
+                                fitting_cost=dict(ship.fitting_cost) if hasattr(ship, 'fitting_cost') and ship.fitting_cost else None
                             ))
                             short = FACTION_SHORTS.get(faction_id, faction_id)
                             self.emit(EventLog(tick=tick, msg=f"BUILT: {ship.name} for {short} at {station.name}"))

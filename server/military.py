@@ -14,5 +14,6 @@ class MilitaryShipClass:
     weapons: list[str] = field(default_factory=list)
     modules: list[str] = field(default_factory=list)
     build_cost: dict[str, int] = field(default_factory=dict)
+    fitting_cost: dict[str, int] = field(default_factory=dict)
     crew: int = 0
     description: str = ""

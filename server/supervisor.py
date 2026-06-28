@@ -316,13 +316,28 @@ class Supervisor:
                 fleet = self.sim.warfare.fleets.get(intent.faction_id, {})
                 fleet[intent.ship_class_id] = fleet.get(intent.ship_class_id, 0) + 1
                 self.sim.warfare.ships_built += 1
-            # Consume materials
+            # Consume hull materials from shipyard
             sys = self.sim.universe.get(intent.system_id)
             if sys:
                 station = next((st for st in sys.stations if st.name == intent.station_name), None)
                 if station:
                     for commodity, qty in intent.cost.items():
                         station.inventory[commodity] = max(0, station.inventory.get(commodity, 0) - qty)
+            # Abstract fitting procurement: deduct weapons/modules from faction factories
+            if hasattr(intent, 'fitting_cost') and intent.fitting_cost:
+                for sys2 in self.sim.universe.values():
+                    if sys2.faction != intent.faction_id:
+                        continue
+                    for st2 in sys2.stations:
+                        if st2.station_type not in ('factory', 'component_works'):
+                            continue
+                        for commodity, qty in intent.fitting_cost.items():
+                            available = st2.inventory.get(commodity, 0)
+                            take = min(qty, available)
+                            if take > 0:
+                                st2.inventory[commodity] = available - take
+                                intent.fitting_cost[commodity] = qty - take
+                        break
 
         elif isinstance(intent, SpawnCommand):
             # Spawning handled by Corsair worker results; actual spawn logic TBD
