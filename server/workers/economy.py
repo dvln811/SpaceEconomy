@@ -30,6 +30,9 @@ class EconomyWorker(WorkerThread):
         self._production(universe, tick, do_consumption)
         if tick % 60 == 0 or tick == 1:
             self._update_prices(universe, tick)
+        # Corsair raids: cull excess stockpiles if growth too high
+        if tick % 500 == 0 and tick > 0:
+            self._corsair_raids(universe, tick)
 
     def _production(self, universe, tick, do_consumption):
         commodities = self.commodities
@@ -185,3 +188,59 @@ class EconomyWorker(WorkerThread):
                                 name = commodities[commodity_id].name
                                 direction = "^" if pct > 0 else "v"
                                 self.emit(EventLog(tick=tick, msg=f"{direction} {name} {pct:+.0f}% at {station.name} ({sys.name})"))
+
+    def _corsair_raids(self, universe, tick):
+        """Dynamic pressure valve: if stockpiles are too high, corsairs raid and cull inventory."""
+        import random
+        # Calculate total inventory
+        total_inv = 0
+        stations_with_surplus = []
+        for sys_id, sys in universe.items():
+            for st in sys.stations:
+                st_total = sum(st.inventory.values())
+                total_inv += st_total
+                if st_total > 50000 and st.station_type in ('mining_colony', 'refinery', 'component_works'):
+                    stations_with_surplus.append((sys_id, sys, st, st_total))
+
+        # Only raid if total inventory is growing too fast (> 80M threshold)
+        if total_inv < 80_000_000:
+            return
+
+        # Raid intensity scales with how far over threshold we are
+        excess = total_inv - 80_000_000
+        raid_fraction = min(0.15, excess / total_inv)  # max 15% culled per raid cycle
+
+        # Pick random stations to raid
+        if not stations_with_surplus:
+            return
+        num_targets = max(3, len(stations_with_surplus) // 5)
+        targets = random.sample(stations_with_surplus, min(num_targets, len(stations_with_surplus)))
+
+        total_lost = 0
+        regions_hit = set()
+        for sys_id, sys, st, st_total in targets:
+            # Cull a fraction of their stockpile
+            cull_amount = st_total * raid_fraction
+            culled_this = 0
+            items = list(st.inventory.items())
+            random.shuffle(items)
+            for commodity_id, qty in items:
+                if culled_this >= cull_amount:
+                    break
+                take = min(qty * raid_fraction, cull_amount - culled_this)
+                if take > 1:
+                    st.inventory[commodity_id] = max(0, qty - take)
+                    culled_this += take
+            total_lost += culled_this
+            regions_hit.add(sys.region or 'Unknown')
+
+        # Empire news event
+        if total_lost > 0:
+            regions_str = ', '.join(list(regions_hit)[:3])
+            if len(regions_hit) > 3:
+                regions_str += f' +{len(regions_hit)-3} more'
+            self.emit(EventLog(tick=tick,
+                msg=f"NEWS: Corsair raiders hit supply convoys across {regions_str} - {int(total_lost):,} units of materials lost"))
+            if total_lost > 1_000_000:
+                self.emit(EventLog(tick=tick,
+                    msg=f"NEWS: MAJOR CORSAIR OFFENSIVE - Coordinated attacks on {len(targets)} stations. Faction security forces responding."))
