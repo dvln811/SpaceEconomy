@@ -170,7 +170,7 @@ class NPCDecisionWorker(WorkerThread):
                         closest_src = (src_sys_id, src_station_name, qty)
                     break  # just check top source per region
 
-            if not closest_src or closest_hops > 20:
+            if not closest_src:
                 continue
 
             # Score: (value) / (distance + 1) / (1 + claims)
