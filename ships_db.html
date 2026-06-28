@@ -151,7 +151,7 @@ function show(filter, btn) {
     else if (filter.startsWith('class_')) ships = allShips.filter(s => s.hull_class === filter.replace('class_',''));
     ships = ships.filter(match);
     el.innerHTML = `<table><thead><tr>
-      <th>Name</th><th>Class</th><th>Faction</th><th>Manufacturer</th><th>Speed</th><th>Shield</th><th>Armor</th><th>Hull</th><th>CPU</th><th>PG</th><th>Slots (H/M/L)</th><th>Turr/Lnch</th><th>Cargo</th><th>Weapons</th><th>Description</th>
+      <th>Name</th><th>Class</th><th>Faction</th><th>Manufacturer</th><th>Speed</th><th>Shield</th><th>Armor</th><th>Hull</th><th>CPU</th><th>PG</th><th>Slots (H/M/L)</th><th>Turr/Lnch</th><th>Cargo</th><th>Build Time</th><th>Description</th>
     </tr></thead><tbody>${ships.map(s => {
       const fname = factions[s.faction_id] ? factions[s.faction_id].name : (s.faction_id ? s.faction_id : '—');
       const hp = typeof s.hardpoints === 'string' ? JSON.parse(s.hardpoints) : (s.hardpoints||{});
@@ -169,7 +169,7 @@ function show(filter, btn) {
       <td style="font-size:11px"><span style="color:#ef5350">${hp.high_slots||0}H</span> / <span style="color:#ffd54f">${hp.mid_slots||0}M</span> / <span style="color:#66bb6a">${hp.low_slots||0}L</span></td>
       <td style="font-size:11px">${hp.turret_hardpoints||0}T / ${hp.launcher_hardpoints||0}L</td>
       <td style="color:#ffd54f">${s.cargo_capacity||0}</td>
-      <td style="font-size:11px">${grpList(s.weapons||[])}</td>
+      <td>${s.build_time?fmtTime(s.build_time):'-'}</td>
       <td class="desc">${s.description}</td>
     </tr>`;}).join('')}</tbody></table>`;
   }
