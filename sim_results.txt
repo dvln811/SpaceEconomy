@@ -1,73 +1,45 @@
-WEAPON DELIVERY TRACE | 5002 ticks
+ECONOMY SIM RESULTS | 5004 ticks | 20.8 days | 6 t/s
 ======================================================================
 
-1. WEAPONS AT FACTORIES (sources):
-  shield_booster                 1,178 units across all factories
-  pulse_laser_m                  1,031 units across all factories
-  afterburner                      900 units across all factories
-  armor_plate                      408 units across all factories
-  beam_laser_m                     331 units across all factories
-  autocannon_l                     258 units across all factories
-  railgun_m                        202 units across all factories
-  missile_launcher_m               122 units across all factories
-  autocannon_m                      89 units across all factories
+PRICE STABILITY (12,026 points)
+  Within +/-15%: 50 (0.4%)
+  Range: 0.500x - 2.000x | Median: 2.000x
 
-2. WEAPONS AT SHIPYARDS (destinations):
-  Kepler Drydock                 weapons: 69.51255796914174 | {'autocannon_l': 0.711739207527728, 'railgun_m': 67.2925806794955, 'afterburner': 1.0, 'armor_plate': 0.5082380821185097}
-  Tau Ceti Dockyard              weapons: 2.576447219627269 | {'beam_laser_m': 0.5942357053235696, 'railgun_m': 0.43866496620995576, 'missile_launcher_m': 0.9540707902348089, 'armor_plate': 0.5894757578589349}
-  Apogee Drydock                 weapons: 1.536932991751506 | {'beam_laser_m': 0.2651391487153134, 'autocannon_m': 0.934681524463528, 'railgun_m': 0.2712961062670871, 'armor_plate': 0.06581621230557744}
-  Argent Drydock                 weapons: 2.6032509717463412 | {'beam_laser_m': 0.623863230793205, 'autocannon_m': 0.12641289999238126, 'autocannon_l': 1.0, 'railgun_m': 0.8529748409607549}
-  Breakwater Drydock             weapons: 2.317423481448756 | {'beam_laser_m': 0.643275637075817, 'autocannon_l': 0.5943897241902505, 'railgun_m': 0.7512969400829945, 'missile_launcher_m': 0.10819376103604839, 'afterburner': 0.08916765626560164, 'armor_plate': 0.13109976279804414}
-  Anvil Shipyard                 weapons: 2.568176596663527 | {'autocannon_m': 0.6260514752118738, 'railgun_m': 0.7144256328989513, 'afterburner': 0.22769948855270172, 'armor_plate': 1.0}
+  Distribution:
+         <0.5x:      0 (  0.0%)
+     0.5-0.85x:   4799 ( 39.9%)
+    0.85-1.15x:     50 (  0.4%)
+     1.15-2.0x:   7177 ( 59.7%)
+         >2.0x:      0 (  0.0%)
 
-3. ACTIVE CONTRACTS FOR WEAPONS:
-  Total contracts: 8184
-  Weapon contracts: 93
-    shield_booster            station:Kepler Drydock            remaining:500
-    shield_booster            station:Breakwater Drydock        remaining:500
-    shield_booster            station:Anvil Shipyard            remaining:500
-    shield_booster            station:Argent Drydock            remaining:500
-    autocannon_m              station:Rigel Garrison            remaining:500
-    pulse_laser_m             station:Rigel Garrison            remaining:500
-    railgun_m                 station:Aldebaran Military Base   remaining:500
-    pulse_laser_m             station:Aldebaran Military Base   remaining:500
-    pulse_laser_m             station:Canopus Fleet Command     remaining:500
-    beam_laser_m              station:Canopus Fleet Command     remaining:500
-    missile_launcher_m        station:Canopus Fleet Command     remaining:500
-    railgun_m                 station:Mira Military Base        remaining:500
-    pulse_laser_m             station:Mira Military Base        remaining:500
-    railgun_m                 station:Haven Fleet Command       remaining:500
-    pulse_laser_m             station:Haven Fleet Command       remaining:500
+  Inflated (top 5):
+    Warp Coil                      avg:2.00x
+    Power Cell                     avg:1.99x
+    Neutronium Flake               avg:1.98x
+    Carbon Composite               avg:1.95x
+    Palladium Ore                  avg:1.95x
+  Crashed (bottom 5):
+    Flak Battery Compact           avg:0.50x
+    Null Charge                    avg:0.50x
+    Navy Artillery Cannon          avg:0.50x
+    Medium Salvage Drone           avg:0.50x
+    Drone Control Unit Compact     avg:0.50x
 
-4. HAULERS CARRYING WEAPONS:
-  Haulers carrying weapons: 10
-    beam_laser_m                     479
-    autocannon_m                     296
-    autocannon_l                     228
-    armor_plate                       95
-    missile_launcher_m                47
 
-5. REGION CACHE - WEAPON SOURCES:
-  beam_laser_m              sources: 1 stations
-    top: ('new_geneva', 'New Geneva Manufacturing', 330.56185379359766)
-  autocannon_m              sources: 1 stations
-    top: ('credit', 'Credit Manufacturing', 88.8543677692292)
-  autocannon_l              sources: 1 stations
-    top: ('pollux', 'Pollux Factory', 257.07837210419683)
-  railgun_m                 sources: 2 stations
-    top: ('coinage', 'Coinage Forge', 201.69547179785235)
-  missile_launcher_m        sources: 1 stations
-    top: ('epsilon_eridani', 'Epsilon Eridani Industrial Hub', 121.0906020669683)
+ECONOMY HEALTH
+  Inventory: 56,263,653 | Growth: 11244/tick
+  Ships destroyed: 112 | Ships built: 0
+  Destruction rate: 2.2 per 100 ticks
+  Fleet strength: 62 ships across 6 factions
 
-6. SAMPLE SHIP BUILD COST:
-  Centurion:
-    armor_compound            x121
-    microprocessor            x64
-    propulsion_unit           x40
-    reactor_core              x8
-    sensor_package            x8
+  Fleet (2757 ships): {'hauler': 1306, 'freelance': 294, 'miner': 584, 'patrol': 573}
+  States: {'intra_traveling': 1182, 'idle': 1079, 'unloading': 66, 'traveling': 26, 'loading': 1, 'mining': 403}
+  Haulers w/cargo: 515 | Cargo in transit: 1,695,777
 
-7. STANDARD METRICS:
-  Ships destroyed: 120
-  Ships built: 14
-  Total inventory: 56,620,526 | Growth: 11320/tick
+  Shipyards:
+    Kepler Drydock                 inv:66,755 (corsairs)
+    Tau Ceti Dockyard              inv:130,272 (corsairs)
+    Apogee Drydock                 inv:143,705 (science_collective)
+    Argent Drydock                 inv:55,833 (merchants_guild)
+    Breakwater Drydock             inv:15,219 (free_states)
+    Anvil Shipyard                 inv:51,337 (iron_compact)
