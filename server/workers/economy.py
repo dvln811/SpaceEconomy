@@ -104,8 +104,14 @@ class EconomyWorker(WorkerThread):
                         if station.inventory.get(commodity_id, 0) > rate:
                             deltas[commodity_id] = deltas.get(commodity_id, 0) - rate
 
-                # Military/shipyard: no self-supply, relies on contract haulers
-                # (self-supply removed - was causing weapon price crashes)
+                # Shipyard hull-material trickle: slowly generate build_cost materials
+                # (only hull inputs, NOT weapons/fittings - those caused price crashes)
+                if station.station_type == 'shipyard' and sys.faction:
+                    for mat in ('armor_compound', 'propulsion_unit', 'microprocessor',
+                                'reactor_core', 'sensor_package', 'warp_coil'):
+                        current = station.inventory.get(mat, 0) + deltas.get(mat, 0)
+                        if current < 500:
+                            deltas[mat] = deltas.get(mat, 0) + 2.0
 
                 # Population-based trade good consumption
                 if do_consumption and station.station_type == 'trade_hub' and sys.population > 10000:

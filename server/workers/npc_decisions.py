@@ -23,8 +23,8 @@ class NPCDecisionWorker(WorkerThread):
         universe = snapshot['universe']
         region_cache = snapshot['region_cache']
 
-        # Add new contracts every 200 ticks (don't reset existing)
-        if tick - self._contract_tick >= 200 or not self._contracts:
+        # Add new contracts every 50 ticks (don't reset existing)
+        if tick - self._contract_tick >= 50 or not self._contracts:
             self._refresh_contracts(universe, region_cache)
             self._contract_tick = tick
 
@@ -135,13 +135,17 @@ class NPCDecisionWorker(WorkerThread):
             return
 
         # Find a contract - score by value/distance/competition
-        # Sample up to 50 contracts (not all 8000+) for performance
+        # Sample: prefer local region contracts for faster turnaround
         import random as _rnd
         region = loc.region
         active = [c for c in self._contracts if c['qty_remaining'] > 0]
         if not active:
             return
-        sample = _rnd.sample(active, min(50, len(active)))
+        local = [c for c in active if c['region'] == region]
+        remote = [c for c in active if c['region'] != region]
+        # Take up to 35 local + 15 remote (biased toward local)
+        sample = _rnd.sample(local, min(35, len(local)))
+        sample += _rnd.sample(remote, min(15, len(remote)))
 
         best_score = -1
         best_contract = None

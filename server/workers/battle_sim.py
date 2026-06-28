@@ -94,7 +94,10 @@ class BattleSimWorker(WorkerThread):
                     continue
 
                 ship = MILITARY_SHIPS[ship_class_id]
+                queued = False
                 for sys in universe.values():
+                    if queued:
+                        break
                     if sys.faction != faction_id:
                         continue
                     for station in sys.stations:
@@ -124,8 +127,8 @@ class BattleSimWorker(WorkerThread):
                         })
                         short = FACTION_SHORTS.get(faction_id, faction_id)
                         self.emit(EventLog(tick=tick, msg=f"QUEUE: {ship.name} at {station.name} ({build_ticks} ticks)"))
+                        queued = True
                         break
-                    break
 
     def _run_skirmish(self, attacker_id: str, defender_id: str, tick: int):
         a_fleet = self.fleets.get(attacker_id, {})
