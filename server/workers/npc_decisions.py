@@ -1,4 +1,4 @@
-"""NPC Decision worker: hauler/miner AI using region inventory cache."""
+"""NPC Decision worker: contract-based hauler AI, miner AI using region inventory cache."""
 import math
 from server.supervisor import WorkerThread
 from server.intents import (
@@ -15,11 +15,18 @@ class NPCDecisionWorker(WorkerThread):
         super().__init__("npc_decisions", tick_interval=1)
         self.commodities = commodities
         self._batch_offset = 0
+        self._contracts = []  # [{station, system_id, commodity_id, qty_needed, qty_claimed}]
+        self._contract_tick = 0
 
     def process(self, tick: int, snapshot):
         ships = snapshot['ships']
         universe = snapshot['universe']
         region_cache = snapshot['region_cache']
+
+        # Rebuild contracts every 50 ticks
+        if tick - self._contract_tick >= 50 or not self._contracts:
+            self._build_contracts(universe, region_cache)
+            self._contract_tick = tick
 
         # Collect all idle industrial ships
         idle_ships = [s for s in ships if s.state == "idle" and s.role in ("hauler", "miner", "freelance")]
@@ -39,79 +46,130 @@ class NPCDecisionWorker(WorkerThread):
             elif ship.role == "freelance":
                 self._freelance_decision(ship, universe, region_cache)
             else:
-                self._trader_decision(ship, universe, region_cache)
+                self._hauler_contract_decision(ship, universe, region_cache)
 
-    def _trader_decision(self, ship, universe, region_cache):
+    def _build_contracts(self, universe, region_cache):
+        """Build demand contracts from all stations that need inputs."""
+        from server.simulation import STATION_CONSUMPTION
+        contracts = []
+        for sys_id, sys in universe.items():
+            for st in sys.stations:
+                # Recipe input deficits
+                for prod_id in st.produces:
+                    c = self.commodities.get(prod_id)
+                    if not c or not c.recipe:
+                        continue
+                    for inp_id, qty in c.recipe.items():
+                        stock = st.inventory.get(inp_id, 0)
+                        want = qty * st.production_rate * 200
+                        if stock < want:
+                            contracts.append({
+                                'sys_id': sys_id, 'station': st.name, 'region': sys.region,
+                                'commodity_id': inp_id, 'qty_needed': want - stock, 'qty_claimed': 0,
+                            })
+                # Consumption deficits (fuel, ammo, materials)
+                for commodity_id in STATION_CONSUMPTION.get(st.station_type, []):
+                    stock = st.inventory.get(commodity_id, 0)
+                    if stock < 500:
+                        contracts.append({
+                            'sys_id': sys_id, 'station': st.name, 'region': sys.region,
+                            'commodity_id': commodity_id, 'qty_needed': 1000 - stock, 'qty_claimed': 0,
+                        })
+        # Sort by deficit size (biggest needs first)
+        contracts.sort(key=lambda c: -(c['qty_needed'] - c['qty_claimed']))
+        self._contracts = contracts
+
+    def _hauler_contract_decision(self, ship, universe, region_cache):
+        """Contract-based hauling: find a contract, source the goods, deliver."""
+        import random
         loc = universe.get(ship.location)
         if not loc:
             return
 
-        # Navigate to a station if not at one
+        # Navigate to station if not at one
         station_objs = [o for o in loc.objects if o.obj_type == "station"]
         at_station = any(ship.intra_position == o.id for o in station_objs)
         if not at_station and station_objs:
             self.emit(ShipIntraIntent(ship_id=ship.id, dest_obj_id=station_objs[0].id))
             return
 
-        # If carrying cargo, deliver to assigned station
+        # If carrying cargo, deliver to contract destination
         if ship.cargo:
-            if ship.location == ship.assigned_system:
-                target = next((st for st in loc.stations if st.name == ship.assigned_station), None)
-                if target:
-                    # Sell all cargo
-                    for commodity, qty in ship.cargo.items():
+            dest = getattr(ship, '_contract_dest', None)
+            if dest:
+                if ship.location == dest[0]:
+                    for commodity, qty in list(ship.cargo.items()):
                         self.emit(ShipSellIntent(
                             ship_id=ship.id, system_id=ship.location,
-                            station_name=ship.assigned_station,
+                            station_name=dest[1],
                             commodity_id=commodity, quantity=qty
                         ))
+                    ship._contract_dest = None
                     return
-            # Not home, travel there
-            self.emit(ShipMoveIntent(ship_id=ship.id, destination=ship.assigned_system))
+                self.emit(ShipMoveIntent(ship_id=ship.id, destination=dest[0]))
+                return
+            # No contract dest, sell at local station
+            if loc.stations:
+                for commodity, qty in list(ship.cargo.items()):
+                    self.emit(ShipSellIntent(
+                        ship_id=ship.id, system_id=ship.location,
+                        station_name=loc.stations[0].name,
+                        commodity_id=commodity, quantity=qty
+                    ))
             return
 
-        # Find what station needs (lowest stock input)
-        home_sys = universe.get(ship.assigned_system)
-        if not home_sys:
-            return
-        target = next((st for st in home_sys.stations if st.name == ship.assigned_station), None)
-        if not target:
-            return
-
-        # Build deficit list - only items that are sourceable in region
-        import random as _rnd
-        region = home_sys.region
+        # Find a contract to fulfill
+        region = loc.region
         region_items = region_cache.get(region, {})
 
-        candidates = []
-        for prod_id in target.produces:
-            c = self.commodities.get(prod_id)
-            if not c or not c.recipe:
+        # Filter contracts: same region, has source, not over-claimed
+        best_contract = None
+        for contract in self._contracts:
+            if contract['region'] != region:
                 continue
-            for inp_id, qty in c.recipe.items():
-                stock = target.inventory.get(inp_id, 0)
-                want = qty * target.production_rate * 500
-                if stock < want and inp_id in region_items:
-                    deficit = (want - stock) / max(want, 1)
-                    candidates.append((inp_id, deficit))
+            if contract['qty_claimed'] >= contract['qty_needed']:
+                continue
+            # Check if source exists in region
+            sources = region_items.get(contract['commodity_id'], [])
+            if not sources:
+                continue
+            best_contract = contract
+            break
 
-        if not candidates:
+        if not best_contract:
+            # Try any region (inter-regional hauling)
+            for contract in self._contracts:
+                if contract['qty_claimed'] >= contract['qty_needed']:
+                    continue
+                # Find source in any region
+                for r, items in region_cache.items():
+                    if contract['commodity_id'] in items:
+                        best_contract = contract
+                        break
+                if best_contract:
+                    break
+
+        if not best_contract:
+            return  # Genuinely nothing to do
+
+        # Claim portion of contract
+        claim_qty = min(ship.cargo_capacity, best_contract['qty_needed'] - best_contract['qty_claimed'])
+        best_contract['qty_claimed'] += claim_qty
+
+        # Find best source
+        commodity_id = best_contract['commodity_id']
+        all_sources = []
+        for r, items in region_cache.items():
+            for src in items.get(commodity_id, []):
+                all_sources.append(src)
+        if not all_sources:
             return
 
-        # Weighted random by deficit - spreads haulers across needs, prevents clustering
-        weights = [d for _, d in candidates]
-        needed = _rnd.choices([c[0] for c in candidates], weights=weights, k=1)[0]
-
-        sources = region_items.get(needed, [])
-
+        # Pick closest source with enough stock
         best_src = None
         best_hops = 999
-        for src_sys_id, src_station_name, qty in sources:
-            if src_station_name == ship.assigned_station:
-                continue
-            # Use sec_level directly - ship won't enter if sec_level below threshold
-            sys_sec = getattr(universe.get(src_sys_id), 'sec_level', 0.5)
-            if sys_sec < (1.0 - ship.risk_tolerance):
+        for src_sys_id, src_station_name, qty in all_sources:
+            if qty < 10:
                 continue
             hops = self._estimate_hops(ship.location, src_sys_id, universe)
             if hops < best_hops:
@@ -119,30 +177,20 @@ class NPCDecisionWorker(WorkerThread):
                 best_src = (src_sys_id, src_station_name, qty)
 
         if not best_src:
-            # Fallback: find any high-stock item in region to haul
-            import random as _rnd
-            region = home_sys.region
-            region_items = region_cache.get(region, {})
-            if region_items:
-                # Pick a random commodity with sources
-                candidates = [(sid, stn, cid) for cid, srcs in region_items.items() for sid, stn, qty in srcs if qty > 100 and sid != ship.location]
-                if candidates:
-                    src_sys_id, src_station_name, commodity_id = _rnd.choice(candidates[:20])
-                    self.emit(ShipMoveIntent(ship_id=ship.id, destination=src_sys_id))
-                    return
             return
+
+        # Store contract destination on ship
+        ship._contract_dest = (best_contract['sys_id'], best_contract['station'])
 
         src_sys_id, src_station_name, available = best_src
         if ship.location == src_sys_id:
-            # Buy here
-            buy_qty = min(available * 0.5, ship.cargo_capacity)
+            buy_qty = min(available * 0.5, ship.cargo_capacity, claim_qty)
             if buy_qty > 1:
-                route_home = self._find_path(ship.location, ship.assigned_system, ship.risk_tolerance, universe)
                 self.emit(ShipBuyIntent(
                     ship_id=ship.id, system_id=src_sys_id,
                     station_name=src_station_name,
-                    commodity_id=needed, quantity=buy_qty,
-                    route_home=route_home
+                    commodity_id=commodity_id, quantity=buy_qty,
+                    route_home=[]
                 ))
         else:
             self.emit(ShipMoveIntent(ship_id=ship.id, destination=src_sys_id))

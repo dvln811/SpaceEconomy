@@ -1,0 +1,64 @@
+30K TICK SIMULATION RESULTS
+Ticks: 10004 | Wall time: 1253s | 8 t/s | Game days: 41.7
+======================================================================
+
+PRICE STABILITY (11,750 price points)
+  Within +/-15%: 29 (0.2%)
+  Range: 0.500x - 2.000x
+  Median: 2.000x
+
+  Distribution:
+         <0.5x:      0 (  0.0%)
+     0.5-0.85x:   5137 ( 43.7%)
+    0.85-1.15x:     29 (  0.2%)
+     1.15-2.0x:   6584 ( 56.0%)
+         >2.0x:      0 (  0.0%)
+
+  Most inflated (top 10):
+    Processed Protein              max:2.00x avg:1.36x
+    Methane Fuel                   max:2.00x avg:1.10x
+    Hydrogen Fuel                  max:2.00x avg:1.10x
+    Purified Water                 max:2.00x avg:1.31x
+    Iron Ore                       max:2.00x avg:1.46x
+    Silicon Ore                    max:2.00x avg:1.52x
+    Carbonite                      max:2.00x avg:1.52x
+    Copper Ore                     max:2.00x avg:1.59x
+    Lithium Crystal                max:2.00x avg:1.91x
+    Cobalt Ore                     max:2.00x avg:1.67x
+
+  Most crashed (bottom 10):
+    Processed Protein              min:0.500x avg:1.36x
+    Methane Fuel                   min:0.500x avg:1.10x
+    Hydrogen Fuel                  min:0.500x avg:1.10x
+    Purified Water                 min:0.500x avg:1.31x
+    Iron Ore                       min:0.500x avg:1.46x
+    Silicon Ore                    min:0.500x avg:1.52x
+    Carbonite                      min:0.500x avg:1.52x
+    Copper Ore                     min:0.500x avg:1.59x
+    Lithium Crystal                min:0.500x avg:1.91x
+    Cobalt Ore                     min:0.500x avg:1.67x
+
+
+ECONOMY SUMMARY
+  Total inventory: 93,079,206 units
+  Growth rate: 9304 units/tick
+
+  Military bases:
+    Rigel Garrison                 pop:     945,518 ammo:4509 wpn:9519 fuel:1002
+    Aldebaran Military Base        pop:     581,858 ammo:4509 wpn:9519 fuel:1002
+    Canopus Fleet Command          pop:     452,417 ammo:4509 wpn:9519 fuel:1002
+    Mira Military Base             pop:     539,903 ammo:4509 wpn:9519 fuel:1002
+    Haven Fleet Command            pop:     641,262 ammo:4509 wpn:9519 fuel:1002
+    Epsilon Eridani Garrison       pop:     691,453 ammo:4509 wpn:9519 fuel:1002
+    Lalande Naval Station          pop:     481,029 ammo:4509 wpn:9519 fuel:1002
+    Struve Garrison                pop:     921,527 ammo:4509 wpn:9519 fuel:1002
+    Gliese Fleet Command           pop:      16,814 ammo:4509 wpn:9519 fuel:1002
+
+  Fleet (2757 ships):
+    Roles: {'freelance': 328, 'hauler': 1272, 'miner': 584, 'patrol': 573}
+    States: {'intra_traveling': 1069, 'loading': 41, 'unloading': 130, 'idle': 1076, 'traveling': 28, 'mining': 413}
+    Haulers carrying cargo: 1164
+    Total cargo in transit: 5,673,840 units
+    Hauler capacity range: 100 - 100,020 m3
+    Hauler avg capacity: 23,624 m3
+    Total fleet capacity: 30,049,510 m3

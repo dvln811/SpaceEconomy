@@ -111,11 +111,11 @@ class Simulation:
         ship_idx = 0
 
         # --- Industrial ships: haulers & freelancers ---
-        # ~4 per system that has stations (~600 haulers/freelancers)
+        # ~10 per system that has stations (~1500 haulers/freelancers)
         for sys_id, sys in self.universe.items():
             if not sys.stations:
                 continue
-            for i in range(4):
+            for i in range(10):
                 st = hauler_types[ship_idx % len(hauler_types)]
                 role = "freelance" if random.random() < 0.2 else "hauler"
                 station = sys.stations[i % len(sys.stations)]

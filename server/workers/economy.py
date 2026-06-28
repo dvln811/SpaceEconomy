@@ -96,10 +96,21 @@ class EconomyWorker(WorkerThread):
                             deltas[input_id] = deltas.get(input_id, 0) - qty_needed * actual
                         deltas[commodity_id] = deltas.get(commodity_id, 0) + actual
 
-                # End-use consumption (every tick, 2x rate)
+                # End-use consumption (every tick, population-scaled)
                 if do_consumption:
+                    pop_mult = max(0.5, sys.population / 100_000_000.0)
                     for commodity_id in station_consumption.get(station.station_type, []):
-                        deltas[commodity_id] = deltas.get(commodity_id, 0) - 2.0
+                        rate = 2.0 * pop_mult
+                        if station.inventory.get(commodity_id, 0) > rate:
+                            deltas[commodity_id] = deltas.get(commodity_id, 0) - rate
+
+                # Military/shipyard self-supply: baseline production of consumed goods
+                if station.station_type in ('military_base', 'shipyard'):
+                    pop_mult_ms = max(0.5, sys.population / 100_000_000.0)
+                    for commodity_id in station_consumption.get(station.station_type, []):
+                        current = station.inventory.get(commodity_id, 0) + deltas.get(commodity_id, 0)
+                        if current < 500:
+                            deltas[commodity_id] = deltas.get(commodity_id, 0) + 2.0 * pop_mult_ms * 1.5
 
                 # Population-based trade good consumption
                 if do_consumption and station.station_type == 'trade_hub' and sys.population > 10000:
@@ -147,16 +158,19 @@ class EconomyWorker(WorkerThread):
 
                     pressure = station.price_pressure.get(commodity_id, 0)
                     if demand > 10 and stock < demand:
-                        pressure = min(pressure + 0.5, 50)
+                        pressure = min(pressure + 0.2, 15)
                     elif stock > demand * 3:
-                        pressure = max(pressure - 0.5, -30)
+                        pressure = max(pressure - 0.2, -15)
                     else:
-                        pressure *= 0.98
+                        pressure *= 0.90
                     station.price_pressure[commodity_id] = pressure
 
                     supply = max(1, stock)
                     base_price = calculate_price(commodity_id, supply, demand, commodities)
                     new_price = round(base_price * (1 + pressure / 100), 2)
+                    # Hard clamp: never deviate more than 2x from base
+                    bp = commodities[commodity_id].base_price
+                    new_price = max(bp * 0.5, min(bp * 2.0, new_price))
                     old_price = station.price_cache.get(commodity_id)
 
                     if old_price is None or new_price != old_price:

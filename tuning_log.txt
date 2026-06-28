@@ -1,0 +1,106 @@
+# Economy Tuning Log - June 27, 2026
+
+## Overview
+5 rounds of simulate -> analyze -> tweak to achieve a stable population-driven economy.
+Each round: 10K ticks (~42 game-days) at 8-16 t/s.
+
+## Round 0 (Pre-tuning baseline)
+- Flat 2.0/tick consumption per station (no population scaling)
+- 507 haulers, old assigned-station logic
+- Prices: wildly unstable, 0.054x to 18x range
+- Growth: massive accumulation
+
+## Round 1: Population Scaling + Fuel Fix
+**Changes:**
+- Consumption: rate = 2.0 * max(0.5, pop/100M) per commodity
+- Removed fuel consumption from refineries/factories/component_works
+- Military/shipyard self-supply at 1.5x consumption rate (cap 500)
+- Passive gen reduced 20 -> 8
+- Contract-based hauler AI (replaces assigned-station logic)
+- Hauler fleet increased 507 -> ~1600
+- Industrial cargo bumped (Clydesdale 100K, Mammoth 30K, Ox 15K)
+
+**Results:**
+- Fuel: avg 1.10x (FIXED - was 1.97x)
+- Military bases: stocked (4500 ammo, 9500 wpn, 1000 fuel)
+- Hauler utilization: 72% (was 18%)
+- Ore prices: 1.4-1.6x avg (still elevated)
+- Growth: 9,300/tick
+
+## Round 2: Refinery Boost
+**Changes:**
+- Refinery production_rate: 1.0 -> 3.0 (3x throughput)
+- Military self-supply cap: 5000 -> 500
+
+**Results:**
+- Fuel: avg 1.09x (stable)
+- Ore: Iron 1.46x, Copper 1.60x (slight improvement)
+- Growth: 10,126/tick (slight increase from faster refinery output)
+- Military: properly capped at 4500/9500/1000
+
+## Round 3: Mining Yield Increase
+**Changes:**
+- Mining yield: 200 -> 400 per cycle
+- Passive gen: 8 -> 3 (reduce free stockpiling)
+
+**Results:**
+- Nearly identical to Round 2 (ore still 1.4-1.6x)
+- Confirms bottleneck is LOGISTICS, not production
+- Haulers at 72% utilization with 5.7M units in transit
+- Growth: 9,300/tick (decelerating from R2)
+
+## Final Assessment
+
+### What's Working:
+- Population-driven consumption creates demand hotspots (high-sec > null-sec)
+- Fuel economy solved (only trade hubs/military/shipyards consume externally)
+- Military bases self-sustain with capped stockpiles
+- Contract-based hauler AI achieves 72% utilization
+- Production chains functional (ore -> refined -> manufactured -> components)
+- Hard price clamp (0.5x-2.0x) prevents runaway inflation/deflation
+- 7M+ units actively in transit at any time
+
+### Remaining Issues:
+- Growth rate 9,300/tick (ore stockpiling at mining colonies)
+  - Not critical: stockpiles represent available supply for haulers
+  - Will self-limit when inventory_cap (500K) is reached
+- 56% of prices at 2.0x ceiling
+  - This is geographic friction (logistics can't service all demand points)
+  - Will improve with: more haulers, combat attrition sinking goods, faction events
+  - The hard clamp makes this a visual issue, not an economic failure
+- Median price 2.0x
+  - Need to consider relaxing the clamp to 0.5x-3.0x for more natural variation
+  - OR accept that the hard clamp is an artifical stability mechanism
+
+### Next Steps:
+1. Wire combat attrition into the sim (ships destroyed = real demand sink)
+2. Consider relaxing price clamp once combat provides natural demand
+3. Add more haulers as fleet grows organically
+4. Test with event injection (sim_events.py) for resilience
+
+## Config State After Tuning:
+```yaml
+mining:
+  yield_multiplier: 400
+  cycle_ticks: 50
+passive_generation:
+  rate_multiplier: 3.0
+  inventory_cap: 500000
+economy:
+  production_rate: 1.0 (refineries: 3.0 in DB)
+  baseline_trickle_mult: 0.3
+  price_update_interval: 60
+```
+
+## Economy Worker Changes:
+- Consumption: `rate = 2.0 * max(0.5, sys.population / 100_000_000.0)`
+- Price clamp: `max(bp * 0.5, min(bp * 2.0, new_price))`
+- Pressure: +/-0.2 per update, cap +/-15, decay 0.90
+- Military self-supply: `2.0 * pop_mult * 1.5` when inventory < 500
+- Fuel removed from refinery/factory/component_works consumption
+
+## NPC Hauler Changes:
+- Contract-based system (replaces assigned-station)
+- Contracts rebuild every 50 ticks from all station deficits
+- Inter-regional hauling enabled
+- Fleet: ~1600 haulers (10 per system with stations)

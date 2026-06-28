@@ -15,7 +15,9 @@ if os.path.exists('data/game.db'):
     print("Cleared saved state.")
 
 import server.main as m
-m._sim_ready.wait(30)
+if not m._sim_ready.wait(60):
+    print("ERROR: Simulation failed to start in 60s")
+    sys.exit(1)
 m.supervisor.multiplier = speed
 print(f"Running at {speed}x for {duration}s...")
 

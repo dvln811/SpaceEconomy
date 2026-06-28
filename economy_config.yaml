@@ -9,13 +9,13 @@ mining:
 
   # Mining cycle
   cycle_ticks: 50                    # ticks per mining extraction cycle
-  yield_multiplier: 40               # ore per cycle = yield_multiplier * field_density
+  yield_multiplier: 400              # ore per cycle = yield_multiplier * field_density
   unload_ticks: 25                   # ticks to unload cargo at station
 
 passive_generation:
   # Station-based ore generation (mining colonies)
-  rate_multiplier: 1.0               # ore/tick = rate_multiplier * field_density per ore type
-  inventory_cap: 5000                # max ore stockpile per type per station before gen stops
+  rate_multiplier: 3.0               # ore/tick = rate_multiplier * field_density per ore type
+  inventory_cap: 500000              # max ore stockpile per type per station before gen stops
 
 economy:
   # Production
