@@ -124,7 +124,7 @@ async function showAgent(id) {
     <div class="info-grid">
       <div class="info-card"><div class="label">Age</div><div class="val">${a.age || '?'} years</div></div>
       <div class="info-card"><div class="label">Rank</div><div class="val">${a.rank || 1}</div></div>
-      <div class="info-card"><div class="label">Wealth</div><div class="val">${Math.round(a.wealth || 0)} credits</div></div>
+      <div class="info-card"><div class="label">Wealth</div><div class="val">${(a.wealth||0).toLocaleString()} credits</div></div>
       <div class="info-card"><div class="label">Kills</div><div class="val">${a.kills || 0}</div></div>
     </div>`;
 
