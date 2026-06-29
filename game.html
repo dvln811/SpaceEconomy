@@ -1291,7 +1291,7 @@ async function fetchNews(){
       }
       // Link agent name if present
       if(e.agent_name&&e.agent_id){
-        txt=txt.replace(e.agent_name,`<a href="/agents#${e.agent_id}" target="_top" style="color:${color};text-decoration:underline">${e.agent_name}</a>`);
+        txt=txt.replace(e.agent_name,`<a href="#" onclick="event.preventDefault();document.getElementById('viewFrame').src='/agents#${e.agent_id}';document.getElementById('viewFrame').style.display='block'" style="color:${color};text-decoration:underline">${e.agent_name}</a>`);
       }
       const eTick=e.tick||0;
       const eDays=Math.floor(eTick/240);
