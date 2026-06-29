@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Space Economy - Agents</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:13px;height:100vh;overflow:hidden}
+a{color:#4fc3f7;text-decoration:none;cursor:pointer}a:hover{text-decoration:underline}
+h2{color:#4fc3f7;font-size:13px;letter-spacing:1px;margin:16px 0 8px;border-bottom:1px solid #1a2844;padding-bottom:4px}
+.layout{display:grid;grid-template-columns:280px 1fr;height:100vh}
+.left{background:#080c14;border-right:1px solid #1a2844;display:flex;flex-direction:column;overflow:hidden}
+.left-hdr{padding:8px 10px;border-bottom:1px solid #1a2844}
+.left-hdr h1{color:#4fc3f7;font-size:14px;letter-spacing:2px;margin-bottom:6px}
+.filters{display:flex;flex-direction:column;gap:4px}
+.filters select,.filters input{background:#0a1020;border:1px solid #1a2844;color:#c8d4e0;padding:4px 8px;border-radius:3px;font:inherit;font-size:11px;width:100%}
+.agent-list{flex:1;overflow-y:auto;padding:4px 0}
+.al-row{display:flex;align-items:center;gap:6px;padding:4px 10px;cursor:pointer;font-size:11px;border-left:3px solid transparent}
+.al-row:hover{background:#0d1a2f}
+.al-row.active{background:#0a1a30;border-left-color:#4fc3f7}
+.al-row .name{flex:1;color:#e0e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.al-row .meta{color:#5a7a9a;font-size:9px;text-align:right;white-space:nowrap}
+.al-row.dead{opacity:0.4}
+.right{overflow-y:auto;padding:24px 32px}
+.right .empty{color:#5a7a9a;margin-top:40vh;text-align:center;font-size:12px}
+.detail .big-name{font-size:20px;color:#e0e8f0;font-weight:600}
+.detail .title-line{color:#8aa0b8;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:3px 0}
+.detail .faction-badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;letter-spacing:1px}
+.detail .status-dead{color:#ef5350;font-size:12px;margin-top:6px;padding:4px 8px;background:#1a0a0a;border-radius:3px;display:inline-block}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.stat{background:#0a1020;border:1px solid #1a2844;border-radius:4px;padding:8px 10px}
+.stat .label{font-size:9px;color:#5a7a9a;text-transform:uppercase;letter-spacing:1px}
+.stat .val{font-size:14px;color:#e0e8f0;margin-top:2px}
+.stat .bar{height:4px;border-radius:2px;margin-top:4px;background:#1a2844}
+.stat .bar-fill{height:100%;border-radius:2px}
+.family{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.family-member{background:#0a1020;border:1px solid #1a2844;border-radius:4px;padding:8px 12px;font-size:11px;cursor:pointer;transition:border-color .15s}
+.family-member:hover{border-color:#4fc3f7}
+.family-member .rel{font-size:9px;color:#5a7a9a;text-transform:uppercase;margin-bottom:2px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.info-card{background:#0a1020;border:1px solid #1a2844;border-radius:4px;padding:12px}
+.info-card .label{font-size:9px;color:#5a7a9a;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.info-card .val{color:#e0e8f0;font-size:12px}
+.history-log{margin:8px 0;max-height:250px;overflow-y:auto}
+.hist-entry{padding:4px 0;border-bottom:1px solid #0f1520;font-size:11px;color:#8aa0b8}
+.hist-entry .tick{color:#4fc3f7;margin-right:8px;font-size:10px}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#080c14}::-webkit-scrollbar-thumb{background:#1a3050;border-radius:3px}
+</style></head><body>
+<div class="layout">
+  <div class="left">
+    <div class="left-hdr">
+      <h1>Agents</h1>
+      <div class="filters">
+        <select id="fFaction"><option value="">All Factions</option></select>
+        <select id="fRole"><option value="">All Roles</option></select>
+        <div style="display:flex;gap:4px">
+          <select id="fAlive" style="flex:1"><option value="1">Alive</option><option value="0">Dead</option><option value="">All</option></select>
+          <input id="fSearch" type="search" placeholder="Search..." style="flex:2">
+        </div>
+      </div>
+    </div>
+    <div class="agent-list" id="agentList"></div>
+  </div>
+  <div class="right" id="agentDetail">
+    <div class="empty">Select an agent to view details</div>
+  </div>
+</div>
+<script>
+const FACTIONS = {terran_fed:'Terran Federation',science_collective:'Nexus Collective',merchants_guild:'Merchants Guild',free_states:'Frontier Alliance',iron_compact:'Iron Compact',corsairs:'The Corsairs'};
+const COLORS = {terran_fed:'#4fc3f7',science_collective:'#ab47bc',merchants_guild:'#ffd54f',free_states:'#66bb6a',iron_compact:'#ff8a65',corsairs:'#ef5350'};
+let allAgents = [];
+
+async function init() {
+  // Populate faction filter
+  const fSel = document.getElementById('fFaction');
+  for (const [id, name] of Object.entries(FACTIONS)) {
+    fSel.innerHTML += `<option value="${id}">${name}</option>`;
+  }
+  await loadAgents();
+  // Check URL hash for direct agent link
+  if (location.hash) showAgent(location.hash.slice(1));
+}
+
+async function loadAgents() {
+  const params = new URLSearchParams();
+  const faction = document.getElementById('fFaction').value;
+  const role = document.getElementById('fRole').value;
+  const alive = document.getElementById('fAlive').value;
+  if (faction) params.set('faction', faction);
+  if (role) params.set('role', role);
+  if (alive !== '') params.set('alive', alive);
+  const r = await fetch('/api/agents?' + params);
+  allAgents = await r.json();
+  renderList();
+}
+
+function renderList() {
+  const search = document.getElementById('fSearch').value.toLowerCase();
+  const list = document.getElementById('agentList');
+  const filtered = allAgents.filter(a => !search || a.name.toLowerCase().includes(search));
+  list.innerHTML = filtered.slice(0, 150).map(a => `<div class="al-row${a.alive?'':' dead'}" data-id="${a.id}" onclick="showAgent('${a.id}')">
+    <span class="name">${a.name}</span>
+    <span class="meta">${(a.role||'').replace(/_/g,' ')}</span>
+  </div>`).join('');
+}
+
+async function showAgent(id) {
+  location.hash = id;
+  document.querySelectorAll('.al-row').forEach(r => r.classList.toggle('active', r.dataset.id === id));
+  const r = await fetch('/api/agents/' + id);
+  if (!r.ok) return;
+  const a = await r.json();
+  const color = COLORS[a.faction_id] || '#888';
+  const fname = FACTIONS[a.faction_id] || a.faction_id;
+
+  let html = `<div class="detail">
+    <div class="big-name">${a.name}</div>
+    <div class="title-line">${a.title} -- ${(a.role||'').replace(/_/g,' ')}</div>
+    <div class="title-line"><span class="faction-badge" style="border:1px solid ${color};color:${color}">${fname}</span> Clan ${a.clan || 'Unknown'}</div>
+    ${!a.alive ? `<div class="status-dead">DECEASED -- ${a.cause_of_death||'unknown cause'}</div>` : ''}
+
+    <div class="info-grid">
+      <div class="info-card"><div class="label">Age</div><div class="val">${a.age || '?'} years</div></div>
+      <div class="info-card"><div class="label">Rank</div><div class="val">${a.rank || 1}</div></div>
+      <div class="info-card"><div class="label">Wealth</div><div class="val">${Math.round(a.wealth || 0)} credits</div></div>
+      <div class="info-card"><div class="label">Kills</div><div class="val">${a.kills || 0}</div></div>
+    </div>`;
+
+  // Traits with bars
+  html += `<h2>Personality</h2><div class="stats">`;
+  const traits = [['Aggression',a.aggression,'#ef5350'],['Caution',a.caution,'#4fc3f7'],['Competence',a.competence,'#66bb6a'],['Loyalty',a.loyalty,'#ffd54f'],['Ambition',a.ambition,'#ab47bc'],['Corruption',a.corruption,'#ff8a65']];
+  for (const [name, val, col] of traits) {
+    const v = val != null ? Math.round(val * 100) : 0;
+    html += `<div class="stat"><div class="label">${name}</div><div class="val">${v}%</div><div class="bar"><div class="bar-fill" style="width:${v}%;background:${col}"></div></div></div>`;
+  }
+  html += `</div>`;
+
+  // Family
+  const fam = [];
+  if (a.spouse) fam.push({...a.spouse, rel:'Spouse'});
+  if (a.parent) fam.push({...a.parent, rel:'Parent'});
+  if (a.children) a.children.forEach(c => fam.push({...c, rel:'Child'}));
+  if (fam.length || (a.clan_members && a.clan_members.length)) {
+    html += `<h2>Family & Clan</h2><div class="family">`;
+    for (const m of fam) {
+      html += `<div class="family-member" onclick="showAgent('${m.id}')"><div class="rel">${m.rel}</div>${m.name}${m.alive?'':' (dead)'}</div>`;
+    }
+    html += `</div>`;
+    if (a.clan_members && a.clan_members.length) {
+      html += `<div style="margin-top:8px;font-size:10px;color:#5a7a9a">Clan ${a.clan} (${a.clan_members.length + 1} members)</div><div class="family">`;
+      for (const m of a.clan_members.slice(0, 12)) {
+        html += `<div class="family-member" onclick="showAgent('${m.id}')"><div class="rel">${(m.role||'').replace(/_/g,' ')}</div>${m.name}, ${m.age}</div>`;
+      }
+      html += `</div>`;
+    }
+  }
+
+  // History
+  html += `<h2>History</h2>`;
+  if (a.history && a.history.length) {
+    html += `<div class="history-log">`;
+    for (const h of a.history) {
+      html += `<div class="hist-entry"><span class="tick">T${h.tick}</span>${h.detail || h.event_type}</div>`;
+    }
+    html += `</div>`;
+  } else {
+    html += `<div style="color:#5a7a9a;font-size:11px">No recorded history yet.</div>`;
+  }
+
+  html += `</div>`;
+  document.getElementById('agentDetail').innerHTML = html;
+}
+
+document.getElementById('fFaction').addEventListener('change', loadAgents);
+document.getElementById('fRole').addEventListener('change', loadAgents);
+document.getElementById('fAlive').addEventListener('change', loadAgents);
+document.getElementById('fSearch').addEventListener('input', renderList);
+init();
+</script></body></html>

@@ -197,13 +197,13 @@ function showFaction(fid) {
     if (execs.length) {
       html += `<h2>Officers</h2>`;
       for (const a of execs) {
-        html += `<div class="agent" style="border-color:${f.color}55">
+        html += `<a href="/agents#${a.id}" class="agent" style="border-color:${f.color}55;text-decoration:none;display:flex">
           ${a.portrait ? `<img src="${portraitUrl(a.portrait)}" alt="${a.name}">` : ''}
           <div class="agent-info">
             <div class="agent-name">${a.name}</div>
             <div class="agent-title">${a.title} (${a.role})</div>
           </div>
-        </div>`;
+        </a>`;
       }
     }
     if (population.length) {
@@ -211,12 +211,12 @@ function showFaction(fid) {
       <div style="margin:4px 0 8px"><button class="btn" onclick="const el=document.getElementById('popAgents');el.style.display=el.style.display==='none'?'block':'none';this.textContent=el.style.display==='none'?'Show Agents':'Hide Agents'">Show Agents</button></div>
       <div id="popAgents" style="display:none;max-height:300px;overflow-y:auto;border:1px solid #1a2844;border-radius:4px;padding:8px">`;
       for (const a of population) {
-        html += `<div class="agent" style="border-color:${f.color}22">
+        html += `<a href="/agents#${a.id}" class="agent" style="border-color:${f.color}22;text-decoration:none;display:flex">
           <div class="agent-info">
             <div class="agent-name">${a.name}</div>
             <div class="agent-title">${a.title} (${a.role.replace(/_/g,' ')})</div>
           </div>
-        </div>`;
+        </a>`;
       }
       html += `</div>`;
     }

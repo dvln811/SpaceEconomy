@@ -177,6 +177,11 @@ def universe_page():
     return send_from_directory(BASE_DIR, "universe.html")
 
 
+@app.route("/agents")
+def agents_page():
+    return send_from_directory(BASE_DIR, "agents.html")
+
+
 @app.route("/ships")
 def ships_page():
     return send_from_directory(BASE_DIR, "ships.html")
@@ -931,7 +936,7 @@ def api_agents():
 
 @app.route("/api/agents/<agent_id>")
 def api_agent_detail(agent_id):
-    """Get single agent with full history."""
+    """Get single agent with full history and family."""
     from server.game_data_db import get_data_db
     conn = get_data_db()
     row = conn.execute("SELECT * FROM faction_agents WHERE id=?", (agent_id,)).fetchone()
@@ -942,6 +947,18 @@ def api_agent_detail(agent_id):
     agent['history'] = [dict(h) for h in conn.execute(
         "SELECT tick, event_type, detail, related_agent_id, system_id FROM agent_history WHERE agent_id=? ORDER BY tick DESC",
         (agent_id,)).fetchall()]
+    # Family: spouse, parent, children, clan members
+    if agent.get('spouse_id'):
+        s = conn.execute("SELECT id, name, title, role, alive FROM faction_agents WHERE id=?", (agent['spouse_id'],)).fetchone()
+        agent['spouse'] = dict(s) if s else None
+    if agent.get('parent_id'):
+        p = conn.execute("SELECT id, name, title, role, alive FROM faction_agents WHERE id=?", (agent['parent_id'],)).fetchone()
+        agent['parent'] = dict(p) if p else None
+    agent['children'] = [dict(c) for c in conn.execute(
+        "SELECT id, name, title, role, alive FROM faction_agents WHERE parent_id=?", (agent_id,)).fetchall()]
+    agent['clan_members'] = [dict(c) for c in conn.execute(
+        "SELECT id, name, title, role, alive, age FROM faction_agents WHERE clan=? AND faction_id=? AND id!=? ORDER BY age DESC",
+        (agent.get('clan',''), agent.get('faction_id',''), agent_id)).fetchall()]
     conn.close()
     return jsonify(agent)
 

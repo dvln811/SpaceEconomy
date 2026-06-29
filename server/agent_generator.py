@@ -204,7 +204,9 @@ def regenerate_all():
     conn.row_factory = sqlite3.Row
 
     states = conn.execute("SELECT faction_id, government FROM faction_state").fetchall()
-    conn.execute("DELETE FROM faction_agents WHERE id NOT LIKE 'corp_%'")
+    leadership_roles = ('leader', 'admiral', 'governor', 'general', 'director', 'spymaster')
+    conn.execute(f"DELETE FROM faction_agents WHERE role IN ({','.join('?' * len(leadership_roles))}) AND id NOT LIKE 'corp_%'",
+                 leadership_roles)
 
     all_agents = []
     used_portraits = set()
@@ -240,7 +242,7 @@ def regenerate_faction(faction_id):
         conn.close()
         return []
 
-    conn.execute("DELETE FROM faction_agents WHERE faction_id=? AND id NOT LIKE 'corp_%'", (faction_id,))
+    conn.execute("DELETE FROM faction_agents WHERE faction_id=? AND id NOT LIKE 'corp_%' AND role IN ('leader','admiral','governor','general','director','spymaster')", (faction_id,))
     agents = generate_agents(faction_id, state['government'])
 
     leader = next(a for a in agents if a['role'] == 'leader')

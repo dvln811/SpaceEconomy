@@ -98,8 +98,8 @@ def _spawn_replacement(conn, faction_id, role, system_id, station_id, tick):
 
     conn.execute("""INSERT INTO faction_agents
         (id, name, title, faction_id, role, aggression, caution, competence,
-         loyalty, ambition, corruption, system_id, station_id, rank, wealth, alive)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)""",
+         loyalty, ambition, corruption, system_id, station_id, rank, wealth, gender, alive)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)""",
         (agent_id, name, title, faction_id, role,
          generate_trait(0.5, bias.get('aggression', 0)),
          generate_trait(0.5, bias.get('caution', 0)),
@@ -108,6 +108,6 @@ def _spawn_replacement(conn, faction_id, role, system_id, station_id, tick):
          generate_trait(0.4, bias.get('ambition', 0)),
          generate_trait(0.1, bias.get('corruption', 0)),
          system_id or '', station_id or '', 1,
-         round(random.uniform(50, 200), 1)))
+         round(random.uniform(50, 200), 1), gender))
 
     log_history(conn, tick, agent_id, 'spawned', f"Replaces fallen predecessor as {title}", system_id=system_id or '')
