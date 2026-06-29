@@ -80,9 +80,11 @@ def _init_simulation():
     supervisor.add_worker(FactionStrategyWorker())
     supervisor.add_worker(BattleSimWorker())
     supervisor.add_worker(CorsairSpawnWorker())
+    from server.workers.event_generator import EventGeneratorWorker
+    supervisor.add_worker(EventGeneratorWorker())
     supervisor.add_worker(DashboardWorker(COMMODITIES, STATION_CONSUMPTION))
     supervisor.start()
-    log.info(f"Supervisor started ({sim_speed['rate']}s/tick, {len(sim.ships)} NPCs, 6 workers)")
+    log.info(f"Supervisor started ({sim_speed['rate']}s/tick, {len(sim.ships)} NPCs, 7 workers)")
     _sim_ready.set()
 
 
