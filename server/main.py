@@ -662,9 +662,19 @@ def api_news():
         return jsonify([])
     HIDE_PREFIXES = ('QUEUE:', 'BUILT:', 'TRADE:')
     all_events = sim.events if hasattr(sim, 'events') else []
-    filtered = [e for e in all_events if not any(e.get('msg', '').startswith(p) for p in HIDE_PREFIXES)]
+    filtered = [e for e in all_events if not any(e.get('msg', '').startswith(p) for p in HIDE_PREFIXES) and e.get('category') != 'price']
     events = filtered[-75:]
     return jsonify(list(reversed(events)))
+
+
+@app.route("/api/prices/ticker")
+def api_prices_ticker():
+    """Return last 30 price change messages for the scrolling ticker."""
+    if not sim:
+        return jsonify([])
+    all_events = sim.events if hasattr(sim, 'events') else []
+    prices = [e for e in all_events if e.get('category') == 'price']
+    return jsonify(prices[-30:])
 
 
 @app.route("/api/debug")
