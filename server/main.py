@@ -80,8 +80,8 @@ def _init_simulation():
     supervisor.add_worker(FactionStrategyWorker())
     supervisor.add_worker(BattleSimWorker())
     supervisor.add_worker(CorsairSpawnWorker())
-    from server.workers.event_generator import EventGeneratorWorker
-    supervisor.add_worker(EventGeneratorWorker())
+    from server.workers.faction_events import FactionEventWorker
+    supervisor.add_worker(FactionEventWorker())
     supervisor.add_worker(DashboardWorker(COMMODITIES, STATION_CONSUMPTION))
     supervisor.start()
     log.info(f"Supervisor started ({sim_speed['rate']}s/tick, {len(sim.ships)} NPCs, 7 workers)")
@@ -890,6 +890,60 @@ def api_data_faction_agents():
     rows = conn.execute("SELECT * FROM faction_agents WHERE alive=1 ORDER BY faction_id, role").fetchall()
     conn.close()
     return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/agents")
+def api_agents():
+    """Browse agents with optional filters: faction, role, alive, system."""
+    from server.game_data_db import get_data_db
+    conn = get_data_db()
+    sql = "SELECT * FROM faction_agents WHERE 1=1"
+    params = []
+    faction = request.args.get('faction')
+    role = request.args.get('role')
+    alive = request.args.get('alive')
+    system = request.args.get('system')
+    if faction:
+        sql += " AND faction_id=?"
+        params.append(faction)
+    if role:
+        sql += " AND role=?"
+        params.append(role)
+    if alive is not None:
+        sql += " AND alive=?"
+        params.append(int(alive))
+    if system:
+        sql += " AND system_id=?"
+        params.append(system)
+    sql += " ORDER BY faction_id, rank DESC, name"
+    rows = conn.execute(sql, params).fetchall()
+    # Attach history for each agent
+    agents = []
+    for r in rows:
+        a = dict(r)
+        hist = conn.execute("SELECT tick, event_type, detail FROM agent_history WHERE agent_id=? ORDER BY tick DESC LIMIT 10",
+                            (a['id'],)).fetchall()
+        a['history'] = [dict(h) for h in hist]
+        agents.append(a)
+    conn.close()
+    return jsonify(agents)
+
+
+@app.route("/api/agents/<agent_id>")
+def api_agent_detail(agent_id):
+    """Get single agent with full history."""
+    from server.game_data_db import get_data_db
+    conn = get_data_db()
+    row = conn.execute("SELECT * FROM faction_agents WHERE id=?", (agent_id,)).fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"error": "not found"}), 404
+    agent = dict(row)
+    agent['history'] = [dict(h) for h in conn.execute(
+        "SELECT tick, event_type, detail, related_agent_id, system_id FROM agent_history WHERE agent_id=? ORDER BY tick DESC",
+        (agent_id,)).fetchall()]
+    conn.close()
+    return jsonify(agent)
 
 
 @app.route("/api/data/faction_agents/regenerate", methods=["POST"])
