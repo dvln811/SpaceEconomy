@@ -23,13 +23,18 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 ::-webkit-scrollbar-thumb:hover{background:#2a4060}
 
 /* Layout */
-.app{display:grid;grid-template-columns:120px 1fr 4px 320px;grid-template-rows:48px 1fr;height:100vh;gap:0;background:#1a2030}
-.nav-panel{grid-row:1/-1;background:#0a0e18;border-right:1px solid #1a2844;display:flex;flex-direction:column;padding:8px 6px;gap:2px}
-.nav-btn{border:none;background:none;color:#8aa0b8;cursor:pointer;border-radius:3px;font-size:11px;font-family:'JetBrains Mono',monospace;text-align:left;padding:6px 8px;letter-spacing:0.5px;text-transform:uppercase;transition:all .12s;white-space:nowrap}
+.app{display:grid;grid-template-columns:160px 1fr 4px 320px;grid-template-rows:48px 1fr;height:100vh;gap:0;background:#1a2030}
+.nav-panel{grid-row:1/-1;background:#0a0e18;border-right:1px solid #1a2844;display:flex;flex-direction:column;padding:8px 6px;gap:1px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#1a3050 #0a0e18}
+.nav-btn{border:none;background:none;color:#8aa0b8;cursor:pointer;border-radius:3px;font-size:11px;font-family:'JetBrains Mono',monospace;text-align:left;padding:5px 8px;letter-spacing:0.5px;text-transform:uppercase;transition:all .12s;white-space:nowrap}
 .nav-btn:hover{background:#0d1a2f;color:#4fc3f7}
 .nav-btn.active{color:#4fc3f7;background:#0a1a30;border-left:2px solid #4fc3f7}
 .nav-btn.danger{color:#ef5350}
 .nav-btn.danger:hover{background:#1a0a0a}
+.nav-tree{display:none;flex-direction:column;gap:1px}
+.nav-tree.open{display:flex}
+.nav-sub{font-size:10px;padding:3px 8px 3px 16px;text-transform:none;letter-spacing:0}
+.nav-sub2{padding-left:24px;font-size:9px}
+.nav-sub3{padding-left:32px;font-size:9px;color:#5a7a9a}
 
 /* Side resize handles */
 .side-handle{background:#0a0f1a;cursor:ew-resize;display:flex;align-items:center;justify-content:center;transition:background .15s}
@@ -155,8 +160,29 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     <button class="nav-btn" data-view="ship">Ship</button>
     <button class="nav-btn" data-view="inventory">Inventory</button>
     <button class="nav-btn" data-view="market">Market</button>
-    <button class="nav-btn" data-view="encyclopedia">Encyclopedia</button>
-    <button class="nav-btn" data-view="universe" style="padding-left:16px;font-size:10px">Factions</button>
+    <button class="nav-btn" data-toggle="enc">Encyclopedia &#9662;</button>
+    <div class="nav-tree" id="encTree">
+      <button class="nav-btn nav-sub" data-view="docs">Hub</button>
+      <button class="nav-btn nav-sub" data-toggle="uni">Universe &#9662;</button>
+      <div class="nav-tree" id="uniTree">
+        <button class="nav-btn nav-sub2" data-view="universe">Factions</button>
+      </div>
+      <button class="nav-btn nav-sub" data-view="items">Items DB</button>
+      <button class="nav-btn nav-sub" data-view="chain">Chain Calc</button>
+      <button class="nav-btn nav-sub" data-toggle="shp">Ships &#9662;</button>
+      <div class="nav-tree" id="shpTree">
+        <button class="nav-btn nav-sub2" data-view="ships_db">Ships DB</button>
+        <button class="nav-btn nav-sub2" data-view="ships">Ships 3D</button>
+        <button class="nav-btn nav-sub2" data-view="fitting">Fitting</button>
+      </div>
+      <button class="nav-btn nav-sub" data-toggle="mat">Materials &#9662;</button>
+      <div class="nav-tree" id="matTree">
+        <button class="nav-btn nav-sub2" data-view="resources">Resources</button>
+        <button class="nav-btn nav-sub2" data-view="materials">Materials</button>
+        <button class="nav-btn nav-sub2" data-view="products">Products</button>
+      </div>
+      <button class="nav-btn nav-sub" data-view="design">Design</button>
+    </div>
     <button class="nav-btn" data-view="settings">Settings</button>
     <div style="flex:1"></div>
     <button class="nav-btn danger" data-view="dashboard">Dashboard</button>
@@ -242,24 +268,33 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 (function(){
   const btns=document.querySelectorAll('.nav-panel .nav-btn');
   const frame=document.getElementById('viewFrame');
-  const viewUrls={market:'/market',encyclopedia:'/docs',universe:'/universe',dashboard:'/debug',ship:'/ship',inventory:'/inventory',settings:'/settings'};
+  const viewUrls={market:'/market',docs:'/docs',universe:'/universe',items:'/items',chain:'/chain',ships_db:'/ships_db',ships:'/ships',fitting:'/fitting',resources:'/resources',materials:'/materials',products:'/products',design:'/design',dashboard:'/debug',ship:'/ship',inventory:'/inventory',settings:'/settings'};
   const rightHandle = document.getElementById('right-handle');
   const rightPanel = document.querySelector('.right-panel');
   const app = document.querySelector('.app');
-  btns.forEach(btn=>{
+  // Toggle tree sections
+  document.querySelectorAll('[data-toggle]').forEach(btn=>{
     btn.addEventListener('click',()=>{
-      btns.forEach(b=>b.classList.remove('active'));
+      const id=btn.dataset.toggle+'Tree';
+      const tree=document.getElementById(id);
+      if(tree){tree.classList.toggle('open');btn.textContent=btn.textContent.replace(/[▾▸]/,tree.classList.contains('open')?'▾':'▸');}
+    });
+  });
+  btns.forEach(btn=>{
+    if(btn.dataset.toggle) return; // skip toggle buttons
+    btn.addEventListener('click',()=>{
+      btns.forEach(b=>{if(b.dataset.view)b.classList.remove('active');});
       btn.classList.add('active');
       const view=btn.dataset.view;
       document.getElementById('sysviewWin').classList.remove('open');
       if(view==='map'){
         frame.style.display='none';frame.src='';
         rightHandle.style.display='';rightPanel.style.display='';
-        app.style.gridTemplateColumns='120px 1fr 4px 320px';
+        app.style.gridTemplateColumns='160px 1fr 4px 320px';
       } else {
         frame.src=viewUrls[view]||'/';frame.style.display='block';
         rightHandle.style.display='none';rightPanel.style.display='none';
-        app.style.gridTemplateColumns='120px 1fr';
+        app.style.gridTemplateColumns='160px 1fr';
       }
     });
   });
@@ -271,7 +306,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   let rightW=320;
 
   function updateCols(){
-    app.style.gridTemplateColumns=`1fr 4px ${rightW}px`;
+    app.style.gridTemplateColumns=`160px 1fr 4px ${rightW}px`;
     window.dispatchEvent(new Event('resize'));
   }
 
@@ -734,7 +769,7 @@ window.setRouteTo=function(sysName){
   document.querySelector('.nav-btn[data-view="map"]').classList.add('active');
   const rh=document.getElementById('right-handle'),rp=document.querySelector('.right-panel');
   if(rh)rh.style.display='';if(rp)rp.style.display='';
-  document.querySelector('.app').style.gridTemplateColumns='120px 1fr 4px 320px';
+  document.querySelector('.app').style.gridTemplateColumns='160px 1fr 4px 320px';
   if(currentRoute.length) focusSystem(toIdx);
 };
 

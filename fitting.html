@@ -19,21 +19,9 @@ td{padding:6px 8px;border-bottom:1px solid #0f1a28;font-size:12px}
 .formula{background:#0d1520;border:1px solid #1a3050;border-radius:4px;padding:10px 14px;font-size:13px;color:#4fc3f7;margin:8px 0;display:inline-block}
 ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:#0a0e18}::-webkit-scrollbar-thumb{background:#1a3050;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#2a4a70}
 *{scrollbar-width:thin;scrollbar-color:#1a3050 #0a0e18}
-#docnav .dnl{font-size:12px;color:#8aa0b8;text-decoration:none;padding:6px 10px;letter-spacing:1px;text-transform:uppercase;transition:all .15s;border-bottom:2px solid transparent}
-#docnav .dnl:hover{color:#4fc3f7;border-bottom-color:#4fc3f7}
-#docnav .dnl.active{color:#4fc3f7;border-bottom-color:#4fc3f7}
-#docnav .dnl-drop{position:relative;display:inline-block}
-#docnav .dnl-drop .dnl-menu{display:none;position:absolute;top:100%;left:0;background:#0a0f1a;border:1px solid #1a2844;border-radius:4px;padding:4px 0;min-width:120px;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,0.5)}
-#docnav .dnl-drop:hover .dnl-menu{display:block}
-#docnav .dnl-menu a{display:block;padding:5px 12px;color:#8aa0b8;text-decoration:none;font-size:11px;letter-spacing:0.5px}
-#docnav .dnl-menu a:hover{color:#4fc3f7;background:#0d1a2f}
-#docnav .dnl-sep{display:inline-block;width:1px;height:20px;background:#1a2844;margin:0 8px;vertical-align:middle}
 </style>
 </head>
 <body>
-<div id="docnav" style="position:sticky;top:0;z-index:100;background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;align-items:center;padding:0 24px;height:48px;gap:12px;flex-wrap:wrap">
-<a href="/docs" class="dnl">Hub</a><a href="/universe" class="dnl">Universe</a><a href="/items" class="dnl">Items DB</a><a href="/chain" class="dnl">Chain Calc</a><div class="dnl-drop"><a href="/ships_db" class="dnl active">Ships &#9662;</a><div class="dnl-menu"><a href="/ships_db">Ships DB</a><a href="/ships">Ships 3D</a><a href="/fitting">Fitting</a></div></div><div class="dnl-drop"><a href="/resources" class="dnl">Materials &#9662;</a><div class="dnl-menu"><a href="/resources">Resources</a><a href="/materials">Materials</a><a href="/products">Products</a></div></div><span class="dnl-sep"></span><a href="/design" class="dnl">Design</a>
-</div>
 <div style="max-width:1100px;margin:0 auto;padding:0 40px 60px">
 <h1>Fitting Mechanics</h1>
 <p>Every ship has module slots constrained by CPU and Power Grid. Choosing what to fit defines your ship's role.</p>
