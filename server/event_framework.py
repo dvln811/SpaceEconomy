@@ -557,7 +557,9 @@ class FactionEventGenerator:
             detail="Loyalist and rebel forces clash. Communications jammed.",
             faction_id=fid, agent_id=agent['id'] if agent else '', chain_id=chain_id, chain_step=1,
             effects=[{'type': 'stability_loss', 'value': 0.4}])
-        outcome = random.choice(['fails', 'succeeds'])
+        # Coups rarely succeed -- 15-20% chance based on agent's competence/ambition
+        coup_chance = 0.1 + (agent.get('competence', 0.5) * 0.1 if agent else 0)
+        outcome = 'succeeds' if random.random() < coup_chance else 'fails'
         if outcome == 'fails':
             followup = StructuredEvent(tick + random.randint(50, 150), 'political', MAJOR,
                 f"Coup crushed: {name} executed for treason",
@@ -613,7 +615,7 @@ class FactionEventGenerator:
         a2 = self._pick_agent(agents, ['fleet_captain', 'mercenary_leader'])
         if not a1 or not a2 or a1['id'] == a2['id']:
             return None
-        winner, loser = (a1, a2) if random.random() < 0.5 else (a2, a1)
+        winner, loser = (a1, a2) if random.random() < (0.3 + a1.get('aggression',0.5)*0.4) else (a2, a1)
         return StructuredEvent(tick, 'military', MAJOR, f"Captain's Duel: {winner['name']} defeats {loser['name']}",
             detail=f"{loser['name']}'s crew absorbed into {winner['name']}'s fleet.",
             faction_id=fid, agent_id=winner['id'],
@@ -639,8 +641,11 @@ class FactionEventGenerator:
         evt = StructuredEvent(tick, 'political', CRITICAL, f"{c_name} challenges {l_name} for the throne",
             detail="All Fleet Captains called to witness. No quarter asked or given.",
             faction_id=fid, agent_id=challenger['id'], chain_id=chain_id, chain_step=1)
-        # Determine winner now so effects are correct
-        challenger_wins = random.random() < 0.4  # 40% chance challenger wins
+        # Odds based on traits: leader has massive advantage (incumbency + reputation)
+        # Challenger needs to be significantly better to win (~15-25% base chance)
+        leader_power = 0.6 + leader.get('aggression', 0.5) * 0.2 + leader.get('competence', 0.5) * 0.2
+        challenger_power = challenger.get('aggression', 0.5) * 0.3 + challenger.get('competence', 0.5) * 0.2
+        challenger_wins = random.random() < (challenger_power / (leader_power + challenger_power)) * 0.6
         if challenger_wins:
             winner, loser = challenger, leader
         else:
