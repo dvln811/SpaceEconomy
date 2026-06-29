@@ -508,7 +508,7 @@ def create_3faction_battle(fleet_size=22):
                 if ammo_id:
                     ammo[ammo_id] = ammo.get(ammo_id, 0) + 150
 
-            spd = speed_table.get(hull_class, 100) * row['speed']
+            spd = row['speed']  # Already in m/s from DB
             sig = sig_table.get(hull_class, 60)
             cap = cap_table.get(hull_class, 500)
             ships.append(make_ship(

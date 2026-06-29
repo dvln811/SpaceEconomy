@@ -178,9 +178,9 @@ function createShipMesh(shipId, geometryId, faction) {
   buildShipFromData(tempGroup, geoData, { showHardpoints: false });
 
   const classScale = {'Fighter':0.5,'Frigate':1.2,'Destroyer':2.5,'Cruiser':5.0,'Battlecruiser':10.0,'Battleship':25.0,'Carrier':32.0,'Dreadnought':100.0};
-  const baseSize = geoData.bounds ? Math.max(geoData.bounds.length, geoData.bounds.width) : 2;
+  const baseSize = geoData.bounds ? Math.max(geoData.bounds.length, geoData.bounds.width) : 100;
   const hullMult = classScale[geoData.hull_class] || classScale[geoData.role] || 1.0;
-  const scale = (25 / baseSize) * hullMult;
+  const scale = (2500 / baseSize) * hullMult;
 
   // Merge all mesh geometries into one
   const geometries = [];
