@@ -329,5 +329,65 @@ economy:
 ## Revert Points
 
 - `d296047` - Last stable state before soft price anchor (hard clamp 0.5x-2.0x working)
-- `4c02998` - Soft anchor + faction strategy material consumption (current, being tested)
-- `e35258b` - Fix for conn error in faction_strategy (current HEAD)
+- `6e573c5` - Current HEAD: full economy with events, combat fix, news ticker
+- `fbea1a9` - Build_cost/fitting_cost split first working
+
+## Recent Session Summary (June 28, 2026)
+
+### Major Achievements
+1. **Ship Fitting System** - Full H/M/L slot layout, CPU/PG costs on all 940 items, hardpoints
+2. **Economy Rebalance** - Population-driven consumption, contract haulers, combat attrition
+3. **Build/Destroy Cycle Working** - 570-635 ships built per 5K ticks, 700 destroyed, fleet stable at ~60
+4. **Slipway Queue System** - Multi-slot shipyards with build times, materials consumed from inventory
+5. **Build Cost Split** - build_cost (hull materials, hauled physically) + fitting_cost (weapons/modules, deducted abstractly from factories)
+6. **Hauler Contract System** - Scoring model (value/distance/claims), opportunistic backhaul, 99% real utilization
+7. **Event Generator** - 14 event types with real effects (dock strikes halt production, corsair raids steal goods, ore discoveries add stockpiles)
+8. **News Ticker** - Map overlay, resizable, minimizable, timestamps, color-coded event types
+9. **Universe Clock** - 82604.xx format (xx increments 0-99 per game-day), local GST
+10. **Corsair Raid Growth Control** - Pressure valve that culls stockpiles when inventory > 80M
+11. **Combat Viewer Fixes** - Speed fixed (was double-multiplied after rebalance), visual scale fixed, smooth position interpolation
+
+### Architecture Decisions Made
+- **1 tick = 6 minutes** game time (240 ticks/day, 87,600/year)
+- **Ships self-fuel** via bussard collectors (no fuel stops for ships, stations consume fuel)
+- **Hull materials hauled physically**, weapons/modules procured abstractly (deducted from factories)
+- **Hard price clamp (0.5x-2.0x)** kept until structural balance achieved
+- **Contract scoring**: value / (distance+1) / (1+claims) with ship-size matching
+- **Corsair raids** as dynamic inventory pressure valve (fires when > 80M total)
+
+### What's Working
+- Full production chain: mining -> refining -> manufacturing -> ship building
+- Combat attrition as demand sink (~700 ships destroyed per 5K ticks)
+- Shipyard slipway queues with real build times
+- 99.4% hauler utilization (confirmed via diagnostic)
+- Opportunistic backhaul (+44% cargo volume)
+- Event system generating gameplay-affecting events
+- News ticker showing live events on map
+
+### Known Issues
+- **Growth rate ~11K/tick** - Ore stockpiling at mining colonies, will trigger corsair raids at 80M
+- **Price distribution** - 60% inflated / 40% crashed (hard clamp prevents extremes, structural)
+- **Combat viewer** - Ships may still need tuning on spacing/engagement range after speed changes
+- **News ticker z-index** - Fixed but may need testing on all overlay pages
+
+### Immediate Next Steps (for next session)
+1. **Faction Lore** - Write detailed histories, political structures, cultural character types for all 6 factions
+2. **Encyclopedia Faction Pages** - Extend /universe to have clickable faction detail pages
+3. **Player Progression** - Renown system (M&B style), start as free agent, earn faction membership
+4. **Faction Policy Framework** - Elections, appointments, policy sliders that affect behavior
+5. **News Event Content** - Expand from 14 to 50+ event templates with deeper lore integration
+6. **News ticker UX** - Test minimize/restore, verify mouse blocking works on all browsers
+
+### Economy Status (end of session)
+- Inventory: ~57M units, Growth: ~11K/tick
+- Ships: 570-635 built / 700 destroyed per 5K ticks (83% replacement, fleet stable)
+- Haulers: 1300 total, 99% assigned, 81% measured carrying+en_route
+- Cargo in transit: 2.6M units (up 44% from backhaul)
+- Price equilibrium: 3.3% within +/-15% (up from 0.4% thanks to event disruptions)
+- Shipyards: 6 active, 4K-67K inventory, building fighters/frigates/destroyers
+
+### Simulation Tools
+- `python _sim.py [ticks]` - economy sim with progress bar, results to sim_results.txt
+- `python sim_events.py [ticks]` - event injection stress test
+- `python dev.py [speed] [duration]` - full server with console output
+- Event generator fires every 200 ticks (1-2 events per cycle)
