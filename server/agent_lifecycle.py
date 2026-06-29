@@ -34,6 +34,11 @@ def process_event_effects(event):
                 _spawn_replacement(conn, row[0], row[1], row[2], row[3], event.tick)
 
         elif etype == 'leader_change' and target:
+            # Demote old leader if still alive
+            conn.execute("UPDATE faction_agents SET role='admiral' WHERE faction_id=? AND role='leader' AND id!=? AND alive=1",
+                         (event.faction_id, target))
+            # Promote new leader
+            conn.execute("UPDATE faction_agents SET role='leader' WHERE id=?", (target,))
             conn.execute("UPDATE faction_state SET leader_id=? WHERE faction_id=?",
                          (target, event.faction_id))
             log_history(conn, event.tick, target, 'promoted_leader', event.title)

@@ -631,17 +631,29 @@ class FactionEventGenerator:
     def _evt_dread_lord_challenge(self, tick, fid, agents, systems, stations):
         challenger = self._pick_agent(agents, ['fleet_captain', 'mercenary_leader'])
         leader = self._pick_agent(agents, ['leader'])
+        if not challenger or not leader:
+            return None
         chain_id = new_chain_id()
-        c_name = challenger['name'] if challenger else 'Unknown Captain'
-        l_name = leader['name'] if leader else 'Dread Lord'
+        c_name = challenger['name']
+        l_name = leader['name']
         evt = StructuredEvent(tick, 'political', CRITICAL, f"{c_name} challenges {l_name} for the throne",
             detail="All Fleet Captains called to witness. No quarter asked or given.",
-            faction_id=fid, agent_id=challenger['id'] if challenger else '', chain_id=chain_id, chain_step=1)
-        followup = StructuredEvent(tick + random.randint(30, 100), 'political', CRITICAL,
-            f"Challenge resolved: {random.choice([c_name, l_name])} emerges victorious",
-            faction_id=fid, chain_id=chain_id, chain_step=2,
-            effects=[{'type': 'leader_change', 'value': 1}])
-        self._schedule_followup(random.randint(30, 100), followup)
+            faction_id=fid, agent_id=challenger['id'], chain_id=chain_id, chain_step=1)
+        # Determine winner now so effects are correct
+        challenger_wins = random.random() < 0.4  # 40% chance challenger wins
+        if challenger_wins:
+            winner, loser = challenger, leader
+        else:
+            winner, loser = leader, challenger
+        followup_tick = tick + random.randint(30, 100)
+        followup = StructuredEvent(followup_tick, 'political', CRITICAL,
+            f"Challenge resolved: {winner['name']} emerges victorious. {loser['name']} is dead.",
+            faction_id=fid, agent_id=winner['id'], chain_id=chain_id, chain_step=2,
+            effects=[
+                {'type': 'agent_killed', 'target': loser['id'], 'value': 1},
+                {'type': 'leader_change', 'target': winner['id'], 'value': 1},
+            ])
+        self._schedule_followup(followup_tick - tick, followup)
         return evt
 
     def _evt_black_market_deal(self, tick, fid, agents, systems, stations):
