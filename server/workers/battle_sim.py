@@ -159,7 +159,37 @@ class BattleSimWorker(WorkerThread):
 
         a_name = FACTIONS.get(attacker_id, attacker_id)
         d_name = FACTIONS.get(defender_id, defender_id)
-        self.emit(EventLog(tick=tick, msg=f"BATTLE: {a_name} vs {d_name} ({a_losses}+{d_losses} ships lost)"))
+        total = a_losses + d_losses
+        # Determine outcome flavor
+        if a_losses < d_losses:
+            winner, loser = a_name, d_name
+            severity = 'decisive' if d_losses >= 2 else 'narrow'
+        elif d_losses < a_losses:
+            winner, loser = d_name, a_name
+            severity = 'decisive' if a_losses >= 2 else 'narrow'
+        else:
+            winner, loser = None, None
+            severity = 'draw'
+        import random
+        if severity == 'decisive':
+            templates = [
+                f"Skirmish: {winner} forces rout {loser} patrol. {loser} retreats with heavy losses.",
+                f"Border clash: {winner} scores decisive victory against {loser}. Multiple ships destroyed.",
+                f"{winner} ambushes {loser} squadron. {loser} withdraws in disarray.",
+            ]
+        elif severity == 'narrow':
+            templates = [
+                f"Skirmish: {winner} edges out {loser} in close engagement. Both sides take damage.",
+                f"Border incident: {winner} and {loser} exchange fire. {loser} disengages.",
+                f"Patrol clash between {winner} and {loser}. {winner} holds the field.",
+            ]
+        else:
+            templates = [
+                f"Inconclusive skirmish between {a_name} and {d_name}. Both sides withdraw.",
+                f"Border standoff: {a_name} and {d_name} trade blows, neither gains advantage.",
+                f"Fierce exchange between {a_name} and {d_name} patrols. Mutual casualties, no victor.",
+            ]
+        self.emit(EventLog(tick=tick, msg=f"NEWS: {random.choice(templates)}", category='military'))
 
     def get_status(self) -> dict:
         building = sum(len(q) for q in self._build_queues.values())
