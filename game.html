@@ -1874,15 +1874,32 @@ function svUpdateShipMeshes(){
       const cid=ship.ship_class||'';
       const geo=mapShipGeos?mapShipGeos[cid]:null;
       if(geo){
-        const tmpScene=new THREE.Scene();
-        const inner=buildShipFromData(tmpScene,geo,{showHardpoints:false});
-        tmpScene.remove(inner);
-        inner.scale.set(2,2,2);
-        inner.rotation.y=-Math.PI/2; // nose points +Z (for lookAt)
+        // Build temp, then merge all geometry into single mesh
+        const tmpGroup=new THREE.Group();
+        buildShipFromData(tmpGroup,geo,{showHardpoints:false});
+        tmpGroup.updateMatrixWorld(true);
+        const geos=[];
+        tmpGroup.traverse(c=>{if(c.isMesh&&c.geometry){const g=c.geometry.clone();g.applyMatrix4(c.matrixWorld);geos.push(g);}});
         const wrapper=new THREE.Group();
-        wrapper.add(inner);
-        svShipsGroup.add(wrapper);
-        cached={group:wrapper,trail:null};
+        if(geos.length){
+          const allG=geos.map(g=>g.index?g.toNonIndexed():g);
+          let tv=0;allG.forEach(g=>tv+=g.attributes.position.count);
+          const pos=new Float32Array(tv*3);let off=0;
+          for(const g of allG){pos.set(g.attributes.position.array,off*3);off+=g.attributes.position.count;}
+          const merged=new THREE.BufferGeometry();
+          merged.setAttribute('position',new THREE.BufferAttribute(pos,3));
+          merged.computeVertexNormals();
+          const mat=new THREE.MeshPhongMaterial({color:0x0a1428,emissive:0x0a1428,shininess:0,transparent:true,opacity:0.7});
+          const m=new THREE.Mesh(merged,mat);
+          m.add(new THREE.LineSegments(new THREE.EdgesGeometry(merged,15),new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.5})));
+          wrapper.add(m);
+          allG.forEach(g=>g.dispose());geos.forEach(g=>g.dispose());
+        }
+        wrapper.scale.set(2,2,2);
+        wrapper.rotation.y=-Math.PI/2;
+        const outer=new THREE.Group();outer.add(wrapper);
+        svShipsGroup.add(outer);
+        cached={group:outer,trail:null};
         svShipCache[ship.name]=cached;
       }else{
         // Fallback: dot sprite
