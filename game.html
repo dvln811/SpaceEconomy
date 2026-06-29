@@ -171,8 +171,10 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <!-- Main: Star Map -->
   <div class="main">
     <div class="map-tooltip" id="map-tooltip"></div>
-    <div id="newsTicker" style="position:absolute;top:10px;left:10px;width:320px;max-height:280px;background:rgba(5,8,15,0.92);border:1px solid #1a2844;border-radius:4px;z-index:5;overflow:hidden;display:flex;flex-direction:column">
-      <div style="padding:4px 10px;font-size:10px;color:#ffa726;border-bottom:1px solid #1a2844;font-weight:600;letter-spacing:1px">GALACTIC NEWS FEED</div>
+    <div id="newsTicker" style="position:absolute;top:10px;left:10px;width:320px;max-height:280px;min-height:24px;background:rgba(5,8,15,0.92);border:1px solid #1a2844;border-radius:4px;z-index:5;overflow:hidden;display:flex;flex-direction:column;resize:vertical">
+      <div style="padding:4px 10px;font-size:10px;color:#ffa726;border-bottom:1px solid #1a2844;font-weight:600;letter-spacing:1px;cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="document.getElementById('newsContent').style.display=document.getElementById('newsContent').style.display==='none'?'block':'none'">
+        <span>GALACTIC NEWS FEED</span><span id="newsToggle" style="font-size:12px">&#9660;</span>
+      </div>
       <div id="newsContent" style="flex:1;overflow-y:auto;padding:4px 8px;font-size:10px;line-height:1.5;color:#8aa0b8;scrollbar-width:thin;scrollbar-color:#1a3050 #0a0e18"></div>
     </div>
     <div class="map-label"><input id="sysSearchMap" type="search" placeholder="Search system..." style="background:#0a1020;border:1px solid #1a2844;color:#c8d4e0;padding:3px 8px;border-radius:3px;font:inherit;font-size:12px;width:140px;margin-right:6px"><select id="starColorMode" style="background:#0a1020;border:1px solid #1a2844;color:#c8d4e0;padding:3px 6px;border-radius:3px;font:inherit;font-size:12px">
@@ -1146,15 +1148,16 @@ async function fetchShips(){
       liveShips=d.ships;
     }
     lastShipsTick=d.tick;
-    // Update clock - universe date (82604.xx) + local time in 24hr GST
+    // Update clock - universe date: 82604.xx (xx = 0-99 per day, rolls over each 240 ticks)
     const tick=d.tick||0;
-    const dayTicks = 240; // 240 ticks per game-day
-    const universeDays = Math.floor(tick / dayTicks);
-    const dayFraction = Math.floor((tick % dayTicks) / (dayTicks/100));
-    const universeDate = `${82604 + Math.floor(universeDays/100)}.${String(universeDays % 100).padStart(2,'0')}`;
+    const dayTicks = 240; // 240 ticks = 1 day (6min * 240 = 24hrs)
+    const totalDays = Math.floor(tick / dayTicks);
+    const dayProgress = Math.floor((tick % dayTicks) * 100 / dayTicks); // 0-99
+    const universeDate = `${82604 + totalDays}.${String(dayProgress).padStart(2,'0')}`;
     const now = new Date();
     const localTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
     document.getElementById('gameClock').textContent=`${universeDate} | ${localTime} GST`;
+    window._currentTick = tick;
     updateMapShips();
     updateLiveShipList();
   }catch(e){}
@@ -1243,9 +1246,17 @@ async function fetchNews(){
       const cls=e.msg.includes('NEWS:')?'color:#ffa726':e.msg.includes('BUILT:')?'color:#66bb6a':e.msg.includes('BATTLE:')?'color:#ef5350':e.msg.includes('PROJECT')?'color:#ab47bc':'color:#8aa0b8';
       const txt=e.msg.replace(/^(NEWS|BATTLE|BUILT|QUEUE|STRATEGY|PROJECT[^:]*):?\s*/,'');
       const tag=e.msg.match(/^([A-Z]+)/)?.[1]||'INFO';
-      return `<div style="margin:2px 0;padding:2px 0;border-bottom:1px solid #0f1a28"><span style="font-size:9px;${cls};font-weight:600">[${tag}]</span> <span style="color:#c8d4e0">${txt}</span></div>`;
+      // Timestamp: short universe date (last 2 digits of day + .progress)
+      const eTick = e.tick||0;
+      const eDays = Math.floor(eTick/240);
+      const eProg = Math.floor((eTick%240)*100/240);
+      const ts = `${String((82604+eDays)%100).padStart(2,'0')}.${String(eProg).padStart(2,'0')}`;
+      return `<div style="margin:2px 0;padding:2px 0;border-bottom:1px solid #0f1a28"><span style="font-size:9px;color:#4a6a8a">${ts}</span> <span style="font-size:9px;${cls};font-weight:600">[${tag}]</span> <span style="color:#c8d4e0">${txt}</span></div>`;
     }).join('');
     el.scrollTop=0;
+    // Update toggle arrow
+    const toggle=document.getElementById('newsToggle');
+    if(toggle)toggle.textContent=el.style.display==='none'?'\u25B6':'\u25BC';
   }catch(e){}
 }
 fetchNews();
