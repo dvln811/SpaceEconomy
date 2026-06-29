@@ -388,9 +388,14 @@ function animate(now) {
   if (!clientPaused) {
   for (const [id, s] of Object.entries(ships)) {
     if (!s.pos || s.dead) continue;
-    s.pos.x += s.pos.vx * dt;
-    s.pos.y += s.pos.vy * dt;
-    s.pos.z += (s.pos.vz||0) * dt;
+    // Pure lerp from start to predicted end over 1 second
+    s.pos.t = Math.min((s.pos.t||0) + dt, 1.2);
+    const t = Math.min(s.pos.t, 1.0);
+    if (s.pos.sx !== undefined) {
+      s.pos.x = s.pos.sx + (s.pos.ex - s.pos.sx) * t;
+      s.pos.y = s.pos.sy + (s.pos.ey - s.pos.sy) * t;
+      s.pos.z = s.pos.sz + (s.pos.ez - s.pos.sz) * t;
+    }
     const mesh = shipMeshes[id];
     if (mesh) {
       mesh.position.set(s.pos.x, s.pos.z||0, s.pos.y);
@@ -606,16 +611,21 @@ function onTick(data) {
   if (data.pos) {
     for (const [id, p] of Object.entries(data.pos)) {
       if (ships[id] && !ships[id].dead) {
-        // Smooth correction: update velocity, lerp position toward server
         const s = ships[id];
         const serverX = p[0], serverY = p[1], serverZ = p[4]||0;
-        s.pos.vx = p[2]; s.pos.vy = p[3]; s.pos.vz = p[5]||0;
-        // Lerp position toward server (70% correction per tick)
-        s.pos.x += (serverX - s.pos.x) * 0.7;
-        s.pos.y += (serverY - s.pos.y) * 0.7;
-        s.pos.z += (serverZ - (s.pos.z||0)) * 0.7;
-        // Correct mesh position
-        if (shipMeshes[id]) shipMeshes[id].position.set(s.pos.x, s.pos.z||0, s.pos.y);
+        const serverVx = p[2], serverVy = p[3], serverVz = p[5]||0;
+        const errX = serverX - s.pos.x, errY = serverY - s.pos.y, errZ = serverZ - (s.pos.z||0);
+        const errDist = Math.sqrt(errX*errX + errY*errY + errZ*errZ);
+        if (errDist > 800) {
+          s.pos.x = serverX; s.pos.y = serverY; s.pos.z = serverZ;
+        }
+        // Lerp endpoints: start from current pos, end at predicted next-tick pos
+        s.pos.sx = s.pos.x; s.pos.sy = s.pos.y; s.pos.sz = s.pos.z||0;
+        s.pos.ex = serverX + serverVx * 0.92;
+        s.pos.ey = serverY + serverVy * 0.92;
+        s.pos.ez = serverZ + serverVz * 0.92;
+        s.pos.vx = serverVx; s.pos.vy = serverVy; s.pos.vz = serverVz;
+        s.pos.t = 0;
       }
     }
   }

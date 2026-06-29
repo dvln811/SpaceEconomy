@@ -311,7 +311,7 @@ def combat_stream():
 
             events = engine.step()
             caps = {s.id: round(s.cap, 1) for s in all_ships if s.alive}
-            positions = {s.id: [round(s.x), round(s.y), round(s.vx,1), round(s.vy,1), round(s.z), round(s.vz,1)] for s in all_ships if s.alive}
+            positions = {s.id: [round(s.x), round(s.y), round(s.vx,2), round(s.vy,2), round(s.z), round(s.vz,2)] for s in all_ships if s.alive}
             msls = []
             for m in engine.missiles:
                 target = next((s for s in all_ships if s.id == m.target_id and s.alive), None)

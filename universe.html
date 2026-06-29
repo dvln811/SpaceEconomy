@@ -43,6 +43,13 @@ a{color:#4fc3f7;text-decoration:none}a:hover{text-decoration:underline}
 .corp-card .corp-name{color:#e0e8f0;font-size:12px;font-weight:500}
 .corp-card .corp-spec{color:#8aa0b8;font-size:10px;text-transform:uppercase;letter-spacing:1px}
 .note{background:#0a1020;border:1px solid #1a2844;border-radius:4px;padding:12px;margin:12px 0;font-size:12px;color:#8aa0b8}
+.lore{margin:16px 0;font-size:12px;line-height:1.7;color:#c8d4e0}
+.lore h2,.lore h3{color:#4fc3f7;margin:20px 0 8px;font-size:13px;letter-spacing:1px;border:none;padding:0}
+.lore h2{font-size:15px;margin-top:0}
+.lore p{margin:6px 0;color:#a8b8c8}
+.lore ul{margin:6px 0 6px 20px;color:#a8b8c8}
+.lore li{margin:3px 0}
+.lore strong{color:#e0e8f0}
 .btn{font-size:11px;color:#8aa0b8;padding:4px 10px;border:1px solid #1a2844;border-radius:3px;cursor:pointer;background:none;font-family:inherit;letter-spacing:1px;text-transform:uppercase;transition:all .1s}
 .btn:hover{color:#4fc3f7;border-color:#4fc3f7}
 .btn-danger{color:#ef5350;border-color:#ef5350}.btn-danger:hover{background:#ef5350;color:#fff}
@@ -144,6 +151,19 @@ function traitBar(val, color) {
   return `<span class="trait-bar" style="width:${val*50}px;background:${color}"></span> ${(val*100).toFixed(0)}%`;
 }
 
+function mdToHtml(md) {
+  if (!md) return '';
+  return md
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, m => '<ul>' + m + '</ul>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/^(?!<[hul])/gm, m => m ? '<p>' + m : '')
+    .replace(/<p><\/p>/g, '');
+}
+
 function showFaction(fid) {
   const f = factions[fid];
   const fAgents = agents.filter(a => a.faction_id === fid && !a.id.startsWith('corp_'));
@@ -162,7 +182,8 @@ function showFaction(fid) {
         <p style="margin:0;font-size:11px"><strong>Allies:</strong> ${(f.allies||[]).map(a=>nameMap[a]||a).join(', ')||'None'} | <strong>Enemies:</strong> ${(f.enemies||[]).map(e=>nameMap[e]||e).join(', ')||'None'}</p>
       </div>
     </div>
-    ${f.history ? `<p style="line-height:1.7;color:#c8d4e0;font-size:12px;margin-bottom:16px">${f.history}</p>` : ''}`;
+    ${f.history ? `<p style="line-height:1.7;color:#c8d4e0;font-size:12px;margin-bottom:16px">${f.history}</p>` : ''}
+    ${f.lore ? `<div style="margin:12px 0 16px"><button class="btn" id="loreToggle" onclick="document.getElementById('loreFull').style.display=document.getElementById('loreFull').style.display==='none'?'block':'none';this.textContent=this.textContent==='Show Full Lore'?'Hide Full Lore':'Show Full Lore'">Show Full Lore</button></div><div id="loreFull" class="lore" style="display:none">${mdToHtml(f.lore)}</div>` : ''}`;
 
   // Leader
   if (leader) {
