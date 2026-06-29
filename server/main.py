@@ -648,6 +648,15 @@ def api_ship_model(class_id):
     return jsonify(geo)
 
 
+@app.route("/api/news")
+def api_news():
+    """Return last 20 news/event log entries."""
+    if not sim:
+        return jsonify([])
+    events = sim.events[-20:] if hasattr(sim, 'events') else []
+    return jsonify(list(reversed(events)))
+
+
 @app.route("/api/debug")
 def api_debug():
     """Pre-computed dashboard summary (~15KB). Updated every 10 ticks by dashboard worker."""

@@ -171,6 +171,10 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <!-- Main: Star Map -->
   <div class="main">
     <div class="map-tooltip" id="map-tooltip"></div>
+    <div id="newsTicker" style="position:absolute;top:10px;left:10px;width:320px;max-height:280px;background:rgba(5,8,15,0.92);border:1px solid #1a2844;border-radius:4px;z-index:50;overflow:hidden;display:flex;flex-direction:column">
+      <div style="padding:4px 10px;font-size:10px;color:#ffa726;border-bottom:1px solid #1a2844;font-weight:600;letter-spacing:1px">GALACTIC NEWS FEED</div>
+      <div id="newsContent" style="flex:1;overflow-y:auto;padding:4px 8px;font-size:10px;line-height:1.5;color:#8aa0b8;scrollbar-width:thin;scrollbar-color:#1a3050 #0a0e18"></div>
+    </div>
     <div class="map-label"><input id="sysSearchMap" type="search" placeholder="Search system..." style="background:#0a1020;border:1px solid #1a2844;color:#c8d4e0;padding:3px 8px;border-radius:3px;font:inherit;font-size:12px;width:140px;margin-right:6px"><select id="starColorMode" style="background:#0a1020;border:1px solid #1a2844;color:#c8d4e0;padding:3px 6px;border-radius:3px;font:inherit;font-size:12px">
       <option value="default">Star Type</option>
       <option value="faction">Faction</option>
@@ -1142,10 +1146,15 @@ async function fetchShips(){
       liveShips=d.ships;
     }
     lastShipsTick=d.tick;
-    // Update clock
+    // Update clock - universe date (82604.xx) + local time in 24hr GST
     const tick=d.tick||0;
-    const hrs=Math.floor(tick/3600);const mins=Math.floor((tick%3600)/60);
-    document.getElementById('gameClock').textContent=`Cycle ${tick} | ${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')} GST`;
+    const dayTicks = 240; // 240 ticks per game-day
+    const universeDays = Math.floor(tick / dayTicks);
+    const dayFraction = Math.floor((tick % dayTicks) / (dayTicks/100));
+    const universeDate = `${82604 + Math.floor(universeDays/100)}.${String(universeDays % 100).padStart(2,'0')}`;
+    const now = new Date();
+    const localTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    document.getElementById('gameClock').textContent=`${universeDate} | ${localTime} GST`;
     updateMapShips();
     updateLiveShipList();
   }catch(e){}
@@ -1222,6 +1231,25 @@ function updateMapShips(){}
 fetchLiveData();
 setInterval(fetchShips, 3000);
 setInterval(fetchMarket, 5000);
+
+// News ticker
+async function fetchNews(){
+  try{
+    const r=await fetch('/api/news');
+    const events=await r.json();
+    const el=document.getElementById('newsContent');
+    if(!el||!events.length)return;
+    el.innerHTML=events.map(e=>{
+      const cls=e.msg.includes('NEWS:')?'color:#ffa726':e.msg.includes('BUILT:')?'color:#66bb6a':e.msg.includes('BATTLE:')?'color:#ef5350':e.msg.includes('PROJECT')?'color:#ab47bc':'color:#8aa0b8';
+      const txt=e.msg.replace(/^(NEWS|BATTLE|BUILT|QUEUE|STRATEGY|PROJECT[^:]*):?\s*/,'');
+      const tag=e.msg.match(/^([A-Z]+)/)?.[1]||'INFO';
+      return `<div style="margin:2px 0;padding:2px 0;border-bottom:1px solid #0f1a28"><span style="font-size:9px;${cls};font-weight:600">[${tag}]</span> <span style="color:#c8d4e0">${txt}</span></div>`;
+    }).join('');
+    el.scrollTop=0;
+  }catch(e){}
+}
+fetchNews();
+setInterval(fetchNews, 10000);
 
 // Snap to current state when tab becomes visible again
 document.addEventListener('visibilitychange', () => {
