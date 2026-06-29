@@ -186,7 +186,7 @@ def generate_population(faction_id, systems, stations):
                 'system_id': system_id,
                 'station_id': station_id,
                 'rank': random.randint(1, 5),
-                'wealth': round(random.uniform(50, 500) * (2 if role in ('merchant_lord', 'smuggler') else 1), 1),
+                'wealth': round(random.uniform(3000, 15000) * (3 if role == 'merchant_lord' else 2 if role in ('station_commander', 'factory_overseer') else 1)),
                 'patron_id': patron_id,
                 'rival_id': '',
                 'bio': '',

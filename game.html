@@ -1273,7 +1273,7 @@ setInterval(fetchShips, 3000);
 setInterval(fetchMarket, 5000);
 
 // News ticker
-const NEWS_COLORS = {economic:'#ffd54f',military:'#ef5350',political:'#ab47bc',social:'#66bb6a',disaster:'#ff8a65',discovery:'#4fc3f7'};
+const NEWS_COLORS = {economic:'#ffd54f',military:'#ef5350',political:'#ab47bc',social:'#66bb6a',disaster:'#ff8a65',discovery:'#4fc3f7',price:'#8aa0b8'};
 async function fetchNews(){
   try{
     const r=await fetch('/api/news');
@@ -1284,6 +1284,11 @@ async function fetchNews(){
       const cat=e.category||'';
       const color=NEWS_COLORS[cat]||(e.msg.includes('BATTLE:')?'#ef5350':e.msg.includes('PROJECT')?'#ab47bc':'#8aa0b8');
       let txt=e.msg.replace(/^(NEWS|BATTLE|BUILT|QUEUE|STRATEGY|PROJECT[^:]*):?\s*/,'');
+      // Color price triangles green/red
+      if(cat==='price'||txt.startsWith('\u25B2')||txt.startsWith('\u25BC')){
+        txt=txt.replace('\u25B2',`<span style="color:#66bb6a">\u25B2</span>`);
+        txt=txt.replace('\u25BC',`<span style="color:#ef5350">\u25BC</span>`);
+      }
       // Link agent name if present
       if(e.agent_name&&e.agent_id){
         txt=txt.replace(e.agent_name,`<a href="/agents#${e.agent_id}" target="_top" style="color:${color};text-decoration:underline">${e.agent_name}</a>`);

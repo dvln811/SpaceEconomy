@@ -186,8 +186,8 @@ class EconomyWorker(WorkerThread):
                             pct = (new_price - old_price) / old_price * 100
                             if abs(pct) > 10:
                                 name = commodities[commodity_id].name
-                                direction = "^" if pct > 0 else "v"
-                                self.emit(EventLog(tick=tick, msg=f"{direction} {name} {pct:+.0f}% at {station.name} ({sys.name})"))
+                                direction = "\u25B2" if pct > 0 else "\u25BC"
+                                self.emit(EventLog(tick=tick, msg=f"{direction} {name} {pct:+.0f}% at {station.name} ({sys.name})", category='price'))
 
     def _corsair_raids(self, universe, tick):
         """Dynamic pressure valve: if stockpiles are too high, corsairs raid and cull inventory."""
