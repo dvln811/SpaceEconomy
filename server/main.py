@@ -598,6 +598,31 @@ def api_station_designs(faction, station_type):
         return jsonify(json.load(f))
 
 
+@app.route("/api/station_model/<station_id>")
+def api_station_model(station_id):
+    """Get the 3D model components for a specific station."""
+    from server.game_data_db import get_data_db
+    conn = get_data_db()
+    row = conn.execute("""SELECT s.station_type, s.geometry_variant, sys.faction_id
+                          FROM stations s JOIN systems sys ON s.system_id = sys.id
+                          WHERE s.id=?""", (station_id,)).fetchone()
+    conn.close()
+    if not row:
+        return jsonify({"error": "station not found"}), 404
+    faction_map = {'terran_fed':'terran','science_collective':'science','merchants_guild':'merchants',
+                   'free_states':'frontier','iron_compact':'iron_compact','corsairs':'frontier','':'frontier'}
+    design_faction = faction_map.get(row['faction_id'], 'frontier')
+    variant = row['geometry_variant'] or 0
+    path = os.path.join(BASE_DIR, "tools", "ship_designer", "station_designs",
+                        f"stations_{design_faction}_{row['station_type']}.json")
+    if not os.path.exists(path):
+        return jsonify({"error": "no design file"}), 404
+    with open(path) as f:
+        designs = json.load(f)
+    idx = variant % len(designs)
+    return jsonify(designs[idx])
+
+
 @app.route("/system_view")
 def system_view_page():
     return send_from_directory(BASE_DIR, "system_view.html")
@@ -620,7 +645,8 @@ def _check_sim_ready():
               '/api/batch_generate', '/api/saved', '/api/save', '/api/load/',
               '/api/all_components', '/api/component_categories', '/api/generate_component',
               '/api/save_component', '/api/saved_components', '/api/load_component/',
-              '/api/export_tagged', '/api/ship_model/', '/api/agents', '/api/data/')
+              '/api/export_tagged', '/api/ship_model/', '/api/agents', '/api/data/',
+              '/api/station_designs/', '/api/station_model/')
     if request.path.startswith('/api/') and not _sim_ready.is_set():
         if not any(request.path.startswith(p) for p in exempt):
             return jsonify({"error": "Simulation loading, please wait..."}), 503
