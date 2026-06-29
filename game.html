@@ -156,6 +156,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
     <button class="nav-btn" data-view="inventory">Inventory</button>
     <button class="nav-btn" data-view="market">Market</button>
     <button class="nav-btn" data-view="encyclopedia">Encyclopedia</button>
+    <button class="nav-btn" data-view="universe" style="padding-left:16px;font-size:10px">Factions</button>
     <button class="nav-btn" data-view="settings">Settings</button>
     <div style="flex:1"></div>
     <button class="nav-btn danger" data-view="dashboard">Dashboard</button>
@@ -171,8 +172,8 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <!-- Main: Star Map -->
   <div class="main">
     <div class="map-tooltip" id="map-tooltip"></div>
-    <div id="newsTicker" style="position:absolute;top:10px;left:10px;width:320px;height:280px;min-height:24px;background:rgba(5,8,15,0.92);border:1px solid #1a2844;border-radius:4px;z-index:5;overflow:hidden;display:flex;flex-direction:column;resize:vertical" onmouseenter="this.dataset.hover='1'" onmouseleave="this.dataset.hover='0'" onmousemove="event.stopPropagation()" onmousedown="event.stopPropagation()" onclick="event.stopPropagation()">
-      <div style="padding:4px 10px;font-size:10px;color:#ffa726;border-bottom:1px solid #1a2844;font-weight:600;letter-spacing:1px;cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="event.stopPropagation();const t=document.getElementById('newsTicker');const c=document.getElementById('newsContent');if(c.style.display==='none'){c.style.display='block';t.style.height=t.dataset.lastH||'280px';t.style.resize='vertical'}else{t.dataset.lastH=t.style.height;c.style.display='none';t.style.height='auto';t.style.resize='none'}">
+    <div id="newsTicker" style="position:absolute;top:10px;left:10px;width:320px;height:280px;min-height:24px;min-width:200px;background:rgba(5,8,15,0.92);border:1px solid #1a2844;border-radius:4px;z-index:5;overflow:hidden;display:flex;flex-direction:column;resize:both" onmouseenter="this.dataset.hover='1'" onmouseleave="this.dataset.hover='0'" onmousemove="event.stopPropagation()" onmousedown="event.stopPropagation()" onclick="event.stopPropagation()">
+      <div style="padding:4px 10px;font-size:10px;color:#ffa726;border-bottom:1px solid #1a2844;font-weight:600;letter-spacing:1px;cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="event.stopPropagation();const t=document.getElementById('newsTicker');const c=document.getElementById('newsContent');if(c.style.display==='none'){c.style.display='block';t.style.height=t.dataset.lastH||'280px';t.style.resize='both'}else{t.dataset.lastH=t.style.height;c.style.display='none';t.style.height='auto';t.style.resize='none'}">
         <span>GALACTIC NEWS FEED</span><span id="newsToggle" style="font-size:12px">&#9660;</span>
       </div>
       <div id="newsContent" style="flex:1;overflow-y:auto;padding:4px 8px;font-size:10px;line-height:1.5;color:#8aa0b8;scrollbar-width:thin;scrollbar-color:#1a3050 #0a0e18"></div>
@@ -241,7 +242,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 (function(){
   const btns=document.querySelectorAll('.nav-panel .nav-btn');
   const frame=document.getElementById('viewFrame');
-  const viewUrls={market:'/market',encyclopedia:'/docs',dashboard:'/debug',ship:'/ship',inventory:'/inventory',settings:'/settings'};
+  const viewUrls={market:'/market',encyclopedia:'/docs',universe:'/universe',dashboard:'/debug',ship:'/ship',inventory:'/inventory',settings:'/settings'};
   const rightHandle = document.getElementById('right-handle');
   const rightPanel = document.querySelector('.right-panel');
   const app = document.querySelector('.app');
