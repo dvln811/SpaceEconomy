@@ -189,8 +189,9 @@ function renderTree(){
       Object.keys(groups).sort().forEach(grp => {
         const ids = groups[grp];
         subCount += ids.length;
-        if(f && !grp.toLowerCase().includes(f) && !sub.toLowerCase().includes(f) && !cat.toLowerCase().includes(f)) return;
-        const gKey = cat+'|'+sub+'|'+grp, gOpen = expanded[gKey];
+        const anyItemMatch = !f || ids.some(id => { const c = commodityMap[id]; const name = c ? displayName(c) : id; return name.toLowerCase().includes(f) || grp.toLowerCase().includes(f) || sub.toLowerCase().includes(f) || cat.toLowerCase().includes(f); });
+        if(f && !anyItemMatch) return;
+        const gKey = cat+'|'+sub+'|'+grp, gOpen = expanded[gKey] || !!f;
         const gSel = selMatch('group',cat,sub,grp) ? ' selected' : '';
         let itemsHtml = '';
         ids.forEach(id => {
@@ -204,12 +205,12 @@ function renderTree(){
       });
       catCount += subCount;
       if(f && !subHtml && !sub.toLowerCase().includes(f) && !cat.toLowerCase().includes(f)) return;
-      const sKey = cat+'|'+sub, sOpen = expanded[sKey];
+      const sKey = cat+'|'+sub, sOpen = expanded[sKey] || !!f;
       const sSel = selMatch('sub',cat,sub) ? ' selected' : '';
       catHtml += '<div class="tree-node"><div class="tree-label'+sSel+'" style="--depth:1" data-t="sub" data-c="'+cat+'" data-s="'+sub+'"><span class="tree-toggle">'+(subHtml?(sOpen?'\u25BC':'\u25B6'):'')+'</span><span>'+sub+'</span><span class="tree-count">'+subCount+'</span></div><div class="tree-children" style="display:'+(sOpen?'block':'none')+'">'+subHtml+'</div></div>';
     });
     if(f && !catHtml && !cat.toLowerCase().includes(f)) return;
-    const cOpen = expanded[cat];
+    const cOpen = expanded[cat] || !!f;
     const cSel = selMatch('cat',cat) ? ' selected' : '';
     html += '<div class="tree-node"><div class="tree-label'+cSel+'" style="--depth:0" data-t="cat" data-c="'+cat+'"><span class="tree-toggle">'+(catHtml?(cOpen?'\u25BC':'\u25B6'):'')+'</span><span>'+cat+'</span><span class="tree-count">'+catCount+'</span></div><div class="tree-children" style="display:'+(cOpen?'block':'none')+'">'+catHtml+'</div></div>';
   });
