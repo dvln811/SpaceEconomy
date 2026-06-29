@@ -365,6 +365,226 @@ def ship_designer_files(filename):
     return send_from_directory(os.path.join(BASE_DIR, "tools", "ship_designer"), filename)
 
 
+# ── Ship Designer API (proxied from tools/ship_designer/app.py) ──────────────
+@app.route("/api/factions")
+def api_designer_factions():
+    import sys
+    sys.path.insert(0, os.path.join(BASE_DIR, "tools", "ship_designer"))
+    from ship_generator import FACTION_STYLES
+    return jsonify({k: v["description"] for k, v in FACTION_STYLES.items()})
+
+
+@app.route("/api/hull_classes")
+def api_designer_hull_classes():
+    import sys
+    sys.path.insert(0, os.path.join(BASE_DIR, "tools", "ship_designer"))
+    from ship_generator import HULL_CLASSES
+    return jsonify(list(HULL_CLASSES.keys()))
+
+
+@app.route("/api/generate", methods=["POST"])
+def api_designer_generate():
+    import sys
+    sys.path.insert(0, os.path.join(BASE_DIR, "tools", "ship_designer"))
+    from ship_generator import generate_ship
+    params = request.get_json() or {}
+    faction = params.get("faction", "terran")
+    hull_class = params.get("hull_class", "frigate")
+    seed = params.get("seed")
+    if seed == "":
+        seed = None
+    elif seed:
+        seed = int(seed)
+    data = generate_ship(faction, hull_class, seed=seed)
+    return jsonify(data)
+
+
+@app.route("/api/station/types")
+def api_station_types():
+    import sys
+    sys.path.insert(0, os.path.join(BASE_DIR, "tools", "ship_designer"))
+    from station_generator import STATION_TYPES
+    return jsonify(STATION_TYPES)
+
+
+@app.route("/api/station/factions")
+def api_station_factions():
+    import sys
+    sys.path.insert(0, os.path.join(BASE_DIR, "tools", "ship_designer"))
+    from station_generator import STATION_FACTION_STYLES
+    return jsonify({k: v['description'] for k, v in STATION_FACTION_STYLES.items()})
+
+
+@app.route("/api/station/generate", methods=["POST"])
+def api_station_generate():
+    import sys
+    sys.path.insert(0, os.path.join(BASE_DIR, "tools", "ship_designer"))
+    from station_generator import generate_station
+    params = request.get_json() or {}
+    station_type = params.get("station_type", "trade_hub")
+    faction = params.get("faction", "terran")
+    seed = params.get("seed")
+    if seed == "" or seed is None:
+        seed = None
+    else:
+        seed = int(seed)
+    data = generate_station(station_type, faction, seed=seed)
+    return jsonify(data)
+
+
+@app.route("/api/station/batch", methods=["POST"])
+def api_station_batch():
+    """Generate 1 station per type per faction for review."""
+    import sys
+    sys.path.insert(0, os.path.join(BASE_DIR, "tools", "ship_designer"))
+    from station_generator import generate_station, STATION_TYPES, STATION_FACTION_STYLES
+    import random as _rnd
+    params = request.get_json() or {}
+    station_type = params.get("station_type", "trade_hub")
+    results = []
+    for faction in STATION_FACTION_STYLES:
+        seed = _rnd.randint(0, 999999)
+        data = generate_station(station_type, faction, seed=seed)
+        results.append({"name": f"{faction}/{station_type}/{seed}", "faction": faction,
+                        "station_type": station_type, "seed": seed,
+                        "components": data["components"], "meta": data["meta"]})
+    return jsonify(results)
+
+
+@app.route("/api/saved")
+def api_designer_saved():
+    save_dir = os.path.join(BASE_DIR, "tools", "ship_designer", "saved_designs")
+    os.makedirs(save_dir, exist_ok=True)
+    files = [f[:-5] for f in os.listdir(save_dir) if f.endswith(".json")]
+    return jsonify(files)
+
+
+@app.route("/api/save", methods=["POST"])
+def api_designer_save():
+    data = request.get_json()
+    name = data.get("name", "unnamed")
+    safe_name = "".join(c for c in name if c.isalnum() or c in "_-").lower()
+    save_dir = os.path.join(BASE_DIR, "tools", "ship_designer", "saved_designs")
+    os.makedirs(save_dir, exist_ok=True)
+    path = os.path.join(save_dir, f"{safe_name}.json")
+    with open(path, "w") as f:
+        json.dump(data["design"], f, indent=2)
+    return jsonify({"status": "saved"})
+
+
+@app.route("/api/load/<name>")
+def api_designer_load(name):
+    path = os.path.join(BASE_DIR, "tools", "ship_designer", "saved_designs", f"{name}.json")
+    if not os.path.exists(path):
+        return jsonify({"error": "not found"}), 404
+    with open(path) as f:
+        return jsonify(json.load(f))
+
+
+@app.route("/api/batch_generate", methods=["POST"])
+def api_designer_batch():
+    import sys, random as _rnd
+    sys.path.insert(0, os.path.join(BASE_DIR, "tools", "ship_designer"))
+    from ship_generator import generate_ship
+    params = request.get_json() or {}
+    hull_class = params.get("hull_class", "fighter")
+    count = int(params.get("count", 4))
+    factions = ["terran", "merchants", "science", "iron_compact", "frontier"]
+    results = []
+    for faction in factions:
+        for i in range(count):
+            seed = _rnd.randint(0, 999999)
+            ship = generate_ship(faction=faction, hull_class=hull_class, seed=seed)
+            results.append({"name": f"{faction}/{hull_class}/{seed}", "faction": faction,
+                            "hull_class": hull_class, "seed": seed,
+                            "components": ship["components"], "meta": ship["meta"]})
+    return jsonify(results)
+
+
+@app.route("/api/all_components")
+def api_designer_all_components():
+    import sys
+    sys.path.insert(0, os.path.join(BASE_DIR, "tools", "ship_designer"))
+    from component_library import GENERATORS
+    comp_dir = os.path.join(BASE_DIR, "tools", "ship_designer", "saved_components")
+    items = []
+    for cat, (fn, styles) in GENERATORS.items():
+        for style in styles:
+            result = fn(style=style, size=1.0, seed=42)
+            items.append({"name": f"{cat}/{style}", "category": cat, "parts": result["parts"]})
+    for fname in sorted(os.listdir(comp_dir)):
+        if not fname.endswith(".json"):
+            continue
+        with open(os.path.join(comp_dir, fname)) as f:
+            data = json.load(f)
+        items.append({"name": fname[:-5], "category": data.get("category", "other"), "parts": data["parts"]})
+    return jsonify(items)
+
+
+@app.route("/api/component_categories")
+def api_designer_comp_categories():
+    import sys
+    sys.path.insert(0, os.path.join(BASE_DIR, "tools", "ship_designer"))
+    from component_library import GENERATORS, COMPONENT_CATEGORIES
+    return jsonify({k: {"description": COMPONENT_CATEGORIES[k], "styles": styles}
+                    for k, (_, styles) in GENERATORS.items()})
+
+
+@app.route("/api/generate_component", methods=["POST"])
+def api_designer_gen_component():
+    import sys
+    sys.path.insert(0, os.path.join(BASE_DIR, "tools", "ship_designer"))
+    from component_library import generate_component
+    params = request.get_json() or {}
+    category = params.get("category", "cockpit")
+    style = params.get("style")
+    size = float(params.get("size", 1.0))
+    seed = params.get("seed")
+    if seed == "" or seed is None:
+        seed = None
+    else:
+        seed = int(seed)
+    return jsonify(generate_component(category=category, style=style, size=size, seed=seed))
+
+
+@app.route("/api/export_tagged", methods=["POST"])
+def api_designer_export_tagged():
+    data = request.get_json()
+    path = os.path.join(BASE_DIR, "tools", "ship_designer", "tagged_feedback.json")
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
+    return jsonify({"status": "saved", "count": len(data)})
+
+
+@app.route("/api/save_component", methods=["POST"])
+def api_designer_save_component():
+    data = request.get_json()
+    name = data.get("name", "unnamed")
+    safe_name = "".join(c for c in name if c.isalnum() or c in "_-").lower()
+    comp_dir = os.path.join(BASE_DIR, "tools", "ship_designer", "saved_components")
+    os.makedirs(comp_dir, exist_ok=True)
+    with open(os.path.join(comp_dir, f"{safe_name}.json"), "w") as f:
+        json.dump(data["component"], f, indent=2)
+    return jsonify({"status": "saved"})
+
+
+@app.route("/api/saved_components")
+def api_designer_saved_components():
+    comp_dir = os.path.join(BASE_DIR, "tools", "ship_designer", "saved_components")
+    os.makedirs(comp_dir, exist_ok=True)
+    files = [f[:-5] for f in os.listdir(comp_dir) if f.endswith(".json")]
+    return jsonify(files)
+
+
+@app.route("/api/load_component/<name>")
+def api_designer_load_component(name):
+    path = os.path.join(BASE_DIR, "tools", "ship_designer", "saved_components", f"{name}.json")
+    if not os.path.exists(path):
+        return jsonify({"error": "not found"}), 404
+    with open(path) as f:
+        return jsonify(json.load(f))
+
+
 @app.route("/system_view")
 def system_view_page():
     return send_from_directory(BASE_DIR, "system_view.html")

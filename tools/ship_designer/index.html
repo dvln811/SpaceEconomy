@@ -36,10 +36,11 @@ select:focus,input:focus{outline:none;border-color:#4fc3f7}
 </head>
 <body>
 <div class="tab-bar">
-  <a href="/" class="active">Ship Generator</a>
-  <a href="/gallery">Component Library</a>
-  <a href="/review">Review</a>
-  <a href="/lod">LOD Viewer</a>
+  <a href="/ship_designer" class="active">Ship Generator</a>
+  <a href="/ship_designer/station.html">Station Generator</a>
+  <a href="/ship_designer/gallery.html">Component Library</a>
+  <a href="/ship_designer/review.html">Review</a>
+  <a href="/ship_designer/lod_viewer.html">LOD Viewer</a>
 </div>
 <div class="page">
 <div class="sidebar">
@@ -75,7 +76,7 @@ select:focus,input:focus{outline:none;border-color:#4fc3f7}
   <h2>Export</h2>
   <button class="btn" id="exportBtn">Copy JSON to Clipboard</button>
   <h2>Component Editor</h2>
-  <div id="compEditor" style="color:#5a7a9a;font-size:11px">Click a component in the viewport to select</div>
+  <div id="compEditor" style="color:#5a7a9a;font-size:11px">Component editing disabled</div>
 </div>
 <div class="viewer" id="viewer">
   <div class="info-bar" id="infoBar">Click <span>Generate</span> to create a ship</div>
@@ -328,6 +329,8 @@ let selectedIndex = -1;
 let highlightMat = new THREE.MeshBasicMaterial({color:0xffff00, wireframe:true, transparent:true, opacity:0.8});
 let highlightObj = null;
 
+// Component selection disabled
+/*
 renderer.domElement.addEventListener('click', (e) => {
   if (!currentGroup) return;
   const rect = renderer.domElement.getBoundingClientRect();
@@ -400,6 +403,7 @@ window.addEventListener('keydown', (e) => {
     document.getElementById('cz').value = comp.pos[2].toFixed(3);
   }
 });
+*/
 
 // Load game ships into dropdown
 async function loadGameShips() {

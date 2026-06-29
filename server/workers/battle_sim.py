@@ -170,7 +170,6 @@ class BattleSimWorker(WorkerThread):
         else:
             winner, loser = None, None
             severity = 'draw'
-        import random
         if severity == 'decisive':
             templates = [
                 f"Skirmish: {winner} forces rout {loser} patrol. {loser} retreats with heavy losses.",

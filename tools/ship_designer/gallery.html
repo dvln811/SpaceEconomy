@@ -29,9 +29,11 @@ body{background:#05080f;color:#c8d4e0;font-family:'Segoe UI',system-ui,sans-seri
 </head>
 <body>
 <div class="tab-bar">
-  <a href="/">Ship Generator</a>
-  <a href="/gallery" class="active">Component Library</a>
-  <a href="/review">Review</a>
+  <a href="/ship_designer">Ship Generator</a>
+  <a href="/ship_designer/station.html">Station Generator</a>
+  <a href="/ship_designer/gallery.html" class="active">Component Library</a>
+  <a href="/ship_designer/review.html">Review</a>
+  <a href="/ship_designer/lod_viewer.html">LOD Viewer</a>
 </div>
 <div class="controls">
   <label>Category:</label>
@@ -44,7 +46,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'Segoe UI',system-ui,sans-seri
 <div class="grid" id="grid"></div>
 
 <script type="importmap">
-{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}
+{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}
 </script>
 <script type="module">
 import * as THREE from 'three';
@@ -82,8 +84,13 @@ function buildParts(scene,parts){
 
 function createThumbnail(canvas,parts){
   canvas.width=W;canvas.height=H;
-  const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
-  renderer.setSize(W,H,false);
+  if(!window._sharedRenderer){
+    const offCanvas=document.createElement('canvas');
+    offCanvas.width=W;offCanvas.height=H;
+    window._sharedRenderer=new THREE.WebGLRenderer({canvas:offCanvas,antialias:true,preserveDrawingBuffer:true});
+    window._sharedRenderer.setSize(W,H,false);
+  }
+  const renderer=window._sharedRenderer;
   renderer.setClearColor(0x060a12);
   const scene=new THREE.Scene();
   const camera=new THREE.PerspectiveCamera(40,W/H,0.001,10);
@@ -96,8 +103,10 @@ function createThumbnail(canvas,parts){
   const center=box.getCenter(new THREE.Vector3());
   camera.position.set(center.x+md*1.8,center.y+md*1.2,center.z+md*1.8);
   camera.lookAt(center);
-  function spin(){requestAnimationFrame(spin);group.rotation.y+=0.008;renderer.render(scene,camera);}
-  spin();
+  group.rotation.y=0.4;
+  renderer.render(scene,camera);
+  const ctx=canvas.getContext('2d');
+  ctx.drawImage(renderer.domElement,0,0);
 }
 
 async function loadAll(){
@@ -106,6 +115,7 @@ async function loadAll(){
   grid.innerHTML='';
   const r=await fetch('/api/all_components');
   const items=await r.json();
+  window._lastItems=items;
   // Populate category filter once
   const cf=document.getElementById('catFilter');
   if(cf.options.length<=1){
@@ -147,6 +157,58 @@ document.getElementById('exportBtn').addEventListener('click',async()=>{
   alert(`Exported ${d.count} items to tagged_feedback.json`);
 });
 loadAll();
+
+// ── Interactive Viewer Overlay ──────────────────────────────────────────────
+const overlay=document.createElement('div');
+overlay.id='viewerOverlay';
+overlay.style.cssText='display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:1000;cursor:pointer';
+overlay.innerHTML='<div style="position:absolute;top:10px;right:20px;color:#4fc3f7;font-size:14px;cursor:pointer" id="closeViewer">✕ Close</div>';
+const vCanvas=document.createElement('canvas');
+vCanvas.style.cssText='width:100%;height:100%';
+overlay.appendChild(vCanvas);
+document.body.appendChild(overlay);
+
+let vRenderer,vScene,vCamera,vControls,vGroup,vRaf;
+import{OrbitControls}from'three/addons/controls/OrbitControls.js';
+function openViewer(parts){
+  overlay.style.display='block';
+  if(!vRenderer){
+    vRenderer=new THREE.WebGLRenderer({canvas:vCanvas,antialias:true});
+    vCamera=new THREE.PerspectiveCamera(40,window.innerWidth/window.innerHeight,0.001,100);
+    vControls=new OrbitControls(vCamera,vCanvas);
+    vControls.enableDamping=true;
+  }
+  vRenderer.setSize(window.innerWidth,window.innerHeight);
+  vCamera.aspect=window.innerWidth/window.innerHeight;
+  vCamera.updateProjectionMatrix();
+  vScene=new THREE.Scene();vScene.background=new THREE.Color(0x060a12);
+  vScene.add(new THREE.AmbientLight(0x1a2a4a,0.6));
+  const key=new THREE.DirectionalLight(0x4fc3f7,0.4);key.position.set(2,3,1);vScene.add(key);
+  vGroup=buildParts(vScene,parts);
+  const box=new THREE.Box3().setFromObject(vGroup);
+  const sz=box.getSize(new THREE.Vector3());
+  const md=Math.max(sz.x,sz.y,sz.z)||0.2;
+  const center=box.getCenter(new THREE.Vector3());
+  vCamera.position.set(center.x+md*1.8,center.y+md*1.2,center.z+md*1.8);
+  vControls.target.copy(center);vControls.update();
+  function anim(){vRaf=requestAnimationFrame(anim);vControls.update();vRenderer.render(vScene,vCamera);}
+  anim();
+}
+function closeViewer(){overlay.style.display='none';cancelAnimationFrame(vRaf);}
+document.getElementById('closeViewer').addEventListener('click',closeViewer);
+overlay.addEventListener('click',e=>{if(e.target===overlay)closeViewer();});
+
+// Attach click to cards
+document.getElementById('grid').addEventListener('click',e=>{
+  const card=e.target.closest('.card');
+  if(!card||e.target.closest('.card-tag')||e.target.closest('.card-select'))return;
+  const name=card.dataset.name;
+  // Find parts from the last loaded data
+  if(window._lastItems){
+    const item=window._lastItems.find(i=>i.name===name);
+    if(item)openViewer(item.parts);
+  }
+});
 </script>
 </body>
 </html>
