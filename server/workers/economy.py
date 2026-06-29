@@ -239,8 +239,16 @@ class EconomyWorker(WorkerThread):
             regions_str = ', '.join(list(regions_hit)[:3])
             if len(regions_hit) > 3:
                 regions_str += f' +{len(regions_hit)-3} more'
-            self.emit(EventLog(tick=tick,
-                msg=f"NEWS: Corsair raiders hit supply convoys across {regions_str} - {int(total_lost):,} units of materials lost"))
+            import random
+            templates = [
+                f"Coordinated corsair raids sweep through {regions_str}. Merchants report {int(total_lost):,} units of cargo seized.",
+                f"Corsair fleets strike supply convoys across {regions_str}. {int(total_lost):,} units lost to piracy.",
+                f"Massive pirate offensive hits {regions_str}. Trade networks disrupted, {int(total_lost):,} units of materials stolen.",
+            ]
+            self.emit(EventLog(tick=tick, msg=f"NEWS: {random.choice(templates)}", category='military'))
             if total_lost > 1_000_000:
-                self.emit(EventLog(tick=tick,
-                    msg=f"NEWS: MAJOR CORSAIR OFFENSIVE - Coordinated attacks on {len(targets)} stations. Faction security forces responding."))
+                major_templates = [
+                    f"EMERGENCY: Corsair armada strikes {len(targets)} stations simultaneously. Faction navies scrambling to respond.",
+                    f"Unprecedented pirate offensive - {len(targets)} stations hit in coordinated assault. Security forces overwhelmed.",
+                ]
+                self.emit(EventLog(tick=tick, msg=f"NEWS: {random.choice(major_templates)}", category='military'))
