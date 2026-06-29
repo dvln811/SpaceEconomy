@@ -32,6 +32,7 @@ class SystemObject:
     angle: float = 0.0
     parent: str = ""
     connects_to: str = ""
+    station_id: str = ""
 
 
 @dataclass

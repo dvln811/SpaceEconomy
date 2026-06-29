@@ -1628,6 +1628,39 @@ function svAdvanceShips(){
 }
 
 // Build scene objects from data
+// Station 3D model builder for system view
+const SV_STATION_MAT=()=>new THREE.MeshPhongMaterial({color:0x0a1428,emissive:0x0a1428,shininess:0,transparent:true,opacity:0.7});
+async function svLoadStationModel(stationId, pos){
+  try{
+    const r=await fetch('/api/station_model/'+stationId);
+    if(!r.ok)return;
+    const data=await r.json();
+    const group=new THREE.Group();
+    for(const comp of data.components){
+      const mat=SV_STATION_MAT();
+      const [px,py,pz]=comp.pos;const [rx,ry,rz]=comp.rot||[0,0,0];let mesh=null;
+      switch(comp.type){
+        case'pod':{const{length,height,width}=comp.params;const b=0.02,hw=width/2,hh=height/2;const s=new THREE.Shape();s.moveTo(-hw+b,-hh);s.lineTo(hw-b,-hh);s.lineTo(hw,-hh+b);s.lineTo(hw,hh-b);s.lineTo(hw-b,hh);s.lineTo(-hw+b,hh);s.lineTo(-hw,hh-b);s.lineTo(-hw,-hh+b);s.closePath();const g=new THREE.ExtrudeGeometry(s,{depth:length,bevelEnabled:false});g.center();mesh=new THREE.Mesh(g,mat);mesh.rotation.y=Math.PI/2;break;}
+        case'cylinder':{const{r_top,r_bot,length}=comp.params;mesh=new THREE.Mesh(new THREE.CylinderGeometry(r_top,r_bot,length,6),mat);if(!rx&&!ry&&!rz)mesh.rotation.z=Math.PI/2;break;}
+        case'cone':{const{radius,length}=comp.params;mesh=new THREE.Mesh(new THREE.ConeGeometry(radius,length,6),mat);if(!rx&&!ry&&!rz)mesh.rotation.z=Math.PI/2;break;}
+        case'box':{const{x,y,z}=comp.params;mesh=new THREE.Mesh(new THREE.BoxGeometry(x,y,z),mat);break;}
+        case'sphere':{const{radius,half}=comp.params;mesh=new THREE.Mesh(half?new THREE.SphereGeometry(radius,6,4,0,Math.PI*2,0,Math.PI/2):new THREE.SphereGeometry(radius,6,4),mat);break;}
+        case'torus':{const{radius,tube}=comp.params;mesh=new THREE.Mesh(new THREE.TorusGeometry(radius,tube,6,12),mat);if(!rx&&!ry&&!rz)mesh.rotation.y=Math.PI/2;break;}
+        case'spine':{const{length,radius}=comp.params;const sg=new THREE.Group();const geo=new THREE.CylinderGeometry(radius,radius,length,4);geo.rotateZ(Math.PI/2);sg.add(new THREE.Mesh(geo,mat));sg.position.set(px,py,pz);sg.rotation.set(rx,ry,rz);group.add(sg);sg.traverse(c=>{if(c.isMesh)c.add(new THREE.LineSegments(new THREE.EdgesGeometry(c.geometry,15),new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.4})));});continue;}
+        default:continue;
+      }
+      if(mesh){mesh.position.set(px,py,pz);mesh.rotation.x+=rx;mesh.rotation.y+=ry;mesh.rotation.z+=rz;group.add(mesh);mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry,15),new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.4})));}
+    }
+    // Scale to fit ~8 units (same visual size as planet dots)
+    const box=new THREE.Box3().setFromObject(group);
+    const sz=box.getSize(new THREE.Vector3());
+    const maxDim=Math.max(sz.x,sz.y,sz.z)||1;
+    group.scale.setScalar(8/maxDim);
+    group.position.set(pos.x,pos.y,pos.z);
+    svObjectsGroup.add(group);
+  }catch(e){}
+}
+
 function _rng(a,b){return a+(b-a)*Math.random();}
 function svBuildScene(){
   svOrbitsGroup.clear(); svObjectsGroup.clear(); svLabelsGroup.clear(); svRadarGroup.clear();
@@ -1695,11 +1728,15 @@ function svBuildScene(){
       dSpr.position.set(wp.x,wp.y,wp.z);dSpr.scale.set(12,12,1);
       svObjectsGroup.add(dSpr);
     }else{
-      // Planets, moons, stations: solid dot only (no glow gradient)
-      const dotSize=obj.type==='planet'?8:obj.type==='moon'?4:6;
-      const dSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDotTexture(col,64),transparent:true}));
-      dSpr.position.set(wp.x,wp.y,wp.z);dSpr.scale.set(dotSize,dotSize,1);
-      svObjectsGroup.add(dSpr);
+      // Planets, moons: solid dot. Stations: load 3D model
+      if(obj.type==='station' && obj.station_id){
+        svLoadStationModel(obj.station_id, wp);
+      } else {
+        const dotSize=obj.type==='planet'?8:obj.type==='moon'?4:6;
+        const dSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDotTexture(col,64),transparent:true}));
+        dSpr.position.set(wp.x,wp.y,wp.z);dSpr.scale.set(dotSize,dotSize,1);
+        svObjectsGroup.add(dSpr);
+      }
     }
     // Label for all bodies
     const lDiv=document.createElement('div');

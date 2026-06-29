@@ -988,7 +988,7 @@ def api_system(system_id):
                 return jsonify({"tick": sim.tick_count, "changed": False})
 
     sys_obj = sim.universe[system_id]
-    objects = [{"id": o.id, "name": o.name, "type": o.obj_type, "distance": o.distance, "angle": round(o.angle, 4), "connects_to": o.connects_to, "parent": o.parent} for o in sys_obj.objects]
+    objects = [{"id": o.id, "name": o.name, "type": o.obj_type, "distance": o.distance, "angle": round(o.angle, 4), "connects_to": o.connects_to, "parent": o.parent, "station_id": getattr(o, 'station_id', '')} for o in sys_obj.objects]
     # Ships in this system
     ships_here = []
     for s in sim.ships:
