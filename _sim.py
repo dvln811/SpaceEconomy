@@ -90,10 +90,12 @@ if hasattr(m.sim, 'warfare'):
 ship_roles = Counter(s.role for s in m.sim.ships)
 ship_states = Counter(s.state for s in m.sim.ships)
 haulers_active = sum(1 for s in m.sim.ships if s.cargo and s.role in ('hauler','freelance'))
+haulers_assigned = sum(1 for s in m.sim.ships if (s.cargo or (hasattr(s, '_contract_dest') and s._contract_dest)) and s.role in ('hauler','freelance'))
 cargo_transit = sum(sum(s.cargo.values()) for s in m.sim.ships if s.cargo)
+total_haulers = sum(1 for s in m.sim.ships if s.role in ('hauler','freelance'))
 out.append(f"\n  Fleet ({len(m.sim.ships)} ships): {dict(ship_roles)}")
 out.append(f"  States: {dict(ship_states)}")
-out.append(f"  Haulers w/cargo: {haulers_active} | Cargo in transit: {cargo_transit:,.0f}")
+out.append(f"  Haulers carrying: {haulers_active} | Assigned (carrying+en_route): {haulers_assigned}/{total_haulers} ({haulers_assigned/max(1,total_haulers)*100:.0f}%) | Cargo: {cargo_transit:,.0f}")
 
 # Shipyard inventory check
 out.append("\n  Shipyards:")

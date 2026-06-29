@@ -123,6 +123,9 @@ class NPCDecisionWorker(WorkerThread):
                             commodity_id=commodity, quantity=qty
                         ))
                     ship._contract_dest = None
+                    # Opportunistic backhaul: check if this station has goods needed elsewhere
+                    if self._try_backhaul(ship, loc, universe, region_cache):
+                        return
                     return
                 self.emit(ShipMoveIntent(ship_id=ship.id, destination=dest[0]))
                 return
@@ -229,6 +232,43 @@ class NPCDecisionWorker(WorkerThread):
                 ))
         else:
             self.emit(ShipMoveIntent(ship_id=ship.id, destination=src_sys_id))
+
+    def _try_backhaul(self, ship, loc, universe, region_cache):
+        """After delivery, check if current station has goods needed along a likely route.
+        Returns True if backhaul cargo was picked up."""
+        if not loc.stations:
+            return False
+        station = loc.stations[0]
+        # Look for items at this station that have active contracts elsewhere
+        for c in self._contracts[:100]:  # check top 100 contracts
+            if c['qty_remaining'] <= 0:
+                continue
+            if c['sys_id'] == ship.location:
+                continue  # don't backhaul to same system
+            commodity_id = c['commodity_id']
+            available = station.inventory.get(commodity_id, 0)
+            if available < 5:
+                continue
+            # Found something - pick it up and deliver
+            com = self.commodities.get(commodity_id)
+            if not com:
+                continue
+            buy_qty = min(available * 0.5, ship.cargo_capacity)
+            if buy_qty < 1:
+                continue
+            # Claim from contract
+            claim = min(buy_qty, c['qty_remaining'])
+            c['qty_remaining'] -= claim
+            c['_claims'] = c.get('_claims', 0) + 1
+            ship._contract_dest = (c['sys_id'], c['station'])
+            self.emit(ShipBuyIntent(
+                ship_id=ship.id, system_id=ship.location,
+                station_name=station.name,
+                commodity_id=commodity_id, quantity=claim,
+                route_home=[]
+            ))
+            return True
+        return False
 
     def _freelance_decision(self, ship, universe, region_cache):
         """Freelance trader: buy cheap, sell expensive using region cache."""
