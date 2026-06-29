@@ -118,6 +118,7 @@ async function showAgent(id) {
     <div class="title-line">${a.title} -- ${(a.role||'').replace(/_/g,' ')}</div>
     <div class="title-line"><span class="faction-badge" style="border:1px solid ${color};color:${color}">${fname}</span> Clan ${a.clan || 'Unknown'}</div>
     ${!a.alive ? `<div class="status-dead">DECEASED -- ${a.cause_of_death||'unknown cause'}</div>` : ''}
+    ${a.bio ? `<p style="color:#a8b8c8;font-size:12px;line-height:1.6;margin:12px 0">${a.bio}</p>` : ''}
 
     <div class="info-grid">
       <div class="info-card"><div class="label">Age</div><div class="val">${a.age || '?'} years</div></div>
