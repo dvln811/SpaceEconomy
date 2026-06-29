@@ -657,10 +657,13 @@ def api_ship_model(class_id):
 
 @app.route("/api/news")
 def api_news():
-    """Return last 20 news/event log entries."""
+    """Return last 75 news/event log entries, filtering out stubs."""
     if not sim:
         return jsonify([])
-    events = sim.events[-20:] if hasattr(sim, 'events') else []
+    HIDE_PREFIXES = ('QUEUE:', 'BUILT:', 'TRADE:')
+    all_events = sim.events if hasattr(sim, 'events') else []
+    filtered = [e for e in all_events if not any(e.get('msg', '').startswith(p) for p in HIDE_PREFIXES)]
+    events = filtered[-75:]
     return jsonify(list(reversed(events)))
 
 

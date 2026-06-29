@@ -348,7 +348,10 @@ class Supervisor:
             pass
 
         elif isinstance(intent, EventLog):
-            self.sim.events.append({"tick": intent.tick, "time": time.time(), "msg": intent.msg})
+            self.sim.events.append({"tick": intent.tick, "time": time.time(), "msg": intent.msg,
+                                    "agent_id": getattr(intent, 'agent_id', ''),
+                                    "agent_name": getattr(intent, 'agent_name', ''),
+                                    "category": getattr(intent, 'category', '')})
 
     def _rebuild_indices(self):
         """Rebuild region inventory cache, ship index, and station index."""

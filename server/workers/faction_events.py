@@ -52,6 +52,15 @@ class FactionEventWorker(WorkerThread):
 
         conn.close()
 
+    def _agent_name(self, agent_id):
+        if not agent_id:
+            return ''
+        for agents in self._agents_by_faction.values():
+            for a in agents:
+                if a.get('id') == agent_id:
+                    return a.get('name', '')
+        return ''
+
     def process(self, tick: int, snapshot):
         # Reload agents every 1000 ticks to pick up deaths/spawns
         if tick % 1000 == 0:
@@ -66,4 +75,6 @@ class FactionEventWorker(WorkerThread):
             # Apply effects (kill agents, transfer wealth, etc)
             process_event_effects(event)
             # Emit to news ticker via existing EventLog system
-            self.emit(EventLog(tick=tick, msg=event.news_msg))
+            self.emit(EventLog(tick=tick, msg=event.news_msg,
+                               agent_id=event.agent_id, agent_name=self._agent_name(event.agent_id),
+                               category=event.category))

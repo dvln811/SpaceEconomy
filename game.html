@@ -1273,6 +1273,7 @@ setInterval(fetchShips, 3000);
 setInterval(fetchMarket, 5000);
 
 // News ticker
+const NEWS_COLORS = {economic:'#ffd54f',military:'#ef5350',political:'#ab47bc',social:'#66bb6a',disaster:'#ff8a65',discovery:'#4fc3f7'};
 async function fetchNews(){
   try{
     const r=await fetch('/api/news');
@@ -1280,18 +1281,20 @@ async function fetchNews(){
     const el=document.getElementById('newsContent');
     if(!el||!events.length)return;
     el.innerHTML=events.map(e=>{
-      const cls=e.msg.includes('NEWS:')?'color:#ffa726':e.msg.includes('BUILT:')?'color:#66bb6a':e.msg.includes('BATTLE:')?'color:#ef5350':e.msg.includes('PROJECT')?'color:#ab47bc':'color:#8aa0b8';
-      const txt=e.msg.replace(/^(NEWS|BATTLE|BUILT|QUEUE|STRATEGY|PROJECT[^:]*):?\s*/,'');
-      const tag=e.msg.match(/^([A-Z]+)/)?.[1]||'INFO';
-      // Timestamp: short universe date (last 2 digits of day + .progress)
-      const eTick = e.tick||0;
-      const eDays = Math.floor(eTick/240);
-      const eProg = Math.floor((eTick%240)*100/240);
-      const ts = `${String((82604+eDays)%100).padStart(2,'0')}.${String(eProg).padStart(2,'0')}`;
-      return `<div style="margin:2px 0;padding:2px 0;border-bottom:1px solid #0f1a28"><span style="font-size:9px;color:#4a6a8a">${ts}</span> <span style="font-size:9px;${cls};font-weight:600">[${tag}]</span> <span style="color:#c8d4e0">${txt}</span></div>`;
+      const cat=e.category||'';
+      const color=NEWS_COLORS[cat]||(e.msg.includes('BATTLE:')?'#ef5350':e.msg.includes('PROJECT')?'#ab47bc':'#8aa0b8');
+      let txt=e.msg.replace(/^(NEWS|BATTLE|BUILT|QUEUE|STRATEGY|PROJECT[^:]*):?\s*/,'');
+      // Link agent name if present
+      if(e.agent_name&&e.agent_id){
+        txt=txt.replace(e.agent_name,`<a href="/agents#${e.agent_id}" target="_top" style="color:${color};text-decoration:underline">${e.agent_name}</a>`);
+      }
+      const eTick=e.tick||0;
+      const eDays=Math.floor(eTick/240);
+      const eProg=Math.floor((eTick%240)*100/240);
+      const ts=`${String((82604+eDays)%100).padStart(2,'0')}.${String(eProg).padStart(2,'0')}`;
+      return `<div style="margin:2px 0;padding:2px 0;border-bottom:1px solid #0f1a28"><span style="font-size:9px;color:#4a6a8a">${ts}</span> <span style="color:${color}">${txt}</span></div>`;
     }).join('');
     el.scrollTop=0;
-    // Update toggle arrow
     const toggle=document.getElementById('newsToggle');
     if(toggle)toggle.textContent=el.style.display==='none'?'\u25B6':'\u25BC';
   }catch(e){}

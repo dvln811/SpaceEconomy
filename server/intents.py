@@ -102,3 +102,6 @@ class EventLog:
     """Any thread: log message for the event feed."""
     tick: int
     msg: str
+    agent_id: str = ""
+    agent_name: str = ""
+    category: str = ""
