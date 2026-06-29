@@ -98,13 +98,9 @@ window.addEventListener('resize', () => {
 
 const MATERIALS = {
   hull: () => new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1428, shininess:0, transparent:true, opacity:0.7}),
-  engine: () => new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1020, shininess:0, transparent:true, opacity:0.7}),
-  cargo: () => new THREE.MeshPhongMaterial({color:0x1a1808, emissive:0x0a0a05, shininess:0, transparent:true, opacity:0.7}),
-  weapon: () => new THREE.MeshPhongMaterial({color:0x1a1018, emissive:0x100508, shininess:0, transparent:true, opacity:0.7}),
-  shield: () => new THREE.MeshPhongMaterial({color:0x0a1a0a, emissive:0x050a05, shininess:0, transparent:true, opacity:0.7}),
-  accent: () => new THREE.MeshPhongMaterial({color:0x1a2040, emissive:0x0a0a1a, shininess:0, transparent:true, opacity:0.7}),
 };
-const ECOL = {hull:0x4fc3f7, engine:0x5a7a9a, cargo:0xffd54f, weapon:0xef5350, shield:0x66bb6a, accent:0xef5350};
+const MAT_FN = () => MATERIALS.hull();
+const ECOL = 0x4fc3f7;
 
 let currentGroup = null, currentData = null;
 
@@ -112,7 +108,7 @@ function buildStation(data) {
   if (currentGroup) scene.remove(currentGroup);
   const group = new THREE.Group();
   for (const comp of data.components) {
-    const mat = (MATERIALS[comp.material] || MATERIALS.hull)();
+    const mat = MAT_FN();
     const [px, py, pz] = comp.pos;
     const [rx, ry, rz] = comp.rot || [0,0,0];
     let mesh = null;
@@ -123,14 +119,14 @@ function buildStation(data) {
       case 'box': { const {x,y,z}=comp.params; mesh=new THREE.Mesh(new THREE.BoxGeometry(x,y,z),mat); break; }
       case 'sphere': { const {radius,half}=comp.params; const g=half?new THREE.SphereGeometry(radius,12,8,0,Math.PI*2,0,Math.PI/2):new THREE.SphereGeometry(radius,12,8); mesh=new THREE.Mesh(g,mat); break; }
       case 'torus': { const {radius,tube}=comp.params; mesh=new THREE.Mesh(new THREE.TorusGeometry(radius,tube,8,24),mat); if(!rx&&!ry&&!rz)mesh.rotation.y=Math.PI/2; break; }
-      case 'spine': { const {length,radius,flange_r}=comp.params; const sg=new THREE.Group(); const s=new THREE.Shape(); for(let i=0;i<=6;i++){const a=Math.PI*2*i/6;if(i===0)s.moveTo(Math.cos(a)*radius,Math.sin(a)*radius);else s.lineTo(Math.cos(a)*radius,Math.sin(a)*radius);} const bg=new THREE.ExtrudeGeometry(s,{depth:length,bevelEnabled:false});bg.center();const body=new THREE.Mesh(bg,mat);body.rotation.y=Math.PI/2;sg.add(body); sg.position.set(px,py,pz);sg.rotation.set(rx,ry,rz);group.add(sg);sg.traverse(c=>{if(c.isMesh)c.add(new THREE.LineSegments(new THREE.EdgesGeometry(c.geometry,15),new THREE.LineBasicMaterial({color:ECOL[comp.material]||0x4fc3f7,transparent:true,opacity:0.5})));}); continue; }
+      case 'spine': { const {length,radius,flange_r}=comp.params; const sg=new THREE.Group(); const s=new THREE.Shape(); for(let i=0;i<=6;i++){const a=Math.PI*2*i/6;if(i===0)s.moveTo(Math.cos(a)*radius,Math.sin(a)*radius);else s.lineTo(Math.cos(a)*radius,Math.sin(a)*radius);} const bg=new THREE.ExtrudeGeometry(s,{depth:length,bevelEnabled:false});bg.center();const body=new THREE.Mesh(bg,mat);body.rotation.y=Math.PI/2;sg.add(body); sg.position.set(px,py,pz);sg.rotation.set(rx,ry,rz);group.add(sg);sg.traverse(c=>{if(c.isMesh)c.add(new THREE.LineSegments(new THREE.EdgesGeometry(c.geometry,15),new THREE.LineBasicMaterial({color:ECOL,transparent:true,opacity:0.5})));}); continue; }
       default: continue;
     }
     if (mesh) {
       mesh.position.set(px, py, pz);
       mesh.rotation.x += rx; mesh.rotation.y += ry; mesh.rotation.z += rz;
       group.add(mesh);
-      mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry, 15), new THREE.LineBasicMaterial({color:ECOL[comp.material]||0x4fc3f7, transparent:true, opacity:0.5})));
+      mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry, 15), new THREE.LineBasicMaterial({color:ECOL, transparent:true, opacity:0.5})));
     }
   }
   scene.add(group);

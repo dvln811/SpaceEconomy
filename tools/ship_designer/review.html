@@ -67,7 +67,15 @@ body{background:#05080f;color:#c8d4e0;font-family:'Segoe UI',system-ui,sans-seri
     <option value="factory">Factory</option>
     <option value="component_works">Component Works</option>
   </select>
-  <button id="genStationBtn">Generate Stations</button>
+  <label>Faction:</label>
+  <select id="stationFaction">
+    <option value="terran">Terran</option>
+    <option value="merchants">Merchants</option>
+    <option value="science">Science</option>
+    <option value="iron_compact">Iron Compact</option>
+    <option value="frontier">Frontier</option>
+  </select>
+  <button id="genStationBtn">Generate Stations (6)</button>
   <button id="exportBtn" class="btn-green" style="margin-left:auto">Export Kept</button>
 </div>
 <div class="grid" id="grid"></div>
@@ -137,14 +145,21 @@ function renderCard(canvas,parts){
 
 let ships=[];
 let kept=new Set();
+let _mode='ship'; // 'ship' or 'station'
 
 async function generateBatch(){
+  _mode='ship';
   const hull_class=document.getElementById('hullClass').value;
   const count=parseInt(document.getElementById('count').value);
   const r=await fetch('/api/batch_generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({hull_class,count})});
   ships=await r.json();
   kept.clear();
   renderGrid();
+}
+
+function cardLabel(s){
+  if(s.station_type) return `${s.faction} / ${s.station_type.replace(/_/g,' ')}`;
+  return `${s.faction} / ${s.hull_class||''}`;
 }
 
 function renderGrid(){
@@ -157,14 +172,13 @@ function renderGrid(){
     card.dataset.i=i;
     const canvas=document.createElement('canvas');
     const info=document.createElement('div');info.className='card-info';
-    info.innerHTML=`<span class="name">${s.faction} / ${s.hull_class}</span><span class="seed">seed: ${s.seed}</span>`;
+    info.innerHTML=`<span class="name">${cardLabel(s)}</span><span class="seed">seed: ${s.seed}</span>`;
     const actions=document.createElement('div');actions.className='card-actions';
     actions.innerHTML=`<button class="btn-keep ${kept.has(i)?'active':''}" data-i="${i}">Keep</button><button class="btn-regen" data-i="${i}">Regenerate</button>`;
     card.appendChild(canvas);card.appendChild(info);card.appendChild(actions);
     grid.appendChild(card);
     renderCard(canvas,s.components);
   }
-  // Event delegation
   grid.onclick=async(e)=>{
     const btn=e.target.closest('button');
     if(!btn)return;
@@ -174,50 +188,77 @@ function renderGrid(){
       if(kept.has(i)){kept.delete(i);card.classList.remove('kept');btn.classList.remove('active');}
       else{kept.add(i);card.classList.add('kept');btn.classList.add('active');}
     }else if(btn.classList.contains('btn-regen')){
-      const s=ships[i];
-      const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({faction:s.faction,hull_class:s.hull_class})});
-      const newShip=await r.json();
-      ships[i]={name:`${s.faction}/${s.hull_class}/${newShip.meta.seed}`,faction:s.faction,hull_class:s.hull_class,seed:newShip.meta.seed,components:newShip.components,meta:newShip.meta};
-      kept.delete(i);
-      // Replace just this card's canvas and info
-      card.classList.remove('kept');
-      card.querySelector('.card-info').innerHTML=`<span class="name">${s.faction} / ${s.hull_class}</span><span class="seed">seed: ${newShip.meta.seed}</span>`;
-      card.querySelector('.btn-keep').classList.remove('active');
-      const oldCanvas=card.querySelector('canvas');
-      const newCanvas=document.createElement('canvas');
-      oldCanvas.replaceWith(newCanvas);
-      renderCard(newCanvas,newShip.components);
+      await regenCard(i, card);
     }
   };
 }
 
+async function regenCard(i, card){
+  const s=ships[i];
+  let newData;
+  if(s.station_type){
+    const r=await fetch('/api/station/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({station_type:s.station_type,faction:s.faction})});
+    newData=await r.json();
+    ships[i]={name:`${s.faction}/${s.station_type}/${newData.meta.seed}`,faction:s.faction,station_type:s.station_type,seed:newData.meta.seed,components:newData.components,meta:newData.meta};
+  } else {
+    const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({faction:s.faction,hull_class:s.hull_class})});
+    newData=await r.json();
+    ships[i]={name:`${s.faction}/${s.hull_class}/${newData.meta.seed}`,faction:s.faction,hull_class:s.hull_class,seed:newData.meta.seed,components:newData.components,meta:newData.meta};
+  }
+  kept.delete(i);
+  if(card){
+    card.classList.remove('kept');
+    card.querySelector('.card-info').innerHTML=`<span class="name">${cardLabel(ships[i])}</span><span class="seed">seed: ${ships[i].seed}</span>`;
+    card.querySelector('.btn-keep').classList.remove('active');
+    const oldCanvas=card.querySelector('canvas');
+    const newCanvas=document.createElement('canvas');
+    oldCanvas.replaceWith(newCanvas);
+    renderCard(newCanvas,ships[i].components);
+  }
+  return ships[i];
+}
+
 document.getElementById('genBtn').addEventListener('click',generateBatch);
 document.getElementById('genStationBtn').addEventListener('click', async()=>{
+  _mode='station';
   const station_type=document.getElementById('stationType').value;
-  const r=await fetch('/api/station/batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({station_type})});
-  const data=await r.json();
-  ships=data;
+  const faction=document.getElementById('stationFaction').value;
+  // Generate 6 variations for this type+faction
+  ships=[];
+  for(let i=0;i<6;i++){
+    const r=await fetch('/api/station/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({station_type,faction})});
+    const data=await r.json();
+    ships.push({name:`${faction}/${station_type}/${data.meta.seed}`,faction,station_type,seed:data.meta.seed,components:data.components,meta:data.meta});
+  }
   kept.clear();
   renderGrid();
 });
 document.getElementById('exportBtn').addEventListener('click',async()=>{
   const exported=ships.filter((_,i)=>kept.has(i));
-  if(!exported.length){alert('No ships kept yet');return;}
-  const r=await fetch('/api/export_tagged',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(exported)});
+  if(!exported.length){alert('Nothing kept yet');return;}
+  // Build filename from content
+  let filename = 'tagged_feedback';
+  if(exported[0].station_type){
+    filename = `stations_${exported[0].faction}_${exported[0].station_type}`;
+  } else if(exported[0].hull_class){
+    filename = `ships_${exported[0].faction}_${exported[0].hull_class}`;
+  }
+  const r=await fetch('/api/export_tagged',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename, items: exported})});
   const d=await r.json();
-  alert(`Exported ${d.count} ships to tagged_feedback.json`);
+  alert(`Exported ${d.count} items to ${d.file}`);
 });
 
 // ── Interactive Viewer Overlay ──────────────────────────────────────────────
 const overlay=document.createElement('div');
 overlay.style.cssText='display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:1000';
-overlay.innerHTML='<div style="position:absolute;top:10px;right:20px;color:#4fc3f7;font-size:14px;cursor:pointer" id="closeViewer">✕ Close</div>';
+overlay.innerHTML='<div style="position:absolute;top:10px;right:20px;display:flex;gap:12px;align-items:center"><button id="viewerRegen" style="padding:6px 14px;border:1px solid #4fc3f7;background:#0d1a2f;color:#4fc3f7;border-radius:3px;cursor:pointer;font-size:12px">Regenerate</button><span id="closeViewer" style="color:#4fc3f7;font-size:14px;cursor:pointer">✕ Close</span></div>';
 const vCanvas=document.createElement('canvas');
 vCanvas.style.cssText='width:100%;height:100%';
 overlay.appendChild(vCanvas);
 document.body.appendChild(overlay);
 
 let vRenderer,vScene,vCamera,vControls,vGroup,vRaf;
+let _viewerIdx = -1;
 function openViewer(parts){
   overlay.style.display='block';
   if(!vRenderer){
@@ -246,6 +287,13 @@ function openViewer(parts){
 function closeViewer(){overlay.style.display='none';cancelAnimationFrame(vRaf);}
 document.getElementById('closeViewer').addEventListener('click',closeViewer);
 overlay.addEventListener('click',e=>{if(e.target===overlay)closeViewer();});
+document.getElementById('viewerRegen').addEventListener('click', async()=>{
+  if(_viewerIdx<0) return;
+  const card=document.querySelector(`.card[data-i="${_viewerIdx}"]`);
+  const newShip=await regenCard(_viewerIdx, card);
+  // Re-open viewer with new data
+  openViewer(newShip.components);
+});
 
 // Click canvas in grid to open viewer
 document.getElementById('grid').addEventListener('click',e=>{
@@ -254,7 +302,7 @@ document.getElementById('grid').addEventListener('click',e=>{
   const card=canvas.closest('.card');
   if(!card)return;
   const i=parseInt(card.dataset.i);
-  if(ships[i])openViewer(ships[i].components);
+  if(ships[i]){_viewerIdx=i; openViewer(ships[i].components);}
 });
 </script>
 </body>

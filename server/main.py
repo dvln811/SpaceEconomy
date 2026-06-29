@@ -550,10 +550,13 @@ def api_designer_gen_component():
 @app.route("/api/export_tagged", methods=["POST"])
 def api_designer_export_tagged():
     data = request.get_json()
-    path = os.path.join(BASE_DIR, "tools", "ship_designer", "tagged_feedback.json")
+    filename = data.get('filename', 'tagged_feedback') if isinstance(data, dict) else 'tagged_feedback'
+    items = data.get('items', data) if isinstance(data, dict) else data
+    safe_name = "".join(c for c in filename if c.isalnum() or c in "_-").lower()
+    path = os.path.join(BASE_DIR, "tools", "ship_designer", f"{safe_name}.json")
     with open(path, "w") as f:
-        json.dump(data, f, indent=2)
-    return jsonify({"status": "saved", "count": len(data)})
+        json.dump(items, f, indent=2)
+    return jsonify({"status": "saved", "count": len(items), "file": f"{safe_name}.json"})
 
 
 @app.route("/api/save_component", methods=["POST"])
@@ -585,6 +588,16 @@ def api_designer_load_component(name):
         return jsonify(json.load(f))
 
 
+@app.route("/api/station_designs/<faction>/<station_type>")
+def api_station_designs(faction, station_type):
+    """Get pre-generated station designs for a faction+type (6 variants)."""
+    path = os.path.join(BASE_DIR, "tools", "ship_designer", "station_designs", f"stations_{faction}_{station_type}.json")
+    if not os.path.exists(path):
+        return jsonify({"error": "not found"}), 404
+    with open(path) as f:
+        return jsonify(json.load(f))
+
+
 @app.route("/system_view")
 def system_view_page():
     return send_from_directory(BASE_DIR, "system_view.html")
@@ -602,8 +615,15 @@ def health():
 @app.before_request
 def _check_sim_ready():
     """Return 503 for API calls if simulation hasn't finished loading."""
+    # Designer endpoints don't need sim
+    exempt = ('/api/factions', '/api/hull_classes', '/api/generate', '/api/station/',
+              '/api/batch_generate', '/api/saved', '/api/save', '/api/load/',
+              '/api/all_components', '/api/component_categories', '/api/generate_component',
+              '/api/save_component', '/api/saved_components', '/api/load_component/',
+              '/api/export_tagged', '/api/ship_model/', '/api/agents', '/api/data/')
     if request.path.startswith('/api/') and not _sim_ready.is_set():
-        return jsonify({"error": "Simulation loading, please wait..."}), 503
+        if not any(request.path.startswith(p) for p in exempt):
+            return jsonify({"error": "Simulation loading, please wait..."}), 503
 
 
 @app.route("/api/positions")

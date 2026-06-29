@@ -1,194 +1,196 @@
-"""Station Generator: assembles station components into full stations by type and faction.
+"""Station Generator v2: spine-first architecture, higher component counts.
 
-Station types match DB: mining_colony, refinery, component_works, factory, trade_hub, military_base, shipyard
-Faction styles influence material choices, symmetry, and component selection.
+Builds stations as a backbone (main spine) with modules branching off,
+secondary hubs, and layered construction. Much more complex output.
+
+Component targets:
+  mining_colony/refinery: 40-60
+  component_works/factory: 50-70
+  trade_hub/military_base: 80-120
+  shipyard: 120-180
 """
 import random
 import math
-from station_components import (gen_hub, gen_ring, gen_arm, gen_dock, gen_solar,
+from station_components import (gen_hub, gen_ring, gen_corridor, gen_dock, gen_solar,
                                  gen_antenna, gen_habitat, gen_industrial, gen_defense)
 
-
-# ─── FACTION STYLES ────────────────────────────────────────────────────────
 
 STATION_FACTION_STYLES = {
     'terran': {
         'description': 'Ordered, symmetrical, large hub cores with uniform arms',
-        'hub_pref': ['cylinder', 'sphere'],
-        'ring_pref': ['single', 'double'],
-        'arm_pref': ['straight', 'truss'],
+        'hub_pref': ['cylinder', 'sphere', 'octagonal'],
+        'corridor_pref': ['straight', 'spine'],
         'symmetry': 4,
-        'scale_mult': 1.2,
+        'scale': 1.2,
     },
     'merchants': {
         'description': 'Sprawling, dock-heavy, modular and expandable',
-        'hub_pref': ['modular', 'cylinder'],
-        'ring_pref': ['wide'],
-        'arm_pref': ['lattice', 'telescoping'],
+        'hub_pref': ['modular', 'cylinder', 'blocky'],
+        'corridor_pref': ['truss', 'tube_lattice'],
         'symmetry': 3,
-        'scale_mult': 1.0,
+        'scale': 1.0,
     },
     'science': {
         'description': 'Elegant, ring-focused, antenna arrays, minimal bulk',
         'hub_pref': ['sphere', 'octagonal'],
-        'ring_pref': ['single', 'tilted'],
-        'arm_pref': ['straight'],
+        'corridor_pref': ['straight', 'spine'],
         'symmetry': 6,
-        'scale_mult': 0.9,
+        'scale': 0.9,
     },
     'iron_compact': {
         'description': 'Heavy, industrial, fortress-like with defense turrets',
-        'hub_pref': ['octagonal', 'cylinder'],
-        'ring_pref': ['double', 'wide'],
-        'arm_pref': ['truss', 'lattice'],
+        'hub_pref': ['octagonal', 'blocky', 'cylinder'],
+        'corridor_pref': ['truss', 'tube_lattice'],
         'symmetry': 4,
-        'scale_mult': 1.3,
+        'scale': 1.3,
     },
     'frontier': {
         'description': 'Scrappy, asymmetric, practical, cobbled together',
-        'hub_pref': ['modular', 'sphere'],
-        'ring_pref': ['single'],
-        'arm_pref': ['telescoping', 'straight'],
+        'hub_pref': ['modular', 'sphere', 'blocky'],
+        'corridor_pref': ['truss', 'straight'],
         'symmetry': 2,
-        'scale_mult': 0.8,
+        'scale': 0.85,
     },
 }
 
-# ─── STATION TYPE RECIPES ──────────────────────────────────────────────────
-
-# Each recipe defines what components a station type uses
 STATION_RECIPES = {
-    'mining_colony': {
-        'hub': True, 'ring': False, 'arms': (2, 4), 'docks': (1, 2),
-        'solar': True, 'industrial': True, 'defense': False,
-        'industrial_style': 'refinery',
-    },
-    'refinery': {
-        'hub': True, 'ring': False, 'arms': (2, 4), 'docks': (1, 2),
-        'solar': True, 'industrial': True, 'defense': False,
-        'industrial_style': 'refinery',
-    },
-    'component_works': {
-        'hub': True, 'ring': False, 'arms': (2, 3), 'docks': (1, 2),
-        'solar': True, 'industrial': True, 'defense': False,
-        'industrial_style': 'factory',
-    },
-    'factory': {
-        'hub': True, 'ring': False, 'arms': (3, 5), 'docks': (2, 3),
-        'solar': True, 'industrial': True, 'defense': False,
-        'industrial_style': 'factory',
-    },
-    'trade_hub': {
-        'hub': True, 'ring': True, 'arms': (4, 6), 'docks': (3, 5),
-        'solar': True, 'industrial': False, 'defense': True,
-        'industrial_style': None,
-    },
-    'military_base': {
-        'hub': True, 'ring': True, 'arms': (4, 6), 'docks': (2, 3),
-        'solar': True, 'industrial': False, 'defense': True,
-        'industrial_style': None,
-    },
-    'shipyard': {
-        'hub': True, 'ring': True, 'arms': (4, 8), 'docks': (4, 6),
-        'solar': True, 'industrial': True, 'defense': True,
-        'industrial_style': 'factory',
-    },
+    'mining_colony': {'complexity': (40, 60), 'rings': 0, 'sections': 2, 'docks': 1, 'industrial': 2, 'defense': 0, 'ind_style': 'ore_processor'},
+    'refinery': {'complexity': (45, 65), 'rings': 0, 'sections': 3, 'docks': 2, 'industrial': 3, 'defense': 0, 'ind_style': 'refinery'},
+    'component_works': {'complexity': (50, 70), 'rings': 0, 'sections': 3, 'docks': 2, 'industrial': 2, 'defense': 1, 'ind_style': 'factory'},
+    'factory': {'complexity': (55, 75), 'rings': 0, 'sections': 4, 'docks': 3, 'industrial': 3, 'defense': 1, 'ind_style': 'factory'},
+    'trade_hub': {'complexity': (80, 120), 'rings': 1, 'sections': 4, 'docks': 4, 'industrial': 1, 'defense': 2, 'ind_style': 'tank_farm'},
+    'military_base': {'complexity': (80, 120), 'rings': 1, 'sections': 4, 'docks': 3, 'industrial': 1, 'defense': 4, 'ind_style': 'tank_farm'},
+    'shipyard': {'complexity': (120, 180), 'rings': 2, 'sections': 6, 'docks': 5, 'industrial': 3, 'defense': 3, 'ind_style': 'factory'},
 }
+
+
+def _offset_parts(parts, dx=0, dy=0, dz=0):
+    """Offset all parts by dx/dy/dz."""
+    for p in parts:
+        p['pos'] = [p['pos'][0]+dx, p['pos'][1]+dy, p['pos'][2]+dz]
+    return parts
+
+
+def _rotate_parts_y(parts, angle):
+    """Rotate all parts around Y axis by angle radians."""
+    cos_a, sin_a = math.cos(angle), math.sin(angle)
+    for p in parts:
+        x, y, z = p['pos']
+        p['pos'] = [round(x*cos_a - z*sin_a, 4), y, round(x*sin_a + z*cos_a, 4)]
+        if p.get('rot'):
+            p['rot'] = [p['rot'][0], p['rot'][1] + angle, p['rot'][2]]
+    return parts
 
 
 def generate_station(station_type='trade_hub', faction='terran', seed=None):
-    """Generate a complete station from type + faction.
-    
-    Returns: {"components": [...], "meta": {...}}
-    """
     if seed is not None:
         random.seed(seed)
 
     style = STATION_FACTION_STYLES.get(faction, STATION_FACTION_STYLES['terran'])
     recipe = STATION_RECIPES.get(station_type, STATION_RECIPES['trade_hub'])
-    sm = style['scale_mult']
+    sc = style['scale']
     sym = style['symmetry']
     components = []
 
-    # Hub (center)
+    # ── 1. CENTRAL HUB ──
     hub_style = random.choice(style['hub_pref'])
-    hub = gen_hub(style=hub_style, size=1.2 * sm)
-    for p in hub['parts']:
-        components.append(p)
+    hub = gen_hub(style=hub_style, size=1.0*sc)
+    components.extend(hub['parts'])
 
-    # Ring (if applicable)
-    if recipe['ring']:
-        ring_style = random.choice(style['ring_pref'])
-        ring = gen_ring(style=ring_style, size=1.5 * sm)
-        for p in ring['parts']:
-            components.append(p)
+    # ── 2. MAIN SPINE (backbone corridor extending from hub) ──
+    sections = recipe['sections']
+    corridor_style = random.choice(style['corridor_pref'])
+    section_positions = []  # track where each section ends up
 
-    # Arms (radial, using symmetry)
-    arm_count = random.randint(*recipe['arms'])
-    arm_count = min(arm_count, sym * 2)  # cap by symmetry
-    arm_style = random.choice(style['arm_pref'])
-    for i in range(arm_count):
-        angle = (2 * math.pi * i) / arm_count
-        arm = gen_arm(style=arm_style, size=0.8 * sm)
-        cos_a, sin_a = math.cos(angle), math.sin(angle)
-        for p in arm['parts']:
-            ox, oy, oz = p['pos']
-            # Rotate arm outward from center
-            nx = cos_a * ox - sin_a * oz + cos_a * 0.4 * sm
-            nz = sin_a * ox + cos_a * oz + sin_a * 0.4 * sm
-            p['pos'] = [round(nx, 4), oy, round(nz, 4)]
-            ry = p.get('rot', [0, 0, 0])[1] if p.get('rot') else 0
-            p['rot'] = [p.get('rot', [0, 0, 0])[0], ry + angle, p.get('rot', [0, 0, 0])[2]]
-            components.append(p)
+    for section_idx in range(sections):
+        angle = (2 * math.pi * section_idx) / min(sections, sym)
+        dist = 0.5 * sc + section_idx * 0.1 * sc
 
-    # Docks (at arm tips)
-    dock_count = random.randint(*recipe['docks'])
-    dock_style = random.choice(['bay', 'ring_port', 'hangar'])
-    for i in range(min(dock_count, arm_count)):
-        angle = (2 * math.pi * i) / arm_count
-        dock = gen_dock(style=dock_style, size=0.6 * sm)
-        cos_a, sin_a = math.cos(angle), math.sin(angle)
-        for p in dock['parts']:
-            ox, oy, oz = p['pos']
-            nx = cos_a * ox + cos_a * 0.85 * sm
-            nz = sin_a * ox + sin_a * 0.85 * sm
-            p['pos'] = [round(nx, 4), oy, round(nz, 4)]
-            components.append(p)
+        # Corridor
+        corr = gen_corridor(style=corridor_style, size=0.8*sc)
+        corr_length = corr.pop('_length', 0.6*sc)
+        corr_parts = _rotate_parts_y(corr['parts'], angle)
+        _offset_parts(corr_parts, math.cos(angle)*dist, 0, math.sin(angle)*dist)
+        components.extend(corr_parts)
 
-    # Solar panels (top/bottom)
-    if recipe['solar']:
-        solar_style = random.choice(['panel', 'array', 'radiator'])
-        for y_mult in [1, -1]:
-            solar = gen_solar(style=solar_style, size=0.7 * sm)
-            for p in solar['parts']:
-                p['pos'][1] += 0.5 * sm * y_mult
-                components.append(p)
+        # Secondary hub at end of corridor
+        end_dist = dist + corr_length * 0.5
+        end_x = math.cos(angle) * end_dist
+        end_z = math.sin(angle) * end_dist
+        section_positions.append((end_x, 0, end_z, angle))
 
-    # Industrial modules
-    if recipe['industrial']:
-        ind_style = recipe['industrial_style'] or 'tank'
-        ind = gen_industrial(style=ind_style, size=0.8 * sm)
-        for p in ind['parts']:
-            p['pos'][1] -= 0.35 * sm
-            components.append(p)
+        sec_hub_style = random.choice(style['hub_pref'])
+        sec_hub = gen_hub(style=sec_hub_style, size=0.6*sc)
+        _offset_parts(sec_hub['parts'], end_x, 0, end_z)
+        components.extend(sec_hub['parts'])
 
-    # Defense turrets
-    if recipe['defense']:
-        turret_count = random.randint(2, 4)
-        for i in range(turret_count):
-            angle = (2 * math.pi * i) / turret_count + 0.3
-            d = gen_defense(style='turret', size=0.5 * sm)
-            cos_a, sin_a = math.cos(angle), math.sin(angle)
-            for p in d['parts']:
-                ox, oy, oz = p['pos']
-                p['pos'] = [round(cos_a * 0.35 * sm + ox, 4), oy + 0.3 * sm, round(sin_a * 0.35 * sm + oz, 4)]
-                components.append(p)
+    # ── 3. RINGS ──
+    for r in range(recipe['rings']):
+        ring_style = random.choice(['single', 'double', 'wide'])
+        ring = gen_ring(style=ring_style, size=(1.2 + r*0.3)*sc)
+        y_off = (r - recipe['rings']/2) * 0.15 * sc
+        _offset_parts(ring['parts'], 0, y_off, 0)
+        components.extend(ring['parts'])
 
-    # Antenna (top)
-    ant = gen_antenna(style=random.choice(['dish', 'mast']), size=0.5 * sm)
-    for p in ant['parts']:
-        p['pos'][1] += 0.6 * sm
-        components.append(p)
+    # ── 4. DOCKS (placed at section ends) ──
+    dock_styles = ['bay', 'ring_port', 'hangar', 'multi_pad']
+    for i in range(min(recipe['docks'], len(section_positions))):
+        sx, sy, sz, sa = section_positions[i % len(section_positions)]
+        dock = gen_dock(style=random.choice(dock_styles), size=0.7*sc)
+        dock_parts = _rotate_parts_y(dock['parts'], sa)
+        _offset_parts(dock_parts, sx + math.cos(sa)*0.4*sc, sy, sz + math.sin(sa)*0.4*sc)
+        components.extend(dock_parts)
+
+    # ── 5. INDUSTRIAL MODULES ──
+    ind_styles = ['tank_farm', 'refinery', 'factory', 'ore_processor']
+    main_ind = recipe['ind_style']
+    for i in range(recipe['industrial']):
+        ist = main_ind if i == 0 else random.choice(ind_styles)
+        ind = gen_industrial(style=ist, size=0.7*sc)
+        if i < len(section_positions):
+            sx, sy, sz, sa = section_positions[i % len(section_positions)]
+            _offset_parts(ind['parts'], sx, -0.3*sc, sz)
+        else:
+            angle = random.uniform(0, 2*math.pi)
+            _offset_parts(ind['parts'], math.cos(angle)*0.6*sc, -0.25*sc, math.sin(angle)*0.6*sc)
+        components.extend(ind['parts'])
+
+    # ── 6. SOLAR / RADIATORS (top and bottom) ──
+    solar_style = random.choice(['panel', 'array', 'radiator'])
+    for y_mult in [1.0, -1.0]:
+        for i in range(random.randint(1, 3)):
+            solar = gen_solar(style=solar_style, size=0.6*sc)
+            x_off = (i - 1) * 0.4 * sc
+            _offset_parts(solar['parts'], x_off, 0.5*sc*y_mult, 0)
+            components.extend(solar['parts'])
+
+    # ── 7. DEFENSE ──
+    defense_styles = ['turret', 'missile_pod', 'point_defense']
+    for i in range(recipe['defense']):
+        d = gen_defense(style=random.choice(defense_styles), size=0.5*sc)
+        angle = (2*math.pi*i) / max(recipe['defense'], 1) + random.uniform(-0.3, 0.3)
+        r_dist = random.uniform(0.3, 0.6) * sc
+        _offset_parts(d['parts'], math.cos(angle)*r_dist, random.uniform(0.15, 0.4)*sc, math.sin(angle)*r_dist)
+        components.extend(d['parts'])
+
+    # ── 8. ANTENNA (top) ──
+    ant_style = random.choice(['dish', 'mast', 'phased_array'])
+    ant = gen_antenna(style=ant_style, size=0.5*sc)
+    _offset_parts(ant['parts'], 0, 0.65*sc, 0)
+    components.extend(ant['parts'])
+
+    # ── 9. HABITATS (for large stations) ──
+    if recipe['complexity'][0] >= 80:
+        hab_styles = ['dome', 'cylinder', 'pod_cluster']
+        for i in range(random.randint(1, 3)):
+            hab = gen_habitat(style=random.choice(hab_styles), size=0.6*sc)
+            if i < len(section_positions):
+                sx, sy, sz, sa = section_positions[i]
+                _offset_parts(hab['parts'], sx, 0.25*sc, sz)
+            else:
+                angle = random.uniform(0, 2*math.pi)
+                _offset_parts(hab['parts'], math.cos(angle)*0.5*sc, 0.2*sc, math.sin(angle)*0.5*sc)
+            components.extend(hab['parts'])
 
     return {
         'components': components,
@@ -201,5 +203,4 @@ def generate_station(station_type='trade_hub', faction='terran', seed=None):
     }
 
 
-# Station type list for UI
 STATION_TYPES = list(STATION_RECIPES.keys())
