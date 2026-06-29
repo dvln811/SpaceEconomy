@@ -298,6 +298,63 @@ function updateMissiles(msls) {
   }
 }
 
+// --- Station in combat (merged geometry, 2 draw calls) ---
+function buildCombatStation(stationData) {
+  const comps = stationData.components;
+  const tempGroup = new THREE.Group();
+  for (const comp of comps) {
+    const [px,py,pz] = comp.pos; const [rx,ry,rz] = comp.rot||[0,0,0]; let mesh = null;
+    switch(comp.type) {
+      case 'pod': { const {length,height,width}=comp.params; mesh=new THREE.Mesh(new THREE.BoxGeometry(length,height,width)); mesh.rotation.y=Math.PI/2; break; }
+      case 'cylinder': { const {r_top,r_bot,length}=comp.params; mesh=new THREE.Mesh(new THREE.CylinderGeometry(r_top,r_bot,length,6)); if(!rx&&!ry&&!rz)mesh.rotation.z=Math.PI/2; break; }
+      case 'cone': { const {radius,length}=comp.params; mesh=new THREE.Mesh(new THREE.ConeGeometry(radius,length,6)); if(!rx&&!ry&&!rz)mesh.rotation.z=Math.PI/2; break; }
+      case 'box': { const {x,y,z}=comp.params; mesh=new THREE.Mesh(new THREE.BoxGeometry(x,y,z)); break; }
+      case 'sphere': { const {radius,half}=comp.params; mesh=new THREE.Mesh(half?new THREE.SphereGeometry(radius,5,3,0,Math.PI*2,0,Math.PI/2):new THREE.SphereGeometry(radius,5,3)); break; }
+      case 'torus': { const {radius,tube}=comp.params; mesh=new THREE.Mesh(new THREE.TorusGeometry(radius,tube,5,10)); if(!rx&&!ry&&!rz)mesh.rotation.y=Math.PI/2; break; }
+      case 'spine': { const {length,radius}=comp.params; mesh=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,length,4)); mesh.rotation.z=Math.PI/2; break; }
+      default: continue;
+    }
+    if (mesh) { mesh.position.set(px,py,pz); mesh.rotation.x+=rx; mesh.rotation.y+=ry; mesh.rotation.z+=rz; tempGroup.add(mesh); }
+  }
+  // Merge into single geometry
+  tempGroup.updateMatrixWorld(true);
+  const geos = [];
+  tempGroup.traverse(c => { if(c.isMesh&&c.geometry){ const g=c.geometry.clone(); g.applyMatrix4(c.matrixWorld); geos.push(g); }});
+  if (!geos.length) return;
+  const allG = geos.map(g => g.index ? g.toNonIndexed() : g);
+  let tv=0; allG.forEach(g => tv+=g.attributes.position.count);
+  const positions = new Float32Array(tv*3);
+  let off=0; for(const g of allG){positions.set(g.attributes.position.array,off*3);off+=g.attributes.position.count;}
+  const merged = new THREE.BufferGeometry();
+  merged.setAttribute('position', new THREE.BufferAttribute(positions,3));
+  merged.computeVertexNormals();
+  // Scale: stations should be large relative to ships
+  // Dreadnought = 2200-3800m (in combat units roughly 3000-4000 across with scale)
+  // Small outpost: ~5km, Medium station: 15-25km, Large station: 30-50km
+  // Combat field is ~30000 units wide.
+  const stationScale = stationData.type === 'shipyard' ? 18000
+    : stationData.type === 'trade_hub' ? 15000
+    : stationData.type === 'military_base' ? 12000
+    : stationData.type === 'factory' ? 8000
+    : stationData.type === 'refinery' ? 7000
+    : stationData.type === 'component_works' ? 6000
+    : 5000; // mining_colony
+  const box = new THREE.Box3().setFromObject(tempGroup);
+  const sz = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
+  const scale = stationScale / maxDim;
+
+  const group = new THREE.Group();
+  const mat = new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1428, shininess:0, transparent:true, opacity:0.7});
+  group.add(new THREE.Mesh(merged, mat));
+  group.add(new THREE.LineSegments(new THREE.EdgesGeometry(merged,15), new THREE.LineBasicMaterial({color:0x4fc3f7, transparent:true, opacity:0.4})));
+  group.scale.setScalar(scale);
+  group.position.set(0, 0, 0); // center of battlefield
+  scene.add(group);
+  // Cleanup
+  allG.forEach(g=>g.dispose()); geos.forEach(g=>g.dispose());
+}
+
 // --- Camera (spherical orbit + WASD free fly) ---
 let camTheta = 0.8;
 let camPhi = 0.4;
@@ -525,6 +582,11 @@ function connect() {
     const data = JSON.parse(e.data);
     if (data.type === 'init') {
       initFleets(data.fleets);
+      if (data.station) {
+        buildCombatStation(data.station);
+        window._stationLabel = ' | Station: ' + data.station.type.replace(/_/g,' ') + ' (' + data.station.faction + ')';
+        document.getElementById('status').textContent += window._stationLabel;
+      }
     } else if (data.type === 'tick') {
       onTick(data);
     } else if (data.type === 'event') {
@@ -573,8 +635,8 @@ function initFleets(fleets) {
       item.innerHTML = `<div class="li-icon" style="background:${fColor}"></div><span class="li-name">${s.name}</span><span class="li-class">${s.hull_class}</span><span class="li-dist">--</span>`;
       item.addEventListener('click', (e) => { e.stopPropagation(); selectedShipId = s.id; document.querySelectorAll('.list-item').forEach(c=>c.classList.remove('selected')); item.classList.add('selected'); });
       item.addEventListener('dblclick', (e) => { e.stopPropagation(); followShipId = s.id; freeCamera = false; camDist = 150; });
-      item.addEventListener('mouseenter', ev => showTooltip(ev, s));
-      item.addEventListener('mouseleave', () => { document.getElementById('tooltip').style.display = 'none'; });
+      item.addEventListener('mouseenter', ev => { item._ttTimer = setTimeout(() => showTooltip(ev, s), 1200); });
+      item.addEventListener('mouseleave', () => { clearTimeout(item._ttTimer); document.getElementById('tooltip').style.display = 'none'; });
       fleetsEl.appendChild(item);
     });
   });
@@ -606,7 +668,7 @@ function initFleets(fleets) {
 }
 
 function onTick(data) {
-  document.getElementById('status').textContent = 'T' + data.tick;
+  document.getElementById('status').textContent = 'T' + data.tick + (window._stationLabel || '');
   // Update positions
   if (data.pos) {
     for (const [id, p] of Object.entries(data.pos)) {

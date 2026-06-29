@@ -305,6 +305,17 @@ def combat_stream():
             {"faction":"Free States","count":len(fleet_fs),"ally":"Terran Federation","ships":[ship_data(s) for s in fleet_fs]},
             {"faction":"Iron Compact","count":len(fleet_ic),"ships":[ship_data(s) for s in fleet_ic]},
         ]}
+        # Add a station to the battlefield for scale reference
+        import random as _rnd
+        station_types = ['trade_hub', 'military_base', 'refinery', 'mining_colony', 'shipyard', 'factory']
+        st_type = _rnd.choice(station_types)
+        st_faction = 'terran'
+        st_path = os.path.join(BASE_DIR, "tools", "ship_designer", "station_designs", f"stations_{st_faction}_{st_type}.json")
+        if os.path.exists(st_path):
+            with open(st_path) as _sf:
+                st_designs = json.load(_sf)
+            st_design = _rnd.choice(st_designs)
+            init_data["station"] = {"type": st_type, "faction": st_faction, "components": st_design["components"], "pos": [0, 0, 0]}
         yield f"data: {json.dumps(init_data)}\n\n"
         _time.sleep(1)
 
