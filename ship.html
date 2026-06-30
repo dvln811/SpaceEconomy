@@ -161,7 +161,10 @@ function setDockedScene(){
   camera.position.set(30, 15, 30);
   controls.target.set(0, 0, 0);
   controls.maxDistance = 100;
-  if(shipGroup) shipGroup.position.set(0,0,0);
+  if(shipGroup){
+    shipGroup.position.set(0,0,0);
+    shipGroup.quaternion.identity(); // reset rotation for hangar display
+  }
   isDocked = true;
 }
 
@@ -266,8 +269,16 @@ function updateFromState(state){
   if(p.max_speed) playerMaxSpeed = p.max_speed;
 
   // Set initial player position from server if not yet set
-  if(playerPos.x === 0 && playerPos.y === 0 && playerPos.z === 0 && p.x !== 0){
+  // Restore player position from server on first connect (page switch recovery)
+  if(!playerPosInitialized && p.x !== undefined){
     playerPos.set(p.x, p.y, p.z);
+    playerPosInitialized = true;
+    if(p.speed > 0 && p.state === 'flying'){
+      playerSpeed = p.speed;
+      const [hx,hy,hz] = p.heading || [1,0,0];
+      playerHeading.set(hx, hy, hz);
+      flyDirection = playerHeading.clone();
+    }
   }
 
   // Detect dock/undock transition
@@ -305,7 +316,8 @@ let flyDirection = null;  // THREE.Vector3 or null
 let playerSpeed = 0;
 let playerMaxSpeed = 95;  // from ship stats, updated on load
 let playerAlignTime = 5;
-let playerPos = new THREE.Vector3(0, 0, 0);  // world position
+let playerPos = new THREE.Vector3(0, 0, 0);
+let playerPosInitialized = false;  // world position
 let playerHeading = new THREE.Vector3(1, 0, 0);
 let targetHeading = new THREE.Vector3(1, 0, 0);
 let posReportTimer = 0;
@@ -361,14 +373,31 @@ function animate(now){
 
     // Camera follows ship (maintain relative offset) - skip during freelook
     if(!isFreelooking){
+      // Lerp yaw/pitch back to 0 smoothly
+      freelookYaw *= 0.95;
+      freelookPitch *= 0.95;
+      if(Math.abs(freelookYaw) < 0.005 && Math.abs(freelookPitch) < 0.005){
+        freelookYaw = 0; freelookPitch = 0;
+        controls.enabled = true;
+      }
       const camOffset = camera.position.clone().sub(controls.target);
       controls.target.copy(playerPos);
       camera.position.copy(playerPos).add(camOffset);
     } else {
-      // During freelook, still move camera position with ship but don't change lookAt
+      // During freelook: move camera with ship but look in freelook direction
       const camOffset = camera.position.clone().sub(controls.target);
       controls.target.copy(playerPos);
       camera.position.copy(playerPos).add(camOffset);
+    }
+    // Apply freelook rotation (works both during and lerping back)
+    if(Math.abs(freelookYaw) > 0.001 || Math.abs(freelookPitch) > 0.001){
+      const baseDir = playerPos.clone().sub(camera.position).normalize();
+      const right = new THREE.Vector3().crossVectors(baseDir, new THREE.Vector3(0,1,0)).normalize();
+      const up = new THREE.Vector3(0,1,0);
+      const lookAt = playerPos.clone();
+      lookAt.addScaledVector(right, freelookYaw * 50);
+      lookAt.addScaledVector(up, -freelookPitch * 50);
+      camera.lookAt(lookAt);
     }
 
     // Trail
@@ -481,15 +510,13 @@ renderer.domElement.addEventListener('mousedown', e=>{
   if(e.button === 2){
     isFreelooking = true;
     freelookStart = {x:e.clientX, y:e.clientY};
-    freelookYaw = 0;
-    freelookPitch = 0;
     controls.enabled = false;
   }
 });
 window.addEventListener('mouseup', e=>{
   if(e.button === 2){
     isFreelooking = false;
-    controls.enabled = true;
+    // Don't re-enable controls immediately - let lerp handle it
   }
 });
 window.addEventListener('mousemove', e=>{
@@ -499,15 +526,7 @@ window.addEventListener('mousemove', e=>{
   freelookStart = {x:e.clientX, y:e.clientY};
   freelookYaw += dx * 0.003;
   freelookPitch += dy * 0.003;
-  freelookPitch = Math.max(-1.2, Math.min(1.2, freelookPitch));
-  // Apply rotation to camera (camera stays in place, looks in new direction)
-  const baseDir = playerPos.clone().sub(camera.position).normalize();
-  const right = new THREE.Vector3().crossVectors(baseDir, new THREE.Vector3(0,1,0)).normalize();
-  const up = new THREE.Vector3(0,1,0);
-  const lookAt = playerPos.clone();
-  lookAt.addScaledVector(right, Math.sin(freelookYaw) * 100);
-  lookAt.addScaledVector(up, -Math.sin(freelookPitch) * 100);
-  camera.lookAt(lookAt);
+  freelookPitch = Math.max(-1.5, Math.min(1.5, freelookPitch));
 });
 
 // ── Input: Scroll zoom ──
@@ -585,11 +604,11 @@ function renderNavList(objects, playerShip){
       <span style="color:#c8d4e0;font-size:10px">${distStr}</span>
     </div>`;
   }).join('');
-  // Show dock button if near a station (dist < 5 units in local space)
+  // Show dock button if near a station (within ~5km of any station)
   const nearStation = objects.find(o=>{
     if(o.type!=='station') return false;
     const dx=o.x-playerShip.x, dy=o.y-playerShip.y, dz=o.z-playerShip.z;
-    return Math.sqrt(dx*dx+dy*dy+dz*dz) < 10;
+    return Math.sqrt(dx*dx+dy*dy+dz*dz) < 7000;
   });
   document.getElementById('dockBtn').style.display = nearStation ? '' : 'none';
 }

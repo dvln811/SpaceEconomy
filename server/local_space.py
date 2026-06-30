@@ -113,8 +113,6 @@ class LocalSpaceWorker:
     def _tick(self):
         """Advance all ships one tick."""
         for ship in list(self.ships.values()):
-            if ship.is_player:
-                continue  # Player ship is client-authoritative
             if ship.state == 'flying':
                 self._move_flying(ship)
             elif ship.state == 'warping':

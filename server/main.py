@@ -1355,7 +1355,7 @@ def api_player_position():
     """Client reports player ship position (client-authoritative for local movement)."""
     data = request.get_json() or {}
     with local_space._lock:
-        if local_space.player_ship:
+        if local_space.player_ship and local_space.player_ship.state != 'docked':
             local_space.player_ship.x = float(data.get('x', 0))
             local_space.player_ship.y = float(data.get('y', 0))
             local_space.player_ship.z = float(data.get('z', 0))
@@ -1445,27 +1445,45 @@ def api_player_undock():
     conn.execute("UPDATE player SET docked=0, state='idle', intra_position=? WHERE id='player1'", (intra_pos,))
     conn.commit()
     conn.close()
+    # Update local space
+    with local_space._lock:
+        if local_space.player_ship:
+            local_space.player_ship.state = 'idle'
     return jsonify({"status": "undocked", "intra_position": intra_pos})
 
 
 @app.route("/api/player/dock", methods=["POST"])
 def api_player_dock():
-    """Dock player at nearest station."""
+    """Dock player at nearest station (based on local space proximity)."""
     from server.game_data_db import get_data_db
+    import math
+    # Check if player is near a station in local space
+    with local_space._lock:
+        ps = local_space.player_ship
+        if not ps:
+            return jsonify({"error": "no player ship"}), 400
+        nearest_station = None
+        nearest_dist = 99999999
+        for o in local_space.objects:
+            if o.obj_type == 'station' and o.station_id:
+                dx = o.x - ps.x
+                dy = o.y - ps.y
+                dz = o.z - ps.z
+                d = math.sqrt(dx*dx + dy*dy + dz*dz)
+                if d < nearest_dist:
+                    nearest_dist = d
+                    nearest_station = o
+        if not nearest_station or nearest_dist > 7000:
+            return jsonify({"error": "not near a station"}), 400
+        ps.state = 'docked'
+        ps.speed = 0
+        ps.vx = ps.vy = ps.vz = 0
+    # Update DB
     conn = get_data_db()
-    p = conn.execute("SELECT * FROM player WHERE id='player1'").fetchone()
-    if not p or p['docked']:
-        conn.close()
-        return jsonify({"error": "already docked"}), 400
-    # Find what station we're at (intra_position must be a station object)
-    obj = conn.execute("SELECT station_id FROM system_objects WHERE id=? AND obj_type='station'", (p['intra_position'],)).fetchone()
-    if not obj or not obj['station_id']:
-        conn.close()
-        return jsonify({"error": "not at a station"}), 400
-    conn.execute("UPDATE player SET docked=1, state='docked', station_id=?, intra_destination='', intra_progress=0 WHERE id='player1'", (obj['station_id'],))
+    conn.execute("UPDATE player SET docked=1, state='docked', station_id=? WHERE id='player1'", (nearest_station.station_id,))
     conn.commit()
     conn.close()
-    return jsonify({"status": "docked", "station_id": obj['station_id']})
+    return jsonify({"status": "docked", "station_id": nearest_station.station_id})
 
 
 @app.route("/api/player/warp", methods=["POST"])
