@@ -182,7 +182,7 @@ class FactionStrategyWorker(WorkerThread):
 
     def _update_phases(self, conn, fid, tick, universe):
         projects = conn.execute(
-            "SELECT id, project_type, created_tick, phase, status, requirements, accumulated, target_system FROM build_projects WHERE faction_id=? AND status='active'",
+            "SELECT id, project_type, project_name, created_tick, phase, status, requirements, accumulated, target_system FROM build_projects WHERE faction_id=? AND status='active'",
             (fid,)
         ).fetchall()
 

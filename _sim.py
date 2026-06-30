@@ -12,12 +12,10 @@ if not m._sim_ready.wait(60):
     print("FAILED to start"); sys.exit(1)
 
 m.supervisor.multiplier = 9999
-# Disable non-essential workers for speed
+# Disable only dashboard for speed (faction_events stays active for raids/events)
 for w in m.supervisor.workers:
-    if w.name in ('faction_events', 'dashboard'):
+    if w.name == 'dashboard':
         w.tick_interval = 999999
-# Disable saving
-m.supervisor._save_disabled = True
 print(f"Running {TARGET} ticks | Results -> sim_results.txt")
 
 start = time.time()

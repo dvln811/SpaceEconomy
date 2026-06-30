@@ -1,47 +1,59 @@
-ECONOMY SIM RESULTS | 5007 ticks | 20.9 days | 7 t/s
+ECONOMY SIM RESULTS | 5004 ticks | 20.8 days | 8 t/s
 ======================================================================
 
-PRICE STABILITY (10,961 points)
-  Within +/-15%: 63 (0.6%)
+PRICE STABILITY (11,965 points)
+  Within +/-15%: 66 (0.6%)
   Range: 0.500x - 2.000x | Median: 2.000x
 
   Distribution:
          <0.5x:      0 (  0.0%)
-     0.5-0.85x:   3894 ( 35.5%)
-    0.85-1.15x:     63 (  0.6%)
-     1.15-2.0x:   7004 ( 63.9%)
+     0.5-0.85x:   4195 ( 35.1%)
+    0.85-1.15x:     66 (  0.6%)
+     1.15-2.0x:   7704 ( 64.4%)
          >2.0x:      0 (  0.0%)
 
   Inflated (top 5):
-    Power Cell                     avg:1.99x
-    Refined Iron                   avg:1.99x
+    Power Cell                     avg:2.00x
+    Ceramic Plate                  avg:2.00x
+    Titanium Alloy                 avg:2.00x
     Refined Copper                 avg:1.99x
-    Steel Plate                    avg:1.99x
-    Polished Quartz                avg:1.98x
+    Refined Iron                   avg:1.99x
   Crashed (bottom 5):
-    Torpedo Launcher               avg:0.50x
-    Medium Electronic Warfare Drone avg:0.50x
-    Rocket Launcher Compact        avg:0.50x
-    Pulse Laser II                 avg:0.50x
-    Shrapnel Shell II              avg:0.50x
+    Tungsten Ore                   avg:0.50x
+    Warp Scrambler                 avg:0.50x
+    Strip Miner Compact            avg:0.50x
+    Damage Control Unit            avg:0.50x
+    Warp Scrambler II              avg:0.50x
 
 
 ECONOMY HEALTH
-  Inventory: 70,729,194 | Growth: 14126/tick
-  Ships destroyed: 607 | Ships built: 457
-  Destruction rate: 12.1 per 100 ticks
-  Fleet strength: 24 ships across 6 factions
+  Inventory: 112,471,006 | Growth: 22476/tick
+  Ships destroyed: 691 | Ships built: 561
+  Destruction rate: 13.8 per 100 ticks
+  Fleet strength: 44 ships across 6 factions
 
-  Fleet (3230 ships): {'freelance': 240, 'hauler': 1067, 'miner': 1350, 'patrol': 573}
-  States: {'idle': 791, 'intra_traveling': 1603, 'unloading': 120, 'traveling': 8, 'mining': 708}
-  Haulers carrying: 333 | Assigned (carrying+en_route): 1064/1307 (81%) | Cargo: 3,165,145
+  Fleet (3553 ships): {'hauler': 1306, 'freelance': 324, 'miner': 1350, 'patrol': 573}
+  States: {'idle': 1022, 'intra_traveling': 1646, 'unloading': 77, 'traveling': 11, 'mining': 797}
+  Haulers carrying: 354 | Assigned (carrying+en_route): 1303/1630 (80%) | Cargo: 5,837,695
 
   Shipyards:
-    RHE-290 Shipyard               inv:713 (science_collective)
-    JVD-334 Shipyard               inv:139 (merchants_guild)
-    SPE-532 Shipyard               inv:149 (iron_compact)
-    ZQT-632 Shipyard               inv:142 (free_states)
-    TRX-825 Shipyard               inv:14,266 (free_states)
-    HRA-472 Shipyard               inv:145 (terran_fed)
-    MCC-667 Drydock                inv:336 (free_states)
-    EFY-310 Shipyard               inv:59 (corsairs)
+    PFE-113 Shipyard               inv:63 (corsairs)
+    WPP-268 Drydock                inv:129 (corsairs)
+    VGB-607 Drydock                inv:87 (terran_fed)
+    JTZ-137 Shipyard               inv:2,501 (science_collective)
+    EWV-933 Shipyard               inv:83 (free_states)
+    MBS-648 Shipyard               inv:409 (science_collective)
+    SPE-532 Drydock                inv:112 (iron_compact)
+    DRE-619 Shipyard               inv:114 (terran_fed)
+    ZQT-632 Drydock                inv:79 (free_states)
+    NLN-595 Drydock                inv:34 (free_states)
+    YFE-336 Shipyard               inv:76 (iron_compact)
+    AYF-209 Drydock                inv:137 (free_states)
+    HRA-472 Drydock                inv:8,000 (terran_fed)
+    YEB-554 Shipyard               inv:2,557 (science_collective)
+    STF-548 Shipyard               inv:27 (free_states)
+    XCD-591 Drydock                inv:107 (merchants_guild)
+    GMJ-170 Shipyard               inv:114 (merchants_guild)
+    EVV-976 Shipyard               inv:9,738 (free_states)
+    KBY-285 Shipyard               inv:93 (iron_compact)
+    MCC-667 Shipyard               inv:114 (free_states)

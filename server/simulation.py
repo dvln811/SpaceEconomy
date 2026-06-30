@@ -120,9 +120,11 @@ class Simulation:
                 st = hauler_types[ship_idx % len(hauler_types)]
                 role = "freelance" if random.random() < 0.2 else "hauler"
                 station = sys.stations[i % len(sys.stations)]
+                # Cargo expander fitting: 1.5-2x base capacity
+                expander_mult = random.uniform(1.5, 2.0)
                 ship = NPCShip(
                     id=f"hlr_{ship_idx}", name=f"{st.name} {random.randint(100,999)}",
-                    cargo_capacity=st.cargo_capacity + random.randint(-20, 20),
+                    cargo_capacity=int(st.cargo_capacity * expander_mult),
                     fuel=float(st.fuel_capacity), location=sys_id,
                     speed=st.speed, state="idle",
                     role=role, ship_class=st.id, intra_speed=st.intra_speed,
@@ -146,9 +148,11 @@ class Simulation:
             sys = self.universe[sys_id]
             for i in range(MINING_CFG['regular_miners_per_system']):
                 st = miner_types[miner_idx % len(miner_types)]
+                # Cargo expander fitting: miners get 2-2.5x for ore hauling
+                miner_expander = random.uniform(2.0, 2.5)
                 ship = NPCShip(
                     id=f"mnr_{miner_idx}", name=f"{st.name} {random.randint(100,999)}",
-                    cargo_capacity=st.cargo_capacity + random.randint(-10, 10),
+                    cargo_capacity=int(st.cargo_capacity * miner_expander),
                     fuel=float(st.fuel_capacity), location=sys_id,
                     speed=st.speed, state="idle",
                     role="miner", ship_class=st.id, intra_speed=st.intra_speed,
@@ -183,9 +187,10 @@ class Simulation:
         for field_sys, home_sys, home_station in remote_exotic[:MINING_CFG['deep_miner_limit']]:
             st = miner_types[deep_idx % len(miner_types)]
             faction = self.universe[field_sys].faction or self.universe[home_sys].faction or "independent"
+            deep_expander = random.uniform(2.0, 2.5)
             ship = NPCShip(
                 id=f"deep_{deep_idx}", name=f"{st.name} D-{random.randint(100,999)}",
-                cargo_capacity=st.cargo_capacity + random.randint(0, 30),
+                cargo_capacity=int(st.cargo_capacity * deep_expander),
                 fuel=float(st.fuel_capacity), location=field_sys,
                 speed=st.speed, state="idle",
                 role="miner", ship_class=st.id, intra_speed=st.intra_speed,

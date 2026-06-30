@@ -7,7 +7,7 @@ from server.intents import (
 )
 
 
-BATCH_SIZE = 200  # Process N idle ships per tick (round-robin)
+BATCH_SIZE = 50  # Process N idle ships per tick (round-robin)
 
 
 class NPCDecisionWorker(WorkerThread):
@@ -28,17 +28,19 @@ class NPCDecisionWorker(WorkerThread):
             self._refresh_contracts(universe, region_cache)
             self._contract_tick = tick
 
-        # Collect all idle industrial ships
-        idle_ships = [s for s in ships if s.state == "idle" and s.role in ("hauler", "miner", "freelance")]
+        # Reset stuck idle ships every 10 ticks so they retry decisions
+        if tick % 10 == 0:
+            for s in ships:
+                if s.state == "idle" and getattr(s, '_decision_made', False):
+                    s._decision_made = False
+
+        # Collect only NEWLY idle ships (not yet given a decision this idle period)
+        idle_ships = [s for s in ships if s.state == "idle" and s.role in ("hauler", "miner", "freelance") and not getattr(s, '_decision_made', False)]
         if not idle_ships:
             return
 
-        # Process up to 200 per tick
-        start = self._batch_offset % max(1, len(idle_ships))
-        batch = idle_ships[start:start + BATCH_SIZE]
-        if len(batch) < BATCH_SIZE:
-            batch += idle_ships[:BATCH_SIZE - len(batch)]
-        self._batch_offset += BATCH_SIZE
+        # Process all newly idle ships (they only hit this once per idle cycle)
+        batch = idle_ships[:BATCH_SIZE]
 
         for ship in batch:
             if ship.role == "miner":
@@ -47,6 +49,7 @@ class NPCDecisionWorker(WorkerThread):
                 self._freelance_decision(ship, universe, region_cache)
             else:
                 self._hauler_contract_decision(ship, universe, region_cache)
+            ship._decision_made = True
 
     def _refresh_contracts(self, universe, region_cache):
         """Add new contracts for station deficits. Sized for 500 ticks of demand."""
@@ -148,9 +151,9 @@ class NPCDecisionWorker(WorkerThread):
             return
         local = [c for c in active if c['region'] == region]
         remote = [c for c in active if c['region'] != region]
-        # Take up to 35 local + 15 remote (biased toward local)
-        sample = _rnd.sample(local, min(35, len(local)))
-        sample += _rnd.sample(remote, min(15, len(remote)))
+        # Take up to 10 local + 5 remote (biased toward local)
+        sample = _rnd.sample(local, min(10, len(local)))
+        sample += _rnd.sample(remote, min(5, len(remote)))
 
         best_score = -1
         best_contract = None

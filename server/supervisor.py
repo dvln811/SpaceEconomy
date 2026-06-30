@@ -402,6 +402,7 @@ class Supervisor:
                             ship.state = "idle"
                     elif ship.state == "unloading":
                         ship.state = "idle"
+                        ship._decision_made = False
                     elif ship.state == "mining":
                         self._complete_mining(ship, random)
                     self.change_tracker.record_ship_change(tick, ship.id)
@@ -488,21 +489,26 @@ class Supervisor:
                 if ship.intra_progress > 0:
                     ship.intra_progress = 0
                 continue
-            dist = self._intra_distance(ship.location, ship.intra_position or f"{ship.location}_star", ship.intra_destination)
-            warp_au_per_sec = ship.speed * 0.0015
-            travel_ticks = max(5, dist / warp_au_per_sec)
-            step = 1.0 / travel_ticks
+            step = getattr(ship, '_intra_step', 0)
+            if step <= 0:
+                dist = self._intra_distance(ship.location, ship.intra_position or f"{ship.location}_star", ship.intra_destination)
+                warp_au_per_sec = ship.speed * 0.0015
+                travel_ticks = max(5, dist / warp_au_per_sec)
+                step = 1.0 / travel_ticks
+                ship._intra_step = step
             ship.intra_progress += step
             if ship.intra_progress >= 1.0:
                 ship.intra_position = ship.intra_destination
                 ship.intra_destination = ""
                 ship.intra_progress = 0.0
+                ship._intra_step = 0
                 obj = self._get_object(ship.location, ship.intra_position)
                 if obj and obj.obj_type == "gate" and ship.destination and obj.connects_to == ship.destination:
                     ship.state = "traveling"
                     ship.progress = 0.0
                 else:
                     ship.state = "idle"
+                    ship._decision_made = False
                 self.change_tracker.record_ship_change(tick, ship.id)
 
     def _start_intra_travel(self, ship, dest_obj_id: str):
