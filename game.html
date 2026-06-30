@@ -581,7 +581,7 @@ document.getElementById('starColorMode').addEventListener('change',(e)=>{
   systems.forEach((s,i)=>{
     let col;
     if(mode==='faction')col=FACTION_COLORS_HEX[s.faction]||0x555555;
-    else if(mode==='security')col=SEC_COLORS_HEX[s.security]||0xef5350;
+    else if(mode==='security')col=s.sec_level>=0.7?0x00cc44:s.sec_level>=0.4?0xccaa00:s.sec_level>=0.1?0xee6600:0xcc0000;
     else if(mode==='region'){col=REGION_COLOR_MAP[s.region]||0x555555;}
     else col=s.color;
     systemMeshes[i].material.color.setHex(col);
@@ -1381,7 +1381,7 @@ container.addEventListener('mousemove',(e)=>{
       const secCol=secLvl>=0.7?'#66bb6a':secLvl>=0.5?'#ffd54f':secLvl>=0.3?'#ff8a65':'#ef5350';
       let html=`<div class="tt-title">${s.name}</div>
         <div class="tt-row">Faction: <span class="tt-val">${s.faction?facNames[s.faction]||s.faction:'Unclaimed'}</span></div>
-        <div class="tt-row">Security: <span class="tt-val" style="color:${secCol}">${secLvl.toFixed(1)} (${s.security})</span></div>
+        <div class="tt-row">Security: <span class="tt-val" style="color:${secCol}">${secLvl.toFixed(1)} (${secLvl>=0.7?'high':secLvl>=0.4?'low':'null'})</span></div>
         <div class="tt-row">Region: <span class="tt-val">${s.region||'Unknown'}</span></div>
         <div class="tt-row">Constellation: <span class="tt-val">${s.cluster||'Unknown'}</span></div>`;
       tooltip.innerHTML=html;
