@@ -1,59 +1,73 @@
-ECONOMY SIM RESULTS | 5004 ticks | 20.8 days | 8 t/s
+ECONOMY SIM RESULTS | 10014 ticks | 41.7 days | 14 t/s
 ======================================================================
 
-PRICE STABILITY (11,965 points)
-  Within +/-15%: 66 (0.6%)
+PRICE STABILITY (14,212 points)
+  Within +/-15%: 39 (0.3%)
   Range: 0.500x - 2.000x | Median: 2.000x
 
   Distribution:
          <0.5x:      0 (  0.0%)
-     0.5-0.85x:   4195 ( 35.1%)
-    0.85-1.15x:     66 (  0.6%)
-     1.15-2.0x:   7704 ( 64.4%)
+     0.5-0.85x:   4195 ( 29.5%)
+    0.85-1.15x:     39 (  0.3%)
+     1.15-2.0x:   9978 ( 70.2%)
          >2.0x:      0 (  0.0%)
 
   Inflated (top 5):
     Power Cell                     avg:2.00x
     Ceramic Plate                  avg:2.00x
-    Titanium Alloy                 avg:2.00x
-    Refined Copper                 avg:1.99x
     Refined Iron                   avg:1.99x
+    Titanium Alloy                 avg:1.99x
+    Steel Plate                    avg:1.99x
   Crashed (bottom 5):
-    Tungsten Ore                   avg:0.50x
-    Warp Scrambler                 avg:0.50x
-    Strip Miner Compact            avg:0.50x
-    Damage Control Unit            avg:0.50x
-    Warp Scrambler II              avg:0.50x
+    Cobalt Ingot                   avg:0.50x
+    Remote Armor Repairer          avg:0.50x
+    Armor Plate II                 avg:0.50x
+    Nanofiber Structure            avg:0.50x
+    Cloaking Device                avg:0.50x
 
 
 ECONOMY HEALTH
-  Inventory: 112,471,006 | Growth: 22476/tick
-  Ships destroyed: 691 | Ships built: 561
-  Destruction rate: 13.8 per 100 ticks
-  Fleet strength: 44 ships across 6 factions
+  Inventory: 165,685,455 | Growth: 16545/tick
+  Ships destroyed: 504 | Ships built: 439
+  Destruction rate: 5.0 per 100 ticks
+  Fleet strength: 109 ships across 6 factions
 
-  Fleet (3553 ships): {'hauler': 1306, 'freelance': 324, 'miner': 1350, 'patrol': 573}
-  States: {'idle': 1022, 'intra_traveling': 1646, 'unloading': 77, 'traveling': 11, 'mining': 797}
-  Haulers carrying: 354 | Assigned (carrying+en_route): 1303/1630 (80%) | Cargo: 5,837,695
+  Fleet (3411 ships): {'freelance': 300, 'hauler': 1243, 'miner': 1295, 'patrol': 573}
+  States: {'idle': 1055, 'intra_traveling': 1532, 'loading': 1, 'traveling': 8, 'mining': 763, 'unloading': 52}
+  Haulers carrying: 316 | Assigned (carrying+en_route): 1243/1543 (81%) | Cargo: 5,169,651
 
   Shipyards:
-    PFE-113 Shipyard               inv:63 (corsairs)
-    WPP-268 Drydock                inv:129 (corsairs)
-    VGB-607 Drydock                inv:87 (terran_fed)
-    JTZ-137 Shipyard               inv:2,501 (science_collective)
-    EWV-933 Shipyard               inv:83 (free_states)
-    MBS-648 Shipyard               inv:409 (science_collective)
-    SPE-532 Drydock                inv:112 (iron_compact)
-    DRE-619 Shipyard               inv:114 (terran_fed)
-    ZQT-632 Drydock                inv:79 (free_states)
-    NLN-595 Drydock                inv:34 (free_states)
-    YFE-336 Shipyard               inv:76 (iron_compact)
-    AYF-209 Drydock                inv:137 (free_states)
-    HRA-472 Drydock                inv:8,000 (terran_fed)
-    YEB-554 Shipyard               inv:2,557 (science_collective)
-    STF-548 Shipyard               inv:27 (free_states)
-    XCD-591 Drydock                inv:107 (merchants_guild)
-    GMJ-170 Shipyard               inv:114 (merchants_guild)
-    EVV-976 Shipyard               inv:9,738 (free_states)
-    KBY-285 Shipyard               inv:93 (iron_compact)
-    MCC-667 Shipyard               inv:114 (free_states)
+    Struve Shipyard                inv:3,242 (terran_fed)
+    Prism Drydock                  inv:3,009 (science_collective)
+    Graviton Drydock               inv:3,008 (science_collective)
+    Grand Exchange Drydock         inv:3,008 (merchants_guild)
+    Sterling Drydock               inv:3,004 (merchants_guild)
+    Warlord Drydock                inv:2,681 (iron_compact)
+    Scourge Drydock                inv:3,007 (science_collective)
+    CVF-104 Shipyard               inv:3,004 (science_collective)
+    HDB-270 Drydock                inv:2,610 (free_states)
+    GCL-240 Drydock                inv:3,007 (merchants_guild)
+    ZAW-917 Drydock                inv:3,006 (terran_fed)
+    WWQ-684 Shipyard               inv:2,977 (iron_compact)
+    GEG-417 Shipyard               inv:49 (free_states)
+    ASK-391 Shipyard               inv:111 (merchants_guild)
+    JPF-381 Shipyard               inv:2,908 (iron_compact)
+    YEC-242 Shipyard               inv:3,008 (terran_fed)
+    GKP-344 Drydock                inv:3,006 (merchants_guild)
+    WPK-752 Drydock                inv:3,006 (terran_fed)
+    PRL-506 Shipyard               inv:2,973 (iron_compact)
+    HPM-403 Drydock                inv:3,010 (terran_fed)
+    XTH-454 Shipyard               inv:3,008 (terran_fed)
+    XAR-645 Drydock                inv:3,006 (merchants_guild)
+    HHV-437 Shipyard               inv:3,007 (merchants_guild)
+    HKH-764 Drydock                inv:3,308 (science_collective)
+    VYS-919 Drydock                inv:3,006 (science_collective)
+    QPT-331 Drydock                inv:3,008 (iron_compact)
+    YQQ-228 Shipyard               inv:71 (merchants_guild)
+    AYF-209 Drydock                inv:115 (free_states)
+    PCT-127 Shipyard               inv:3,008 (merchants_guild)
+    SEE-620 Drydock                inv:84 (free_states)
+    FPQ-710 Drydock                inv:3,009 (iron_compact)
+    PAZ-802 Shipyard               inv:3,121 (iron_compact)
+    SCQ-420 Drydock                inv:3,011 (iron_compact)
+    ABF-208 Drydock                inv:115 (merchants_guild)
