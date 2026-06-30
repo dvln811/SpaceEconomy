@@ -48,6 +48,7 @@ h2{color:#4fc3f7;font-size:12px;letter-spacing:1px;text-transform:uppercase;marg
       <span id="warpTarget" style="color:#ffd54f"></span>
     </div>
     <div class="ctx-menu" id="ctxMenu"></div>
+    <div id="fadeOverlay" style="position:absolute;inset:0;background:#020308;z-index:50;pointer-events:none;transition:opacity 2s;opacity:1"></div>
   </div>
   <div class="panel" id="panel">
     <div id="dockedPanel">
@@ -178,6 +179,10 @@ function setFlightScene(){
   controls.target.copy(playerPos);
   isDocked = false;
   loadNearbyStation();
+  // Fade in after 0.5s delay (let everything position first)
+  const overlay = document.getElementById('fadeOverlay');
+  overlay.style.opacity = '1';
+  setTimeout(()=>{ overlay.style.opacity = '0'; }, 500);
 }
 
 // ── SSE Stream Connection ──
