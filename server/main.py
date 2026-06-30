@@ -1449,6 +1449,7 @@ def api_player_undock():
     with local_space._lock:
         if local_space.player_ship:
             local_space.player_ship.state = 'idle'
+    local_space.player_undock()
     return jsonify({"status": "undocked", "intra_position": intra_pos})
 
 

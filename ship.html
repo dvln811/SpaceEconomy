@@ -74,7 +74,6 @@ h2{color:#4fc3f7;font-size:12px;letter-spacing:1px;text-transform:uppercase;marg
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { buildShipFromData } from '/static/ship_renderer.js';
 
 // ── State ──
@@ -84,7 +83,9 @@ let shipGroup = null;
 let hangarPedestal = null;
 let stationModel = null;
 let stationWorldPos = null;
-let npcSprites = {};  // id -> THREE.Sprite
+let npcMeshes = {};  // id -> THREE.Group (merged ship models)
+let npcShipCache = {};  // ship_class -> {mesh: THREE.BufferGeometry, edges: THREE.EdgesGeometry}
+let allShipGeos = null;  // loaded from /api/ship_model/all
 let objectSprites = {};  // id -> THREE.Sprite/label
 let isDocked = true;
 let lastTickTime = 0;
@@ -102,12 +103,60 @@ camera.position.set(30, 20, 30);
 const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(container.clientWidth, container.clientHeight);
 container.appendChild(renderer.domElement);
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.minDistance = 10;
-controls.maxDistance = 500;
-controls.mouseButtons = {LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: null};
-controls.enablePan = false;
+
+// ── Custom Camera Controller (replaces OrbitControls) ──
+let camTheta = Math.PI / 4;  // horizontal orbit angle
+let camPhi = Math.PI / 6;    // vertical orbit angle (from horizontal)
+let camRadius = 80;           // orbit distance
+let camMinRadius = 10;
+let camMaxRadius = 2000;
+let isOrbiting = false;
+let orbitStart = {x:0, y:0};
+
+function updateCameraOrbit() {
+  // Spherical to cartesian offset from target
+  const x = camRadius * Math.cos(camPhi) * Math.sin(camTheta);
+  const y = camRadius * Math.sin(camPhi);
+  const z = camRadius * Math.cos(camPhi) * Math.cos(camTheta);
+  const target = isDocked ? new THREE.Vector3(0,0,0) : playerPos.clone();
+  camera.position.set(target.x + x, target.y + y, target.z + z);
+  if (!isFreelooking && freelookLerp >= 1.0) {
+    camera.lookAt(target);
+  }
+}
+
+// Left-click drag: orbit
+let orbitDragged = false;
+renderer.domElement.addEventListener('mousedown', e => {
+  if (e.button === 0) {
+    isOrbiting = true;
+    orbitDragged = false;
+    orbitStart = {x: e.clientX, y: e.clientY};
+  }
+});
+window.addEventListener('mouseup', e => {
+  if (e.button === 0) isOrbiting = false;
+});
+window.addEventListener('mousemove', e => {
+  if (isOrbiting) {
+    const dx = e.clientX - orbitStart.x;
+    const dy = e.clientY - orbitStart.y;
+    orbitStart = {x: e.clientX, y: e.clientY};
+    if (Math.abs(dx) > 0 || Math.abs(dy) > 0) orbitDragged = true;
+    camTheta -= dx * 0.005;
+    camPhi += dy * 0.005;
+    camPhi = Math.max(-Math.PI/2 + 0.05, Math.min(Math.PI/2 - 0.05, camPhi));
+    updateCameraOrbit();
+  }
+});
+
+// Scroll: zoom
+renderer.domElement.addEventListener('wheel', e => {
+  e.preventDefault();
+  camRadius *= 1 + e.deltaY * 0.001;
+  camRadius = Math.max(camMinRadius, Math.min(camMaxRadius, camRadius));
+  updateCameraOrbit();
+}, {passive: false});
 
 scene.add(new THREE.AmbientLight(0x4fc3f7, 0.3));
 const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
@@ -154,18 +203,22 @@ function setDockedScene(){
   if(!hangarPedestal) buildHangar();
   else scene.add(hangarPedestal);
   if(stationModel){ stationModel.removeFromParent(); stationModel=null; }
-  // Remove NPC sprites and object sprites
-  Object.values(npcSprites).forEach(s=>s.removeFromParent());
-  npcSprites = {};
+  // Remove NPC meshes and object sprites
+  Object.values(npcMeshes).forEach(s=>s.removeFromParent());
+  npcMeshes = {};
   Object.values(objectSprites).forEach(s=>s.removeFromParent());
   objectSprites = {};
-  camera.position.set(30, 15, 30);
-  controls.target.set(0, 0, 0);
-  controls.maxDistance = 100;
+  // Remove directional labels
+  clearDirectionalLabels();
+  camRadius = 80;
+  camTheta = Math.PI / 4;
+  camPhi = Math.PI / 6;
+  camMaxRadius = 100;
   if(shipGroup){
     shipGroup.position.set(0,0,0);
     shipGroup.quaternion.identity(); // reset rotation for hangar display
   }
+  updateCameraOrbit();
   isDocked = true;
 }
 
@@ -173,10 +226,9 @@ function setFlightScene(){
   scene.background = new THREE.Color(0x020308);
   if(hangarPedestal) hangarPedestal.removeFromParent();
   scene.add(starField);
-  controls.maxDistance = 2000;
-  // Position camera near player
-  camera.position.set(playerPos.x + 30, playerPos.y + 15, playerPos.z + 30);
-  controls.target.copy(playerPos);
+  camMaxRadius = 2000;
+  camRadius = Math.min(camRadius, 200);
+  updateCameraOrbit();
   isDocked = false;
   loadNearbyStation();
   // Fade in after 0.5s delay (let everything position first)
@@ -210,7 +262,7 @@ function connectStream(){
     for(const id of Object.keys(interpShips)){
       if(!ids.has(id)){
         delete interpShips[id];
-        if(npcSprites[id]){ npcSprites[id].removeFromParent(); delete npcSprites[id]; }
+        if(npcMeshes[id]){ npcMeshes[id].removeFromParent(); delete npcMeshes[id]; }
       }
     }
     updateFromState(state);
@@ -218,25 +270,75 @@ function connectStream(){
   evtSource.onerror = () => { setTimeout(()=>{ if(evtSource.readyState===2) connectStream(); }, 3000); };
 }
 
-// ── NPC Sprite Management ──
+// ── NPC Ship Model Management (merged geometry approach) ──
 const NPC_COLORS = {trader:0x66bb6a, miner:0xffd54f, corsair:0xef5350, military:0x4fc3f7, patrol:0x4fc3f7};
-function getOrCreateNpcSprite(ship){
-  if(npcSprites[ship.id]) return npcSprites[ship.id];
-  const canvas = document.createElement('canvas');
-  canvas.width = 16; canvas.height = 16;
-  const ctx = canvas.getContext('2d');
-  const color = NPC_COLORS[ship.role] || 0x8aa0b8;
-  const hex = '#' + new THREE.Color(color).getHexString();
-  ctx.beginPath(); ctx.arc(8,8,6,0,Math.PI*2);
-  ctx.fillStyle = hex; ctx.fill();
-  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; ctx.stroke();
-  const tex = new THREE.CanvasTexture(canvas);
-  const mat = new THREE.SpriteMaterial({map:tex, transparent:true, opacity:0.8});
-  const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(3,3,1);
-  scene.add(sprite);
-  npcSprites[ship.id] = sprite;
-  return sprite;
+const NPC_EDGE_COLORS = {trader:0x66bb6a, miner:0xffd54f, corsair:0xef5350, military:0x4fc3f7, patrol:0x4fc3f7};
+
+function buildNpcShipMesh(shipClass, role) {
+  // Check cache first
+  const cacheKey = shipClass + '_' + (role || 'default');
+  if (npcShipCache[cacheKey]) return npcShipCache[cacheKey].clone();
+  if (!allShipGeos || !allShipGeos[shipClass]) {
+    // Fallback: simple box
+    const g = new THREE.BoxGeometry(20, 8, 10);
+    const edgeColor = NPC_EDGE_COLORS[role] || 0x8aa0b8;
+    const mesh = new THREE.Mesh(g, new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1428, shininess:0, transparent:true, opacity:0.7}));
+    mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(g, 15), new THREE.LineBasicMaterial({color:edgeColor, transparent:true, opacity:0.5})));
+    const grp = new THREE.Group();
+    grp.add(mesh);
+    npcShipCache[cacheKey] = grp;
+    return grp.clone();
+  }
+  // Build from data using buildShipFromData into a temp scene, then merge
+  const tempScene = new THREE.Scene();
+  const inner = buildShipFromData(tempScene, allShipGeos[shipClass], {showHardpoints: false});
+  tempScene.remove(inner);
+  // Merge all geometries into one
+  inner.updateMatrixWorld(true);
+  const geos = [];
+  inner.traverse(c => {
+    if (c.isMesh && c.geometry) {
+      const g = c.geometry.clone();
+      g.applyMatrix4(c.matrixWorld);
+      geos.push(g);
+    }
+  });
+  const grp = new THREE.Group();
+  if (geos.length) {
+    const allG = geos.map(g => g.index ? g.toNonIndexed() : g);
+    let totalVerts = 0;
+    allG.forEach(g => totalVerts += g.attributes.position.count);
+    const positions = new Float32Array(totalVerts * 3);
+    let offset = 0;
+    for (const g of allG) {
+      positions.set(g.attributes.position.array, offset * 3);
+      offset += g.attributes.position.count;
+    }
+    const merged = new THREE.BufferGeometry();
+    merged.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    merged.computeVertexNormals();
+    const edgeColor = NPC_EDGE_COLORS[role] || 0x4fc3f7;
+    const mesh = new THREE.Mesh(merged, new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1428, shininess:0, transparent:true, opacity:0.7}));
+    mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(merged, 15), new THREE.LineBasicMaterial({color:edgeColor, transparent:true, opacity:0.5})));
+    grp.add(mesh);
+    allG.forEach(g => g.dispose());
+    geos.forEach(g => g.dispose());
+  }
+  // Scale to ~30m (30 units)
+  const box = new THREE.Box3().setFromObject(grp);
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z) || 1;
+  grp.scale.setScalar(30 / maxDim);
+  npcShipCache[cacheKey] = grp;
+  return grp.clone();
+}
+
+function getOrCreateNpcMesh(ship) {
+  if (npcMeshes[ship.id]) return npcMeshes[ship.id];
+  const grp = buildNpcShipMesh(ship.ship_class, ship.role);
+  scene.add(grp);
+  npcMeshes[ship.id] = grp;
+  return grp;
 }
 
 // ── System Object Sprites ──
@@ -378,23 +480,19 @@ function animate(now){
 
     // Camera follows ship (maintain relative offset) - skip during freelook
     if(!isFreelooking){
-      // Lerp yaw/pitch back to 0 smoothly
-      freelookYaw *= 0.95;
-      freelookPitch *= 0.95;
+      // Lerp freelook back to ship smoothly
+      if(freelookLerp < 1.0){
+        freelookLerp += dt * 0.5; // ~2 seconds to return
+        if(freelookLerp >= 1.0) freelookLerp = 1.0;
+      }
+      freelookYaw *= 0.92;
+      freelookPitch *= 0.92;
       if(Math.abs(freelookYaw) < 0.005 && Math.abs(freelookPitch) < 0.005){
         freelookYaw = 0; freelookPitch = 0;
-        controls.enabled = true;
       }
-      const camOffset = camera.position.clone().sub(controls.target);
-      controls.target.copy(playerPos);
-      camera.position.copy(playerPos).add(camOffset);
-    } else {
-      // During freelook: move camera with ship but look in freelook direction
-      const camOffset = camera.position.clone().sub(controls.target);
-      controls.target.copy(playerPos);
-      camera.position.copy(playerPos).add(camOffset);
     }
-    // Apply freelook rotation (works both during and lerping back)
+    updateCameraOrbit();
+    // Apply freelook rotation (look away from ship)
     if(Math.abs(freelookYaw) > 0.001 || Math.abs(freelookPitch) > 0.001){
       const baseDir = playerPos.clone().sub(camera.position).normalize();
       const right = new THREE.Vector3().crossVectors(baseDir, new THREE.Vector3(0,1,0)).normalize();
@@ -438,8 +536,18 @@ function animate(now){
       const sx = ship.x + ship.vx * timeSinceTick;
       const sy = ship.y + ship.vy * timeSinceTick;
       const sz = ship.z + ship.vz * timeSinceTick;
-      const sprite = getOrCreateNpcSprite(ship);
-      sprite.position.set(sx, sy, sz);
+      const mesh = getOrCreateNpcMesh(ship);
+      mesh.position.set(sx, sy, sz);
+      // Rotate ship to face heading
+      if(ship.heading && (ship.heading[0]!==0 || ship.heading[1]!==0 || ship.heading[2]!==0)){
+        const hx = ship.heading[0], hy = ship.heading[1], hz = ship.heading[2];
+        const lookTarget = new THREE.Vector3(sx + hx, sy + hy, sz + hz);
+        const lookMat = new THREE.Matrix4().lookAt(mesh.position, lookTarget, new THREE.Vector3(0,1,0));
+        const targetQuat = new THREE.Quaternion().setFromRotationMatrix(lookMat);
+        const offsetQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI/2);
+        targetQuat.multiply(offsetQuat);
+        mesh.quaternion.slerp(targetQuat, 0.1);
+      }
     }
 
     // ── System Objects (fixed world positions, only render if within 50km) ──
@@ -462,6 +570,9 @@ function animate(now){
       stationModel.position.set(stationWorldPos.x, stationWorldPos.y, stationWorldPos.z);
     }
 
+    // ── Directional labels for distant objects ──
+    updateDirectionalLabels();
+
     // ── Report position to server every 3 seconds ──
     posReportTimer += dt;
     if(posReportTimer > 3){
@@ -474,7 +585,7 @@ function animate(now){
     }
   }
 
-  if(!isFreelooking) controls.update();
+  if(isDocked) updateCameraOrbit();
   renderer.render(scene, camera);
 }
 
@@ -511,17 +622,18 @@ let isFreelooking = false;
 let freelookStart = {x:0, y:0};
 let freelookYaw = 0;
 let freelookPitch = 0;
+let freelookLerp = 1.0; // 1.0 = looking at ship, 0.0 = just released
 renderer.domElement.addEventListener('mousedown', e=>{
   if(e.button === 2){
     isFreelooking = true;
     freelookStart = {x:e.clientX, y:e.clientY};
-    controls.enabled = false;
+    freelookLerp = 0;
   }
 });
 window.addEventListener('mouseup', e=>{
   if(e.button === 2){
     isFreelooking = false;
-    // Don't re-enable controls immediately - let lerp handle it
+    freelookLerp = 0; // will lerp back over ~2 seconds
   }
 });
 window.addEventListener('mousemove', e=>{
@@ -533,9 +645,6 @@ window.addEventListener('mousemove', e=>{
   freelookPitch += dy * 0.003;
   freelookPitch = Math.max(-1.5, Math.min(1.5, freelookPitch));
 });
-
-// ── Input: Scroll zoom ──
-// OrbitControls handles this via MIDDLE mouse / scroll by default
 
 // ── Warp command (called from nav list) ──
 window.warpTo = function(objId){
@@ -596,13 +705,10 @@ function updateUI(state){
 
 function renderNavList(objects, playerShip){
   const nav = document.getElementById('navObjects');
-  const px = playerShip.x, py = playerShip.y, pz = playerShip.z;
   nav.innerHTML = objects.filter(o=>o.type!=='star').map(o=>{
     const icon = o.type==='gate'?'&#9674;':o.type==='station'?'&#9632;':o.type==='planet'?'&#9679;':'&#8226;';
     const color = o.type==='gate'?'#ab47bc':o.type==='station'?'#4fc3f7':'#8aa0b8';
-    const dx=o.x-px, dy=o.y-py, dz=o.z-pz;
-    const dist = Math.sqrt(dx*dx+dy*dy+dz*dz);
-    const distAU = dist / 1000;
+    const distAU = o.au_distance || 0;
     const distStr = distAU < 0.01 ? '<0.01 AU' : distAU.toFixed(2)+' AU';
     return `<div class="nav-obj" style="padding:3px 4px;cursor:pointer;border-bottom:1px solid #0f1520;display:flex;justify-content:space-between" data-id="${o.id}" data-name="${o.name}" data-type="${o.type}">
       <span><span style="color:${color}">${icon}</span> ${o.name}</span>
@@ -610,9 +716,10 @@ function renderNavList(objects, playerShip){
     </div>`;
   }).join('');
   // Show dock button if near a station (within ~5km of any station)
+  const px = playerShip.x, py = playerShip.y, pz = playerShip.z;
   const nearStation = objects.find(o=>{
     if(o.type!=='station') return false;
-    const dx=o.x-playerShip.x, dy=o.y-playerShip.y, dz=o.z-playerShip.z;
+    const dx=o.x-px, dy=o.y-py, dz=o.z-pz;
     return Math.sqrt(dx*dx+dy*dy+dz*dz) < 7000;
   });
   document.getElementById('dockBtn').style.display = nearStation ? '' : 'none';
@@ -638,6 +745,7 @@ async function loadShipModel(){
   const r = await fetch('/api/ship_model/all');
   if(!r.ok) return;
   const models = await r.json();
+  allShipGeos = models;  // Store for NPC ship building
   // Get player ship class from player API
   const pr = await fetch('/api/player');
   if(!pr.ok) return;
@@ -652,7 +760,6 @@ async function loadShipModel(){
   const maxDim = Math.max(size.x, size.y, size.z);
   shipGroup.scale.setScalar(20/maxDim);
   scene.add(shipGroup);
-  controls.target.set(0,0,0);
 
   // Update docked UI with player info
   updatePlayerUI();
@@ -742,6 +849,108 @@ async function loadNearbyStation(){
     stationModel.position.set(stationWorldPos.x, stationWorldPos.y, stationWorldPos.z);
     scene.add(stationModel);
   }catch(e){}
+}
+
+// ── Directional Labels for Distant Solar Bodies ──
+let dirLabelContainer = null;
+let dirLabels = []; // {el, objId, name, type}
+
+function initDirectionalLabels(){
+  dirLabelContainer = document.createElement('div');
+  dirLabelContainer.style.cssText = 'position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:10';
+  container.appendChild(dirLabelContainer);
+}
+initDirectionalLabels();
+
+function clearDirectionalLabels(){
+  if(dirLabelContainer) dirLabelContainer.innerHTML = '';
+  dirLabels = [];
+}
+
+const DIR_LABEL_COLORS = {station:'#4fc3f7', gate:'#ab47bc', planet:'#8aa0b8', moon:'#5a7a9a', asteroid_field:'#ffd54f', star:'#ffab40'};
+const DIR_LABEL_ICONS = {station:'◼', gate:'◇', planet:'●', moon:'○', asteroid_field:'✦', star:'★'};
+
+function updateDirectionalLabels(){
+  if(isDocked || !localState || !localState.objects) {
+    if(dirLabelContainer) dirLabelContainer.style.display = 'none';
+    return;
+  }
+  dirLabelContainer.style.display = '';
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  const margin = 30;
+
+  // Ensure we have label elements for each object
+  const objs = localState.objects.filter(o => o.type !== 'star');
+  while(dirLabels.length < objs.length){
+    const el = document.createElement('div');
+    el.style.cssText = 'position:absolute;font-family:JetBrains Mono,monospace;font-size:10px;white-space:nowrap;transition:opacity 0.3s';
+    dirLabelContainer.appendChild(el);
+    dirLabels.push({el, objId:'', name:'', type:''});
+  }
+  // Hide excess labels
+  for(let i = objs.length; i < dirLabels.length; i++){
+    dirLabels[i].el.style.display = 'none';
+  }
+
+  for(let i = 0; i < objs.length; i++){
+    const obj = objs[i];
+    const label = dirLabels[i];
+    label.el.style.display = '';
+    const color = DIR_LABEL_COLORS[obj.type] || '#8aa0b8';
+    const icon = DIR_LABEL_ICONS[obj.type] || '•';
+
+    // Get direction from player to object
+    const dir = new THREE.Vector3(obj.x - playerPos.x, obj.y - playerPos.y, obj.z - playerPos.z);
+    const dist = dir.length();
+    if(dist < 1) { label.el.style.display = 'none'; continue; }
+    dir.normalize();
+
+    // Project direction onto screen
+    const worldPoint = playerPos.clone().add(dir.multiplyScalar(1000)); // project a point far in that direction
+    const projected = worldPoint.clone().project(camera);
+
+    // Convert to screen coords
+    let sx = (projected.x * 0.5 + 0.5) * w;
+    let sy = (-projected.y * 0.5 + 0.5) * h;
+
+    // Check if behind camera
+    const camDir = new THREE.Vector3();
+    camera.getWorldDirection(camDir);
+    const objDir = new THREE.Vector3(obj.x - camera.position.x, obj.y - camera.position.y, obj.z - camera.position.z).normalize();
+    const dot = camDir.dot(objDir);
+
+    if(dot < 0){
+      // Behind camera - flip to opposite edge
+      sx = w - sx;
+      sy = h - sy;
+    }
+
+    // Clamp to viewport edges with margin
+    const clamped = dot > 0 && sx >= margin && sx <= w - margin && sy >= margin && sy <= h - margin;
+    if(!clamped){
+      sx = Math.max(margin, Math.min(w - margin - 80, sx));
+      sy = Math.max(margin, Math.min(h - margin - 14, sy));
+    }
+
+    // Determine arrow based on clamped edge
+    let arrow = '';
+    if(!clamped || dot < 0){
+      if(sx <= margin + 1) arrow = '◀ ';
+      else if(sx >= w - margin - 81) arrow = ' ▶';
+      else if(sy <= margin + 1) arrow = '▲ ';
+      else arrow = '▼ ';
+    }
+
+    const distAU = obj.au_distance || (dist / 150000000);
+    const distStr = distAU < 0.01 ? '<0.01' : distAU.toFixed(1);
+    label.el.style.left = sx + 'px';
+    label.el.style.top = sy + 'px';
+    label.el.style.color = color;
+    label.el.style.opacity = clamped && dot > 0 ? '0.5' : '0.8';
+    label.el.style.textShadow = '0 0 4px rgba(0,0,0,0.8)';
+    label.el.innerHTML = `${arrow}${icon} ${obj.name} <span style="color:#5a7a9a">${distStr} AU</span>`;
+  }
 }
 
 // ── Resize Handler ──

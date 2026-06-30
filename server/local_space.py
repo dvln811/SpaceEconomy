@@ -64,9 +64,9 @@ class LocalShip:
 
 class SystemObject:
     """A fixed object in the system (station, gate, planet) with 3D position."""
-    __slots__ = ('id', 'name', 'obj_type', 'x', 'y', 'z', 'station_id')
+    __slots__ = ('id', 'name', 'obj_type', 'x', 'y', 'z', 'station_id', 'au_distance')
 
-    def __init__(self, id, name, obj_type, x, y, z, station_id=''):
+    def __init__(self, id, name, obj_type, x, y, z, station_id='', au_distance=0.0):
         self.id = id
         self.name = name
         self.obj_type = obj_type
@@ -74,6 +74,7 @@ class SystemObject:
         self.y = y
         self.z = z
         self.station_id = station_id
+        self.au_distance = au_distance
 
 
 # Scale: 1 unit = 1 km. Local grid is ~500km radius.
@@ -299,7 +300,8 @@ class LocalSpaceWorker:
                 z = obj.distance * math.sin(obj.angle) * 150000000
                 y = 0
                 self.objects.append(SystemObject(obj.id, obj.name, obj.obj_type, x, y, z,
-                                                getattr(obj, 'station_id', '')))
+                                                getattr(obj, 'station_id', ''),
+                                                au_distance=obj.distance))
 
             # Override: place the player's station at 2000m from origin
             player_station_obj = None
@@ -359,6 +361,43 @@ class LocalSpaceWorker:
             self.player_ship._target_hz = dz / d
             self.player_ship.state = 'flying'
 
+    def player_undock(self):
+        """Set player heading away from station on undock."""
+        with self._lock:
+            if not self.player_ship:
+                return
+            # Find the player's station (first station with station_id)
+            station = None
+            for o in self.objects:
+                if o.station_id:
+                    station = o
+                    break
+            if station:
+                # Heading = normalize(player_pos - station_pos)
+                dx = self.player_ship.x - station.x
+                dy = self.player_ship.y - station.y
+                dz = self.player_ship.z - station.z
+                d = math.sqrt(dx*dx + dy*dy + dz*dz)
+                if d > 0.1:
+                    self.player_ship.heading_x = dx / d
+                    self.player_ship.heading_y = dy / d
+                    self.player_ship.heading_z = dz / d
+                else:
+                    # Player at same position as station, default away
+                    self.player_ship.heading_x = -1
+                    self.player_ship.heading_y = 0
+                    self.player_ship.heading_z = 0
+            else:
+                # No station found, default heading
+                self.player_ship.heading_x = -1
+                self.player_ship.heading_y = 0
+                self.player_ship.heading_z = 0
+            # Also set target heading to match
+            self.player_ship._target_hx = self.player_ship.heading_x
+            self.player_ship._target_hy = self.player_ship.heading_y
+            self.player_ship._target_hz = self.player_ship.heading_z
+            self.player_ship.state = 'idle'
+
     def player_stop(self):
         """Begin decelerating player ship."""
         with self._lock:
@@ -382,7 +421,8 @@ class LocalSpaceWorker:
                 'system_id': self.system_id,
                 'objects': [{'id': o.id, 'name': o.name, 'type': o.obj_type,
                              'x': round(o.x, 1), 'y': round(o.y, 1), 'z': round(o.z, 1),
-                             'station_id': o.station_id} for o in self.objects],
+                             'station_id': o.station_id,
+                             'au_distance': round(o.au_distance, 4)} for o in self.objects],
                 'ships': [s.to_dict() for s in self.ships.values() if not s.is_player],
                 'player': self.player_ship.to_dict() if self.player_ship else None,
             }
