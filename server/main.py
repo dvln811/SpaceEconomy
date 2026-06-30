@@ -657,7 +657,7 @@ def _check_sim_ready():
               '/api/all_components', '/api/component_categories', '/api/generate_component',
               '/api/save_component', '/api/saved_components', '/api/load_component/',
               '/api/export_tagged', '/api/ship_model/', '/api/agents', '/api/data/',
-              '/api/station_designs/', '/api/station_model/')
+              '/api/station_designs/', '/api/station_model/', '/api/player')
     if request.path.startswith('/api/') and not _sim_ready.is_set():
         if not any(request.path.startswith(p) for p in exempt):
             return jsonify({"error": "Simulation loading, please wait..."}), 503
@@ -1268,6 +1268,179 @@ def api_regenerate_agents():
     rows = conn.execute("SELECT * FROM faction_agents WHERE alive=1 ORDER BY faction_id, role").fetchall()
     conn.close()
     return jsonify({"status": "regenerated", "agents": [dict(r) for r in rows]})
+
+
+# ── Player API ─────────────────────────────────────────────────────────────────
+
+# Local Space Worker (persistent 3D simulation of player's system)
+from server.local_space import LocalSpaceWorker
+local_space = LocalSpaceWorker()
+local_space.start()
+
+
+def _init_local_space():
+    """Initialize local space for player's current system after sim loads."""
+    from server.game_data_db import get_data_db
+    conn = get_data_db()
+    p = conn.execute("SELECT system_id, ship_class, station_id, intra_position FROM player WHERE id='player1'").fetchone()
+    conn.close()
+    if not p or not p['system_id']:
+        return
+    # Wait for sim to load
+    if not _sim_ready.wait(120):
+        return
+    sys_obj = sim.universe.get(p['system_id'])
+    if not sys_obj:
+        return
+    # Load system objects into local space
+    local_space.load_system(p['system_id'], sys_obj.objects,
+                            [s for s in sim.ships if s.location == p['system_id']])
+    # Place player
+    ship_row = None
+    conn2 = get_data_db()
+    ship_row = conn2.execute("SELECT speed FROM ships WHERE id=?", (p['ship_class'],)).fetchone()
+    conn2.close()
+    speed = ship_row['speed'] if ship_row else 100
+    pos_id = p['intra_position'] or ''
+    local_space.set_player_ship('player1', p['ship_class'], speed, pos_id)
+
+threading.Thread(target=_init_local_space, daemon=True).start()
+
+
+@app.route("/api/player/local_space")
+def api_player_local_space():
+    """Return full local space state."""
+    return jsonify(local_space.get_state())
+
+
+@app.route("/api/player/fly", methods=["POST"])
+def api_player_fly():
+    """Set player flight direction."""
+    data = request.get_json() or {}
+    dx = float(data.get('dx', 0))
+    dy = float(data.get('dy', 0))
+    dz = float(data.get('dz', 0))
+    local_space.player_fly(dx, dy, dz)
+    return jsonify({"status": "flying"})
+
+
+@app.route("/api/player/stop", methods=["POST"])
+def api_player_stop():
+    """Stop player ship."""
+    local_space.player_stop()
+    return jsonify({"status": "stopping"})
+
+@app.route("/api/player")
+def api_player():
+    """Get player state. Also advances warp if in progress."""
+    from server.game_data_db import get_data_db
+    import math
+    conn = get_data_db()
+    row = conn.execute("SELECT * FROM player WHERE id='player1'").fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"error": "no player"}), 404
+    p = dict(row)
+
+    # Advance warp if warping
+    if p['state'] == 'warping' and p['intra_destination']:
+        # Get ship speed
+        ship_row = conn.execute("SELECT speed FROM ships WHERE id=?", (p['ship_class'],)).fetchone()
+        ship_speed = ship_row['speed'] if ship_row else 200
+        # Get distance
+        from_obj = conn.execute("SELECT distance, angle FROM system_objects WHERE id=? AND system_id=?",
+                                (p['intra_position'], p['system_id'])).fetchone()
+        to_obj = conn.execute("SELECT distance, angle FROM system_objects WHERE id=? AND system_id=?",
+                              (p['intra_destination'], p['system_id'])).fetchone()
+        if from_obj and to_obj:
+            ax = from_obj['distance'] * math.cos(from_obj['angle'])
+            ay = from_obj['distance'] * math.sin(from_obj['angle'])
+            bx = to_obj['distance'] * math.cos(to_obj['angle'])
+            by = to_obj['distance'] * math.sin(to_obj['angle'])
+            dist = max(0.5, math.sqrt((ax-bx)**2 + (ay-by)**2))
+            warp_speed = ship_speed * 0.0015
+            travel_ticks = max(5, dist / warp_speed)
+            step = 1.0 / travel_ticks
+            new_progress = p['intra_progress'] + step
+            if new_progress >= 1.0:
+                # Arrived
+                conn.execute("UPDATE player SET state='idle', intra_position=?, intra_destination='', intra_progress=0 WHERE id='player1'",
+                             (p['intra_destination'],))
+                p['state'] = 'idle'
+                p['intra_position'] = p['intra_destination']
+                p['intra_destination'] = ''
+                p['intra_progress'] = 0
+            else:
+                conn.execute("UPDATE player SET intra_progress=? WHERE id='player1'", (new_progress,))
+                p['intra_progress'] = new_progress
+        conn.commit()
+
+    p['cargo'] = json.loads(p.get('cargo') or '{}')
+    p['fittings'] = json.loads(p.get('fittings') or '{}')
+    conn2 = get_data_db()
+    ship_row = conn2.execute("SELECT * FROM ships WHERE id=?", (p['ship_class'],)).fetchone()
+    sys_row = conn2.execute("SELECT name, sec_level, faction_id FROM systems WHERE id=?", (p['system_id'],)).fetchone()
+    st_row = conn2.execute("SELECT name, station_type FROM stations WHERE id=?", (p['station_id'],)).fetchone() if p.get('station_id') else None
+    conn2.close()
+    conn.close()
+    if ship_row:
+        p['ship_stats'] = dict(ship_row)
+    if sys_row:
+        p['system_name'] = sys_row['name']
+        p['system_sec'] = sys_row['sec_level']
+    if st_row:
+        p['station_name'] = st_row['name']
+        p['station_type'] = st_row['station_type']
+    return jsonify(p)
+
+
+@app.route("/api/player/undock", methods=["POST"])
+def api_player_undock():
+    """Undock player from station."""
+    from server.game_data_db import get_data_db
+    conn = get_data_db()
+    p = conn.execute("SELECT * FROM player WHERE id='player1'").fetchone()
+    if not p or not p['docked']:
+        conn.close()
+        return jsonify({"error": "not docked"}), 400
+    # Find the station's system object to set intra_position
+    st_obj = conn.execute("SELECT id FROM system_objects WHERE station_id=? LIMIT 1", (p['station_id'],)).fetchone()
+    intra_pos = st_obj['id'] if st_obj else ''
+    conn.execute("UPDATE player SET docked=0, state='idle', intra_position=? WHERE id='player1'", (intra_pos,))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "undocked", "intra_position": intra_pos})
+
+
+@app.route("/api/player/dock", methods=["POST"])
+def api_player_dock():
+    """Dock player at nearest station."""
+    from server.game_data_db import get_data_db
+    conn = get_data_db()
+    p = conn.execute("SELECT * FROM player WHERE id='player1'").fetchone()
+    if not p or p['docked']:
+        conn.close()
+        return jsonify({"error": "already docked"}), 400
+    # Find what station we're at (intra_position must be a station object)
+    obj = conn.execute("SELECT station_id FROM system_objects WHERE id=? AND obj_type='station'", (p['intra_position'],)).fetchone()
+    if not obj or not obj['station_id']:
+        conn.close()
+        return jsonify({"error": "not at a station"}), 400
+    conn.execute("UPDATE player SET docked=1, state='docked', station_id=?, intra_destination='', intra_progress=0 WHERE id='player1'", (obj['station_id'],))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "docked", "station_id": obj['station_id']})
+
+
+@app.route("/api/player/warp", methods=["POST"])
+def api_player_warp():
+    """Start warp to a system object (via local space worker)."""
+    data = request.get_json() or {}
+    target_obj_id = data.get('target')
+    if not target_obj_id:
+        return jsonify({"error": "no target"}), 400
+    local_space.player_warp(target_obj_id)
+    return jsonify({"status": "warping", "target": target_obj_id})
 
 
 if __name__ == "__main__":

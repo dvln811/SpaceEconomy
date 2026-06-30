@@ -1,6 +1,551 @@
 <!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>Ship</title>
-<style>body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
-.stub{text-align:center}.stub h1{color:#4fc3f7;font-size:18px;letter-spacing:2px;margin-bottom:8px}.stub p{color:#8aa0b8;font-size:13px}::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:#0a0e18}::-webkit-scrollbar-thumb{background:#1a3050;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#2a4a70}*{scrollbar-width:thin;scrollbar-color:#1a3050 #0a0e18}
-</style>
-</head><body><div class="stub"><h1>SHIP</h1><p>Ship status, loadout, and management coming soon.</p></div></body></html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Space Economy - Ship</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:12px;height:100vh;overflow:hidden}
+.layout{display:grid;height:100vh}
+.layout.docked{grid-template-columns:1fr 300px}
+.layout.flight{grid-template-columns:1fr 240px}
+.viewport{position:relative;overflow:hidden;background:#080c14}
+.panel{background:#0a0e18;border-left:1px solid #1a2844;padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;resize:horizontal;overflow:auto;min-width:200px;max-width:500px}
+h2{color:#4fc3f7;font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.stat-row{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #0f1520}
+.stat-row .label{color:#5a7a9a}.stat-row .val{color:#e0e8f0}
+.btn{padding:6px 12px;border:1px solid #4fc3f7;background:#0d1a2f;color:#4fc3f7;border-radius:3px;cursor:pointer;font:inherit;font-size:11px;text-transform:uppercase;letter-spacing:1px}
+.btn:hover{background:#4fc3f7;color:#05080f}
+.btn-red{border-color:#ef5350;color:#ef5350}.btn-red:hover{background:#ef5350;color:#fff}
+.location-bar{position:absolute;top:8px;left:8px;background:rgba(10,14,24,0.9);border:1px solid #1a2844;border-radius:4px;padding:6px 12px;font-size:11px;z-index:5}
+.location-bar .sys{color:#4fc3f7;font-weight:600}
+.location-bar .sec{margin-left:8px}
+.status-bar{position:absolute;bottom:8px;left:8px;background:rgba(10,14,24,0.9);border:1px solid #1a2844;border-radius:4px;padding:6px 12px;font-size:10px;z-index:5;display:flex;gap:8px;align-items:center;max-width:300px}
+.cargo-grid{display:flex;flex-direction:column;gap:2px;max-height:200px;overflow-y:auto}
+.cargo-item{display:flex;justify-content:space-between;padding:2px 4px;background:#0a1020;border-radius:2px;font-size:10px}
+/* Context menu */
+.ctx-menu{display:none;position:absolute;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;padding:4px 0;min-width:140px;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,0.6)}
+.ctx-menu.open{display:block}
+.ctx-item{padding:5px 12px;cursor:pointer;font-size:11px;color:#c8d4e0}
+.ctx-item:hover{background:#0d1a2f;color:#4fc3f7}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:#0a0e18}::-webkit-scrollbar-thumb{background:#1a3050;border-radius:3px}*{scrollbar-width:thin;scrollbar-color:#1a3050 #0a0e18}
+</style></head><body>
+<div class="layout docked" id="layout">
+  <!-- 3D Viewport -->
+  <div class="viewport" id="viewport" oncontextmenu="event.preventDefault()">
+    <div class="location-bar" id="locationBar">
+      <span class="sys" id="sysName">Loading...</span>
+      <span class="sec" id="secLevel"></span>
+      <span id="stationName" style="margin-left:8px;color:#8aa0b8"></span>
+    </div>
+    <div class="status-bar" id="statusBar" style="display:none">
+      <span id="shipState">Idle</span>
+      <div style="display:flex;flex-direction:column;gap:2px;min-width:80px">
+        <span id="shipSpeed" style="color:#66bb6a;font-size:10px">0 m/s</span>
+        <div style="height:4px;background:#0a1020;border-radius:2px;border:1px solid #1a2844;overflow:hidden;width:80px"><div id="speedBar" style="height:100%;width:0%;background:#4fc3f7;transition:width 0.1s"></div></div>
+      </div>
+      <span id="warpTarget" style="color:#ffd54f"></span>
+    </div>
+    <div class="ctx-menu" id="ctxMenu"></div>
+  </div>
+  <!-- Side Panel -->
+  <div class="panel" id="panel">
+    <div id="dockedPanel">
+      <h2>Ship</h2>
+      <div id="shipInfo"></div>
+      <button class="btn" id="undockBtn" style="margin-top:8px">Undock</button>
+      <h2 style="margin-top:12px">Fitting</h2>
+      <div id="fittingInfo" style="color:#5a7a9a">No modules fitted</div>
+      <h2 style="margin-top:12px">Cargo</h2>
+      <div class="cargo-grid" id="cargoGrid"></div>
+      <h2 style="margin-top:12px">Station Services</h2>
+      <div style="color:#5a7a9a;font-size:10px">Market, Repair, Fitting (coming soon)</div>
+    </div>
+    <div id="flightPanel" style="display:none">
+      <h2>Ship</h2>
+      <div id="flightShipInfo"></div>
+      <h2 style="margin-top:12px">Navigation</h2>
+      <div id="navObjects" style="max-height:300px;overflow-y:auto"></div>
+      <button class="btn btn-red" id="dockBtn" style="margin-top:8px;display:none">Dock</button>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { buildShipFromData } from '/static/ship_renderer.js';
+
+// State
+let player = null;
+let systemObjects = [];
+let scene, camera, renderer, controls;
+let shipGroup = null;
+let hangarPedestal = null;
+let stationModel = null;
+
+// ── Three.js Setup ──
+const container = document.getElementById('viewport');
+scene = new THREE.Scene();
+scene.background = new THREE.Color(0x020305);
+camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight, 0.1, 50000);
+camera.position.set(30, 20, 30);
+renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(container.clientWidth, container.clientHeight);
+container.appendChild(renderer.domElement);
+controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.minDistance = 10;
+controls.maxDistance = 500;
+controls.mouseButtons = {LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: null};
+controls.enablePan = false;
+
+scene.add(new THREE.AmbientLight(0x4fc3f7, 0.3));
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+dirLight.position.set(50, 30, 20);
+scene.add(dirLight);
+
+// Hangar pedestal (docked view)
+function buildHangar(){
+  // Dark floor disc
+  const floorGeo = new THREE.CylinderGeometry(25, 25, 0.5, 32);
+  const floorMat = new THREE.MeshPhongMaterial({color:0x0a0e18, emissive:0x050810, shininess:0});
+  hangarPedestal = new THREE.Mesh(floorGeo, floorMat);
+  hangarPedestal.position.y = -8;
+  scene.add(hangarPedestal);
+  // Subtle ring light on pedestal edge
+  const ringGeo = new THREE.TorusGeometry(25, 0.2, 8, 64);
+  const ringMat = new THREE.MeshBasicMaterial({color:0x1a3050, transparent:true, opacity:0.6});
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = Math.PI/2;
+  ring.position.y = -7.7;
+  hangarPedestal.add(ring);
+}
+
+// Starfield (flight view)
+let starField = null;
+function buildStarfield(){
+  const starGeo = new THREE.BufferGeometry();
+  const starVerts = new Float32Array(3000*3);
+  for(let i=0;i<3000*3;i+=3){const r=5000+Math.random()*40000;const th=Math.random()*Math.PI*2;const ph=Math.acos(2*Math.random()-1);starVerts[i]=r*Math.sin(ph)*Math.cos(th);starVerts[i+1]=r*Math.sin(ph)*Math.sin(th);starVerts[i+2]=r*Math.cos(ph);}
+  starGeo.setAttribute('position',new THREE.BufferAttribute(starVerts,3));
+  starField = new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xffffff,size:15,sizeAttenuation:true}));
+}
+buildStarfield();
+
+function setDockedScene(){
+  scene.background = new THREE.Color(0x020305);
+  if(starField) starField.removeFromParent();
+  if(!hangarPedestal) buildHangar();
+  scene.add(hangarPedestal);
+  if(stationModel){ stationModel.removeFromParent(); stationModel=null; }
+  camera.position.set(30, 15, 30);
+  controls.target.set(0, 0, 0);
+  controls.maxDistance = 100;
+}
+
+function setFlightScene(){
+  scene.background = new THREE.Color(0x020308);
+  if(hangarPedestal) hangarPedestal.removeFromParent();
+  scene.add(starField);
+  controls.maxDistance = 2000;
+  camera.position.set(40, 20, 40);
+  controls.target.set(0, 0, 0);
+  // Load station model nearby
+  loadNearbyStation();
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  if(flyDirection && shipGroup && !player.docked){
+    // Rotate ship to face flight direction (with momentum - doesn't stop)
+    const targetPos = shipGroup.position.clone().add(flyDirection);
+    const lookMat = new THREE.Matrix4().lookAt(shipGroup.position, targetPos, new THREE.Vector3(0,1,0));
+    const targetQuat = new THREE.Quaternion().setFromRotationMatrix(lookMat);
+    const offsetQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI/2);
+    targetQuat.multiply(offsetQuat);
+    const alignTime = (player.ship_stats && player.ship_stats.align_time) || 5;
+    shipGroup.quaternion.slerp(targetQuat, 0.5 / (alignTime * 60));
+    // Speed from ship stats - ship always moves in its CURRENT facing direction (momentum)
+    const maxSpeed = ((player.ship_stats && player.ship_stats.speed) || 100) * 0.001;
+    const shipForward = new THREE.Vector3(1,0,0).applyQuaternion(shipGroup.quaternion).normalize();
+    const alignment = Math.max(0, shipForward.dot(flyDirection));
+    // Accelerate/decelerate smoothly
+    currentSpeedFraction += (alignment * alignment - currentSpeedFraction) * 0.02;
+    const currentSpeed = maxSpeed * Math.max(0.1, currentSpeedFraction); // always at least 10% speed (momentum)
+    // Move in ship's actual forward direction (not target direction)
+    shipGroup.position.addScaledVector(shipForward, currentSpeed);
+    // UI
+    const speedMs = Math.round(currentSpeedFraction * ((player.ship_stats&&player.ship_stats.speed)||100));
+    document.getElementById('shipSpeed').textContent = speedMs + ' m/s';
+    document.getElementById('shipState').textContent = alignment > 0.95 ? 'Full Speed' : 'Aligning';
+    document.getElementById('speedBar').style.width = (currentSpeedFraction * 100) + '%';
+    // Camera follows ship
+    const shipDelta = shipGroup.position.clone().sub(lastShipPos);
+    camera.position.add(shipDelta);
+    controls.target.add(shipDelta);
+    lastShipPos.copy(shipGroup.position);
+    // Trail - append points at end (every frame for longer trail)
+    const arr = trailLine.geometry.attributes.position.array;
+    if(trailDrawCount < 100){
+      arr[trailDrawCount*3] = shipGroup.position.x;
+      arr[trailDrawCount*3+1] = shipGroup.position.y;
+      arr[trailDrawCount*3+2] = shipGroup.position.z;
+      trailDrawCount++;
+    } else {
+      for(let i=0;i<(100-1)*3;i++) arr[i] = arr[i+3];
+      arr[99*3] = shipGroup.position.x;
+      arr[99*3+1] = shipGroup.position.y;
+      arr[99*3+2] = shipGroup.position.z;
+    }
+    trailLine.geometry.setDrawRange(0, trailDrawCount);
+    trailLine.geometry.attributes.position.needsUpdate = true;
+    trailLine.visible = true;
+  } else if(shipGroup && currentSpeedFraction > 0.001 && !player.docked){
+    // Decelerate with momentum
+    currentSpeedFraction *= 0.97;
+    const maxSpeed = ((player.ship_stats && player.ship_stats.speed) || 100) * 0.001;
+    const shipForward = new THREE.Vector3(1,0,0).applyQuaternion(shipGroup.quaternion).normalize();
+    const currentSpeed = maxSpeed * currentSpeedFraction;
+    shipGroup.position.addScaledVector(shipForward, currentSpeed);
+    const speedMs = Math.round(currentSpeedFraction * ((player.ship_stats&&player.ship_stats.speed)||100));
+    document.getElementById('shipSpeed').textContent = speedMs + ' m/s';
+    document.getElementById('speedBar').style.width = (currentSpeedFraction * 100) + '%';
+    // Camera follows
+    const shipDelta = shipGroup.position.clone().sub(lastShipPos);
+    camera.position.add(shipDelta);
+    controls.target.add(shipDelta);
+    lastShipPos.copy(shipGroup.position);
+    // Trail during decel
+    const arr = trailLine.geometry.attributes.position.array;
+    if(trailDrawCount < 100){
+      arr[trailDrawCount*3] = shipGroup.position.x;
+      arr[trailDrawCount*3+1] = shipGroup.position.y;
+      arr[trailDrawCount*3+2] = shipGroup.position.z;
+      trailDrawCount++;
+    } else {
+      for(let i=0;i<99*3;i++) arr[i] = arr[i+3];
+      arr[99*3]=shipGroup.position.x;arr[99*3+1]=shipGroup.position.y;arr[99*3+2]=shipGroup.position.z;
+    }
+    trailLine.geometry.setDrawRange(0, trailDrawCount);
+    trailLine.geometry.attributes.position.needsUpdate = true;
+    if(currentSpeedFraction < 0.005){
+      currentSpeedFraction = 0;
+      document.getElementById('shipState').textContent = 'Idle';
+      document.getElementById('shipSpeed').textContent = '0 m/s';
+      document.getElementById('speedBar').style.width = '0%';
+      trailLine.visible = false;
+    }
+  } else {
+    if(trailLine && !flyDirection) trailLine.visible = false;
+  }
+  // Lerp camera target back to ship after freelook release
+  if(!isFreelooking && shipGroup){
+    controls.target.lerp(shipGroup.position, 0.05);
+  }
+  controls.update();
+  renderer.render(scene,camera);
+}
+
+// Local flight state
+let flyDirection = null;
+let lastShipPos = new THREE.Vector3();
+let currentSpeedFraction = 0;
+
+// Engine trail
+let trailLine = null;
+let trailTimer = 0;
+let trailDrawCount = 0;
+function createTrail(){
+  const mat = new THREE.LineBasicMaterial({color:0x2288ff, transparent:true, opacity:0.5});
+  const geo = new THREE.BufferGeometry();
+  const positions = new Float32Array(100 * 3);
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setDrawRange(0, 0);
+  trailLine = new THREE.Line(geo, mat);
+  trailLine.frustumCulled = false;
+  trailLine.visible = false;
+  scene.add(trailLine);
+}
+createTrail();
+
+// Double-click in viewport to set flight direction
+container.addEventListener('dblclick', e=>{
+  if(!player || player.docked) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  const mouse = new THREE.Vector2(
+    ((e.clientX - rect.left) / rect.width) * 2 - 1,
+    -((e.clientY - rect.top) / rect.height) * 2 + 1
+  );
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, camera);
+  flyDirection = raycaster.ray.direction.clone().normalize();
+  trailDrawCount = 0;
+  trailTimer = 0;
+  if(trailLine){ trailLine.geometry.setDrawRange(0,0); trailLine.visible = false; }
+  document.getElementById('shipState').textContent = 'Aligning';
+  document.getElementById('shipSpeed').textContent = '';
+});
+
+// Right-click drag = look around (camera rotates about its own position, changing where it looks)
+let isFreelooking = false;
+let freelookStart = {x:0, y:0};
+renderer.domElement.addEventListener('mousedown', e=>{
+  if(e.button === 2){ isFreelooking = true; freelookStart = {x:e.clientX, y:e.clientY}; controls.enabled = false; }
+});
+window.addEventListener('mouseup', e=>{
+  if(e.button === 2){ isFreelooking = false; controls.enabled = true; }
+});
+window.addEventListener('mousemove', e=>{
+  if(!isFreelooking) return;
+  const dx = e.clientX - freelookStart.x;
+  const dy = e.clientY - freelookStart.y;
+  freelookStart = {x:e.clientX, y:e.clientY};
+  // Camera stays, target moves = look direction changes
+  const right = new THREE.Vector3();
+  const up = new THREE.Vector3(0,1,0);
+  camera.getWorldDirection(right);
+  right.cross(up).normalize();
+  const dist = camera.position.distanceTo(controls.target);
+  controls.target.addScaledVector(right, dx * 0.003 * dist);
+  controls.target.addScaledVector(up, -dy * 0.003 * dist);
+});
+// Press S to stop ship (with deceleration)
+document.addEventListener('keydown', e=>{
+  if(e.key === 's' || e.key === 'S'){
+    flyDirection = null;
+    document.getElementById('shipState').textContent = 'Decelerating';
+  }
+});
+
+animate();
+window.addEventListener('resize',()=>{camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();renderer.setSize(container.clientWidth,container.clientHeight);});
+
+async function loadNearbyStation(){
+  if(!player || !player.station_id) return;
+  // Load station 3D model and place it nearby
+  try{
+    const r = await fetch('/api/station_model/'+player.station_id);
+    if(!r.ok) return;
+    const data = await r.json();
+    if(stationModel) stationModel.removeFromParent();
+    stationModel = new THREE.Group();
+    // Build merged station geometry
+    const tempGroup = new THREE.Group();
+    for(const comp of data.components){
+      const [px,py,pz]=comp.pos;const [rx,ry,rz]=comp.rot||[0,0,0];let mesh=null;
+      const mat=new THREE.MeshPhongMaterial({color:0x0a1428,emissive:0x0a1428,shininess:0,transparent:true,opacity:0.7});
+      switch(comp.type){
+        case'pod':{const{length,height,width}=comp.params;mesh=new THREE.Mesh(new THREE.BoxGeometry(length,height,width),mat);break;}
+        case'cylinder':{const{r_top,r_bot,length}=comp.params;mesh=new THREE.Mesh(new THREE.CylinderGeometry(r_top,r_bot,length,6),mat);if(!rx&&!ry&&!rz)mesh.rotation.z=Math.PI/2;break;}
+        case'cone':{const{radius,length}=comp.params;mesh=new THREE.Mesh(new THREE.ConeGeometry(radius,length,6),mat);if(!rx&&!ry&&!rz)mesh.rotation.z=Math.PI/2;break;}
+        case'box':{const{x,y,z}=comp.params;mesh=new THREE.Mesh(new THREE.BoxGeometry(x,y,z),mat);break;}
+        case'sphere':{const{radius,half}=comp.params;mesh=new THREE.Mesh(half?new THREE.SphereGeometry(radius,5,3,0,Math.PI*2,0,Math.PI/2):new THREE.SphereGeometry(radius,5,3),mat);break;}
+        case'torus':{const{radius,tube}=comp.params;mesh=new THREE.Mesh(new THREE.TorusGeometry(radius,tube,5,10),mat);if(!rx&&!ry&&!rz)mesh.rotation.y=Math.PI/2;break;}
+        case'spine':{const{length,radius}=comp.params;mesh=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,length,4),mat);mesh.rotation.z=Math.PI/2;break;}
+        default:continue;
+      }
+      if(mesh){mesh.position.set(px,py,pz);mesh.rotation.x+=rx;mesh.rotation.y+=ry;mesh.rotation.z+=rz;tempGroup.add(mesh);}
+    }
+    tempGroup.updateMatrixWorld(true);
+    const geos=[];
+    tempGroup.traverse(c=>{if(c.isMesh&&c.geometry){const g=c.geometry.clone();g.applyMatrix4(c.matrixWorld);geos.push(g);}});
+    if(geos.length){
+      const allG=geos.map(g=>g.index?g.toNonIndexed():g);
+      let tv=0;allG.forEach(g=>tv+=g.attributes.position.count);
+      const pos=new Float32Array(tv*3);let off=0;
+      for(const g of allG){pos.set(g.attributes.position.array,off*3);off+=g.attributes.position.count;}
+      const merged=new THREE.BufferGeometry();
+      merged.setAttribute('position',new THREE.BufferAttribute(pos,3));
+      merged.computeVertexNormals();
+      const m=new THREE.Mesh(merged,new THREE.MeshPhongMaterial({color:0x0a1428,emissive:0x0a1428,shininess:0,transparent:true,opacity:0.7}));
+      m.add(new THREE.LineSegments(new THREE.EdgesGeometry(merged,15),new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.4})));
+      stationModel.add(m);
+      allG.forEach(g=>g.dispose());geos.forEach(g=>g.dispose());
+    }
+    // Scale and position station behind/above ship
+    const box=new THREE.Box3().setFromObject(stationModel);
+    const sz=box.getSize(new THREE.Vector3());
+    const maxDim=Math.max(sz.x,sz.y,sz.z)||1;
+    stationModel.scale.setScalar(200/maxDim);
+    stationModel.position.set(-150, 50, -200);
+    scene.add(stationModel);
+  }catch(e){}
+}
+
+// ── Load Player ──
+async function loadPlayer(){
+  const r = await fetch('/api/player');
+  if(!r.ok) return;
+  player = await r.json();
+  updateUI();
+  if(player.docked) setDockedScene(); else setFlightScene();
+  loadShipModel();
+  if(!player.docked) loadSystemObjects();
+}
+
+async function loadShipModel(){
+  if(!player) return;
+  const r = await fetch('/api/ship_model/all');
+  const models = await r.json();
+  const geo = models[player.ship_class];
+  if(!geo) return;
+  if(shipGroup) scene.remove(shipGroup);
+  shipGroup = new THREE.Group();
+  buildShipFromData(shipGroup, geo, {showHardpoints:false});
+  // Scale ship to reasonable viewport size
+  const box = new THREE.Box3().setFromObject(shipGroup);
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+  shipGroup.scale.setScalar(20/maxDim);
+  scene.add(shipGroup);
+  controls.target.set(0,0,0);
+}
+
+async function loadSystemObjects(){
+  const r = await fetch('/api/system/'+player.system_id);
+  if(!r.ok) return;
+  const data = await r.json();
+  systemObjects = data.objects || [];
+  renderNavList();
+}
+
+// ── UI Updates ──
+function updateUI(){
+  if(!player) return;
+  const layout = document.getElementById('layout');
+  const isDocked = player.docked;
+
+  layout.className = 'layout ' + (isDocked ? 'docked' : 'flight');
+  document.getElementById('dockedPanel').style.display = isDocked ? '' : 'none';
+  document.getElementById('flightPanel').style.display = isDocked ? 'none' : '';
+  document.getElementById('statusBar').style.display = isDocked ? 'none' : '';
+
+  // Location bar
+  document.getElementById('sysName').textContent = player.system_name || player.system_id;
+  const sec = player.system_sec || 0;
+  const secEl = document.getElementById('secLevel');
+  secEl.textContent = sec.toFixed(1);
+  secEl.style.color = sec>=0.7?'#66bb6a':sec>=0.4?'#ffd54f':'#ef5350';
+  document.getElementById('stationName').textContent = isDocked ? ('Docked: ' + (player.station_name||'')) : '';
+
+  // Ship info
+  const stats = player.ship_stats || {};
+  const infoHtml = `
+    <div class="stat-row"><span class="label">Ship</span><span class="val">${player.ship_name}</span></div>
+    <div class="stat-row"><span class="label">Class</span><span class="val">${stats.hull_class||''}</span></div>
+    <div class="stat-row"><span class="label">Cargo</span><span class="val">${Object.values(player.cargo||{}).reduce((a,b)=>a+b,0)} / ${stats.cargo_capacity||0}</span></div>
+    <div class="stat-row"><span class="label">Credits</span><span class="val">${(player.credits||0).toLocaleString()}</span></div>
+  `;
+  document.getElementById('shipInfo').innerHTML = infoHtml;
+  if(!isDocked) document.getElementById('flightShipInfo').innerHTML = infoHtml;
+
+  // Cargo
+  const cargoGrid = document.getElementById('cargoGrid');
+  const cargo = player.cargo || {};
+  if(Object.keys(cargo).length === 0){
+    cargoGrid.innerHTML = '<div style="color:#5a7a9a">Empty</div>';
+  } else {
+    cargoGrid.innerHTML = Object.entries(cargo).map(([k,v])=>`<div class="cargo-item"><span>${k.replace(/_/g,' ')}</span><span>${v}</span></div>`).join('');
+  }
+
+  // Flight state
+  if(!isDocked){
+    document.getElementById('shipState').textContent = player.state || 'idle';
+  }
+}
+
+function renderNavList(){
+  const nav = document.getElementById('navObjects');
+  // Calculate distances from player's current position (use intra_position object as reference)
+  const playerObj = systemObjects.find(o=>o.id===player.intra_position);
+  const px = playerObj ? playerObj.distance * Math.cos(playerObj.angle) : 0;
+  const py = playerObj ? playerObj.distance * Math.sin(playerObj.angle) : 0;
+
+  nav.innerHTML = systemObjects.filter(o=>o.type!=='star').map(o=>{
+    const icon = o.type==='gate'?'&#9674;':o.type==='station'?'&#9632;':o.type==='planet'?'&#9679;':'&#8226;';
+    const color = o.type==='gate'?'#ab47bc':o.type==='station'?'#4fc3f7':'#8aa0b8';
+    const ox = o.distance * Math.cos(o.angle);
+    const oy = o.distance * Math.sin(o.angle);
+    const dist = Math.sqrt((ox-px)*(ox-px)+(oy-py)*(oy-py));
+    const distStr = dist < 0.01 ? '<0.01 AU' : dist.toFixed(2)+' AU';
+    return `<div class="nav-obj" style="padding:3px 4px;cursor:pointer;border-bottom:1px solid #0f1520;display:flex;justify-content:space-between" data-id="${o.id}" data-name="${o.name}" data-type="${o.type}">
+      <span><span style="color:${color}">${icon}</span> ${o.name}</span>
+      <span style="color:#c8d4e0;font-size:10px">${distStr}</span>
+    </div>`;
+  }).join('');
+  // Check if we can dock (within ~0.01 AU = close range)
+  const atStation = systemObjects.find(o=>o.id===player.intra_position && o.type==='station');
+  document.getElementById('dockBtn').style.display = atStation ? '' : 'none';
+}
+
+// Nav list context menu (event delegation, set once)
+document.getElementById('navObjects').addEventListener('contextmenu', e=>{
+  const el = e.target.closest('.nav-obj');
+  if(!el) return;
+  e.preventDefault();
+  window.showCtx(e, el.dataset.id, el.dataset.name, el.dataset.type);
+});
+document.getElementById('navObjects').addEventListener('dblclick', e=>{
+  const el = e.target.closest('.nav-obj');
+  if(el) window.warpTo(el.dataset.id);
+});
+
+// ── Actions ──
+document.getElementById('undockBtn').addEventListener('click', async()=>{
+  const r = await fetch('/api/player/undock',{method:'POST'});
+  if(r.ok){
+    await loadPlayer();
+    loadSystemObjects();
+  }
+});
+
+document.getElementById('dockBtn').addEventListener('click', async()=>{
+  const r = await fetch('/api/player/dock',{method:'POST'});
+  if(r.ok) await loadPlayer();
+});
+
+// Context menu
+window.showCtx = function(e, objId, name, type){
+  e.preventDefault();
+  const menu = document.getElementById('ctxMenu');
+  let items = '';
+  if(type==='station') items += `<div class="ctx-item" onclick="warpTo('${objId}')">Warp to ${name}</div>`;
+  if(type==='gate') items += `<div class="ctx-item" onclick="warpTo('${objId}')">Warp to Gate</div>`;
+  if(type==='planet'||type==='moon') items += `<div class="ctx-item" onclick="warpTo('${objId}')">Warp to ${name}</div>`;
+  items += `<div class="ctx-item" onclick="closeCtx()">Cancel</div>`;
+  menu.innerHTML = items;
+  menu.style.left = e.clientX+'px';
+  menu.style.top = e.clientY+'px';
+  menu.classList.add('open');
+};
+window.closeCtx = function(){ document.getElementById('ctxMenu').classList.remove('open'); };
+document.addEventListener('click',()=>closeCtx());
+
+window.warpTo = async function(objId){
+  closeCtx();
+  const r = await fetch('/api/player/warp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({target:objId})});
+  if(r.ok){
+    player.state = 'warping';
+    updateUI();
+    pollPlayerState();
+  }
+};
+
+// Poll player state during warp
+let pollInterval = null;
+function pollPlayerState(){
+  if(pollInterval) return;
+  pollInterval = setInterval(async()=>{
+    await loadPlayer();
+    if(player.state==='idle'||player.state==='docked'){
+      clearInterval(pollInterval);
+      pollInterval=null;
+    }
+  }, 1000);
+}
+
+// Init
+loadPlayer();
+</script></body></html>
