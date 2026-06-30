@@ -20,6 +20,7 @@ class LocalShip:
     __slots__ = ('id', 'name', 'ship_class', 'role', 'faction',
                  'x', 'y', 'z', 'vx', 'vy', 'vz',
                  'speed', 'max_speed', 'heading_x', 'heading_y', 'heading_z',
+                 '_target_hx', '_target_hy', '_target_hz',
                  'state', 'target_obj', 'dock_station', 'is_player')
 
     def __init__(self, id, name='', ship_class='', role='', faction='',
@@ -40,6 +41,9 @@ class LocalShip:
         self.heading_x = 1
         self.heading_y = 0
         self.heading_z = 0
+        self._target_hx = 1
+        self._target_hy = 0
+        self._target_hz = 0
         self.state = state  # idle, flying, warping, docking, docked, mining, arriving, departing
         self.target_obj = None  # target object id for warp
         self.dock_station = ''
@@ -72,9 +76,12 @@ class SystemObject:
         self.station_id = station_id
 
 
-# Scale: 1 AU = 1000 local space units. Ship speeds in m/s mapped to units/tick.
-AU_SCALE = 1000.0
-WARP_SPEED_MULT = 0.0015  # AU/s per m/s of ship speed -> units/tick
+# Scale: 1 unit = 1 km. Local grid is ~500km radius.
+# Ship speeds in m/s -> km/s = speed/1000. At 95 m/s base = 0.095 km/s.
+# With afterburner: ~0.5 km/s. MWD: ~3 km/s.
+# Warp between grids uses AU scale separately (not in local space).
+LOCAL_GRID_RADIUS = 500  # km
+WARP_SPEED_MULT = 0.0015  # AU/s per m/s -- used for intra-system warp only
 
 
 class LocalSpaceWorker:
@@ -105,7 +112,7 @@ class LocalSpaceWorker:
 
     def _tick(self):
         """Advance all ships one tick."""
-        for ship in self.ships.values():
+        for ship in list(self.ships.values()):
             if ship.state == 'flying':
                 self._move_flying(ship)
             elif ship.state == 'warping':
@@ -114,20 +121,64 @@ class LocalSpaceWorker:
                 self._move_arriving(ship)
             elif ship.state == 'departing':
                 self._move_departing(ship)
+            elif ship.state == 'idle' and ship.speed > 0:
+                self._decelerate(ship)
+            elif ship.state == 'docked' and not ship.is_player:
+                # Random chance to undock and fly around locally
+                if random.random() < 0.02:  # 2% per tick = undock every ~50 sec
+                    self._npc_undock_local(ship)
+
+    def _npc_undock_local(self, ship):
+        """NPC undocks and flies to a random nearby point."""
+        # Pick a random direction and fly 5-20km
+        ship.state = 'flying'
+        ship._target_hx = random.uniform(-1, 1)
+        ship._target_hy = random.uniform(-0.3, 0.3)
+        ship._target_hz = random.uniform(-1, 1)
+        d = math.sqrt(ship._target_hx**2 + ship._target_hy**2 + ship._target_hz**2) or 1
+        ship._target_hx /= d
+        ship._target_hy /= d
+        ship._target_hz /= d
+        ship.heading_x = ship._target_hx
+        ship.heading_y = ship._target_hy
+        ship.heading_z = ship._target_hz
+        ship.speed = 0
+
+    def _decelerate(self, ship):
+        """Gradually slow down a stopped ship (momentum/braking)."""
+        ship.speed *= 0.85
+        if ship.speed < 0.5:
+            ship.speed = 0
+            ship.vx = ship.vy = ship.vz = 0
+            return
+        move_km = ship.speed / 1000.0
+        ship.vx = ship.heading_x * move_km
+        ship.vy = ship.heading_y * move_km
+        ship.vz = ship.heading_z * move_km
+        ship.x += ship.vx
+        ship.y += ship.vy
+        ship.z += ship.vz
 
     def _move_flying(self, ship):
-        """Move ship along its heading at current speed (local flight, m/s scale)."""
+        """Move ship along its heading at current speed (km scale)."""
+        # Gradual turn toward target heading
+        lerp_rate = 0.08
+        ship.heading_x += (ship._target_hx - ship.heading_x) * lerp_rate
+        ship.heading_y += (ship._target_hy - ship.heading_y) * lerp_rate
+        ship.heading_z += (ship._target_hz - ship.heading_z) * lerp_rate
+        d = math.sqrt(ship.heading_x**2 + ship.heading_y**2 + ship.heading_z**2) or 1
+        ship.heading_x /= d
+        ship.heading_y /= d
+        ship.heading_z /= d
         # Accelerate toward max_speed
         if ship.speed < ship.max_speed:
-            accel = ship.max_speed * 0.05  # 5% of max per tick
+            accel = ship.max_speed * 0.08
             ship.speed = min(ship.max_speed, ship.speed + accel)
-        # Convert m/s to local units/tick (1 AU = 1000 units, 1 AU = 150M km)
-        # At these scales, m/s is tiny. 100 m/s = 0.000000667 AU/s = 0.000667 units/tick
-        # That's too small to see. For local flight (not warp), scale up for gameplay.
-        move_rate = ship.speed * 0.01  # gameplay scale: 100 m/s = 1 unit/tick
-        ship.vx = ship.heading_x * move_rate
-        ship.vy = ship.heading_y * move_rate
-        ship.vz = ship.heading_z * move_rate
+        # Move: speed is m/s, convert to km/tick (1 tick = 1 sec)
+        move_km = ship.speed / 1000.0  # m/s -> km/s, 1 tick = 1 sec
+        ship.vx = ship.heading_x * move_km
+        ship.vy = ship.heading_y * move_km
+        ship.vz = ship.heading_z * move_km
         ship.x += ship.vx
         ship.y += ship.vy
         ship.z += ship.vz
@@ -152,7 +203,7 @@ class LocalSpaceWorker:
             ship.target_obj = None
             return
         # Warp speed in units/tick
-        warp_speed = ship.max_speed * WARP_SPEED_MULT * AU_SCALE
+        warp_speed = ship.max_speed * 0.05
         move = min(warp_speed, dist)
         nx, ny, nz = dx/dist, dy/dist, dz/dist
         ship.heading_x = nx
@@ -164,7 +215,7 @@ class LocalSpaceWorker:
         ship.x += ship.vx
         ship.y += ship.vy
         ship.z += ship.vz
-        ship.speed = move / (WARP_SPEED_MULT * AU_SCALE) if WARP_SPEED_MULT * AU_SCALE > 0 else 0
+        ship.speed = move / 0.05 if True else 0
 
     def _move_arriving(self, ship):
         """NPC arriving from gate - fly toward a station."""
@@ -190,7 +241,7 @@ class LocalSpaceWorker:
             ship.vx = ship.vy = ship.vz = 0
             return
         # Warp to station
-        warp_speed = ship.max_speed * WARP_SPEED_MULT * AU_SCALE
+        warp_speed = ship.max_speed * 0.05
         move = min(warp_speed, dist)
         nx, ny, nz = dx/dist, dy/dist, dz/dist
         ship.heading_x, ship.heading_y, ship.heading_z = nx, ny, nz
@@ -216,7 +267,7 @@ class LocalSpaceWorker:
             # Ship leaves system
             self.ships.pop(ship.id, None)
             return
-        warp_speed = ship.max_speed * WARP_SPEED_MULT * AU_SCALE
+        warp_speed = ship.max_speed * 0.05
         move = min(warp_speed, dist)
         nx, ny, nz = dx/dist, dy/dist, dz/dist
         ship.heading_x, ship.heading_y, ship.heading_z = nx, ny, nz
@@ -236,25 +287,31 @@ class LocalSpaceWorker:
         """Initialize local space for a system. Called when player enters."""
         with self._lock:
             self.system_id = system_id
-            # Convert system objects to 3D positions
+            # Convert system objects to local grid positions (km scale)
+            # Each object gets a position within the local grid (~500km radius)
+            # Objects are spread based on their AU distance (scaled down for local view)
             self.objects = []
             for obj in system_objects:
-                # obj has distance (AU) and angle (radians)
-                x = obj.distance * math.cos(obj.angle) * AU_SCALE
-                z = obj.distance * math.sin(obj.angle) * AU_SCALE
-                y = hash(obj.name) % 50 - 25  # slight vertical spread
+                # Local objects: station player is AT stays nearby (2km)
+                # Everything else: far away at AU*500 scale (nav markers only)
+                x = obj.distance * math.cos(obj.angle) * 500
+                z = obj.distance * math.sin(obj.angle) * 500
+                y = hash(obj.name) % 10 - 5
                 self.objects.append(SystemObject(obj.id, obj.name, obj.obj_type, x, y, z,
                                                 getattr(obj, 'station_id', '')))
 
-            # Place NPC ships at their current positions
+            # Place NPC ships at their current positions (km scale, near stations)
             self.ships = {}
             for npc in npc_ships_in_system:
-                # Place at their intra_position object
                 pos_obj = self._get_object(npc.intra_position) if npc.intra_position else None
                 if pos_obj:
-                    x, y, z = pos_obj.x + random.uniform(-20, 20), pos_obj.y + random.uniform(-5, 5), pos_obj.z + random.uniform(-20, 20)
+                    x = pos_obj.x + random.uniform(-2, 2)  # within 2km of station
+                    y = pos_obj.y + random.uniform(-0.5, 0.5)
+                    z = pos_obj.z + random.uniform(-2, 2)
                 else:
-                    x, y, z = random.uniform(-500, 500), random.uniform(-20, 20), random.uniform(-500, 500)
+                    x = random.uniform(-50, 50)
+                    y = random.uniform(-2, 2)
+                    z = random.uniform(-50, 50)
                 ls = LocalShip(
                     id=npc.id, name=npc.name, ship_class=npc.ship_class,
                     role=npc.role, faction=npc.faction,
@@ -270,8 +327,8 @@ class LocalSpaceWorker:
         """Place or update the player ship in local space."""
         with self._lock:
             pos_obj = self._get_object(position_obj_id)
-            x = pos_obj.x if pos_obj else 0
-            y = pos_obj.y + 10 if pos_obj else 10
+            x = pos_obj.x + 1.5 if pos_obj else 0  # 1.5km from station
+            y = pos_obj.y + 0.5 if pos_obj else 0.5
             z = pos_obj.z if pos_obj else 0
             if ship_id in self.ships:
                 ps = self.ships[ship_id]
@@ -283,14 +340,14 @@ class LocalSpaceWorker:
             self.player_ship = ps
 
     def player_fly(self, dx, dy, dz):
-        """Set player heading to fly in a direction."""
+        """Set player target heading to fly in a direction (ship will gradually turn)."""
         with self._lock:
             if not self.player_ship:
                 return
             d = math.sqrt(dx*dx + dy*dy + dz*dz) or 1
-            self.player_ship.heading_x = dx / d
-            self.player_ship.heading_y = dy / d
-            self.player_ship.heading_z = dz / d
+            self.player_ship._target_hx = dx / d
+            self.player_ship._target_hy = dy / d
+            self.player_ship._target_hz = dz / d
             self.player_ship.state = 'flying'
 
     def player_stop(self):
@@ -310,14 +367,14 @@ class LocalSpaceWorker:
             self.player_ship.state = 'warping'
 
     def get_state(self):
-        """Return full local space state for the client."""
+        """Return local space state for the client (NPCs + objects, not player ship)."""
         with self._lock:
             return {
                 'system_id': self.system_id,
                 'objects': [{'id': o.id, 'name': o.name, 'type': o.obj_type,
                              'x': round(o.x, 1), 'y': round(o.y, 1), 'z': round(o.z, 1),
                              'station_id': o.station_id} for o in self.objects],
-                'ships': [s.to_dict() for s in self.ships.values()],
+                'ships': [s.to_dict() for s in self.ships.values() if not s.is_player],
                 'player': self.player_ship.to_dict() if self.player_ship else None,
             }
 

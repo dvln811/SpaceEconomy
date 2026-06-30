@@ -23,15 +23,16 @@ h2{color:#4fc3f7;font-size:12px;letter-spacing:1px;text-transform:uppercase;marg
 .status-bar{position:absolute;bottom:8px;left:8px;background:rgba(10,14,24,0.9);border:1px solid #1a2844;border-radius:4px;padding:6px 12px;font-size:10px;z-index:5;display:flex;gap:8px;align-items:center;max-width:300px}
 .cargo-grid{display:flex;flex-direction:column;gap:2px;max-height:200px;overflow-y:auto}
 .cargo-item{display:flex;justify-content:space-between;padding:2px 4px;background:#0a1020;border-radius:2px;font-size:10px}
-/* Context menu */
 .ctx-menu{display:none;position:absolute;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;padding:4px 0;min-width:140px;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,0.6)}
 .ctx-menu.open{display:block}
 .ctx-item{padding:5px 12px;cursor:pointer;font-size:11px;color:#c8d4e0}
 .ctx-item:hover{background:#0d1a2f;color:#4fc3f7}
-::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:#0a0e18}::-webkit-scrollbar-thumb{background:#1a3050;border-radius:3px}*{scrollbar-width:thin;scrollbar-color:#1a3050 #0a0e18}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#0a0e18}
+::-webkit-scrollbar-thumb{background:#1a3050;border-radius:3px}
+*{scrollbar-width:thin;scrollbar-color:#1a3050 #0a0e18}
 </style></head><body>
 <div class="layout docked" id="layout">
-  <!-- 3D Viewport -->
   <div class="viewport" id="viewport" oncontextmenu="event.preventDefault()">
     <div class="location-bar" id="locationBar">
       <span class="sys" id="sysName">Loading...</span>
@@ -42,13 +43,12 @@ h2{color:#4fc3f7;font-size:12px;letter-spacing:1px;text-transform:uppercase;marg
       <span id="shipState">Idle</span>
       <div style="display:flex;flex-direction:column;gap:2px;min-width:80px">
         <span id="shipSpeed" style="color:#66bb6a;font-size:10px">0 m/s</span>
-        <div style="height:4px;background:#0a1020;border-radius:2px;border:1px solid #1a2844;overflow:hidden;width:80px"><div id="speedBar" style="height:100%;width:0%;background:#4fc3f7;transition:width 0.1s"></div></div>
+        <div style="height:4px;background:#0a1020;border-radius:2px;border:1px solid #1a2844;overflow:hidden;width:80px"><div id="speedBar" style="height:100%;width:0%;background:#4fc3f7;transition:width 0.3s"></div></div>
       </div>
       <span id="warpTarget" style="color:#ffd54f"></span>
     </div>
     <div class="ctx-menu" id="ctxMenu"></div>
   </div>
-  <!-- Side Panel -->
   <div class="panel" id="panel">
     <div id="dockedPanel">
       <h2>Ship</h2>
@@ -59,7 +59,7 @@ h2{color:#4fc3f7;font-size:12px;letter-spacing:1px;text-transform:uppercase;marg
       <h2 style="margin-top:12px">Cargo</h2>
       <div class="cargo-grid" id="cargoGrid"></div>
       <h2 style="margin-top:12px">Station Services</h2>
-      <div style="color:#5a7a9a;font-size:10px">Market, Repair, Fitting (coming soon)</div>
+      <div style="color:#5a7a9a;font-size:10px">Market, Repair, Fitting</div>
     </div>
     <div id="flightPanel" style="display:none">
       <h2>Ship</h2>
@@ -70,31 +70,38 @@ h2{color:#4fc3f7;font-size:12px;letter-spacing:1px;text-transform:uppercase;marg
     </div>
   </div>
 </div>
-
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { buildShipFromData } from '/static/ship_renderer.js';
 
-// State
+// ── State ──
 let player = null;
-let systemObjects = [];
-let scene, camera, renderer, controls;
+let localState = null;  // from SSE stream
 let shipGroup = null;
 let hangarPedestal = null;
 let stationModel = null;
+let stationWorldPos = null;
+let npcSprites = {};  // id -> THREE.Sprite
+let objectSprites = {};  // id -> THREE.Sprite/label
+let isDocked = true;
+let lastTickTime = 0;
+let displaySpeed = 0;
+
+// Interpolated positions: {id: {x,y,z,vx,vy,vz}}
+let interpShips = {};
 
 // ── Three.js Setup ──
 const container = document.getElementById('viewport');
-scene = new THREE.Scene();
+const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x020305);
-camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight, 0.1, 50000);
+const camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight, 0.1, 50000);
 camera.position.set(30, 20, 30);
-renderer = new THREE.WebGLRenderer({antialias:true});
+const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(container.clientWidth, container.clientHeight);
 container.appendChild(renderer.domElement);
-controls = new OrbitControls(camera, renderer.domElement);
+const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.minDistance = 10;
 controls.maxDistance = 500;
@@ -106,43 +113,56 @@ const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
 dirLight.position.set(50, 30, 20);
 scene.add(dirLight);
 
-// Hangar pedestal (docked view)
+// ── Hangar (docked view) ──
 function buildHangar(){
-  // Dark floor disc
   const floorGeo = new THREE.CylinderGeometry(25, 25, 0.5, 32);
   const floorMat = new THREE.MeshPhongMaterial({color:0x0a0e18, emissive:0x050810, shininess:0});
   hangarPedestal = new THREE.Mesh(floorGeo, floorMat);
   hangarPedestal.position.y = -8;
-  scene.add(hangarPedestal);
-  // Subtle ring light on pedestal edge
   const ringGeo = new THREE.TorusGeometry(25, 0.2, 8, 64);
   const ringMat = new THREE.MeshBasicMaterial({color:0x1a3050, transparent:true, opacity:0.6});
   const ring = new THREE.Mesh(ringGeo, ringMat);
   ring.rotation.x = Math.PI/2;
-  ring.position.y = -7.7;
+  ring.position.y = 0.3;
   hangarPedestal.add(ring);
+  scene.add(hangarPedestal);
 }
 
-// Starfield (flight view)
+// ── Starfield ──
 let starField = null;
 function buildStarfield(){
-  const starGeo = new THREE.BufferGeometry();
-  const starVerts = new Float32Array(3000*3);
-  for(let i=0;i<3000*3;i+=3){const r=5000+Math.random()*40000;const th=Math.random()*Math.PI*2;const ph=Math.acos(2*Math.random()-1);starVerts[i]=r*Math.sin(ph)*Math.cos(th);starVerts[i+1]=r*Math.sin(ph)*Math.sin(th);starVerts[i+2]=r*Math.cos(ph);}
-  starGeo.setAttribute('position',new THREE.BufferAttribute(starVerts,3));
-  starField = new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xffffff,size:15,sizeAttenuation:true}));
+  const geo = new THREE.BufferGeometry();
+  const verts = new Float32Array(3000*3);
+  for(let i=0;i<3000*3;i+=3){
+    const r=5000+Math.random()*40000;
+    const th=Math.random()*Math.PI*2;
+    const ph=Math.acos(2*Math.random()-1);
+    verts[i]=r*Math.sin(ph)*Math.cos(th);
+    verts[i+1]=r*Math.sin(ph)*Math.sin(th);
+    verts[i+2]=r*Math.cos(ph);
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(verts,3));
+  starField = new THREE.Points(geo,new THREE.PointsMaterial({color:0xffffff,size:15,sizeAttenuation:true}));
 }
 buildStarfield();
 
+// ── Scene Switching ──
 function setDockedScene(){
   scene.background = new THREE.Color(0x020305);
   if(starField) starField.removeFromParent();
   if(!hangarPedestal) buildHangar();
-  scene.add(hangarPedestal);
+  else scene.add(hangarPedestal);
   if(stationModel){ stationModel.removeFromParent(); stationModel=null; }
+  // Remove NPC sprites and object sprites
+  Object.values(npcSprites).forEach(s=>s.removeFromParent());
+  npcSprites = {};
+  Object.values(objectSprites).forEach(s=>s.removeFromParent());
+  objectSprites = {};
   camera.position.set(30, 15, 30);
   controls.target.set(0, 0, 0);
   controls.maxDistance = 100;
+  if(shipGroup) shipGroup.position.set(0,0,0);
+  isDocked = true;
 }
 
 function setFlightScene(){
@@ -150,129 +170,269 @@ function setFlightScene(){
   if(hangarPedestal) hangarPedestal.removeFromParent();
   scene.add(starField);
   controls.maxDistance = 2000;
-  camera.position.set(40, 20, 40);
-  controls.target.set(0, 0, 0);
-  // Load station model nearby
+  // Position camera near player
+  camera.position.set(playerPos.x + 30, playerPos.y + 15, playerPos.z + 30);
+  controls.target.copy(playerPos);
+  isDocked = false;
   loadNearbyStation();
 }
 
-function animate(){
-  requestAnimationFrame(animate);
-  if(flyDirection && shipGroup && !player.docked){
-    // Rotate ship to face flight direction (with momentum - doesn't stop)
-    const targetPos = shipGroup.position.clone().add(flyDirection);
-    const lookMat = new THREE.Matrix4().lookAt(shipGroup.position, targetPos, new THREE.Vector3(0,1,0));
-    const targetQuat = new THREE.Quaternion().setFromRotationMatrix(lookMat);
-    const offsetQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI/2);
-    targetQuat.multiply(offsetQuat);
-    const alignTime = (player.ship_stats && player.ship_stats.align_time) || 5;
-    shipGroup.quaternion.slerp(targetQuat, 0.5 / (alignTime * 60));
-    // Speed from ship stats - ship always moves in its CURRENT facing direction (momentum)
-    const maxSpeed = ((player.ship_stats && player.ship_stats.speed) || 100) * 0.001;
-    const shipForward = new THREE.Vector3(1,0,0).applyQuaternion(shipGroup.quaternion).normalize();
-    const alignment = Math.max(0, shipForward.dot(flyDirection));
-    // Accelerate/decelerate smoothly
-    currentSpeedFraction += (alignment * alignment - currentSpeedFraction) * 0.02;
-    const currentSpeed = maxSpeed * Math.max(0.1, currentSpeedFraction); // always at least 10% speed (momentum)
-    // Move in ship's actual forward direction (not target direction)
-    shipGroup.position.addScaledVector(shipForward, currentSpeed);
-    // UI
-    const speedMs = Math.round(currentSpeedFraction * ((player.ship_stats&&player.ship_stats.speed)||100));
-    document.getElementById('shipSpeed').textContent = speedMs + ' m/s';
-    document.getElementById('shipState').textContent = alignment > 0.95 ? 'Full Speed' : 'Aligning';
-    document.getElementById('speedBar').style.width = (currentSpeedFraction * 100) + '%';
-    // Camera follows ship
-    const shipDelta = shipGroup.position.clone().sub(lastShipPos);
-    camera.position.add(shipDelta);
-    controls.target.add(shipDelta);
-    lastShipPos.copy(shipGroup.position);
-    // Trail - append points at end (every frame for longer trail)
-    const arr = trailLine.geometry.attributes.position.array;
-    if(trailDrawCount < 100){
-      arr[trailDrawCount*3] = shipGroup.position.x;
-      arr[trailDrawCount*3+1] = shipGroup.position.y;
-      arr[trailDrawCount*3+2] = shipGroup.position.z;
-      trailDrawCount++;
-    } else {
-      for(let i=0;i<(100-1)*3;i++) arr[i] = arr[i+3];
-      arr[99*3] = shipGroup.position.x;
-      arr[99*3+1] = shipGroup.position.y;
-      arr[99*3+2] = shipGroup.position.z;
+// ── SSE Stream Connection ──
+let evtSource = null;
+function connectStream(){
+  if(evtSource) evtSource.close();
+  evtSource = new EventSource('/api/player/local_space/stream');
+  evtSource.onmessage = (e) => {
+    const state = JSON.parse(e.data);
+    localState = state;
+    lastTickTime = performance.now();
+    // Update interpolation targets
+    for(const ship of state.ships){
+      interpShips[ship.id] = {
+        x: ship.x, y: ship.y, z: ship.z,
+        vx: ship.vx, vy: ship.vy, vz: ship.vz,
+        speed: ship.speed, state: ship.state,
+        heading: ship.heading, name: ship.name,
+        is_player: ship.is_player, ship_class: ship.ship_class,
+        max_speed: ship.max_speed, target_obj: ship.target_obj
+      };
     }
-    trailLine.geometry.setDrawRange(0, trailDrawCount);
-    trailLine.geometry.attributes.position.needsUpdate = true;
-    trailLine.visible = true;
-  } else if(shipGroup && currentSpeedFraction > 0.001 && !player.docked){
-    // Decelerate with momentum
-    currentSpeedFraction *= 0.97;
-    const maxSpeed = ((player.ship_stats && player.ship_stats.speed) || 100) * 0.001;
-    const shipForward = new THREE.Vector3(1,0,0).applyQuaternion(shipGroup.quaternion).normalize();
-    const currentSpeed = maxSpeed * currentSpeedFraction;
-    shipGroup.position.addScaledVector(shipForward, currentSpeed);
-    const speedMs = Math.round(currentSpeedFraction * ((player.ship_stats&&player.ship_stats.speed)||100));
-    document.getElementById('shipSpeed').textContent = speedMs + ' m/s';
-    document.getElementById('speedBar').style.width = (currentSpeedFraction * 100) + '%';
-    // Camera follows
-    const shipDelta = shipGroup.position.clone().sub(lastShipPos);
-    camera.position.add(shipDelta);
-    controls.target.add(shipDelta);
-    lastShipPos.copy(shipGroup.position);
-    // Trail during decel
-    const arr = trailLine.geometry.attributes.position.array;
-    if(trailDrawCount < 100){
-      arr[trailDrawCount*3] = shipGroup.position.x;
-      arr[trailDrawCount*3+1] = shipGroup.position.y;
-      arr[trailDrawCount*3+2] = shipGroup.position.z;
-      trailDrawCount++;
-    } else {
-      for(let i=0;i<99*3;i++) arr[i] = arr[i+3];
-      arr[99*3]=shipGroup.position.x;arr[99*3+1]=shipGroup.position.y;arr[99*3+2]=shipGroup.position.z;
+    // Remove ships no longer in state
+    const ids = new Set(state.ships.map(s=>s.id));
+    for(const id of Object.keys(interpShips)){
+      if(!ids.has(id)){
+        delete interpShips[id];
+        if(npcSprites[id]){ npcSprites[id].removeFromParent(); delete npcSprites[id]; }
+      }
     }
-    trailLine.geometry.setDrawRange(0, trailDrawCount);
-    trailLine.geometry.attributes.position.needsUpdate = true;
-    if(currentSpeedFraction < 0.005){
-      currentSpeedFraction = 0;
-      document.getElementById('shipState').textContent = 'Idle';
-      document.getElementById('shipSpeed').textContent = '0 m/s';
-      document.getElementById('speedBar').style.width = '0%';
-      trailLine.visible = false;
-    }
-  } else {
-    if(trailLine && !flyDirection) trailLine.visible = false;
-  }
-  // Lerp camera target back to ship after freelook release
-  if(!isFreelooking && shipGroup){
-    controls.target.lerp(shipGroup.position, 0.05);
-  }
-  controls.update();
-  renderer.render(scene,camera);
+    updateFromState(state);
+  };
+  evtSource.onerror = () => { setTimeout(()=>{ if(evtSource.readyState===2) connectStream(); }, 3000); };
 }
 
-// Local flight state
-let flyDirection = null;
-let lastShipPos = new THREE.Vector3();
-let currentSpeedFraction = 0;
+// ── NPC Sprite Management ──
+const NPC_COLORS = {trader:0x66bb6a, miner:0xffd54f, corsair:0xef5350, military:0x4fc3f7, patrol:0x4fc3f7};
+function getOrCreateNpcSprite(ship){
+  if(npcSprites[ship.id]) return npcSprites[ship.id];
+  const canvas = document.createElement('canvas');
+  canvas.width = 16; canvas.height = 16;
+  const ctx = canvas.getContext('2d');
+  const color = NPC_COLORS[ship.role] || 0x8aa0b8;
+  const hex = '#' + new THREE.Color(color).getHexString();
+  ctx.beginPath(); ctx.arc(8,8,6,0,Math.PI*2);
+  ctx.fillStyle = hex; ctx.fill();
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; ctx.stroke();
+  const tex = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({map:tex, transparent:true, opacity:0.8});
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(3,3,1);
+  scene.add(sprite);
+  npcSprites[ship.id] = sprite;
+  return sprite;
+}
+
+// ── System Object Sprites ──
+const OBJ_COLORS = {station:'#4fc3f7', gate:'#ab47bc', planet:'#8aa0b8', moon:'#5a7a9a', asteroid_field:'#ffd54f', star:'#ffab40'};
+function getOrCreateObjSprite(obj){
+  if(objectSprites[obj.id]) return objectSprites[obj.id];
+  const canvas = document.createElement('canvas');
+  canvas.width = 128; canvas.height = 32;
+  const ctx = canvas.getContext('2d');
+  const color = OBJ_COLORS[obj.type] || '#8aa0b8';
+  // Icon
+  ctx.fillStyle = color;
+  if(obj.type==='station'){ ctx.fillRect(2,10,12,12); }
+  else if(obj.type==='gate'){ ctx.beginPath();ctx.moveTo(8,6);ctx.lineTo(14,16);ctx.lineTo(2,16);ctx.fill(); }
+  else { ctx.beginPath();ctx.arc(8,16,5,0,Math.PI*2);ctx.fill(); }
+  // Label
+  ctx.font = '10px monospace'; ctx.fillStyle = color;
+  ctx.fillText(obj.name.substring(0,14), 18, 18);
+  const tex = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({map:tex, transparent:true, opacity:0.9});
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(20,5,1);
+  scene.add(sprite);
+  objectSprites[obj.id] = sprite;
+  return sprite;
+}
+
+// ── Update from SSE State ──
+function updateFromState(state){
+  if(!state) return;
+  const p = state.player;
+  if(!p) return;
+
+  // Update player ship stats from server
+  if(p.max_speed) playerMaxSpeed = p.max_speed;
+
+  // Set initial player position from server if not yet set
+  if(playerPos.x === 0 && playerPos.y === 0 && playerPos.z === 0 && p.x !== 0){
+    playerPos.set(p.x, p.y, p.z);
+  }
+
+  // Detect dock/undock transition
+  const wasDockedBefore = isDocked;
+  const isDockedNow = (p.state === 'docked');
+
+  if(isDockedNow && !wasDockedBefore){
+    setDockedScene();
+  } else if(!isDockedNow && wasDockedBefore){
+    setFlightScene();
+  }
+
+  // Update UI
+  updateUI(state);
+
+  // Position system objects (only in flight)
+  if(!isDockedNow && state.objects){
+    // Position objects relative to player (player at origin)
+    for(const obj of state.objects){
+      if(obj.type === 'star') continue;
+      const sprite = getOrCreateObjSprite(obj);
+      const rx = (obj.x - p.x) * 0.1;  // Scale down for viewport
+      const ry = (obj.y - p.y) * 0.1;
+      const rz = (obj.z - p.z) * 0.1;
+      sprite.position.set(rx, ry, rz);
+    }
+  }
+}
+
+// ── Player Ship Local Physics ──
+let flyDirection = null;  // THREE.Vector3 or null
+let playerSpeed = 0;
+let playerMaxSpeed = 95;  // from ship stats, updated on load
+let playerAlignTime = 5;
+let playerPos = new THREE.Vector3(0, 0, 0);  // world position
+let playerHeading = new THREE.Vector3(1, 0, 0);
+let targetHeading = new THREE.Vector3(1, 0, 0);
+let posReportTimer = 0;
 
 // Engine trail
 let trailLine = null;
-let trailTimer = 0;
 let trailDrawCount = 0;
 function createTrail(){
-  const mat = new THREE.LineBasicMaterial({color:0x2288ff, transparent:true, opacity:0.5});
   const geo = new THREE.BufferGeometry();
-  const positions = new Float32Array(100 * 3);
-  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(150*3), 3));
   geo.setDrawRange(0, 0);
-  trailLine = new THREE.Line(geo, mat);
+  trailLine = new THREE.Line(geo, new THREE.LineBasicMaterial({color:0x2288ff, transparent:true, opacity:0.5}));
   trailLine.frustumCulled = false;
   trailLine.visible = false;
   scene.add(trailLine);
 }
 createTrail();
 
-// Double-click in viewport to set flight direction
+// ── Animation Loop ──
+let lastFrameTime = 0;
+function animate(now){
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, (now - (lastFrameTime||now)) / 1000);
+  lastFrameTime = now;
+
+  if(!isDocked && shipGroup){
+    // ── Player Ship Physics (CLIENT-AUTHORITATIVE, ship moves in world space) ──
+    if(flyDirection){
+      const lerpRate = 1.0 / (playerAlignTime * 60) * 3;
+      playerHeading.lerp(flyDirection, lerpRate).normalize();
+      const alignment = Math.max(0, playerHeading.dot(flyDirection));
+      playerSpeed += (playerMaxSpeed * alignment - playerSpeed) * 0.03;
+    } else {
+      playerSpeed *= 0.95;
+      if(playerSpeed < 0.5) playerSpeed = 0;
+    }
+
+    // Move ship in world space (1 unit = 1 km, speed in m/s -> km/frame)
+    if(playerSpeed > 0.1){
+      const moveKm = playerSpeed / 1000.0 * dt * 60; // km per frame (normalized to ~60fps tick)
+      playerPos.addScaledVector(playerHeading, moveKm);
+    }
+
+    // Position ship model at world pos
+    shipGroup.position.copy(playerPos);
+    // Rotate ship to face heading
+    const lookTarget = playerPos.clone().add(playerHeading);
+    const lookMat = new THREE.Matrix4().lookAt(shipGroup.position, lookTarget, new THREE.Vector3(0,1,0));
+    const targetQuat = new THREE.Quaternion().setFromRotationMatrix(lookMat);
+    const offsetQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI/2);
+    targetQuat.multiply(offsetQuat);
+    shipGroup.quaternion.slerp(targetQuat, 0.15);
+
+    // Camera follows ship (maintain relative offset)
+    if(!isFreelooking){
+      const camOffset = camera.position.clone().sub(controls.target);
+      controls.target.copy(playerPos);
+      camera.position.copy(playerPos).add(camOffset);
+    }
+
+    // Trail
+    if(playerSpeed > 1){
+      trailLine.visible = true;
+      const arr = trailLine.geometry.attributes.position.array;
+      if(trailDrawCount < 150){
+        arr[trailDrawCount*3] = playerPos.x;
+        arr[trailDrawCount*3+1] = playerPos.y;
+        arr[trailDrawCount*3+2] = playerPos.z;
+        trailDrawCount++;
+      } else {
+        for(let i=0;i<149*3;i++) arr[i] = arr[i+3];
+        arr[149*3]=playerPos.x; arr[149*3+1]=playerPos.y; arr[149*3+2]=playerPos.z;
+      }
+      trailLine.geometry.setDrawRange(0, trailDrawCount);
+      trailLine.geometry.attributes.position.needsUpdate = true;
+    } else {
+      trailLine.visible = false;
+      trailDrawCount = 0;
+    }
+
+    // Speed UI
+    displaySpeed += (playerSpeed - displaySpeed) * 0.1;
+    document.getElementById('speedBar').style.width = (displaySpeed / playerMaxSpeed * 100) + '%';
+    document.getElementById('shipSpeed').textContent = Math.round(displaySpeed) + ' m/s';
+    document.getElementById('shipState').textContent = flyDirection ? (displaySpeed > playerMaxSpeed*0.9 ? 'Full Speed' : 'Aligning') : (playerSpeed > 1 ? 'Decelerating' : 'Idle');
+
+    // ── NPC Ships (SERVER-AUTHORITATIVE, interpolated, world space) ──
+    const timeSinceTick = (now - lastTickTime) / 1000;
+    for(const [id, ship] of Object.entries(interpShips)){
+      if(ship.is_player) continue;
+      const sx = ship.x + ship.vx * timeSinceTick;
+      const sy = ship.y + ship.vy * timeSinceTick;
+      const sz = ship.z + ship.vz * timeSinceTick;
+      const sprite = getOrCreateNpcSprite(ship);
+      sprite.position.set(sx, sy, sz);
+    }
+
+    // ── System Objects (fixed world positions) ──
+    if(localState && localState.objects){
+      for(const obj of localState.objects){
+        if(obj.type==='star') continue;
+        const sprite = objectSprites[obj.id];
+        if(!sprite) continue;
+        sprite.position.set(obj.x, obj.y, obj.z);
+      }
+    }
+    // Station model at world pos
+    if(stationModel && stationWorldPos){
+      stationModel.position.set(stationWorldPos.x, stationWorldPos.y, stationWorldPos.z);
+    }
+
+    // ── Report position to server every 3 seconds ──
+    posReportTimer += dt;
+    if(posReportTimer > 3){
+      posReportTimer = 0;
+      fetch('/api/player/position', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({x:playerPos.x, y:playerPos.y, z:playerPos.z, speed:playerSpeed,
+          hx:playerHeading.x, hy:playerHeading.y, hz:playerHeading.z,
+          state: flyDirection?'flying':'idle'})
+      }).catch(()=>{});
+    }
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+// ── Input: Double-click to fly ──
 container.addEventListener('dblclick', e=>{
-  if(!player || player.docked) return;
+  if(isDocked) return;
   const rect = renderer.domElement.getBoundingClientRect();
   const mouse = new THREE.Vector2(
     ((e.clientX - rect.left) / rect.width) * 2 - 1,
@@ -281,14 +441,24 @@ container.addEventListener('dblclick', e=>{
   const raycaster = new THREE.Raycaster();
   raycaster.setFromCamera(mouse, camera);
   flyDirection = raycaster.ray.direction.clone().normalize();
-  trailDrawCount = 0;
-  trailTimer = 0;
-  if(trailLine){ trailLine.geometry.setDrawRange(0,0); trailLine.visible = false; }
-  document.getElementById('shipState').textContent = 'Aligning';
-  document.getElementById('shipSpeed').textContent = '';
+  targetHeading.copy(flyDirection);
+  // Report to server
+  fetch('/api/player/fly', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({dx:flyDirection.x, dy:flyDirection.y, dz:flyDirection.z})
+  }).catch(()=>{});
 });
 
-// Right-click drag = look around (camera rotates about its own position, changing where it looks)
+// ── Input: S key to stop ──
+document.addEventListener('keydown', e=>{
+  if(e.key === 's' || e.key === 'S'){
+    if(isDocked) return;
+    flyDirection = null;
+    fetch('/api/player/stop', {method:'POST'}).catch(()=>{});
+  }
+});
+
+// ── Input: Right-click freelook ──
 let isFreelooking = false;
 let freelookStart = {x:0, y:0};
 renderer.domElement.addEventListener('mousedown', e=>{
@@ -302,36 +472,171 @@ window.addEventListener('mousemove', e=>{
   const dx = e.clientX - freelookStart.x;
   const dy = e.clientY - freelookStart.y;
   freelookStart = {x:e.clientX, y:e.clientY};
-  // Camera stays, target moves = look direction changes
-  const right = new THREE.Vector3();
-  const up = new THREE.Vector3(0,1,0);
-  camera.getWorldDirection(right);
-  right.cross(up).normalize();
-  const dist = camera.position.distanceTo(controls.target);
-  controls.target.addScaledVector(right, dx * 0.003 * dist);
-  controls.target.addScaledVector(up, -dy * 0.003 * dist);
+  // Rotate camera itself (yaw + pitch) without moving it
+  // This rotates where the camera LOOKS, camera position unchanged
+  camera.rotateY(-dx * 0.003);
+  camera.rotateX(-dy * 0.003);
 });
-// Press S to stop ship (with deceleration)
-document.addEventListener('keydown', e=>{
-  if(e.key === 's' || e.key === 'S'){
-    flyDirection = null;
-    document.getElementById('shipState').textContent = 'Decelerating';
+
+// ── Input: Scroll zoom ──
+// OrbitControls handles this via MIDDLE mouse / scroll by default
+
+// ── Warp command (called from nav list) ──
+window.warpTo = function(objId){
+  closeCtx();
+  fetch('/api/player/warp', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({target: objId})
+  });
+};
+
+// ── Context Menu ──
+window.showCtx = function(e, objId, name, type){
+  e.preventDefault();
+  const menu = document.getElementById('ctxMenu');
+  let items = '';
+  items += `<div class="ctx-item" onclick="warpTo('${objId}')">Warp to ${name}</div>`;
+  items += `<div class="ctx-item" onclick="closeCtx()">Cancel</div>`;
+  menu.innerHTML = items;
+  menu.style.left = e.clientX+'px';
+  menu.style.top = e.clientY+'px';
+  menu.classList.add('open');
+};
+window.closeCtx = function(){ document.getElementById('ctxMenu').classList.remove('open'); };
+document.addEventListener('click',()=>closeCtx());
+
+// Nav list right-click and double-click
+document.getElementById('navObjects').addEventListener('contextmenu', e=>{
+  const el = e.target.closest('.nav-obj');
+  if(!el) return;
+  e.preventDefault();
+  window.showCtx(e, el.dataset.id, el.dataset.name, el.dataset.type);
+});
+document.getElementById('navObjects').addEventListener('dblclick', e=>{
+  const el = e.target.closest('.nav-obj');
+  if(el) window.warpTo(el.dataset.id);
+});
+
+// ── UI Updates ──
+function updateUI(state){
+  if(!state || !state.player) return;
+  const p = state.player;
+  const layout = document.getElementById('layout');
+  const isDockedNow = (p.state === 'docked');
+
+  layout.className = 'layout ' + (isDockedNow ? 'docked' : 'flight');
+  document.getElementById('dockedPanel').style.display = isDockedNow ? '' : 'none';
+  document.getElementById('flightPanel').style.display = isDockedNow ? 'none' : '';
+  document.getElementById('statusBar').style.display = isDockedNow ? 'none' : '';
+
+  document.getElementById('sysName').textContent = state.system_id || '';
+  document.getElementById('stationName').textContent = isDockedNow ? 'Docked' : '';
+
+  // Nav list (flight only)
+  if(!isDockedNow && state.objects){
+    renderNavList(state.objects, p);
+  }
+}
+
+function renderNavList(objects, playerShip){
+  const nav = document.getElementById('navObjects');
+  const px = playerShip.x, py = playerShip.y, pz = playerShip.z;
+  nav.innerHTML = objects.filter(o=>o.type!=='star').map(o=>{
+    const icon = o.type==='gate'?'&#9674;':o.type==='station'?'&#9632;':o.type==='planet'?'&#9679;':'&#8226;';
+    const color = o.type==='gate'?'#ab47bc':o.type==='station'?'#4fc3f7':'#8aa0b8';
+    const dx=o.x-px, dy=o.y-py, dz=o.z-pz;
+    const dist = Math.sqrt(dx*dx+dy*dy+dz*dz);
+    const distAU = dist / 1000;
+    const distStr = distAU < 0.01 ? '<0.01 AU' : distAU.toFixed(2)+' AU';
+    return `<div class="nav-obj" style="padding:3px 4px;cursor:pointer;border-bottom:1px solid #0f1520;display:flex;justify-content:space-between" data-id="${o.id}" data-name="${o.name}" data-type="${o.type}">
+      <span><span style="color:${color}">${icon}</span> ${o.name}</span>
+      <span style="color:#c8d4e0;font-size:10px">${distStr}</span>
+    </div>`;
+  }).join('');
+  // Show dock button if near a station (dist < 5 units in local space)
+  const nearStation = objects.find(o=>{
+    if(o.type!=='station') return false;
+    const dx=o.x-playerShip.x, dy=o.y-playerShip.y, dz=o.z-playerShip.z;
+    return Math.sqrt(dx*dx+dy*dy+dz*dz) < 10;
+  });
+  document.getElementById('dockBtn').style.display = nearStation ? '' : 'none';
+}
+
+// ── Actions ──
+document.getElementById('undockBtn').addEventListener('click', async()=>{
+  const r = await fetch('/api/player/undock',{method:'POST'});
+  if(r.ok){
+    // Will transition via SSE state update
   }
 });
 
-animate();
-window.addEventListener('resize',()=>{camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();renderer.setSize(container.clientWidth,container.clientHeight);});
+document.getElementById('dockBtn').addEventListener('click', async()=>{
+  const r = await fetch('/api/player/dock',{method:'POST'});
+  if(r.ok){
+    // Will transition via SSE state update
+  }
+});
 
+// ── Load Ship Model ──
+async function loadShipModel(){
+  const r = await fetch('/api/ship_model/all');
+  if(!r.ok) return;
+  const models = await r.json();
+  // Get player ship class from player API
+  const pr = await fetch('/api/player');
+  if(!pr.ok) return;
+  player = await pr.json();
+  const geo = models[player.ship_class];
+  if(!geo) return;
+  if(shipGroup) scene.remove(shipGroup);
+  shipGroup = new THREE.Group();
+  buildShipFromData(shipGroup, geo, {showHardpoints:false});
+  const box = new THREE.Box3().setFromObject(shipGroup);
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+  shipGroup.scale.setScalar(20/maxDim);
+  scene.add(shipGroup);
+  controls.target.set(0,0,0);
+
+  // Update docked UI with player info
+  updatePlayerUI();
+
+  // Determine initial state
+  if(player.docked){
+    setDockedScene();
+  } else {
+    setFlightScene();
+  }
+}
+
+function updatePlayerUI(){
+  if(!player) return;
+  const stats = player.ship_stats || {};
+  const infoHtml = `
+    <div class="stat-row"><span class="label">Ship</span><span class="val">${player.ship_name||player.ship_class}</span></div>
+    <div class="stat-row"><span class="label">Class</span><span class="val">${stats.hull_class||''}</span></div>
+    <div class="stat-row"><span class="label">Credits</span><span class="val">${(player.credits||0).toLocaleString()}</span></div>
+  `;
+  document.getElementById('shipInfo').innerHTML = infoHtml;
+  document.getElementById('flightShipInfo').innerHTML = infoHtml;
+  const cargo = player.cargo || {};
+  const cargoGrid = document.getElementById('cargoGrid');
+  if(Object.keys(cargo).length === 0){
+    cargoGrid.innerHTML = '<div style="color:#5a7a9a">Empty</div>';
+  } else {
+    cargoGrid.innerHTML = Object.entries(cargo).map(([k,v])=>`<div class="cargo-item"><span>${k.replace(/_/g,' ')}</span><span>${v}</span></div>`).join('');
+  }
+}
+
+// ── Load Station Model (flight view) ──
 async function loadNearbyStation(){
   if(!player || !player.station_id) return;
-  // Load station 3D model and place it nearby
   try{
     const r = await fetch('/api/station_model/'+player.station_id);
     if(!r.ok) return;
     const data = await r.json();
     if(stationModel) stationModel.removeFromParent();
     stationModel = new THREE.Group();
-    // Build merged station geometry
     const tempGroup = new THREE.Group();
     for(const comp of data.components){
       const [px,py,pz]=comp.pos;const [rx,ry,rz]=comp.rot||[0,0,0];let mesh=null;
@@ -364,188 +669,32 @@ async function loadNearbyStation(){
       stationModel.add(m);
       allG.forEach(g=>g.dispose());geos.forEach(g=>g.dispose());
     }
-    // Scale and position station behind/above ship
     const box=new THREE.Box3().setFromObject(stationModel);
     const sz=box.getSize(new THREE.Vector3());
     const maxDim=Math.max(sz.x,sz.y,sz.z)||1;
     stationModel.scale.setScalar(200/maxDim);
-    stationModel.position.set(-150, 50, -200);
+    // Set world position from local state objects
+    if(localState && localState.objects){
+      const stObj = localState.objects.find(o=>o.station_id);
+      if(stObj) stationWorldPos = {x:stObj.x, y:stObj.y, z:stObj.z};
+    }
+    if(!stationWorldPos) stationWorldPos = {x:playerPos.x+50, y:playerPos.y+20, z:playerPos.z-80};
+    stationModel.position.set(stationWorldPos.x - playerPos.x, stationWorldPos.y - playerPos.y, stationWorldPos.z - playerPos.z);
     scene.add(stationModel);
   }catch(e){}
 }
 
-// ── Load Player ──
-async function loadPlayer(){
-  const r = await fetch('/api/player');
-  if(!r.ok) return;
-  player = await r.json();
-  updateUI();
-  if(player.docked) setDockedScene(); else setFlightScene();
-  loadShipModel();
-  if(!player.docked) loadSystemObjects();
-}
-
-async function loadShipModel(){
-  if(!player) return;
-  const r = await fetch('/api/ship_model/all');
-  const models = await r.json();
-  const geo = models[player.ship_class];
-  if(!geo) return;
-  if(shipGroup) scene.remove(shipGroup);
-  shipGroup = new THREE.Group();
-  buildShipFromData(shipGroup, geo, {showHardpoints:false});
-  // Scale ship to reasonable viewport size
-  const box = new THREE.Box3().setFromObject(shipGroup);
-  const size = box.getSize(new THREE.Vector3());
-  const maxDim = Math.max(size.x, size.y, size.z);
-  shipGroup.scale.setScalar(20/maxDim);
-  scene.add(shipGroup);
-  controls.target.set(0,0,0);
-}
-
-async function loadSystemObjects(){
-  const r = await fetch('/api/system/'+player.system_id);
-  if(!r.ok) return;
-  const data = await r.json();
-  systemObjects = data.objects || [];
-  renderNavList();
-}
-
-// ── UI Updates ──
-function updateUI(){
-  if(!player) return;
-  const layout = document.getElementById('layout');
-  const isDocked = player.docked;
-
-  layout.className = 'layout ' + (isDocked ? 'docked' : 'flight');
-  document.getElementById('dockedPanel').style.display = isDocked ? '' : 'none';
-  document.getElementById('flightPanel').style.display = isDocked ? 'none' : '';
-  document.getElementById('statusBar').style.display = isDocked ? 'none' : '';
-
-  // Location bar
-  document.getElementById('sysName').textContent = player.system_name || player.system_id;
-  const sec = player.system_sec || 0;
-  const secEl = document.getElementById('secLevel');
-  secEl.textContent = sec.toFixed(1);
-  secEl.style.color = sec>=0.7?'#66bb6a':sec>=0.4?'#ffd54f':'#ef5350';
-  document.getElementById('stationName').textContent = isDocked ? ('Docked: ' + (player.station_name||'')) : '';
-
-  // Ship info
-  const stats = player.ship_stats || {};
-  const infoHtml = `
-    <div class="stat-row"><span class="label">Ship</span><span class="val">${player.ship_name}</span></div>
-    <div class="stat-row"><span class="label">Class</span><span class="val">${stats.hull_class||''}</span></div>
-    <div class="stat-row"><span class="label">Cargo</span><span class="val">${Object.values(player.cargo||{}).reduce((a,b)=>a+b,0)} / ${stats.cargo_capacity||0}</span></div>
-    <div class="stat-row"><span class="label">Credits</span><span class="val">${(player.credits||0).toLocaleString()}</span></div>
-  `;
-  document.getElementById('shipInfo').innerHTML = infoHtml;
-  if(!isDocked) document.getElementById('flightShipInfo').innerHTML = infoHtml;
-
-  // Cargo
-  const cargoGrid = document.getElementById('cargoGrid');
-  const cargo = player.cargo || {};
-  if(Object.keys(cargo).length === 0){
-    cargoGrid.innerHTML = '<div style="color:#5a7a9a">Empty</div>';
-  } else {
-    cargoGrid.innerHTML = Object.entries(cargo).map(([k,v])=>`<div class="cargo-item"><span>${k.replace(/_/g,' ')}</span><span>${v}</span></div>`).join('');
-  }
-
-  // Flight state
-  if(!isDocked){
-    document.getElementById('shipState').textContent = player.state || 'idle';
-  }
-}
-
-function renderNavList(){
-  const nav = document.getElementById('navObjects');
-  // Calculate distances from player's current position (use intra_position object as reference)
-  const playerObj = systemObjects.find(o=>o.id===player.intra_position);
-  const px = playerObj ? playerObj.distance * Math.cos(playerObj.angle) : 0;
-  const py = playerObj ? playerObj.distance * Math.sin(playerObj.angle) : 0;
-
-  nav.innerHTML = systemObjects.filter(o=>o.type!=='star').map(o=>{
-    const icon = o.type==='gate'?'&#9674;':o.type==='station'?'&#9632;':o.type==='planet'?'&#9679;':'&#8226;';
-    const color = o.type==='gate'?'#ab47bc':o.type==='station'?'#4fc3f7':'#8aa0b8';
-    const ox = o.distance * Math.cos(o.angle);
-    const oy = o.distance * Math.sin(o.angle);
-    const dist = Math.sqrt((ox-px)*(ox-px)+(oy-py)*(oy-py));
-    const distStr = dist < 0.01 ? '<0.01 AU' : dist.toFixed(2)+' AU';
-    return `<div class="nav-obj" style="padding:3px 4px;cursor:pointer;border-bottom:1px solid #0f1520;display:flex;justify-content:space-between" data-id="${o.id}" data-name="${o.name}" data-type="${o.type}">
-      <span><span style="color:${color}">${icon}</span> ${o.name}</span>
-      <span style="color:#c8d4e0;font-size:10px">${distStr}</span>
-    </div>`;
-  }).join('');
-  // Check if we can dock (within ~0.01 AU = close range)
-  const atStation = systemObjects.find(o=>o.id===player.intra_position && o.type==='station');
-  document.getElementById('dockBtn').style.display = atStation ? '' : 'none';
-}
-
-// Nav list context menu (event delegation, set once)
-document.getElementById('navObjects').addEventListener('contextmenu', e=>{
-  const el = e.target.closest('.nav-obj');
-  if(!el) return;
-  e.preventDefault();
-  window.showCtx(e, el.dataset.id, el.dataset.name, el.dataset.type);
-});
-document.getElementById('navObjects').addEventListener('dblclick', e=>{
-  const el = e.target.closest('.nav-obj');
-  if(el) window.warpTo(el.dataset.id);
+// ── Resize Handler ──
+window.addEventListener('resize',()=>{
+  camera.aspect=container.clientWidth/container.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(container.clientWidth,container.clientHeight);
 });
 
-// ── Actions ──
-document.getElementById('undockBtn').addEventListener('click', async()=>{
-  const r = await fetch('/api/player/undock',{method:'POST'});
-  if(r.ok){
-    await loadPlayer();
-    loadSystemObjects();
-  }
+// ── Init ──
+loadShipModel().then(()=>{
+  connectStream();
 });
+requestAnimationFrame(animate);
 
-document.getElementById('dockBtn').addEventListener('click', async()=>{
-  const r = await fetch('/api/player/dock',{method:'POST'});
-  if(r.ok) await loadPlayer();
-});
-
-// Context menu
-window.showCtx = function(e, objId, name, type){
-  e.preventDefault();
-  const menu = document.getElementById('ctxMenu');
-  let items = '';
-  if(type==='station') items += `<div class="ctx-item" onclick="warpTo('${objId}')">Warp to ${name}</div>`;
-  if(type==='gate') items += `<div class="ctx-item" onclick="warpTo('${objId}')">Warp to Gate</div>`;
-  if(type==='planet'||type==='moon') items += `<div class="ctx-item" onclick="warpTo('${objId}')">Warp to ${name}</div>`;
-  items += `<div class="ctx-item" onclick="closeCtx()">Cancel</div>`;
-  menu.innerHTML = items;
-  menu.style.left = e.clientX+'px';
-  menu.style.top = e.clientY+'px';
-  menu.classList.add('open');
-};
-window.closeCtx = function(){ document.getElementById('ctxMenu').classList.remove('open'); };
-document.addEventListener('click',()=>closeCtx());
-
-window.warpTo = async function(objId){
-  closeCtx();
-  const r = await fetch('/api/player/warp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({target:objId})});
-  if(r.ok){
-    player.state = 'warping';
-    updateUI();
-    pollPlayerState();
-  }
-};
-
-// Poll player state during warp
-let pollInterval = null;
-function pollPlayerState(){
-  if(pollInterval) return;
-  pollInterval = setInterval(async()=>{
-    await loadPlayer();
-    if(player.state==='idle'||player.state==='docked'){
-      clearInterval(pollInterval);
-      pollInterval=null;
-    }
-  }, 1000);
-}
-
-// Init
-loadPlayer();
 </script></body></html>

@@ -1313,6 +1313,19 @@ def api_player_local_space():
     return jsonify(local_space.get_state())
 
 
+@app.route("/api/player/local_space/stream")
+def api_player_local_space_stream():
+    """Stream local space state as SSE, one tick per second."""
+    def generate():
+        while True:
+            state = local_space.get_state()
+            yield f"data: {json.dumps(state)}\n\n"
+            time.sleep(1)
+
+    return Response(generate(), mimetype='text/event-stream',
+                    headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
+
+
 @app.route("/api/player/fly", methods=["POST"])
 def api_player_fly():
     """Set player flight direction."""
@@ -1329,6 +1342,23 @@ def api_player_stop():
     """Stop player ship."""
     local_space.player_stop()
     return jsonify({"status": "stopping"})
+
+
+@app.route("/api/player/position", methods=["POST"])
+def api_player_position():
+    """Client reports player ship position (client-authoritative for local movement)."""
+    data = request.get_json() or {}
+    with local_space._lock:
+        if local_space.player_ship:
+            local_space.player_ship.x = float(data.get('x', 0))
+            local_space.player_ship.y = float(data.get('y', 0))
+            local_space.player_ship.z = float(data.get('z', 0))
+            local_space.player_ship.speed = float(data.get('speed', 0))
+            local_space.player_ship.heading_x = float(data.get('hx', 1))
+            local_space.player_ship.heading_y = float(data.get('hy', 0))
+            local_space.player_ship.heading_z = float(data.get('hz', 0))
+            local_space.player_ship.state = data.get('state', 'idle')
+    return jsonify({"status": "ok"})
 
 @app.route("/api/player")
 def api_player():
