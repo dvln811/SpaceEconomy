@@ -1281,13 +1281,12 @@ local_space.start()
 def _init_local_space():
     """Initialize local space for player's current system after sim loads."""
     from server.game_data_db import get_data_db
+    if not _sim_ready.wait(120):
+        return
     conn = get_data_db()
     p = conn.execute("SELECT system_id, ship_class, station_id, intra_position FROM player WHERE id='player1'").fetchone()
     conn.close()
     if not p or not p['system_id']:
-        return
-    # Wait for sim to load
-    if not _sim_ready.wait(120):
         return
     sys_obj = sim.universe.get(p['system_id'])
     if not sys_obj:
@@ -1296,15 +1295,22 @@ def _init_local_space():
     local_space.load_system(p['system_id'], sys_obj.objects,
                             [s for s in sim.ships if s.location == p['system_id']])
     # Place player
-    ship_row = None
     conn2 = get_data_db()
     ship_row = conn2.execute("SELECT speed FROM ships WHERE id=?", (p['ship_class'],)).fetchone()
     conn2.close()
     speed = ship_row['speed'] if ship_row else 100
     pos_id = p['intra_position'] or ''
     local_space.set_player_ship('player1', p['ship_class'], speed, pos_id)
+    log.info(f"LocalSpace loaded: system={p['system_id']}, {len(local_space.objects)} objects, {len(local_space.ships)} ships")
 
 threading.Thread(target=_init_local_space, daemon=True).start()
+
+
+@app.route("/api/player/local_space/reload", methods=["POST"])
+def api_reload_local_space():
+    """Force reload local space (for debugging)."""
+    threading.Thread(target=_init_local_space, daemon=True).start()
+    return jsonify({"status": "reloading"})
 
 
 @app.route("/api/player/local_space")

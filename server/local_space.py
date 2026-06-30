@@ -113,6 +113,8 @@ class LocalSpaceWorker:
     def _tick(self):
         """Advance all ships one tick."""
         for ship in list(self.ships.values()):
+            if ship.is_player:
+                continue  # Player ship is client-authoritative
             if ship.state == 'flying':
                 self._move_flying(ship)
             elif ship.state == 'warping':
@@ -145,16 +147,15 @@ class LocalSpaceWorker:
         ship.speed = 0
 
     def _decelerate(self, ship):
-        """Gradually slow down a stopped ship (momentum/braking)."""
+        """Gradually slow down a stopped ship."""
         ship.speed *= 0.85
         if ship.speed < 0.5:
             ship.speed = 0
             ship.vx = ship.vy = ship.vz = 0
             return
-        move_km = ship.speed / 1000.0
-        ship.vx = ship.heading_x * move_km
-        ship.vy = ship.heading_y * move_km
-        ship.vz = ship.heading_z * move_km
+        ship.vx = ship.heading_x * ship.speed
+        ship.vy = ship.heading_y * ship.speed
+        ship.vz = ship.heading_z * ship.speed
         ship.x += ship.vx
         ship.y += ship.vy
         ship.z += ship.vz
@@ -174,11 +175,10 @@ class LocalSpaceWorker:
         if ship.speed < ship.max_speed:
             accel = ship.max_speed * 0.08
             ship.speed = min(ship.max_speed, ship.speed + accel)
-        # Move: speed is m/s, convert to km/tick (1 tick = 1 sec)
-        move_km = ship.speed / 1000.0  # m/s -> km/s, 1 tick = 1 sec
-        ship.vx = ship.heading_x * move_km
-        ship.vy = ship.heading_y * move_km
-        ship.vz = ship.heading_z * move_km
+        # Move: speed is m/s, 1 tick = 1 sec, 1 unit = 1 meter
+        ship.vx = ship.heading_x * ship.speed
+        ship.vy = ship.heading_y * ship.speed
+        ship.vz = ship.heading_z * ship.speed
         ship.x += ship.vx
         ship.y += ship.vy
         ship.z += ship.vz
@@ -292,25 +292,38 @@ class LocalSpaceWorker:
             # Objects are spread based on their AU distance (scaled down for local view)
             self.objects = []
             for obj in system_objects:
-                # Local objects: station player is AT stays nearby (2km)
-                # Everything else: far away at AU*500 scale (nav markers only)
-                x = obj.distance * math.cos(obj.angle) * 500
-                z = obj.distance * math.sin(obj.angle) * 500
-                y = hash(obj.name) % 10 - 5
+                # 1 unit = 1 meter. Only place objects physically that are in the local grid.
+                # The player's current station: place at 2000m (2km)
+                # Other stations in same system: far (not rendered, nav list only)
+                # Gates/planets: not physically present, nav list only
+                # Store AU-based position for nav distance calculation only
+                x = obj.distance * math.cos(obj.angle) * 150000000  # real AU->meters (just for reference)
+                z = obj.distance * math.sin(obj.angle) * 150000000
+                y = 0
                 self.objects.append(SystemObject(obj.id, obj.name, obj.obj_type, x, y, z,
                                                 getattr(obj, 'station_id', '')))
 
-            # Place NPC ships at their current positions (km scale, near stations)
+            # Override: place the player's station at 2000m from origin
+            player_station_obj = None
+            for o in self.objects:
+                if o.station_id:  # first station found (player's docked station)
+                    player_station_obj = o
+                    break
+            if player_station_obj:
+                player_station_obj.x = 2000
+                player_station_obj.y = 0
+                player_station_obj.z = 0
+
+            # Place NPC ships near the player's station (within 2km = 2000m)
             self.ships = {}
             for npc in npc_ships_in_system:
-                pos_obj = self._get_object(npc.intra_position) if npc.intra_position else None
-                if pos_obj:
-                    x = pos_obj.x + random.uniform(-2, 2)  # within 2km of station
-                    y = pos_obj.y + random.uniform(-0.5, 0.5)
-                    z = pos_obj.z + random.uniform(-2, 2)
+                if player_station_obj:
+                    x = player_station_obj.x + random.uniform(-500, 500)
+                    y = random.uniform(-100, 100)
+                    z = player_station_obj.z + random.uniform(-500, 500)
                 else:
-                    x = random.uniform(-50, 50)
-                    y = random.uniform(-2, 2)
+                    x = random.uniform(-1000, 1000)
+                    y = random.uniform(-100, 100)
                     z = random.uniform(-50, 50)
                 ls = LocalShip(
                     id=npc.id, name=npc.name, ship_class=npc.ship_class,
@@ -326,10 +339,8 @@ class LocalSpaceWorker:
     def set_player_ship(self, ship_id, ship_class, speed, position_obj_id):
         """Place or update the player ship in local space."""
         with self._lock:
-            pos_obj = self._get_object(position_obj_id)
-            x = pos_obj.x + 1.5 if pos_obj else 0  # 1.5km from station
-            y = pos_obj.y + 0.5 if pos_obj else 0.5
-            z = pos_obj.z if pos_obj else 0
+            # Player starts at origin (0,0,0). Station is 2km away.
+            x, y, z = 0, 0, 0
             if ship_id in self.ships:
                 ps = self.ships[ship_id]
                 ps.max_speed = speed

@@ -278,6 +278,9 @@ function updateFromState(state){
     setDockedScene();
   } else if(!isDockedNow && wasDockedBefore){
     setFlightScene();
+  } else if(!isDockedNow && !stationModel){
+    // Player already in flight on page load -- set up flight scene
+    setFlightScene();
   }
 
   // Update UI
@@ -340,10 +343,10 @@ function animate(now){
       if(playerSpeed < 0.5) playerSpeed = 0;
     }
 
-    // Move ship in world space (1 unit = 1 km, speed in m/s -> km/frame)
+    // Move ship in world space (1 unit = 1 meter, speed in m/s)
     if(playerSpeed > 0.1){
-      const moveKm = playerSpeed / 1000.0 * dt * 60; // km per frame (normalized to ~60fps tick)
-      playerPos.addScaledVector(playerHeading, moveKm);
+      const moveM = playerSpeed * dt; // meters this frame
+      playerPos.addScaledVector(playerHeading, moveM);
     }
 
     // Position ship model at world pos
@@ -356,8 +359,13 @@ function animate(now){
     targetQuat.multiply(offsetQuat);
     shipGroup.quaternion.slerp(targetQuat, 0.15);
 
-    // Camera follows ship (maintain relative offset)
+    // Camera follows ship (maintain relative offset) - skip during freelook
     if(!isFreelooking){
+      const camOffset = camera.position.clone().sub(controls.target);
+      controls.target.copy(playerPos);
+      camera.position.copy(playerPos).add(camOffset);
+    } else {
+      // During freelook, still move camera position with ship but don't change lookAt
       const camOffset = camera.position.clone().sub(controls.target);
       controls.target.copy(playerPos);
       camera.position.copy(playerPos).add(camOffset);
@@ -400,16 +408,22 @@ function animate(now){
       sprite.position.set(sx, sy, sz);
     }
 
-    // ── System Objects (fixed world positions) ──
+    // ── System Objects (fixed world positions, only render if within 50km) ──
     if(localState && localState.objects){
       for(const obj of localState.objects){
         if(obj.type==='star') continue;
+        const dist = Math.sqrt((obj.x-playerPos.x)**2 + (obj.y-playerPos.y)**2 + (obj.z-playerPos.z)**2);
+        if(dist > 50000){ // >50km, just nav marker
+          if(objectSprites[obj.id]){ objectSprites[obj.id].visible = false; }
+          continue;
+        }
         const sprite = objectSprites[obj.id];
         if(!sprite) continue;
+        sprite.visible = true;
         sprite.position.set(obj.x, obj.y, obj.z);
       }
     }
-    // Station model at world pos
+    // Station model at fixed world position (doesn't move)
     if(stationModel && stationWorldPos){
       stationModel.position.set(stationWorldPos.x, stationWorldPos.y, stationWorldPos.z);
     }
@@ -426,7 +440,7 @@ function animate(now){
     }
   }
 
-  controls.update();
+  if(!isFreelooking) controls.update();
   renderer.render(scene, camera);
 }
 
@@ -461,21 +475,39 @@ document.addEventListener('keydown', e=>{
 // ── Input: Right-click freelook ──
 let isFreelooking = false;
 let freelookStart = {x:0, y:0};
+let freelookYaw = 0;
+let freelookPitch = 0;
 renderer.domElement.addEventListener('mousedown', e=>{
-  if(e.button === 2){ isFreelooking = true; freelookStart = {x:e.clientX, y:e.clientY}; controls.enabled = false; }
+  if(e.button === 2){
+    isFreelooking = true;
+    freelookStart = {x:e.clientX, y:e.clientY};
+    freelookYaw = 0;
+    freelookPitch = 0;
+    controls.enabled = false;
+  }
 });
 window.addEventListener('mouseup', e=>{
-  if(e.button === 2){ isFreelooking = false; controls.enabled = true; }
+  if(e.button === 2){
+    isFreelooking = false;
+    controls.enabled = true;
+  }
 });
 window.addEventListener('mousemove', e=>{
   if(!isFreelooking) return;
   const dx = e.clientX - freelookStart.x;
   const dy = e.clientY - freelookStart.y;
   freelookStart = {x:e.clientX, y:e.clientY};
-  // Rotate camera itself (yaw + pitch) without moving it
-  // This rotates where the camera LOOKS, camera position unchanged
-  camera.rotateY(-dx * 0.003);
-  camera.rotateX(-dy * 0.003);
+  freelookYaw += dx * 0.003;
+  freelookPitch += dy * 0.003;
+  freelookPitch = Math.max(-1.2, Math.min(1.2, freelookPitch));
+  // Apply rotation to camera (camera stays in place, looks in new direction)
+  const baseDir = playerPos.clone().sub(camera.position).normalize();
+  const right = new THREE.Vector3().crossVectors(baseDir, new THREE.Vector3(0,1,0)).normalize();
+  const up = new THREE.Vector3(0,1,0);
+  const lookAt = playerPos.clone();
+  lookAt.addScaledVector(right, Math.sin(freelookYaw) * 100);
+  lookAt.addScaledVector(up, -Math.sin(freelookPitch) * 100);
+  camera.lookAt(lookAt);
 });
 
 // ── Input: Scroll zoom ──
@@ -672,14 +704,18 @@ async function loadNearbyStation(){
     const box=new THREE.Box3().setFromObject(stationModel);
     const sz=box.getSize(new THREE.Vector3());
     const maxDim=Math.max(sz.x,sz.y,sz.z)||1;
-    stationModel.scale.setScalar(200/maxDim);
+    // Scale based on station type (meters)
+    const typeScale = {'trade_hub':10000, 'military_base':8000, 'shipyard':12000, 'factory':6000, 'refinery':5000, 'component_works':4000, 'mining_colony':3000};
+    const stationType = (localState && localState.player && localState.player.station_type) || 'trade_hub';
+    const targetSize = typeScale[stationType] || 5000;
+    stationModel.scale.setScalar(targetSize/maxDim);
     // Set world position from local state objects
     if(localState && localState.objects){
       const stObj = localState.objects.find(o=>o.station_id);
       if(stObj) stationWorldPos = {x:stObj.x, y:stObj.y, z:stObj.z};
     }
-    if(!stationWorldPos) stationWorldPos = {x:playerPos.x+50, y:playerPos.y+20, z:playerPos.z-80};
-    stationModel.position.set(stationWorldPos.x - playerPos.x, stationWorldPos.y - playerPos.y, stationWorldPos.z - playerPos.z);
+    if(!stationWorldPos) stationWorldPos = {x:2000, y:0, z:0};
+    stationModel.position.set(stationWorldPos.x, stationWorldPos.y, stationWorldPos.z);
     scene.add(stationModel);
   }catch(e){}
 }
