@@ -17,7 +17,7 @@ def process_event_effects(event):
     if not event.effects:
         return
 
-    conn = sqlite3.connect(DB)
+    conn = sqlite3.connect(DB, timeout=10)
     for effect in event.effects:
         etype = effect.get('type', '')
         target = effect.get('target', '')
@@ -72,7 +72,7 @@ def log_event_for_agents(conn, event):
 
 def record_structured_event(event):
     """Persist a StructuredEvent to the sim_events table."""
-    conn = sqlite3.connect(DB)
+    conn = sqlite3.connect(DB, timeout=10)
     d = event.to_dict()
     conn.execute("""INSERT INTO sim_events (tick, category, severity, faction_id, system_id,
                     agent_id, title, detail, effects, chain_id, chain_step)

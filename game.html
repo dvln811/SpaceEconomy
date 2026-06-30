@@ -1593,28 +1593,40 @@ svEl.addEventListener('click',e=>{
 
 function svUpdateTargets(){
   if(!svData||!svData.ships)return;
+  // Hide ships that left the system
+  const currentNames=new Set(svData.ships.map(s=>s.name));
+  for(const id in svShipPos){
+    if(!currentNames.has(id)){
+      svShipPos[id].vis=false;
+      if(svSelectedShip===id)svSelectedShip=null;
+    }
+  }
   for(const ship of svData.ships){
     const id=ship.name;
     if(ship.state==='intra_traveling'&&ship.intra_from&&ship.intra_to){
-      // Look up object names for consistent Y hash
       const fromObj=svData.objects.find(o=>Math.abs(o.distance-ship.intra_from.d)<0.01&&Math.abs(o.angle-ship.intra_from.a)<0.01);
       const toObj=svData.objects.find(o=>Math.abs(o.distance-ship.intra_to.d)<0.01&&Math.abs(o.angle-ship.intra_to.a)<0.01);
       const f=svPolar(ship.intra_from.d,ship.intra_from.a,fromObj?fromObj.name:'');
       const t=svPolar(ship.intra_to.d,ship.intra_to.a,toObj?toObj.name:'');
-      const travelTicks=Math.max(30,Math.min(90,ship.intra_dist*5));
-      const rate=1.0/travelTicks;
+      const serverP=Math.max(0, Math.min(1, ship.intra_progress));
+      // Warp speed: same formula as server. AU/s = ship.speed * 0.0015
+      // travel_ticks = dist_AU / warp_au_s, step = 1/travel_ticks per second
+      const warpAuS = (ship.speed || 200) * 0.0015;
+      const dist = ship.intra_dist || 5;
+      const travelSec = Math.max(5, dist / warpAuS);
+      const speed = 1.0 / travelSec;
       const existing=svShipPos[id];
-      const displayP=Math.max(0, ship.intra_progress);
       if(existing&&existing.fx===f.x&&existing.fz===f.z&&existing.tx===t.x&&existing.tz===t.z){
-        existing.rate=rate;
+        existing.speed=speed;
+        existing.vis=true;
       }else{
-        svShipPos[id]={fx:f.x,fy:f.y,fz:f.z,tx:t.x,ty:t.y,tz:t.z,p:displayP,rate:rate,role:ship.role,vis:true};
+        svShipPos[id]={fx:f.x,fy:f.y,fz:f.z,tx:t.x,ty:t.y,tz:t.z,p:serverP,speed:speed,role:ship.role,vis:true};
       }
     }else if(ship.state==='mining'&&ship.intra_position){
       const at=svData.objects.find(o=>o.id===ship.intra_position);
       if(at){const pos=svPolar(at.distance,at.angle,at.name);svShipPos[id]={fx:pos.x+5,fy:pos.y,fz:pos.z-5,tx:pos.x+5,ty:pos.y,tz:pos.z-5,p:0,rate:0,role:ship.role,vis:true};}
     }else{
-      if(svShipPos[id])svShipPos[id].vis=false;
+      if(svShipPos[id]){svShipPos[id].vis=false; if(svSelectedShip===id)svSelectedShip=null;}
     }
   }
 }
@@ -1624,7 +1636,7 @@ function svAdvanceShips(){
   const now=performance.now();
   const dt=(now-svLastFrame)/1000;
   svLastFrame=now;
-  for(const id in svShipPos){const s=svShipPos[id];if(s.rate>0){s.p=Math.min(s.p+s.rate*dt,1.0);if(s.p>=1.0)s.vis=false;}}
+  for(const id in svShipPos){const s=svShipPos[id];if(s.speed>0&&s.p<1.0){s.p=Math.min(s.p+s.speed*dt,1.0);}}
 }
 
 // Build scene objects from data
@@ -1860,96 +1872,57 @@ let svShipCache={}; // ship name -> {group, classId}
 
 let svShipMeshes=[];
 function svUpdateShipMeshes(){
-  // Hide all cached ships first
-  for(const id in svShipCache){svShipCache[id].group.visible=false;if(svShipCache[id].trail)svShipCache[id].trail.visible=false;}
+  // Hide ALL cached ships and labels (including departed ships)
+  for(const id in svShipCache){
+    svShipCache[id].group.visible=false;
+    if(svShipCache[id].labelDiv){
+      svShipCache[id].labelDiv.style.display='none';
+      svShipCache[id].labelDiv.style.visibility='hidden';
+    }
+  }
 
   if(!svData||!svData.ships)return;
+  // Only show ships that are actively in system and visible
+  const currentNames=new Set(svData.ships.map(s=>s.name));
   for(const ship of svData.ships){
     const sp=svShipPos[ship.name];if(!sp||!sp.vis)continue;
     const sx=sp.fx+(sp.tx-sp.fx)*sp.p, sy=sp.fy+(sp.ty-sp.fy)*sp.p, sz=(sp.fz||0)+((sp.tz||0)-(sp.fz||0))*sp.p;
 
-    // Get or create ship model
+    // Get or create ship callout flag
     let cached=svShipCache[ship.name];
     if(!cached){
-      const cid=ship.ship_class||'';
-      const geo=mapShipGeos?mapShipGeos[cid]:null;
-      if(geo){
-        // Build temp, then merge all geometry into single mesh
-        const tmpGroup=new THREE.Group();
-        buildShipFromData(tmpGroup,geo,{showHardpoints:false});
-        tmpGroup.updateMatrixWorld(true);
-        const geos=[];
-        tmpGroup.traverse(c=>{if(c.isMesh&&c.geometry){const g=c.geometry.clone();g.applyMatrix4(c.matrixWorld);geos.push(g);}});
-        const wrapper=new THREE.Group();
-        if(geos.length){
-          const allG=geos.map(g=>g.index?g.toNonIndexed():g);
-          let tv=0;allG.forEach(g=>tv+=g.attributes.position.count);
-          const pos=new Float32Array(tv*3);let off=0;
-          for(const g of allG){pos.set(g.attributes.position.array,off*3);off+=g.attributes.position.count;}
-          const merged=new THREE.BufferGeometry();
-          merged.setAttribute('position',new THREE.BufferAttribute(pos,3));
-          merged.computeVertexNormals();
-          const mat=new THREE.MeshPhongMaterial({color:0x0a1428,emissive:0x0a1428,shininess:0,transparent:true,opacity:0.7});
-          const m=new THREE.Mesh(merged,mat);
-          m.add(new THREE.LineSegments(new THREE.EdgesGeometry(merged,15),new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.5})));
-          wrapper.add(m);
-          allG.forEach(g=>g.dispose());geos.forEach(g=>g.dispose());
-        }
-        wrapper.scale.set(2,2,2);
-        wrapper.rotation.y=-Math.PI/2;
-        const outer=new THREE.Group();outer.add(wrapper);
-        svShipsGroup.add(outer);
-        cached={group:outer,trail:null};
-        svShipCache[ship.name]=cached;
-      }else{
-        // Fallback: dot sprite
-        const col=sp.role==='miner'?'#ffd54f':'#ef5350';
-        const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDotTexture(col,32),transparent:true}));
-        spr.scale.set(5,5,1);
-        const wrapper=new THREE.Group();wrapper.add(spr);
-        svShipsGroup.add(wrapper);
-        cached={group:wrapper,trail:null};
-        svShipCache[ship.name]=cached;
-      }
+      const group=new THREE.Group();
+      const stalkH = 12;
+      const stalkGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0),new THREE.Vector3(0,stalkH,0)]);
+      const stalkColor = sp.role==='miner'?0xffd54f : sp.role==='hauler'?0x66bb6a : sp.role==='military'?0xef5350 : 0x4fc3f7;
+      const stalk=new THREE.Line(stalkGeo,new THREE.LineBasicMaterial({color:stalkColor,transparent:true,opacity:0.6}));
+      group.add(stalk);
+      const dot=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDotTexture('#'+stalkColor.toString(16).padStart(6,'0'),32),transparent:true}));
+      dot.scale.set(2,2,1);
+      group.add(dot);
+      const labelDiv=document.createElement('div');
+      labelDiv.style.cssText='font:9px "JetBrains Mono",monospace;color:#c8d4e0;white-space:nowrap;pointer-events:none;text-shadow:0 0 3px #000,0 0 6px #000';
+      labelDiv.textContent=ship.name;
+      const label=new CSS2DObject(labelDiv);
+      label.position.set(0,stalkH+1,0);
+      group.add(label);
+      svShipsGroup.add(group);
+      cached={group:group, labelDiv:labelDiv};
+      svShipCache[ship.name]=cached;
     }
     cached.group.visible=true;
+    cached.labelDiv.style.display='';
+    cached.labelDiv.style.visibility='visible';
+    // Selection styling
+    const isSel = (svSelectedShip === ship.name);
+    cached.labelDiv.style.fontSize = isSel ? '12px' : '9px';
+    cached.labelDiv.style.color = isSel ? '#4fc3f7' : '#c8d4e0';
+    cached.labelDiv.style.fontWeight = isSel ? '600' : '300';
     cached.group.position.set(sx,sy,sz);
-    // Orientation: lookAt destination
-    if(sp.rate>0){
-      if(sp.p<0.01){
-        // Aligning: lerp toward target direction
-        if(!cached.targetDir)cached.targetDir=new THREE.Vector3(sp.tx,sp.ty,sp.tz||0);
-        cached.targetDir.lerp(new THREE.Vector3(sp.tx,sp.ty,sp.tz||0),0.05);
-        cached.group.lookAt(cached.targetDir);
-      }else{
-        // Moving: face destination directly
-        cached.group.lookAt(sp.tx,sp.ty,sp.tz||0);
-        cached.targetDir=null;
-      }
-    }
-
-    // Trail line - only for selected ship
-    if(sp.rate>0&&svSelectedShip===ship.name){
-      if(!cached.trail){
-        const pts=[new THREE.Vector3(0,0,0),new THREE.Vector3(1,0,0)];
-        cached.trail=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineDashedMaterial({color:0x4fc3f7,dashSize:2,gapSize:3,transparent:true,opacity:0.5}));
-        svShipsGroup.add(cached.trail);
-      }
-      const posArr=cached.trail.geometry.attributes.position.array;
-      posArr[0]=sx;posArr[1]=sy;posArr[2]=sz;
-      posArr[3]=sp.tx;posArr[4]=sp.ty;posArr[5]=sp.tz||0;
-      cached.trail.geometry.attributes.position.needsUpdate=true;
-      cached.trail.computeLineDistances();
-      cached.trail.visible=true;
-    }
   }
 }
 
-// Selected ship label
-const svShipLabelDiv=document.createElement('div');
-svShipLabelDiv.style.cssText='font-size:12px;color:#4fc3f7;background:rgba(10,14,24,0.8);padding:2px 6px;border-radius:3px;font-family:JetBrains Mono,monospace';
-const svShipLabel=new CSS2DObject(svShipLabelDiv);
-svShipLabel.visible=false;svScene.add(svShipLabel);
+// Selected ship label (handled inline via label styling)
 
 // Starfield background
 const sfGeo=new THREE.BufferGeometry();const sfVerts=new Float32Array(1000*3);
@@ -1960,7 +1933,19 @@ svScene.add(new THREE.Points(sfGeo,new THREE.PointsMaterial({color:0xb4c8dc,size
 // Zoom to ship (exposed for list dblclick)
 window._svZoomToShip=function(name){
   const c=svShipCache[name];
-  if(c&&c.group.visible){const p=c.group.position;svControls.target.set(p.x,p.y,p.z);svCam.position.set(p.x+20,p.y+15,p.z+20);svControls.update();}
+  if(c&&c.group.visible){
+    const p=c.group.position;svControls.target.set(p.x,p.y,p.z);svCam.position.set(p.x+20,p.y+15,p.z+20);svControls.update();
+  } else {
+    // Ship is docked/idle -- find its station and zoom there
+    const ship=svData&&svData.ships?svData.ships.find(s=>s.name===name):null;
+    if(ship&&ship.intra_position&&svData.objects){
+      const obj=svData.objects.find(o=>o.id===ship.intra_position);
+      if(obj){
+        const wp=svPolar(obj.distance,obj.angle,obj.name);
+        svControls.target.set(wp.x,wp.y,wp.z);svCam.position.set(wp.x+20,wp.y+15,wp.z+20);svControls.update();
+      }
+    }
+  }
 };
 
 // Click ship in 3D map to select
@@ -1992,12 +1977,6 @@ function svAnimate(){
   svAdvanceShips();
   svUpdateShipMeshes();
   // Ship label follows selected
-  if(svSelectedShip&&svShipCache[svSelectedShip]){
-    const grp=svShipCache[svSelectedShip].group;
-    svShipLabel.position.set(grp.position.x,grp.position.y+3,grp.position.z);
-    svShipLabelDiv.textContent=svSelectedShip;
-    svShipLabel.visible=true;
-  }else{svShipLabel.visible=false;}
   svRenderer.render(svScene,svCam);
   svLabelRenderer.render(svScene,svCam);
 }

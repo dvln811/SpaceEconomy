@@ -132,7 +132,7 @@ class Supervisor:
             t0 = time.time()
             for _ in range(self.multiplier):
                 self._do_tick()
-            if self.sim.tick_count % 10 == 0:
+            if self.sim.tick_count % 100 == 0:
                 save_simulation(self.sim)
             elapsed = time.time() - t0
             sleep_time = max(0, self.tick_rate - elapsed)
@@ -479,7 +479,6 @@ class Supervisor:
                 self.change_tracker.record_ship_change(tick, ship.id)
 
     def _move_ships_intra(self):
-        import math
         tick = self.sim.tick_count
         for ship in self.sim.ships:
             if ship.state != "intra_traveling" or not ship.intra_destination:
@@ -490,7 +489,8 @@ class Supervisor:
                     ship.intra_progress = 0
                 continue
             dist = self._intra_distance(ship.location, ship.intra_position or f"{ship.location}_star", ship.intra_destination)
-            travel_ticks = max(8, min(30, dist * 2))
+            warp_au_per_sec = ship.speed * 0.0015
+            travel_ticks = max(5, dist / warp_au_per_sec)
             step = 1.0 / travel_ticks
             ship.intra_progress += step
             if ship.intra_progress >= 1.0:

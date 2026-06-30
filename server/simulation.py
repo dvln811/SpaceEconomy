@@ -111,11 +111,12 @@ class Simulation:
         ship_idx = 0
 
         # --- Industrial ships: haulers & freelancers ---
-        # ~10 per system that has stations (~1500 haulers/freelancers)
+        # Haulers: scale with station count (2-3 per station, max 8 per system)
         for sys_id, sys in self.universe.items():
             if not sys.stations:
                 continue
-            for i in range(10):
+            num_haulers = min(8, len(sys.stations) * 3)
+            for i in range(num_haulers):
                 st = hauler_types[ship_idx % len(hauler_types)]
                 role = "freelance" if random.random() < 0.2 else "hauler"
                 station = sys.stations[i % len(sys.stations)]

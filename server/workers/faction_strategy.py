@@ -218,7 +218,7 @@ class FactionStrategyWorker(WorkerThread):
                 if complete:
                     conn.execute("UPDATE build_projects SET status='completed', phase='complete' WHERE id=?", (p['id'],))
                     fname = FNAME.get(fid, fid)
-                    self.emit(EventLog(tick=tick, msg=f"PROJECT COMPLETE: {fname} finishes {p['project_name']}"))
+                    self.emit(EventLog(tick=tick, msg=f"PROJECT COMPLETE: {fname} finishes {p['project_name'] or p['project_type']}"))
                     continue
 
             if new_phase != p['phase']:
