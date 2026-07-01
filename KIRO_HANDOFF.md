@@ -284,7 +284,8 @@ economy:
 | URL | Purpose |
 |-----|---------|
 | / (game.html) | 3D star map, system view, route planning |
-| /ship | Stub - player ship status |
+| /ship | Player ship - docked hangar + flight view with local space |
+| /agents | Agent encyclopedia (split-pane, detail with family/history) |
 | /inventory | Stub - cargo/assets |
 | /market | Live market (treeview, buy/sell, right-click) |
 | /docs | Encyclopedia hub |
@@ -293,10 +294,11 @@ economy:
 | /fitting | Fitting mechanics reference |
 | /items | Items database |
 | /chain | Production chain calculator |
-| /universe | Universe/systems info |
-| /combat | 3D combat viewer |
-| /design | Game design document |
+| /universe | Universe/factions with expandable lore |
+| /combat | 3D combat viewer (stations as scale reference) |
+| /design | Game design document (includes expansion spec) |
 | /debug | Dashboard (overview, factions, stations, ships, combat, market) |
+| /ship_designer | Ship + Station generator, review, component library |
 | /settings | Stub |
 
 ---
@@ -332,62 +334,85 @@ economy:
 - `6e573c5` - Current HEAD: full economy with events, combat fix, news ticker
 - `fbea1a9` - Build_cost/fitting_cost split first working
 
-## Recent Session Summary (June 28, 2026)
+## Recent Session Summary (June 29-30, 2026)
 
-### Major Achievements
-1. **Ship Fitting System** - Full H/M/L slot layout, CPU/PG costs on all 940 items, hardpoints
-2. **Economy Rebalance** - Population-driven consumption, contract haulers, combat attrition
-3. **Build/Destroy Cycle Working** - 570-635 ships built per 5K ticks, 700 destroyed, fleet stable at ~60
-4. **Slipway Queue System** - Multi-slot shipyards with build times, materials consumed from inventory
-5. **Build Cost Split** - build_cost (hull materials, hauled physically) + fitting_cost (weapons/modules, deducted abstractly from factories)
-6. **Hauler Contract System** - Scoring model (value/distance/claims), opportunistic backhaul, 99% real utilization
-7. **Event Generator** - 14 event types with real effects (dock strikes halt production, corsair raids steal goods, ore discoveries add stockpiles)
-8. **News Ticker** - Map overlay, resizable, minimizable, timestamps, color-coded event types
-9. **Universe Clock** - 82604.xx format (xx increments 0-99 per game-day), local GST
-10. **Corsair Raid Growth Control** - Pressure valve that culls stockpiles when inventory > 80M
-11. **Combat Viewer Fixes** - Speed fixed (was double-multiplied after rebalance), visual scale fixed, smooth position interpolation
+### Major Achievements This Session
+1. **Faction Lore** - 6 factions with 5.5-7K chars detailed histories, cultures, politics, military doctrine
+2. **Agent Population** - 295 M&B-style agents with clans, families, ages, bios, traits, patron/rival relationships
+3. **Agent Detail Page** (/agents) - Split-pane with list + full detail (traits, family, history)
+4. **Structured Event Framework** - 50+ faction-specific event types, chains, agent lifecycle effects
+5. **Station Generator** - 210 pre-generated station designs (5 factions x 7 types x 6 variants)
+6. **3D Stations in System View** - Merged geometry, faction-appropriate models
+7. **Combat Viewer Stations** - Stations as scale reference in battles
+8. **Ship System View Labels** - Callout flags with names instead of 3D models
+9. **Intra-system Warp Speed** - Based on ship.speed * 0.0015 AU/s (realistically scaled)
+10. **NPC Decision Optimization** - Only on state change (14+ t/s, was 2 t/s)
+11. **Security Redistribution** - Distance-based from empire centers, unclaimed = null-sec
+12. **Station Redistribution** - 712 stations, proper sec-level density (high-sec dense, low-sec sparse)
+13. **News System Overhaul** - Category coloring, agent links, price ticker tape, battle narratives
+14. **Player Ship Flight** (WIP) - Local space, undock/dock, client-side physics, SSE for NPCs
+15. **LocalSpaceWorker** - Server-side persistent 3D simulation of player's current system
+16. **Territorial Expansion Design Spec** - Multi-year real-time expansion pipeline documented
 
-### Architecture Decisions Made
-- **1 tick = 6 minutes** game time (240 ticks/day, 87,600/year)
-- **Ships self-fuel** via bussard collectors (no fuel stops for ships, stations consume fuel)
-- **Hull materials hauled physically**, weapons/modules procured abstractly (deducted from factories)
-- **Hard price clamp (0.5x-2.0x)** kept until structural balance achieved
-- **Contract scoring**: value / (distance+1) / (1+claims) with ship-size matching
-- **Corsair raids** as dynamic inventory pressure valve (fires when > 80M total)
+### Architecture Decisions Made (New)
+- **Local space scale**: 1 unit = 1 meter. Station ~2km away on undock.
+- **Player ship**: Client-authoritative for local movement, server tracks position
+- **NPC ships in local space**: Server-authoritative, client interpolates from SSE stream
+- **Warp/dock/jump**: Server-authoritative commands
+- **Security = distance to nearest empire center** (not faction-specific)
+- **Unclaimed space**: Always 0.0-0.1 security
+- **Expansion timeline**: 2-3 real years to settle all unclaimed systems
+- **Sim performance**: 14+ t/s achieved via NPC decisions only on state change + 50-ship batch cap
 
-### What's Working
-- Full production chain: mining -> refining -> manufacturing -> ship building
-- Combat attrition as demand sink (~700 ships destroyed per 5K ticks)
-- Shipyard slipway queues with real build times
-- 99.4% hauler utilization (confirmed via diagnostic)
-- Opportunistic backhaul (+44% cargo volume)
-- Event system generating gameplay-affecting events
-- News ticker showing live events on map
+### Player Ship System (NEW - /ship page)
+- **Docked view**: Dark hangar, pedestal, ship model, stats, cargo, undock button
+- **Flight view**: 3D space, station nearby, NPC ships, engine trail
+- **Controls**: Double-click to fly direction, S to stop, right-click nav for warp
+- **Camera**: Left-drag orbit, right-drag freelook (WIP), scroll zoom
+- **Local Space Worker**: Server thread maintains all ships in system at 1 tick/sec
+- **SSE stream**: /api/player/local_space/stream pushes NPC state each tick
+- **Position reporting**: Client reports player position every 3 seconds
 
-### Known Issues
-- **Growth rate ~11K/tick** - Ore stockpiling at mining colonies, will trigger corsair raids at 80M
-- **Price distribution** - 60% inflated / 40% crashed (hard clamp prevents extremes, structural)
-- **Combat viewer** - Ships may still need tuning on spacing/engagement range after speed changes
-- **News ticker z-index** - Fixed but may need testing on all overlay pages
+### Key Files (New)
+| File | Purpose |
+|------|---------|
+| server/local_space.py | LocalSpaceWorker - 3D simulation of player's system |
+| server/event_framework.py | Structured event generator (50+ faction-specific types) |
+| server/agent_lifecycle.py | Agent death/replacement/history logging |
+| server/agent_population.py | M&B-style agent population generator |
+| ship.html | Player ship page (docked + flight views) |
+| agents.html | Agent encyclopedia (split-pane, detail view) |
+| tools/ship_designer/station_generator.py | Station assembly from components |
+| tools/ship_designer/station_components.py | Station component primitives (30 styles) |
+| tools/ship_designer/station_designs/ | 210 pre-generated station JSON files |
 
-### Immediate Next Steps (for next session)
-1. **Faction Lore** - Write detailed histories, political structures, cultural character types for all 6 factions
-2. **Encyclopedia Faction Pages** - Extend /universe to have clickable faction detail pages
-3. **Player Progression** - Renown system (M&B style), start as free agent, earn faction membership
-4. **Faction Policy Framework** - Elections, appointments, policy sliders that affect behavior
-5. **News Event Content** - Expand from 14 to 50+ event templates with deeper lore integration
-6. **News ticker UX** - Test minimize/restore, verify mouse blocking works on all browsers
+### Known Issues (Current)
+- **Price bimodality** - 70% inflated / 30% crashed (structural pricing algorithm issue, not supply)
+- **NPC ship models in flight** - Falling back to cone shapes (ship_class key mismatch with geometry IDs)
+- **Solar body labels** - Projection not quite right, especially when zoomed out
+- **Freelook camera** - Works partially, needs cleanup (OrbitControls conflict resolved but lerp-back imperfect)
+- **System map ship labels** - May not fully clean up when switching between systems
+- **Nav list interaction** - Context menu positioning fixed but needs testing
 
-### Economy Status (end of session)
-- Inventory: ~57M units, Growth: ~11K/tick
-- Ships: 570-635 built / 700 destroyed per 5K ticks (83% replacement, fleet stable)
-- Haulers: 1300 total, 99% assigned, 81% measured carrying+en_route
-- Cargo in transit: 2.6M units (up 44% from backhaul)
-- Price equilibrium: 3.3% within +/-15% (up from 0.4% thanks to event disruptions)
-- Shipyards: 6 active, 4K-67K inventory, building fighters/frigates/destroyers
+### Immediate Next Steps
+1. **Fix NPC ship_class -> geometry_id mapping** so real models load
+2. **Polish freelook camera** - write fully custom controller (no OrbitControls)
+3. **Warp implementation** - transition between local grids (AU travel animation)
+4. **Jump gate travel** - system-to-system transition
+5. **Market interaction from ship** - buy/sell while docked
+6. **Player progression** - renown system, faction membership
+7. **Pricing algorithm rework** - fix the bimodal price distribution
+
+### Economy Status (end of session, 10K tick sim)
+- Performance: 14 t/s (3411 ships, 712 stations)
+- Inventory: 165M, Growth: 16.5K/tick
+- Fleet: 109 ships rebuilt, combat attrition working
+- Haulers: 80% utilization, 5.1M cargo in transit
+- Price: 70% inflated / 30% crashed (structural - needs pricing rework)
+- Shipyards: ~3000 inventory each, actively building
 
 ### Simulation Tools
-- `python _sim.py [ticks]` - economy sim with progress bar, results to sim_results.txt
-- `python sim_events.py [ticks]` - event injection stress test
-- `python dev.py [speed] [duration]` - full server with console output
-- Event generator fires every 200 ticks (1-2 events per cycle)
+- `python _sim.py [ticks]` - economy sim (14 t/s, ~7 min for 5K)
+- `python sim_faction_events.py [ticks]` - test faction event generation
+- `python -m server.main` - local dev server
+- Nuke via /debug to reset runtime state after DB changes
