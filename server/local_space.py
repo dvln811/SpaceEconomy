@@ -362,26 +362,36 @@ class LocalSpaceWorker:
             self.player_ship.state = 'flying'
 
     def player_undock(self):
-        """Set player heading away from station on undock."""
+        """Place player at dock boundary (7000m from station), heading away."""
         with self._lock:
             if not self.player_ship:
                 return
-            # Find the player's station (first station with station_id)
+            # Find the player's station
             station = None
             for o in self.objects:
                 if o.station_id:
                     station = o
                     break
             if station:
-                # Heading = normalize(player_pos - station_pos)
+                # Place player 7000m from station center, in a random direction
+                import random as _rnd
+                angle = _rnd.uniform(0, math.pi * 2)
+                self.player_ship.x = station.x + math.cos(angle) * 7000
+                self.player_ship.y = station.y + _rnd.uniform(-200, 200)
+                self.player_ship.z = station.z + math.sin(angle) * 7000
+                # Heading away from station
                 dx = self.player_ship.x - station.x
                 dy = self.player_ship.y - station.y
                 dz = self.player_ship.z - station.z
-                d = math.sqrt(dx*dx + dy*dy + dz*dz)
-                if d > 0.1:
-                    self.player_ship.heading_x = dx / d
-                    self.player_ship.heading_y = dy / d
-                    self.player_ship.heading_z = dz / d
+                d = math.sqrt(dx*dx + dy*dy + dz*dz) or 1
+                self.player_ship.heading_x = dx / d
+                self.player_ship.heading_y = dy / d
+                self.player_ship.heading_z = dz / d
+                self.player_ship._target_hx = self.player_ship.heading_x
+                self.player_ship._target_hy = self.player_ship.heading_y
+                self.player_ship._target_hz = self.player_ship.heading_z
+            self.player_ship.state = 'idle'
+            self.player_ship.speed = 0
                 else:
                     # Player at same position as station, default away
                     self.player_ship.heading_x = -1

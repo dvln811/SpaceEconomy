@@ -279,11 +279,12 @@ function buildNpcShipMesh(shipClass, role) {
   const cacheKey = shipClass + '_' + (role || 'default');
   if (npcShipCache[cacheKey]) return npcShipCache[cacheKey].clone();
   if (!allShipGeos || !allShipGeos[shipClass]) {
-    // Fallback: simple box
-    const g = new THREE.BoxGeometry(20, 8, 10);
+    // Fallback: simple ship-like shape (cone + body)
     const edgeColor = NPC_EDGE_COLORS[role] || 0x8aa0b8;
-    const mesh = new THREE.Mesh(g, new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1428, shininess:0, transparent:true, opacity:0.7}));
-    mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(g, 15), new THREE.LineBasicMaterial({color:edgeColor, transparent:true, opacity:0.5})));
+    const body = new THREE.ConeGeometry(6, 25, 4);
+    body.rotateZ(-Math.PI/2);  // nose forward along +X
+    const mesh = new THREE.Mesh(body, new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1428, shininess:0, transparent:true, opacity:0.7}));
+    mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(body, 15), new THREE.LineBasicMaterial({color:edgeColor, transparent:true, opacity:0.5})));
     const grp = new THREE.Group();
     grp.add(mesh);
     npcShipCache[cacheKey] = grp;
@@ -903,53 +904,46 @@ function updateDirectionalLabels(){
     // Get direction from player to object
     const dir = new THREE.Vector3(obj.x - playerPos.x, obj.y - playerPos.y, obj.z - playerPos.z);
     const dist = dir.length();
-    if(dist < 1) { label.el.style.display = 'none'; continue; }
+    if(dist < 100) { label.el.style.display = 'none'; continue; } // too close, rendered physically
     dir.normalize();
 
-    // Project direction onto screen
-    const worldPoint = playerPos.clone().add(dir.multiplyScalar(1000)); // project a point far in that direction
-    const projected = worldPoint.clone().project(camera);
+    // Project: put a point 500 units away in that direction, project to screen
+    const projPoint = new THREE.Vector3().copy(playerPos).addScaledVector(dir, 500);
+    projPoint.project(camera);
 
-    // Convert to screen coords
-    let sx = (projected.x * 0.5 + 0.5) * w;
-    let sy = (-projected.y * 0.5 + 0.5) * h;
+    let sx = (projPoint.x * 0.5 + 0.5) * w;
+    let sy = (-projPoint.y * 0.5 + 0.5) * h;
 
-    // Check if behind camera
-    const camDir = new THREE.Vector3();
-    camera.getWorldDirection(camDir);
-    const objDir = new THREE.Vector3(obj.x - camera.position.x, obj.y - camera.position.y, obj.z - camera.position.z).normalize();
-    const dot = camDir.dot(objDir);
-
-    if(dot < 0){
-      // Behind camera - flip to opposite edge
+    // Behind camera check
+    const behind = projPoint.z > 1;
+    if(behind){
       sx = w - sx;
       sy = h - sy;
     }
 
-    // Clamp to viewport edges with margin
-    const clamped = dot > 0 && sx >= margin && sx <= w - margin && sy >= margin && sy <= h - margin;
-    if(!clamped){
-      sx = Math.max(margin, Math.min(w - margin - 80, sx));
-      sy = Math.max(margin, Math.min(h - margin - 14, sy));
-    }
+    // Clamp to viewport edges
+    const onScreen = !behind && sx >= margin && sx <= w - margin && sy >= margin && sy <= h - margin;
+    sx = Math.max(margin, Math.min(w - margin - 60, sx));
+    sy = Math.max(margin, Math.min(h - margin - 14, sy));
 
-    // Determine arrow based on clamped edge
+    // Arrow indicator when off-screen
     let arrow = '';
-    if(!clamped || dot < 0){
+    if(!onScreen){
       if(sx <= margin + 1) arrow = '◀ ';
-      else if(sx >= w - margin - 81) arrow = ' ▶';
+      else if(sx >= w - margin - 61) arrow = ' ▶';
       else if(sy <= margin + 1) arrow = '▲ ';
       else arrow = '▼ ';
     }
 
-    const distAU = obj.au_distance || (dist / 150000000);
-    const distStr = distAU < 0.01 ? '<0.01' : distAU.toFixed(1);
+    // Short name (first 12 chars)
+    const shortName = obj.name.length > 12 ? obj.name.substring(0,12) : obj.name;
+
     label.el.style.left = sx + 'px';
     label.el.style.top = sy + 'px';
     label.el.style.color = color;
-    label.el.style.opacity = clamped && dot > 0 ? '0.5' : '0.8';
-    label.el.style.textShadow = '0 0 4px rgba(0,0,0,0.8)';
-    label.el.innerHTML = `${arrow}${icon} ${obj.name} <span style="color:#5a7a9a">${distStr} AU</span>`;
+    label.el.style.opacity = onScreen ? '0.6' : '0.9';
+    label.el.style.textShadow = '0 0 4px rgba(0,0,0,0.9)';
+    label.el.innerHTML = `${arrow}${icon} ${shortName}`;
   }
 }
 
