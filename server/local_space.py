@@ -392,20 +392,6 @@ class LocalSpaceWorker:
                 self.player_ship._target_hz = self.player_ship.heading_z
             self.player_ship.state = 'idle'
             self.player_ship.speed = 0
-                else:
-                    # Player at same position as station, default away
-                    self.player_ship.heading_x = -1
-                    self.player_ship.heading_y = 0
-                    self.player_ship.heading_z = 0
-            else:
-                # No station found, default heading
-                self.player_ship.heading_x = -1
-                self.player_ship.heading_y = 0
-                self.player_ship.heading_z = 0
-            # Also set target heading to match
-            self.player_ship._target_hx = self.player_ship.heading_x
-            self.player_ship._target_hy = self.player_ship.heading_y
-            self.player_ship._target_hz = self.player_ship.heading_z
             self.player_ship.state = 'idle'
 
     def player_stop(self):
