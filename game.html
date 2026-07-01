@@ -1998,6 +1998,10 @@ setInterval(svFetch,3000);
 window.openSystemView=function(sysId){
   // Open system view in modal (3D)
   svCurrentId=sysId;window._svCurrentId=sysId;svData=null;svShipPos={};
+  // Clean up ship labels (CSS2D elements)
+  for(const id in svShipCache){
+    if(svShipCache[id].labelDiv) svShipCache[id].labelDiv.style.display='none';
+  }
   svShipCache={};svShipsGroup.clear();svBuiltForId='';
   svCam.position.set(0,150,300);
   svControls.target.set(0,0,0);svControls.update();

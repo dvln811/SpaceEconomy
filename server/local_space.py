@@ -20,7 +20,7 @@ class LocalShip:
     __slots__ = ('id', 'name', 'ship_class', 'role', 'faction',
                  'x', 'y', 'z', 'vx', 'vy', 'vz',
                  'speed', 'max_speed', 'heading_x', 'heading_y', 'heading_z',
-                 '_target_hx', '_target_hy', '_target_hz',
+                 '_target_hx', '_target_hy', '_target_hz', '_flight_timer',
                  'state', 'target_obj', 'dock_station', 'is_player')
 
     def __init__(self, id, name='', ship_class='', role='', faction='',
@@ -44,6 +44,7 @@ class LocalShip:
         self._target_hx = 1
         self._target_hy = 0
         self._target_hz = 0
+        self._flight_timer = 0
         self.state = state  # idle, flying, warping, docking, docked, mining, arriving, departing
         self.target_obj = None  # target object id for warp
         self.dock_station = ''
@@ -131,8 +132,8 @@ class LocalSpaceWorker:
 
     def _npc_undock_local(self, ship):
         """NPC undocks and flies to a random nearby point."""
-        # Pick a random direction and fly 5-20km
         ship.state = 'flying'
+        ship._flight_timer = random.randint(20, 40)
         ship._target_hx = random.uniform(-1, 1)
         ship._target_hy = random.uniform(-0.3, 0.3)
         ship._target_hz = random.uniform(-1, 1)
@@ -161,6 +162,14 @@ class LocalSpaceWorker:
 
     def _move_flying(self, ship):
         """Move ship along its heading at current speed (km scale)."""
+        # NPC flight timer - stop after duration
+        if not ship.is_player and ship._flight_timer > 0:
+            ship._flight_timer -= 1
+            if ship._flight_timer <= 0:
+                ship.state = 'idle'
+                ship.speed = 0
+                ship.vx = ship.vy = ship.vz = 0
+                return
         # Gradual turn toward target heading
         lerp_rate = 0.08
         ship.heading_x += (ship._target_hx - ship.heading_x) * lerp_rate
