@@ -791,6 +791,14 @@ def system_view_page():
     return send_from_directory(BASE_DIR, "system_view.html")
 
 
+@app.route("/api/debug_log", methods=["POST"])
+def api_debug_log():
+    data = request.get_json() or {}
+    with open(os.path.join(BASE_DIR, "debug_output.txt"), "a") as f:
+        f.write(json.dumps(data) + "\n")
+    return jsonify({"ok": True})
+
+
 @app.route("/health")
 def health():
     if not _sim_ready.is_set():
@@ -1482,8 +1490,12 @@ def api_player_local_space_stream():
     """Stream local space state as SSE, one tick per second."""
     def generate():
         while True:
-            state = local_space.get_state()
-            yield f"data: {json.dumps(state)}\n\n"
+            try:
+                state = local_space.get_state()
+                yield f"data: {json.dumps(state)}\n\n"
+            except Exception as e:
+                log.error(f"SSE stream error: {e}")
+                yield f"data: {{}}\n\n"
             time.sleep(1)
 
     return Response(generate(), mimetype='text/event-stream',
@@ -1665,7 +1677,11 @@ def api_player_warp_arrive():
     from_z = float(data.get('from_z', 0))
     if not target_obj_id:
         return jsonify({"error": "no target"}), 400
-    local_space.recenter_on_target(target_obj_id, from_x, from_z)
+    try:
+        local_space.recenter_on_target(target_obj_id, from_x, from_z)
+    except Exception as e:
+        log.error(f"recenter_on_target error: {e}")
+        return jsonify({"error": str(e)}), 500
     return jsonify({"status": "arrived", "target": target_obj_id})
 
 

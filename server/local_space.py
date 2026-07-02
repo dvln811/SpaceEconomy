@@ -484,6 +484,9 @@ class LocalSpaceWorker:
             if not target:
                 return
 
+            # Update anchor to the new target
+            self._anchor_id = target_obj_id
+
             # Shift all objects so target is at origin
             offset_x = target.x
             offset_y = target.y

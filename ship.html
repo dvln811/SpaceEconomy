@@ -366,6 +366,14 @@ function connectStream(){
   evtSource = new EventSource('/api/player/local_space/stream');
   evtSource.onmessage = (e) => {
     const state = JSON.parse(e.data);
+    // DEBUG: log to file when in arriving state
+    if(warpState === 'arriving' && !window._rawSSElog){
+      window._rawSSElog = true;
+      fetch('/api/debug_log', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({type:'RAW_SSE', warpState, hasPlayer: !!state.player, playerX: state.player?.x, playerPosInitialized, warpRecenterPending})
+      }).catch(()=>{});
+      setTimeout(()=>{ window._rawSSElog = false; }, 500);
+    }
     const firstState = !localState;
     localState = state;
     lastTickTime = performance.now();
@@ -503,6 +511,14 @@ function getOrCreateObjSprite(obj){
 function updateFromState(state){
   if(!state) return;
   const p = state.player;
+  // Debug during arriving
+  if(warpState === 'arriving' && !window._sseDebugDone2){
+    window._sseDebugDone2 = true;
+    fetch('/api/debug_log', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({type:'SSE_STATE', hasPlayer: !!p, playerPosInitialized, warpRecenterPending, warpState})
+    }).catch(()=>{});
+    setTimeout(()=>{ window._sseDebugDone2 = false; }, 500);
+  }
   if(!p) return;
 
   // Update player ship stats from server
@@ -511,6 +527,13 @@ function updateFromState(state){
 
   // Set initial player position from server if not yet set
   // Restore player position from server on first connect (page switch recovery)
+  if(warpState === 'arriving' && !window._sseDebugDone){
+    window._sseDebugDone = true;
+    fetch('/api/debug_log', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({type:'SSE_ARRIVE', playerPosInitialized, warpRecenterPending, px: p.x, py: p.y, pz: p.z, pState: p.state})
+    }).catch(()=>{});
+    setTimeout(()=>{ window._sseDebugDone = false; }, 500);
+  }
   if(!playerPosInitialized && !warpRecenterPending && p.x !== undefined){
     playerPos.set(p.x, p.y, p.z);
     playerPosInitialized = true;
@@ -610,7 +633,7 @@ function animate(now){
       const toTarget = warpTargetPos.clone().sub(playerPos).normalize();
       warpHeading.copy(toTarget);
       // Lerp rate: reach alignment within align_time seconds
-      const alignLerp = (dt / playerAlignTime) * 3.0;
+      const alignLerp = (dt / playerAlignTime) * 8.0;
       playerHeading.lerp(toTarget, alignLerp).normalize();
       const alignment = playerHeading.dot(toTarget);
       // Accelerate toward warp trigger speed during alignment
@@ -654,23 +677,25 @@ function animate(now){
 
       if(progress >= 1.0){
         // Warp complete. Tell server to recenter LSG on new target.
-        // Then spawn player at offset from origin (new target is at 0,0,0).
         warpState = 'arriving';
         warpSpeed = 0;
         playerSpeed = 0;
         flyDirection = null;
+        playerPosInitialized = false; // Block until server recenters and SSE delivers new pos
+        warpRecenterPending = true;
         // Tell server to recenter
         fetch('/api/player/warp_arrive', {method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({target: warpTargetId})
         }).then(()=>{
-          // Server has recentered. Reset player position from next SSE.
-          playerPosInitialized = false;
-          // Clear old models
+          // Server has recentered. Clear old models, SSE will deliver new position.
+          warpRecenterPending = false;
           Object.values(stationModels).forEach(m => m.removeFromParent()); stationModels = {};
           Object.values(gateModels).forEach(m => m.removeFromParent()); gateModels = {};
           Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => r.removeFromParent())); asteroidModels = {};
           Object.values(planetModels).forEach(m => m.removeFromParent()); planetModels = {};
-        }).catch(()=>{ playerPosInitialized = false; });
+          // Force SSE reconnect to ensure we get fresh data
+          connectStream();
+        }).catch(()=>{ warpRecenterPending = false; connectStream(); });
         flyDirection = null;
         warpState = 'decelerating';
         warpSpeed = 0;
@@ -684,6 +709,13 @@ function animate(now){
       document.getElementById('warpTarget').textContent = 'Warp ' + Math.round(progress * 100) + '%';
     } else if(warpState === 'arriving'){
       // Wait for server recenter + SSE to provide new position
+      if(!window._arriveLogDone){
+        fetch('/api/debug_log', {method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({type:'ARRIVE_WAIT', playerPosInitialized, warpRecenterPending, playerPos:{x:playerPos.x,y:playerPos.y,z:playerPos.z}})
+        }).catch(()=>{});
+        window._arriveLogDone = true;
+        setTimeout(()=>{ window._arriveLogDone = false; }, 1000);
+      }
       if(playerPosInitialized){
         // Server has recentered. Load new models and start decel.
         loadAllStations(); loadAllGates(); loadAsteroidFields(); loadPlanetsAndMoons(); initSun();
@@ -1294,15 +1326,20 @@ function renderNavList(objects, playerShip){
       if(distM < 1000) distStr = Math.round(distM) + ' m';
       else distStr = (distM / 1000).toFixed(1) + ' km';
     } else {
-      // SS AU distance from anchor's SS position
+      // SS AU distance from current position (interpolated during warp)
       const anchorObj = objects.find(a => a.is_anchor);
-      if(anchorObj){
-        const adx = o.ss_x - anchorObj.ss_x, adz = o.ss_z - anchorObj.ss_z;
-        const auDist = Math.sqrt(adx*adx + adz*adz);
-        distStr = auDist.toFixed(2) + ' AU';
-      } else {
-        distStr = o.au_distance.toFixed(2) + ' AU';
+      let curX = anchorObj ? anchorObj.ss_x : 0, curZ = anchorObj ? anchorObj.ss_z : 0;
+      if(warpState === 'warping' && warpTargetId){
+        const tgt = objects.find(t => t.id === warpTargetId);
+        if(tgt){
+          const progress = Math.min(1.0, warpTravelTimer / warpTravelDuration);
+          curX += (tgt.ss_x - curX) * progress;
+          curZ += (tgt.ss_z - curZ) * progress;
+        }
       }
+      const adx = o.ss_x - curX, adz = o.ss_z - curZ;
+      const auDist = Math.sqrt(adx*adx + adz*adz);
+      distStr = auDist.toFixed(2) + ' AU';
     }
     const distKm = o.is_anchor ? 0.01 : 999; // for atLocation check
     // Mark if player is at this object's LSG
@@ -1778,19 +1815,44 @@ function updateDirectionalLabels(){
     const color = DIR_LABEL_COLORS[obj.type] || '#8aa0b8';
     const icon = DIR_LABEL_ICONS[obj.type] || '\u2022';
 
-    // Direction from camera to object
-    // Use object's local space position for label projection
-    const labelX = obj.x, labelY = obj.y, labelZ = obj.z;
+    // Direction from current SS position to this object's SS position
+    // During warp, interpolate our SS position toward the warp target
+    const anchorSS = localState.objects.find(o => o.is_anchor);
+    let curSSx = anchorSS ? anchorSS.ss_x : 0, curSSz = anchorSS ? anchorSS.ss_z : 0;
+    if(warpState === 'warping' && warpTargetId){
+      const targetSS = localState.objects.find(o => o.id === warpTargetId);
+      if(targetSS){
+        const progress = Math.min(1.0, warpTravelTimer / warpTravelDuration);
+        curSSx += (targetSS.ss_x - curSSx) * progress;
+        curSSz += (targetSS.ss_z - curSSz) * progress;
+      }
+    }
+    const ssDirX = obj.ss_x - curSSx, ssDirZ = obj.ss_z - curSSz;
+    const ssDirLen = Math.sqrt(ssDirX*ssDirX + ssDirZ*ssDirZ);
+    
+    // For anchor object, use its LSG position (it's at origin). For others, project from SS direction.
+    let labelX, labelY, labelZ;
+    if(obj.is_anchor){
+      labelX = obj.x; labelY = obj.y; labelZ = obj.z;
+    } else if(ssDirLen > 0.001){
+      // Place label point very far away in the SS direction (effectively at infinity)
+      labelX = (ssDirX / ssDirLen) * 100000;
+      labelY = 0;
+      labelZ = (ssDirZ / ssDirLen) * 100000;
+    } else {
+      label.el.style.display = 'none'; continue;
+    }
     const toObj = new THREE.Vector3(labelX - camera.position.x, labelY - camera.position.y, labelZ - camera.position.z);
-    const dist = new THREE.Vector3(labelX - labelRefPos.x, labelY - labelRefPos.y, labelZ - labelRefPos.z).length();
-    if(dist < 1) { label.el.style.display = 'none'; continue; }
+    // Distance in AU for display
+    const dist = obj.is_anchor ? new THREE.Vector3(obj.x - labelRefPos.x, obj.y - labelRefPos.y, obj.z - labelRefPos.z).length() : ssDirLen;
+    if(dist < 0.001 && !obj.is_anchor) { label.el.style.display = 'none'; continue; }
     toObj.normalize();
 
     // Dot product: positive = in front of camera, negative = behind
     const dotForward = toObj.dot(camForward);
 
     // Project to screen
-    const projPoint = new THREE.Vector3(obj.x, obj.y, obj.z).project(camera);
+    const projPoint = new THREE.Vector3(labelX, labelY, labelZ).project(camera);
 
     let sx = (projPoint.x * 0.5 + 0.5) * w;
     let sy = (-projPoint.y * 0.5 + 0.5) * h;
@@ -1848,10 +1910,15 @@ function updateDirectionalLabels(){
     // Full name + distance
     const displayName = obj.name;
     // Format distance
-    const distKm = dist / 1000;
     let distLabel;
-    if(distKm < 1) distLabel = Math.round(dist) + 'm';
-    else distLabel = (dist / 1000).toFixed(2) + 'AU';
+    if(obj.is_anchor){
+      // Local distance in meters (dist is in cm-scale units)
+      const distM = dist * 0.01;
+      distLabel = distM < 1000 ? Math.round(distM) + 'm' : (distM/1000).toFixed(1) + 'km';
+    } else {
+      // dist is AU
+      distLabel = dist.toFixed(2) + 'AU';
+    }
 
     label.el.style.left = sx + 'px';
     label.el.style.top = sy + 'px';
