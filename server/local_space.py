@@ -488,11 +488,12 @@ class LocalSpaceWorker:
                 o.z -= offset_z
 
             # Determine arrival distance based on object type
-            # Player spawns here, decelerates to stop ~10-15km from target
             if target.obj_type == 'planet':
-                arrival_dist = 80000   # planets are bigger, stop further
+                arrival_dist = 80000
             elif target.obj_type == 'moon':
                 arrival_dist = 50000
+            elif target.obj_type == 'gate':
+                arrival_dist = 10000   # jump gate: close
             else:
                 arrival_dist = 50000   # 50km out, decel to ~10-15km
 

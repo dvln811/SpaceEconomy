@@ -202,34 +202,33 @@ function initSun(){
   const sunDist = 2000000;
   const sunPos = sunDirection.clone().multiplyScalar(sunDist);
 
-  // Sun sphere (bright)
-  const sunGeo = new THREE.SphereGeometry(20000, 16, 12);
-  sunMesh = new THREE.Mesh(sunGeo, new THREE.MeshBasicMaterial({color: 0xffffaa}));
+  // Sun: flares only (no sphere)
+  sunMesh = new THREE.Group(); // placeholder for cleanup tracking
   sunMesh.position.copy(sunPos);
   scene.add(sunMesh);
 
-  // Lens flare with radial gradient textures (circles, not squares)
+  // Bright lens flare sprites
   const flare1 = new THREE.Sprite(new THREE.SpriteMaterial({
-    map: makeFlareTexture(256, 255, 255, 220, 0.2),
-    transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending
+    map: makeFlareTexture(256, 255, 255, 230, 0.15),
+    transparent: true, opacity: 1.0, depthWrite: false, blending: THREE.AdditiveBlending
   }));
-  flare1.scale.set(60000, 60000, 1);
+  flare1.scale.set(80000, 80000, 1);
   flare1.position.copy(sunPos);
   scene.add(flare1);
 
   const flare2 = new THREE.Sprite(new THREE.SpriteMaterial({
-    map: makeFlareTexture(256, 255, 200, 100, 0.4),
-    transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending
+    map: makeFlareTexture(256, 255, 220, 120, 0.3),
+    transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending
   }));
-  flare2.scale.set(180000, 180000, 1);
+  flare2.scale.set(200000, 200000, 1);
   flare2.position.copy(sunPos);
   scene.add(flare2);
 
   const flare3 = new THREE.Sprite(new THREE.SpriteMaterial({
-    map: makeFlareTexture(128, 255, 150, 50, 0.6),
-    transparent: true, opacity: 0.2, depthWrite: false, blending: THREE.AdditiveBlending
+    map: makeFlareTexture(128, 255, 180, 80, 0.5),
+    transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending
   }));
-  flare3.scale.set(400000, 400000, 1);
+  flare3.scale.set(450000, 450000, 1);
   flare3.position.copy(sunPos);
   scene.add(flare3);
 
@@ -521,6 +520,14 @@ function updateFromState(state){
       playerHeading.set(hx, hy, hz);
       flyDirection = playerHeading.clone();
     }
+    // Apply undock speed (25% max, heading away from station)
+    if(window._undockSpeedPending){
+      window._undockSpeedPending = false;
+      const [hx,hy,hz] = p.heading || [1,0,0];
+      playerHeading.set(hx, hy, hz);
+      playerSpeed = playerMaxSpeed * 0.25;
+      flyDirection = playerHeading.clone();
+    }
   }
 
   // Detect dock/undock transition
@@ -620,6 +627,8 @@ function animate(now){
       // Enter warp ONLY when fully aligned AND at speed (no timeout shortcut)
       const atSpeed = playerSpeed >= warpTriggerSpeed * 0.95;
       if(alignment > 0.9995 && atSpeed){
+        // Snap heading to exact target direction
+        playerHeading.copy(warpHeading).normalize();
         warpState = 'warping';
         warpSpeed = 0;
         playerSpeed = 0;
@@ -845,8 +854,17 @@ function animate(now){
       // Normal flight: show objects near PLAYER
       if(warpState !== 'warping'){
         const visCenter = (warpState === 'decelerating' && warpTargetPos) ? warpTargetPos : playerPos;
-        const visDist = 50000; // 50km visibility always - at astronomical scales nothing is visible further
-        // DEBUG: log visibility state once per second
+        const visDist = 50000;
+        // Reset scales from any previous warp departure (restore original scale)
+        for(const [id, mesh] of Object.entries(stationModels)){
+          if(mesh.userData._origScale) mesh.scale.setScalar(mesh.userData._origScale);
+        }
+        for(const [id, mesh] of Object.entries(gateModels)){
+          if(mesh.userData._origScale) mesh.scale.setScalar(mesh.userData._origScale);
+        }
+        for(const [id, rocks] of Object.entries(asteroidModels)) rocks.forEach(r => {
+          if(r.userData._origScale) r.scale.setScalar(r.userData._origScale);
+        });
         for(const [id, mesh] of Object.entries(stationModels)){
           const obj = localState.objects.find(o => o.station_id === id);
           if(!obj){ mesh.visible = false; continue; }
@@ -865,7 +883,28 @@ function animate(now){
           const dist = Math.sqrt((obj.x-visCenter.x)**2 + (obj.y-visCenter.y)**2 + (obj.z-visCenter.z)**2);
           rocks.forEach(r => r.visible = dist < 25000);
         }
+      } else {
+        // During warping: shrink all visible stations/gates/asteroids (departure effect)
+        if(!window._objDepartTimer) window._objDepartTimer = 0;
+        window._objDepartTimer += dt;
+        const ot = Math.min(1.0, window._objDepartTimer / 1.5);
+        const objScale = Math.max(0.02, 1.0 - ot * 0.98);
+        for(const [id, mesh] of Object.entries(stationModels)){
+          const os = mesh.userData._origScale || 1;
+          mesh.scale.setScalar(os * objScale);
+          if(ot >= 1.0) mesh.visible = false;
+        }
+        for(const [id, mesh] of Object.entries(gateModels)){
+          const os = mesh.userData._origScale || 1;
+          mesh.scale.setScalar(os * objScale);
+          if(ot >= 1.0) mesh.visible = false;
+        }
+        for(const [id, rocks] of Object.entries(asteroidModels)){
+          rocks.forEach(r => { const os = r.userData._origScale || 1; r.scale.setScalar(os * objScale); if(ot >= 1.0) r.visible = false; });
+        }
       }
+      // Reset departure timer when not warping
+      if(warpState !== 'warping') window._objDepartTimer = 0;
       // ── PLANETS: run in ALL states (including warping) ──
       for(const [id, mesh] of Object.entries(planetModels)){
           const obj = localState.objects.find(o => o.id === id);
@@ -887,7 +926,18 @@ function animate(now){
             pdirX = playerHeading.x;
             pdirY = playerHeading.y;
             pdirZ = playerHeading.z;
-            // Save direction for when we stop
+            // For moons: offset to the side so they orbit the planet, not stack on it
+            if(mesh.userData.type === 'moon'){
+              const moonAngle = hash(id) * 0.7;
+              const perpX = -pdirZ;
+              const perpZ = pdirX;
+              const offsetAmt = 1.2; // fully offset to the side of the planet
+              pdirX += perpX * Math.cos(moonAngle) * offsetAmt;
+              pdirY += 0.2 * Math.sin(moonAngle);
+              pdirZ += perpZ * Math.cos(moonAngle) * offsetAmt;
+              const nl = Math.sqrt(pdirX*pdirX+pdirY*pdirY+pdirZ*pdirZ);
+              pdirX/=nl; pdirY/=nl; pdirZ/=nl;
+            }
             mesh.userData._lastDirX = pdirX;
             mesh.userData._lastDirY = pdirY;
             mesh.userData._lastDirZ = pdirZ;
@@ -954,6 +1004,24 @@ function animate(now){
 
     // ── Directional labels for distant objects ──
     updateDirectionalLabels();
+
+    // ── Update nav card distances every 2s during flight ──
+    if(!window._navRefreshTimer) window._navRefreshTimer = 0;
+    window._navRefreshTimer += dt;
+    if(window._navRefreshTimer > 0.5 && localState && localState.objects && !isDocked){
+      window._navRefreshTimer = 0;
+      // During warp, interpolate position toward target for distance display
+      let navPos = {x: playerPos.x, y: playerPos.y, z: playerPos.z};
+      if(warpState === 'warping' && warpTargetPos){
+        const progress = Math.min(1.0, warpTravelTimer / warpTravelDuration);
+        navPos = {
+          x: playerPos.x + (warpTargetPos.x - playerPos.x) * progress,
+          y: playerPos.y + (warpTargetPos.y - playerPos.y) * progress,
+          z: playerPos.z + (warpTargetPos.z - playerPos.z) * progress
+        };
+      }
+      renderNavList(localState.objects, navPos);
+    }
 
     // ── Report position to server every 3 seconds ──
     posReportTimer += dt;
@@ -1192,7 +1260,11 @@ function renderNavList(objects, playerShip){
     const color = o.type==='gate'?'#ab47bc':o.type==='station'?'#4fc3f7':'#8aa0b8';
     // Compute actual distance from player to this object (meters)
     const dx = o.x - px, dy = o.y - py, dz = o.z - pz;
-    const distM = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    let distM = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    // For planets/moons at their LSG, show realistic orbit distance instead
+    if((o.type === 'planet' || o.type === 'moon') && distM < 50000 && planetModels[o.id]){
+      distM = planetModels[o.id].userData.orbitDist || distM;
+    }
     const distKm = distM / 1000;
     // Show km when within 50km, AU when far
     let distStr;
@@ -1256,15 +1328,22 @@ document.getElementById('locationBar').addEventListener('click', ()=>{
 document.getElementById('undockBtn').addEventListener('click', async()=>{
   const r = await fetch('/api/player/undock',{method:'POST'});
   if(r.ok){
-    // Will transition via SSE state update
+    // Force client to pick up new position/heading from server on next SSE
+    playerPosInitialized = false;
+    // Set 25% speed on next position init
+    window._undockSpeedPending = true;
   }
 });
 
 document.getElementById('dockBtn').addEventListener('click', async()=>{
-  const r = await fetch('/api/player/dock',{method:'POST'});
-  if(r.ok){
-    // Will transition via SSE state update
-  }
+  // Fade out before docking
+  const overlay = document.getElementById('fadeOverlay');
+  overlay.style.transition = 'opacity 1s';
+  overlay.style.opacity = '1';
+  setTimeout(async()=>{
+    const r = await fetch('/api/player/dock',{method:'POST'});
+    // SSE will trigger setDockedScene which fades back in
+  }, 1000);
 });
 
 // ── Load Ship Model ──
@@ -1339,6 +1418,7 @@ async function loadAllStations(){
       const typeScale = {'trade_hub':10000, 'military_base':8000, 'shipyard':12000, 'factory':6000, 'refinery':5000, 'component_works':4000, 'mining_colony':3000};
       const targetSize = typeScale[data.station_type] || 500;
       model.scale.setScalar(targetSize / maxDim);
+      model.userData._origScale = targetSize / maxDim;
       // Position at object world coords
       model.position.set(obj.x, obj.y, obj.z);
       scene.add(model);
@@ -1407,6 +1487,7 @@ async function loadAllGates(){
       const sz = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
       model.scale.setScalar(1000 / maxDim);
+      model.userData._origScale = 1000 / maxDim;
       model.position.set(obj.x, obj.y, obj.z);
       // Give gates a bright purple/magenta edge color
       model.traverse(c => {
@@ -1482,6 +1563,7 @@ function buildAsteroidMesh(data){
   const mat = new THREE.MeshPhongMaterial({color:0x2a2018, emissive:0x0a0805, shininess:2, transparent:true, opacity:0.85});
   const mesh = new THREE.Mesh(geo, mat);
   mesh.scale.setScalar(radius);
+  mesh.userData._origScale = radius;
   // Add edge wireframe for the low-poly look
   const edgeMat = new THREE.LineBasicMaterial({color:0x8d6e4a, transparent:true, opacity:0.4});
   mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25), edgeMat));
@@ -1620,7 +1702,7 @@ function clearDirectionalLabels(){
   dirLabels = [];
 }
 
-const DIR_LABEL_COLORS = {station:'#4fc3f7', gate:'#ab47bc', planet:'#8aa0b8', moon:'#5a7a9a', asteroid_field:'#ffd54f', star:'#ffab40'};
+const DIR_LABEL_COLORS = {station:'#4fc3f7', gate:'#d080f0', planet:'#a0c0d8', moon:'#8aaaba', asteroid_field:'#ffd54f', star:'#ffab40'};
 const DIR_LABEL_ICONS = {station:'◼', gate:'◇', planet:'●', moon:'○', asteroid_field:'✦', star:'★'};
 
 function updateDirectionalLabels(){
@@ -1648,6 +1730,16 @@ function updateDirectionalLabels(){
 
   // Get camera forward vector for behind-camera detection
   const camForward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+  // Reference position for distance calc (interpolated during warp)
+  let labelRefPos = camera.position;
+  if(warpState === 'warping' && warpTargetPos){
+    const progress = Math.min(1.0, warpTravelTimer / warpTravelDuration);
+    labelRefPos = new THREE.Vector3(
+      playerPos.x + (warpTargetPos.x - playerPos.x) * progress,
+      playerPos.y + (warpTargetPos.y - playerPos.y) * progress,
+      playerPos.z + (warpTargetPos.z - playerPos.z) * progress
+    );
+  }
 
   for(let i = 0; i < objs.length; i++){
     const obj = objs[i];
@@ -1657,8 +1749,10 @@ function updateDirectionalLabels(){
     const icon = DIR_LABEL_ICONS[obj.type] || '\u2022';
 
     // Direction from camera to object
-    const toObj = new THREE.Vector3(obj.x - camera.position.x, obj.y - camera.position.y, obj.z - camera.position.z);
-    const dist = toObj.length();
+    // Use object's local space position for label projection
+    const labelX = obj.x, labelY = obj.y, labelZ = obj.z;
+    const toObj = new THREE.Vector3(labelX - camera.position.x, labelY - camera.position.y, labelZ - camera.position.z);
+    const dist = new THREE.Vector3(labelX - labelRefPos.x, labelY - labelRefPos.y, labelZ - labelRefPos.z).length();
     if(dist < 100) { label.el.style.display = 'none'; continue; }
     toObj.normalize();
 
@@ -1733,9 +1827,9 @@ function updateDirectionalLabels(){
     label.el.style.left = sx + 'px';
     label.el.style.top = sy + 'px';
     label.el.style.color = color;
-    label.el.style.opacity = onScreen ? '0.6' : '0.9';
+    label.el.style.opacity = onScreen ? '0.85' : '1.0';
     label.el.style.textShadow = '0 0 4px rgba(0,0,0,0.9)';
-    label.el.innerHTML = `${arrow}${icon} ${displayName} <span style="opacity:0.6">${distLabel}</span>`;
+    label.el.innerHTML = `${arrow}${icon} ${displayName} <span style="opacity:0.9">${distLabel}</span>`;
   }
 }
 
