@@ -100,7 +100,7 @@ let interpShips = {};
 const container = document.getElementById('viewport');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x020305);
-const camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight, 1, 5000000);
+const camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight, 1, 50000000);
 camera.position.set(30, 20, 30);
 const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(container.clientWidth, container.clientHeight);
@@ -281,7 +281,7 @@ function buildStarfield(){
   starField = new THREE.Points(geo,new THREE.PointsMaterial({color:0xffffff,size:1.5,sizeAttenuation:false}));
   starField.frustumCulled = false;
   starField.renderOrder = -1; // render behind everything
-  starField.scale.setScalar(4000000); // huge radius sphere, stays inside far plane
+  starField.scale.setScalar(45000000); // stays inside far plane
 }
 buildStarfield();
 
@@ -895,8 +895,66 @@ function animate(now){
         for(const [id, mesh] of Object.entries(planetModels)){
           const obj = localState.objects.find(o => o.id === id);
           if(!obj){ mesh.visible = false; continue; }
-          const dist = Math.sqrt((obj.x-visCenter.x)**2 + (obj.y-visCenter.y)**2 + (obj.z-visCenter.z)**2);
-          mesh.visible = dist < visDist;
+          // Only show planet when player is at its nav point (within 50km)
+          const distToNav = Math.sqrt((obj.x-visCenter.x)**2 + (obj.y-visCenter.y)**2 + (obj.z-visCenter.z)**2);
+          if(distToNav > visDist){
+            mesh.visible = false;
+            continue;
+          }
+          mesh.visible = true;
+          const orbitDist = mesh.userData.orbitDist;
+          const baseRadius = mesh.userData.radius;
+
+          // Direction: during deceleration, planet is IN FRONT (along player heading)
+          // After decel, keep the last position (don't snap)
+          let pdirX, pdirY, pdirZ;
+          if(warpState === 'decelerating'){
+            pdirX = playerHeading.x;
+            pdirY = playerHeading.y;
+            pdirZ = playerHeading.z;
+            // Save direction for when we stop
+            mesh.userData._lastDirX = pdirX;
+            mesh.userData._lastDirY = pdirY;
+            mesh.userData._lastDirZ = pdirZ;
+          } else if(mesh.userData._lastDirX !== undefined){
+            // Use saved direction from end of decel
+            pdirX = mesh.userData._lastDirX;
+            pdirY = mesh.userData._lastDirY;
+            pdirZ = mesh.userData._lastDirZ;
+          } else {
+            const a = hash(id) * 0.001;
+            pdirX = Math.cos(a); pdirZ = Math.sin(a); pdirY = -0.2;
+          }
+          const l = Math.sqrt(pdirX*pdirX+pdirY*pdirY+pdirZ*pdirZ) || 1;
+
+          // Scale effect: during deceleration, scale up from 5% to 100%
+          // During aligning (departure), scale down from 100% to 5%
+          let scaleT = 1.0;
+          if(warpState === 'decelerating' && warpDecelRate > 0){
+            // Progress: 0 at start of decel, 1 when stopped
+            const totalTime = playerSpeed > 0 ? (playerSpeed / warpDecelRate) : 0;
+            const elapsed = totalTime > 0 ? 1.0 - (totalTime / (mesh.userData._decelStartTime || totalTime)) : 1.0;
+            scaleT = 0.05 + elapsed * 0.95;
+            if(!mesh.userData._decelStartTime) mesh.userData._decelStartTime = playerSpeed / warpDecelRate;
+          } else if(warpState === 'aligning'){
+            // Departure: shrink based on align timer
+            scaleT = Math.max(0.05, 1.0 - (warpAlignTimer / playerAlignTime));
+          } else {
+            mesh.userData._decelStartTime = 0; // reset for next warp
+            scaleT = 1.0;
+          }
+
+          // Position planet at orbital distance, apply slight parallax from player movement
+          const parallaxOffset = playerSpeed * 0.0001;
+          mesh.position.set(
+            playerPos.x + (pdirX/l) * orbitDist + playerHeading.x * parallaxOffset,
+            playerPos.y + (pdirY/l) * orbitDist,
+            playerPos.z + (pdirZ/l) * orbitDist + playerHeading.z * parallaxOffset
+          );
+
+          // Apply scale
+          const s = scaleT;
+          mesh.scale.set(s, s, s);
         }
         for(const [id, rocks] of Object.entries(asteroidModels)){
           const obj = localState.objects.find(o => o.id === id);
@@ -1135,7 +1193,7 @@ function updateUI(state){
 
   // Nav list (flight only)
   if(!isDockedNow && state.objects){
-    renderNavList(state.objects, p);
+    renderNavList(state.objects, {x: playerPos.x, y: playerPos.y, z: playerPos.z});
   }
 }
 
@@ -1154,8 +1212,9 @@ function renderNavList(objects, playerShip){
     if(distKm < 50){
       distStr = distKm < 1 ? Math.round(distM) + ' m' : distKm.toFixed(1) + ' km';
     } else {
-      const distAU = o.au_distance || 0;
-      distStr = distAU < 0.01 ? '<0.01 AU' : distAU.toFixed(2) + ' AU';
+      // Convert meters to AU (1 AU = 100,000m in our local space scale)
+      const distAU = distM / 100000;
+      distStr = distAU.toFixed(2) + ' AU';
     }
     // Mark if player is at this object's LSG (within 25km)
     const atLocation = distKm < 25;
@@ -1445,9 +1504,84 @@ function buildAsteroidMesh(data){
 // ── Planet/Moon Models (simple spheres with color) ──
 let planetModels = {}; // obj_id -> THREE.Group
 const PLANET_COLORS = {
-  'planet': [0x2a4a6b, 0x4a6b3a, 0x6b4a2a, 0x3a2a6b, 0x6b6b4a, 0x4a3a2a],
-  'moon': [0x555555, 0x6a6a6a, 0x4a4a4a, 0x5a5a6a],
+  // Realistic planet base colors (earth-like, gas giant, rocky, ice, desert)
+  'planet': [0x1a5c3a, 0x2a4a6b, 0x8b6b3a, 0x6b8baa, 0xc4956a, 0x4a7a4a],
+  'moon': [0x6a6a6a, 0x7a7a7a, 0x5a5a5a, 0x606060],
 };
+
+// Generate procedural planet texture (noise-based canvas)
+function generatePlanetTexture(id, baseColor, isPlanet){
+  const size = isPlanet ? 256 : 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  
+  // Seeded random from id
+  let s = Math.abs(hash(id));
+  const rand = ()=>{ s=(s*1664525+1013904223)&0xFFFFFFFF; return(s>>>0)/4294967296; };
+  
+  // Base color components
+  const r = (baseColor >> 16) & 0xFF;
+  const g = (baseColor >> 8) & 0xFF;
+  const b = baseColor & 0xFF;
+  
+  // Fill with base
+  ctx.fillStyle = `rgb(${r},${g},${b})`;
+  ctx.fillRect(0, 0, size, size);
+  
+  if(isPlanet){
+    // Horizontal bands (gas giant style or climate zones)
+    const numBands = 4 + Math.floor(rand() * 6);
+    for(let i = 0; i < numBands; i++){
+      const y = rand() * size;
+      const h = 5 + rand() * 30;
+      const variation = Math.floor((rand() - 0.5) * 40);
+      ctx.fillStyle = `rgba(${Math.max(0,Math.min(255,r+variation))},${Math.max(0,Math.min(255,g+variation))},${Math.max(0,Math.min(255,b+variation))},0.4)`;
+      ctx.fillRect(0, y, size, h);
+    }
+    // Continent/cloud patches
+    const numPatches = 8 + Math.floor(rand() * 15);
+    for(let i = 0; i < numPatches; i++){
+      const px = rand() * size, py = rand() * size;
+      const pr = 10 + rand() * 40;
+      const variation = Math.floor((rand() - 0.5) * 60);
+      const gradient = ctx.createRadialGradient(px, py, 0, px, py, pr);
+      gradient.addColorStop(0, `rgba(${Math.max(0,Math.min(255,r+variation))},${Math.max(0,Math.min(255,g+variation))},${Math.max(0,Math.min(255,b+variation))},0.5)`);
+      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(px-pr, py-pr, pr*2, pr*2);
+    }
+    // Polar caps (for rocky/earth-like)
+    if(rand() > 0.4){
+      ctx.fillStyle = 'rgba(220,230,240,0.3)';
+      ctx.fillRect(0, 0, size, 10 + rand()*15);
+      ctx.fillRect(0, size - 10 - rand()*15, size, 20);
+    }
+  } else {
+    // Moon: craters and grey variation
+    const numCraters = 5 + Math.floor(rand() * 10);
+    for(let i = 0; i < numCraters; i++){
+      const cx = rand() * size, cy = rand() * size;
+      const cr = 3 + rand() * 15;
+      const dark = Math.floor(rand() * 30);
+      ctx.beginPath();
+      ctx.arc(cx, cy, cr, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(${Math.max(0,r-dark)},${Math.max(0,g-dark)},${Math.max(0,b-dark)},0.6)`;
+      ctx.fill();
+      // Crater rim
+      ctx.beginPath();
+      ctx.arc(cx, cy, cr, 0, Math.PI*2);
+      ctx.strokeStyle = `rgba(${Math.min(255,r+15)},${Math.min(255,g+15)},${Math.min(255,b+15)},0.4)`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+  
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  return tex;
+}
 
 function loadPlanetsAndMoons(){
   if(!localState || !localState.objects) return;
@@ -1455,16 +1589,19 @@ function loadPlanetsAndMoons(){
   for(const obj of bodies){
     if(planetModels[obj.id]) continue;
     const isPlanet = obj.type === 'planet';
-    // Size: planets 1-3km radius, moons 0.5-1.5km. Small enough to be dots from across system.
-    const radius = isPlanet ? 1000 + Math.abs(hash(obj.id)) % 2000 : 500 + Math.abs(hash(obj.id)) % 1000;
+    // Planets: 1500-5000km radius, placed 5000-10000km from player
+    // Moons: 300-1000km radius, placed 3000-5000km from player
+    const radius = isPlanet ? 1500000 + Math.abs(hash(obj.id)) % 3500000 : 300000 + Math.abs(hash(obj.id)) % 700000;
+    const orbitDist = isPlanet ? 5000000 + Math.abs(hash(obj.id + 'dist')) % 5000000 : 3000000 + Math.abs(hash(obj.id + 'dist')) % 2000000;
     const colors = PLANET_COLORS[obj.type] || PLANET_COLORS['planet'];
     const color = colors[Math.abs(hash(obj.id)) % colors.length];
-    const geo = new THREE.SphereGeometry(radius, isPlanet ? 24 : 14, isPlanet ? 18 : 10);
-    const mat = new THREE.MeshPhongMaterial({color: color, emissive: 0x030508, shininess: 8});
+    const geo = new THREE.SphereGeometry(radius, isPlanet ? 48 : 24, isPlanet ? 32 : 16);
+    const tex = generatePlanetTexture(obj.id, color, isPlanet);
+    const mat = new THREE.MeshPhongMaterial({map: tex, shininess: isPlanet ? 15 : 5});
     const mesh = new THREE.Mesh(geo, mat);
-    // Place at actual position
-    mesh.position.set(obj.x, obj.y, obj.z);
-    mesh.userData = {radius, type: obj.type};
+    mesh.visible = false;
+    // Store metadata for per-frame positioning
+    mesh.userData = {radius, type: obj.type, orbitDist, objId: obj.id};
     scene.add(mesh);
     planetModels[obj.id] = mesh;
   }
@@ -1597,15 +1734,21 @@ function updateDirectionalLabels(){
       else arrow = '\u25BC ';
     }
 
-    // Full name - no truncation
+    // Full name + distance
     const displayName = obj.name;
+    // Format distance
+    const distKm = dist / 1000;
+    let distLabel;
+    if(distKm < 1) distLabel = Math.round(dist) + 'm';
+    else if(distKm < 100) distLabel = distKm.toFixed(1) + 'km';
+    else distLabel = (dist / 100000).toFixed(2) + 'AU';
 
     label.el.style.left = sx + 'px';
     label.el.style.top = sy + 'px';
     label.el.style.color = color;
     label.el.style.opacity = onScreen ? '0.6' : '0.9';
     label.el.style.textShadow = '0 0 4px rgba(0,0,0,0.9)';
-    label.el.innerHTML = `${arrow}${icon} ${displayName}`;
+    label.el.innerHTML = `${arrow}${icon} ${displayName} <span style="opacity:0.6">${distLabel}</span>`;
   }
 }
 
