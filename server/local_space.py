@@ -488,14 +488,13 @@ class LocalSpaceWorker:
                 o.z -= offset_z
 
             # Determine arrival distance based on object type
-            # Planets: 15km (they'll be 1-3km radius)
-            # Everything else: 10km
+            # Player spawns here, decelerates to stop ~10-15km from target
             if target.obj_type == 'planet':
-                arrival_dist = 15000
+                arrival_dist = 80000   # planets are bigger, stop further
             elif target.obj_type == 'moon':
-                arrival_dist = 12000
+                arrival_dist = 50000
             else:
-                arrival_dist = 10000
+                arrival_dist = 50000   # 50km out, decel to ~10-15km
 
             # Approach vector: from the player's previous position toward target
             # (from_x, from_z are the player's position before warp in the OLD coordinate system)

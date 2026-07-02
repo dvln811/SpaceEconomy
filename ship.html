@@ -521,17 +521,6 @@ function updateFromState(state){
       playerHeading.set(hx, hy, hz);
       flyDirection = playerHeading.clone();
     }
-    // If we just arrived from warp, reload all models with new positions
-    if(warpState === 'arriving'){
-      Object.values(stationModels).forEach(m => m.removeFromParent()); stationModels = {};
-      Object.values(gateModels).forEach(m => m.removeFromParent()); gateModels = {};
-      Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => r.removeFromParent())); asteroidModels = {};
-      Object.values(planetModels).forEach(m => m.removeFromParent()); planetModels = {};
-      loadAllStations();
-      loadAllGates();
-      loadAsteroidFields();
-      loadPlanetsAndMoons();
-    }
   }
 
   // Detect dock/undock transition
@@ -583,6 +572,7 @@ let warpTravelTimer = 0;  // how long warp takes (based on AU distance)
 let warpTravelDuration = 0; // total warp time in seconds
 let warpSpeed = 0; // visual speed display
 let warpRecenterPending = false; // true while waiting for server recenter
+let warpDecelRate = 0; // m/s^2 deceleration during arrival
 
 // Engine trail
 let trailLine = null;
@@ -641,51 +631,80 @@ function animate(now){
       // Visual warp speed ramps up then down
       const speedCurve = Math.sin(progress * Math.PI); // 0->1->0
       warpSpeed = speedCurve * 50000; // peak 50 km/s visual display
-      // Move player rapidly along heading - departure objects fly away behind
-      const warpMoveSpeed = speedCurve * 50000; // 50 km/s peak
-      playerPos.addScaledVector(warpHeading, warpMoveSpeed * dt);
+      // Only move player during departure (first 40% of warp) - after that, tunnel
+      if(progress < 0.4){
+        const warpMoveSpeed = speedCurve * 50000;
+        playerPos.addScaledVector(warpHeading, warpMoveSpeed * dt);
+      } else {
+        // In tunnel - hide all objects
+        Object.values(stationModels).forEach(m => m.visible = false);
+        Object.values(gateModels).forEach(m => m.visible = false);
+        Object.values(planetModels).forEach(m => m.visible = false);
+        Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => r.visible = false));
+      }
 
       if(progress >= 1.0){
-        // Warp complete: tell server to recenter LSG on target
-        const fromX = playerPos.x, fromZ = playerPos.z;
-        warpState = 'arriving';
-        warpSpeed = 0;
-        playerSpeed = 0;
+        // Warp complete - ALL CLIENT SIDE. No server needed until we've stopped.
+        // Place player 500km from target, facing it. Decelerate to stop at 10-15km.
+        const stopDist = 10000 + Math.random() * 5000; // stop 10-15km from target
+        const spawnDist = 500000; // 500km out
+        const travelDist = spawnDist - stopDist;
+        const decelTime = 4.0; // seconds
+
+        // Position player 500km from target along approach vector (opposite of warp heading)
+        playerPos.copy(warpTargetPos).addScaledVector(warpHeading, -spawnDist);
+        // Face toward target
+        playerHeading.copy(warpHeading);
+
+        // Calculate exit speed for exact stop: v0 = 2 * distance / time
+        const exitSpeed = 2 * travelDist / decelTime;
+        warpDecelRate = exitSpeed / decelTime;
+        playerSpeed = exitSpeed;
         flyDirection = null;
-        playerPosInitialized = false; // block SSE from setting position until recenter done
-        // Brief flash for transition
-        const overlay = document.getElementById('fadeOverlay');
-        overlay.style.transition = 'opacity 0.15s';
-        overlay.style.opacity = '0.4';
-        setTimeout(()=>{ overlay.style.transition = 'opacity 0.8s'; overlay.style.opacity = '0'; }, 150);
-        // Tell server to recenter. Ignore SSE data until this completes.
-        warpRecenterPending = true;
-        fetch('/api/player/warp_arrive', {method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({target: warpTargetId, from_x: fromX, from_z: fromZ})
-        }).then(()=>{
-          // Server has recentered. Allow next SSE to set position.
-          warpRecenterPending = false;
-        }).catch(()=>{ warpRecenterPending = false; });
-        // Model reload happens when SSE delivers new position (see playerPosInitialized handler)
+        warpState = 'decelerating';
+        warpSpeed = 0;
+        document.getElementById('warpTarget').textContent = 'Arriving';
+        
+        // DEBUG
+        console.log('WARP ARRIVE:', {
+          targetPos: {x: warpTargetPos.x, y: warpTargetPos.y, z: warpTargetPos.z},
+          playerPos: {x: playerPos.x, y: playerPos.y, z: playerPos.z},
+          distToTarget: playerPos.distanceTo(warpTargetPos),
+          exitSpeed, decelTime, travelDist, stopDist,
+          heading: {x: playerHeading.x, y: playerHeading.y, z: playerHeading.z},
+          stationCount: Object.keys(stationModels).length,
+          gateCount: Object.keys(gateModels).length,
+          planetCount: Object.keys(planetModels).length
+        });
       }
       // Override display speed during warp
       displaySpeed = warpSpeed;
       document.getElementById('speedBar').style.width = (progress * 100) + '%';
       document.getElementById('shipSpeed').textContent = warpSpeed > 1000 ? (warpSpeed/1000).toFixed(1) + ' km/s' : Math.round(warpSpeed) + ' m/s';
       document.getElementById('warpTarget').textContent = 'Warp ' + Math.round(progress * 100) + '%';
-    } else if(warpState === 'arriving'){
-      // Wait for recenter to finish AND server to provide new position via SSE
-      if(playerPosInitialized && !warpRecenterPending){
+    } else if(warpState === 'decelerating'){
+      // Linear deceleration toward target
+      playerSpeed -= warpDecelRate * dt;
+      if(playerSpeed <= 0){
+        playerSpeed = 0;
         warpState = 'none';
+        console.log('WARP STOPPED:', {
+          playerPos: {x: playerPos.x, y: playerPos.y, z: playerPos.z},
+          distToNearestStation: Object.entries(stationModels).map(([id,m])=>({id, dist: playerPos.distanceTo(m.position), visible: m.visible}))
+        });
         warpTargetId = null;
         warpTargetPos = null;
-        playerSpeed = 0;
         document.getElementById('warpTarget').textContent = '';
+        // NOW tell server where we ended up
+        fetch('/api/player/position', {method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({x:playerPos.x, y:playerPos.y, z:playerPos.z, speed:0,
+            hx:playerHeading.x, hy:playerHeading.y, hz:playerHeading.z, state:'idle'})
+        }).catch(()=>{});
       }
     }
 
     // ── Player Ship Physics (CLIENT-AUTHORITATIVE, ship moves in world space) ──
-    if(warpState === 'none' || warpState === 'arriving'){
+    if(warpState === 'none'){
       if(flyDirection){
         const lerpRate = 1.0 / (playerAlignTime * 60) * 3;
         playerHeading.lerp(flyDirection, lerpRate).normalize();
@@ -695,12 +714,12 @@ function animate(now){
         playerSpeed *= 0.95;
         if(playerSpeed < 0.5) playerSpeed = 0;
       }
+    }
 
-      // Move ship in world space (1 unit = 1 meter, speed in m/s)
-      if(playerSpeed > 0.1){
-        const moveM = playerSpeed * dt; // meters this frame
-        playerPos.addScaledVector(playerHeading, moveM);
-      }
+    // Move ship in world space (always, regardless of state)
+    if(playerSpeed > 0.1){
+      const moveM = playerSpeed * dt;
+      playerPos.addScaledVector(playerHeading, moveM);
     }
 
     // Position ship model at world pos
@@ -762,7 +781,7 @@ function animate(now){
     displaySpeed += (playerSpeed - displaySpeed) * 0.1;
     document.getElementById('speedBar').style.width = (displaySpeed / playerMaxSpeed * 100) + '%';
     document.getElementById('shipSpeed').textContent = Math.round(displaySpeed) + ' m/s';
-    document.getElementById('shipState').textContent = warpState === 'warping' ? 'Warping' : warpState === 'aligning' ? 'Aligning' : flyDirection ? (displaySpeed > playerMaxSpeed*0.9 ? 'Full Speed' : 'Aligning') : (playerSpeed > 1 ? 'Decelerating' : 'Idle');
+    document.getElementById('shipState').textContent = warpState === 'warping' ? 'Warping' : warpState === 'aligning' ? 'Aligning' : warpState === 'decelerating' ? 'Decelerating' : flyDirection ? (displaySpeed > playerMaxSpeed*0.9 ? 'Full Speed' : 'Aligning') : (playerSpeed > 1 ? 'Decelerating' : 'Idle');
 
     // ── Starfield: follow camera (skybox behavior, no parallax) ──
     if(starField){
@@ -839,31 +858,27 @@ function animate(now){
       // All objects in LSG are at real positions
       // During warp: hide everything (no-man's-land)
       // After arrival: show based on distance
-      const inWarp = warpState === 'warping' || warpState === 'aligning';
-      if(localState && localState.objects){
+      // Distance-based visibility. Skip during warp (handled above).
+      if(warpState !== 'warping' && localState && localState.objects){
         for(const [id, mesh] of Object.entries(stationModels)){
-          if(inWarp){ mesh.visible = false; continue; }
           const obj = localState.objects.find(o => o.station_id === id);
           if(!obj){ mesh.visible = false; continue; }
           const dist = Math.sqrt((obj.x-playerPos.x)**2 + (obj.y-playerPos.y)**2 + (obj.z-playerPos.z)**2);
-          mesh.visible = dist < 30000;
+          mesh.visible = dist < 600000;
         }
         for(const [id, mesh] of Object.entries(gateModels)){
-          if(inWarp){ mesh.visible = false; continue; }
           const obj = localState.objects.find(o => o.id === id);
           if(!obj){ mesh.visible = false; continue; }
           const dist = Math.sqrt((obj.x-playerPos.x)**2 + (obj.y-playerPos.y)**2 + (obj.z-playerPos.z)**2);
-          mesh.visible = dist < 30000;
+          mesh.visible = dist < 600000;
         }
         for(const [id, mesh] of Object.entries(planetModels)){
-          if(inWarp){ mesh.visible = false; continue; }
           const obj = localState.objects.find(o => o.id === id);
           if(!obj){ mesh.visible = false; continue; }
           const dist = Math.sqrt((obj.x-playerPos.x)**2 + (obj.y-playerPos.y)**2 + (obj.z-playerPos.z)**2);
-          mesh.visible = dist < 30000;
+          mesh.visible = dist < 600000;
         }
         for(const [id, rocks] of Object.entries(asteroidModels)){
-          if(inWarp){ rocks.forEach(r => r.visible = false); continue; }
           const obj = localState.objects.find(o => o.id === id);
           if(!obj){ rocks.forEach(r => r.visible = false); continue; }
           const dist = Math.sqrt((obj.x-playerPos.x)**2 + (obj.y-playerPos.y)**2 + (obj.z-playerPos.z)**2);
