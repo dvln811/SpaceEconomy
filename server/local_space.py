@@ -67,9 +67,9 @@ class LocalShip:
 
 class SystemObject:
     """A fixed object in the system (station, gate, planet) with 3D position."""
-    __slots__ = ('id', 'name', 'obj_type', 'x', 'y', 'z', 'station_id', 'au_distance', 'connects_to', 'parent')
+    __slots__ = ('id', 'name', 'obj_type', 'x', 'y', 'z', 'station_id', 'au_distance', 'connects_to', 'parent', 'ss_x', 'ss_z')
 
-    def __init__(self, id, name, obj_type, x, y, z, station_id='', au_distance=0.0, connects_to='', parent=''):
+    def __init__(self, id, name, obj_type, x, y, z, station_id='', au_distance=0.0, connects_to='', parent='', ss_x=0.0, ss_z=0.0):
         self.id = id
         self.name = name
         self.obj_type = obj_type
@@ -80,6 +80,8 @@ class SystemObject:
         self.au_distance = au_distance
         self.connects_to = connects_to
         self.parent = parent
+        self.ss_x = ss_x
+        self.ss_z = ss_z
 
 
 # Scale: 1 unit = 1 km. Local grid is ~500km radius.
@@ -301,65 +303,67 @@ class LocalSpaceWorker:
             ship_speed_map = {}
         with self._lock:
             self.system_id = system_id
-            # Place all system objects in local space.
-            # Stations get placed at scaled positions within the local grid.
-            # 1 unit = 1 meter. Station positions scale AU -> local meters.
-            # Scale factor: 1 AU = 100,000 meters (100km) in local space.
-            # This puts stations 10-500km apart (warpable distances).
-            AU_TO_LOCAL = 100000  # 1 AU = 100km in local space
+            # ── NEW LSG SYSTEM ──
+            # 1 unit = 1 centimeter. All models scaled 100x smaller.
+            # Target object at (0,0,0). Player arrives at offset.
+            # SS (Solar System) coordinates stored on objects for nav/label display.
+            # Only nearby objects (moons of planet, etc.) get placed in LSG.
+            # LSG usable range: ~10,000,000 units = 100,000m = 100km (plenty)
+            #
+            # Scale: ship 30m = 0.3 units. Station 8km = 80 units.
+            # Speed: 111 m/s = 1.11 units/s. 
+            # Camera orbit: 80m = 0.8 units.
 
             self.objects = []
             for obj in system_objects:
-                x = obj.distance * math.cos(obj.angle) * AU_TO_LOCAL
-                z = obj.distance * math.sin(obj.angle) * AU_TO_LOCAL
-                y = 0
-                self.objects.append(SystemObject(obj.id, obj.name, obj.obj_type, x, y, z,
+                # Store SS coordinates (AU-based polar -> cartesian) for nav display
+                ss_x = obj.distance * math.cos(obj.angle)
+                ss_z = obj.distance * math.sin(obj.angle)
+                # LSG position: not placed in grid by default (0,0,0 means "not in local space")
+                # Only the anchor target and nearby objects get real LSG positions
+                self.objects.append(SystemObject(obj.id, obj.name, obj.obj_type, 0, 0, 0,
                                                 getattr(obj, 'station_id', ''),
                                                 au_distance=obj.distance,
                                                 connects_to=getattr(obj, 'connects_to', ''),
-                                                parent=getattr(obj, 'parent', '')))
+                                                parent=getattr(obj, 'parent', ''),
+                                                ss_x=ss_x, ss_z=ss_z))
 
-            # Find the player's docked station and place it at 2000m from origin
-            # Offset all other objects relative to the player's docked station (at origin)
-            player_station_obj = None
+            # Find anchor object and set it at origin
+            anchor_obj = None
             if anchor_station_id:
                 for o in self.objects:
                     if o.station_id == anchor_station_id:
-                        player_station_obj = o
+                        anchor_obj = o
                         break
-            if not player_station_obj:
+            if not anchor_obj:
                 for o in self.objects:
                     if o.station_id:
-                        player_station_obj = o
+                        anchor_obj = o
                         break
 
-            if player_station_obj:
-                # Shift ALL objects so player's station is at origin
-                offset_x = player_station_obj.x
-                offset_y = player_station_obj.y
-                offset_z = player_station_obj.z
-                for o in self.objects:
-                    o.x -= offset_x
-                    o.y -= offset_y
-                    o.z -= offset_z
+            # Place moons near their parent planet if anchor is a planet
+            # (For now, just place anchor at origin - client handles the rest)
+            if anchor_obj:
+                anchor_obj.x = 0
+                anchor_obj.y = 0
+                anchor_obj.z = 0
 
-            # Place NPC ships around the station (within 3km = 3000m)
-            # Some near station, some further out in the local area
+            # Place NPC ships around the anchor (within 30 units = 3000cm = 30m scaled)
             self.ships = {}
             for npc in npc_ships_in_system:
-                # Look up real speed from DB (m/s), fall back to 80 m/s
-                real_speed = ship_speed_map.get(npc.ship_class, 80)
-                if player_station_obj:
-                    # Spread ships in a wider radius around station
-                    r = random.uniform(200, 3000)
+                # Look up real speed from DB (m/s), scale to cm/s (/100)
+                real_speed = ship_speed_map.get(npc.ship_class, 80) / 100.0
+                if anchor_obj:
+                    # Spread ships in a wider radius around anchor
+                    r = random.uniform(2, 30)
                     angle = random.uniform(0, math.pi * 2)
-                    x = player_station_obj.x + math.cos(angle) * r
-                    y = random.uniform(-200, 200)
-                    z = player_station_obj.z + math.sin(angle) * r
+                    x = anchor_obj.x + math.cos(angle) * r
+                    y = random.uniform(-2, 2)
+                    z = anchor_obj.z + math.sin(angle) * r
                 else:
-                    x = random.uniform(-2000, 2000)
-                    y = random.uniform(-200, 200)
-                    z = random.uniform(-2000, 2000)
+                    x = random.uniform(-20, 20)
+                    y = random.uniform(-2, 2)
+                    z = random.uniform(-20, 20)
                 ls = LocalShip(
                     id=npc.id, name=npc.name, ship_class=npc.ship_class,
                     role=npc.role, faction=npc.faction,
@@ -414,7 +418,7 @@ class LocalSpaceWorker:
             self.player_ship.state = 'flying'
 
     def player_undock(self):
-        """Place player at dock boundary (2000m from station), heading away."""
+        """Place player at dock boundary (20 units from station), heading away."""
         with self._lock:
             if not self.player_ship:
                 return
@@ -425,12 +429,12 @@ class LocalSpaceWorker:
                     station = o
                     break
             if station:
-                # Place player 2000m from station center, in a random direction
+                # Place player 20 units from station center (= 2000cm = 20m)
                 import random as _rnd
                 angle = _rnd.uniform(0, math.pi * 2)
-                self.player_ship.x = station.x + math.cos(angle) * 2000
-                self.player_ship.y = station.y + _rnd.uniform(-100, 100)
-                self.player_ship.z = station.z + math.sin(angle) * 2000
+                self.player_ship.x = station.x + math.cos(angle) * 20
+                self.player_ship.y = station.y + _rnd.uniform(-1, 1)
+                self.player_ship.z = station.z + math.sin(angle) * 20
                 # Heading away from station
                 dx = self.player_ship.x - station.x
                 dy = self.player_ship.y - station.y
@@ -487,15 +491,16 @@ class LocalSpaceWorker:
                 o.y -= offset_y
                 o.z -= offset_z
 
-            # Determine arrival distance based on object type
+            # Determine arrival distance based on object type (in cm-scale units)
+            # Planet: 800 units (= 800m real), Moon: 500, Gate: 100, Station: 500
             if target.obj_type == 'planet':
-                arrival_dist = 80000
+                arrival_dist = 800
             elif target.obj_type == 'moon':
-                arrival_dist = 50000
+                arrival_dist = 500
             elif target.obj_type == 'gate':
-                arrival_dist = 10000   # jump gate: close
+                arrival_dist = 100
             else:
-                arrival_dist = 50000   # 50km out, decel to ~10-15km
+                arrival_dist = 500
 
             # Approach vector: from the player's previous position toward target
             # (from_x, from_z are the player's position before warp in the OLD coordinate system)
@@ -534,11 +539,12 @@ class LocalSpaceWorker:
             return {
                 'system_id': self.system_id,
                 'objects': [{'id': o.id, 'name': o.name, 'type': o.obj_type,
-                             'x': round(o.x, 1), 'y': round(o.y, 1), 'z': round(o.z, 1),
+                             'x': round(o.x, 2), 'y': round(o.y, 2), 'z': round(o.z, 2),
                              'station_id': o.station_id,
                              'au_distance': round(o.au_distance, 4),
                              'connects_to': o.connects_to,
-                             'parent': o.parent} for o in self.objects],
+                             'parent': o.parent,
+                             'ss_x': round(o.ss_x, 4), 'ss_z': round(o.ss_z, 4)} for o in self.objects],
                 'ships': [s.to_dict() for s in self.ships.values() if not s.is_player],
                 'player': self.player_ship.to_dict() if self.player_ship else None,
             }

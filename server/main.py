@@ -1455,7 +1455,7 @@ def _init_local_space():
     # Place player
     ship_row = conn.execute("SELECT speed, align_time FROM ships WHERE id=?", (p['ship_class'],)).fetchone()
     conn.close()
-    speed = ship_row['speed'] if ship_row else 100
+    speed = (ship_row['speed'] if ship_row else 100) / 100.0
     align_time = ship_row['align_time'] if ship_row else 5
     pos_id = p['intra_position'] or ''
     local_space.set_player_ship('player1', p['ship_class'], speed, align_time, pos_id)
@@ -1632,7 +1632,7 @@ def api_player_dock():
                 if d < nearest_dist:
                     nearest_dist = d
                     nearest_station = o
-        if not nearest_station or nearest_dist > 3000:
+        if not nearest_station or nearest_dist > 30:
             return jsonify({"error": "not near a station"}), 400
         ps.state = 'docked'
         ps.speed = 0
@@ -1699,7 +1699,7 @@ def api_player_jump():
         dy = gate_obj.y - ps.y
         dz = gate_obj.z - ps.z
         dist = math.sqrt(dx*dx + dy*dy + dz*dz)
-        if dist > 2000:
+        if dist > 20:
             return jsonify({"error": "too far from gate", "distance": round(dist)}), 400
 
     dest_system_id = gate_obj.connects_to
@@ -1718,7 +1718,7 @@ def api_player_jump():
     # Get ship speed and align_time for new local space
     ship_row = conn.execute("SELECT speed, align_time FROM ships WHERE id=(SELECT ship_class FROM player WHERE id='player1')").fetchone()
     conn.close()
-    speed = ship_row['speed'] if ship_row else 100
+    speed = (ship_row['speed'] if ship_row else 100) / 100.0
     align_time = ship_row['align_time'] if ship_row else 5
 
     # Build speed map for NPC ships
