@@ -21,7 +21,7 @@ A browser-based space economy simulation. Single-player (Devlyn) with a living, 
 3. **NO M-DASHES in replies.**
 4. **No raw IDs displayed anywhere** - always title case or lookup names.
 5. Item names must NOT include size labels (size is a separate column/badge).
-6. **Ask before coding** when user asks a question vs requests a change.
+6. **Ask before coding** when user asks a question vs requests a change. **NEVER start coding just because the visionary asks a question.** Discuss first, confirm approach, THEN code.
 7. Use `python dev.py` or `python _sim.py` for local testing.
 8. Nuke button on /debug resets runtime state after breaking changes.
 9. **ALL scrollbars must be themed** (dark track, subtle thumb) on every page.

@@ -68,7 +68,7 @@ def generate():
             obj_count += 1
             dist = 3.0 + si * 2.0 + random.uniform(0, 1.0)
             angle = random.uniform(0, 2 * math.pi)
-            objects.append((f"obj_{obj_count:06d}", st['name'], sid, 'station', round(dist, 2), round(angle, 4), '', ''))
+            objects.append((f"obj_{obj_count:06d}", st['name'], sid, 'station', round(dist, 2), round(angle, 4), '', '', st['id']))
 
         # Asteroid belts
         sys_fields = fields.get(sid, [])
@@ -76,7 +76,8 @@ def generate():
             obj_count += 1
             dist = 5.0 + fi * 1.5 + random.uniform(0, 1.5)
             angle = random.uniform(0, 2 * math.pi)
-            objects.append((f"obj_{obj_count:06d}", f['name'], sid, 'belt', round(dist, 2), round(angle, 4), '', ''))
+            # Store field_id in connects_to for asteroid model lookup
+            objects.append((f"obj_{obj_count:06d}", f['name'], sid, 'belt', round(dist, 2), round(angle, 4), '', f['id']))
 
         # Jump gates (one per connection, outer ring)
         sys_conns = connections.get(sid, [])
@@ -90,7 +91,10 @@ def generate():
 
         # Write all objects
         for obj in objects:
-            conn.execute("INSERT INTO system_objects (id, name, system_id, obj_type, distance, angle, parent, connects_to) VALUES (?,?,?,?,?,?,?,?)", obj)
+            if len(obj) == 9:
+                conn.execute("INSERT INTO system_objects (id, name, system_id, obj_type, distance, angle, parent, connects_to, station_id) VALUES (?,?,?,?,?,?,?,?,?)", obj)
+            else:
+                conn.execute("INSERT INTO system_objects (id, name, system_id, obj_type, distance, angle, parent, connects_to) VALUES (?,?,?,?,?,?,?,?)", obj)
 
     conn.commit()
     conn.close()

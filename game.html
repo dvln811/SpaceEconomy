@@ -206,7 +206,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
       </div>
       <div id="newsContent" style="flex:1;overflow-y:auto;padding:4px 8px;font-size:10px;line-height:1.5;color:#8aa0b8;scrollbar-width:thin;scrollbar-color:#1a3050 #0a0e18"></div>
     </div>
-    <div class="map-label"><input id="sysSearchMap" type="search" placeholder="Search system..." style="background:#0a1020;border:1px solid #1a2844;color:#c8d4e0;padding:3px 8px;border-radius:3px;font:inherit;font-size:12px;width:140px;margin-right:6px"><select id="starColorMode" style="background:#0a1020;border:1px solid #1a2844;color:#c8d4e0;padding:3px 6px;border-radius:3px;font:inherit;font-size:12px">
+    <div class="map-label"><button id="mySystemBtn" style="background:#1a1400;border:1px solid #f0a030;color:#f0a030;padding:3px 10px;border-radius:3px;font:inherit;font-size:11px;cursor:pointer;margin-right:6px;text-transform:uppercase;letter-spacing:1px" title="Go to current system">CURRENT SYSTEM</button><input id="sysSearchMap" type="search" placeholder="Search system..." style="background:#0a1020;border:1px solid #1a2844;color:#c8d4e0;padding:3px 8px;border-radius:3px;font:inherit;font-size:12px;width:140px;margin-right:6px"><select id="starColorMode" style="background:#0a1020;border:1px solid #1a2844;color:#c8d4e0;padding:3px 6px;border-radius:3px;font:inherit;font-size:12px">
       <option value="default">Star Type</option>
       <option value="faction">Faction</option>
       <option value="security">Security</option>
@@ -568,7 +568,37 @@ async function initSystems(){
   updateLabelVisibility();
 }
 
-initSystems();
+initSystems().then(()=>{
+  // Fetch player location and position the player ring
+  fetch('/api/player').then(r=>r.json()).then(p=>{
+    if(p && p.system_id && systemIdToIndex[p.system_id] !== undefined){
+      playerSystemIndex = systemIdToIndex[p.system_id];
+      const s = systems[playerSystemIndex];
+      playerRing.position.set(s.x, s.y, s.z);
+      playerRing.visible = true;
+    }
+  }).catch(()=>{});
+  // Handle ?system= URL parameter (navigate to that system)
+  const urlParams = new URLSearchParams(window.location.search);
+  const targetSys = urlParams.get('system');
+  if(targetSys && systemIdToIndex[targetSys] !== undefined){
+    const idx = systemIdToIndex[targetSys];
+    focusSystem(idx);
+    zoomToSystem(idx);
+    // If openSV=1, also open the system view modal
+    if(urlParams.get('openSV') === '1'){
+      setTimeout(()=>{ openSystemView(targetSys); }, 800);
+    }
+  }
+});
+
+// My System button - navigate to player's current system
+document.getElementById('mySystemBtn').addEventListener('click', ()=>{
+  if(playerSystemIndex >= 0){
+    focusSystem(playerSystemIndex);
+    zoomToSystem(playerSystemIndex);
+  }
+});
 
 // Star color mode
 const FACTION_COLORS_HEX={terran_fed:0x4fc3f7,science_collective:0xab47bc,merchants_guild:0xffd54f,free_states:0x66bb6a,iron_compact:0xff8a65,corsairs:0x888888};
@@ -663,9 +693,9 @@ function getOrCreate3DShip(ship,idx){
 }
 
 // Player indicator at Cygnus
-// Player location marker (brackets style)
+// Player location marker (yellowish-orange reticule)
 const playerRing = new THREE.Group();
-const pMat=new THREE.LineBasicMaterial({color:0x66ff66,transparent:true,opacity:0.8});
+const pMat=new THREE.LineBasicMaterial({color:0xf0a030,transparent:true,opacity:0.9});
 [0,Math.PI/2,Math.PI,Math.PI*1.5].forEach(a=>{
   const pts=[];const r1=10,r2=14;
   for(let i=0;i<=4;i++){const t=a+i*0.15;pts.push(new THREE.Vector3(Math.cos(t)*r2,0,Math.sin(t)*r2));}
@@ -674,6 +704,7 @@ const pMat=new THREE.LineBasicMaterial({color:0x66ff66,transparent:true,opacity:
 playerRing.position.set(0,0,0);
 playerRing.visible=false;
 scene.add(playerRing);
+let playerSystemIndex = -1; // index into systems[] for player's current system
 
 // Selected ship label
 const shipLabelDiv=document.createElement('div');
@@ -855,6 +886,9 @@ function animate(){
     reticle.position.set(s.x,s.y,s.z);
     reticle.rotation.y=reticleAngle;
     reticle.visible=true;
+    // Orange color if selected system is player's current system
+    const isPlayerSys = selectedSystem === playerSystemIndex;
+    reticle.traverse(c=>{ if(c.material) c.material.color.setHex(isPlayerSys ? 0xf0a030 : 0x4fc3f7); });
   }else if(selectedShip>=0&&selectedShip<shipMeshes.length&&shipMeshes[selectedShip].position){
     reticle.position.copy(shipMeshes[selectedShip].position);
     reticle.rotation.y=reticleAngle;

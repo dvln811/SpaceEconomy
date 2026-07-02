@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Asteroid Generator</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#05080f;color:#c8d4e0;font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.tab-bar{background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;gap:4px;padding:6px 12px;flex-shrink:0}
+.tab-bar a{padding:5px 14px;border:1px solid #1a2844;color:#5a7a9a;border-radius:3px;text-decoration:none;font-size:11px}
+.tab-bar a.active{background:#0d1a2f;border-color:#4fc3f7;color:#4fc3f7;font-weight:600}
+.page{display:flex;flex:1;overflow:hidden}
+.sidebar{width:280px;background:#0a0e18;border-right:1px solid #1a2844;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.sidebar h1{font-size:16px;color:#ffd54f;letter-spacing:1px;margin-bottom:4px}
+label{display:block;font-size:11px;color:#8aa0b8;margin-bottom:3px}
+select,input[type=number]{width:100%;background:#0a1020;border:1px solid #1a3050;color:#c8d4e0;padding:6px 8px;border-radius:3px;font-family:inherit;font-size:12px}
+.btn{display:block;width:100%;padding:10px;border:1px solid #ffd54f;background:#1a1a0a;color:#ffd54f;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;transition:all .15s}
+.btn:hover{background:#ffd54f;color:#05080f}
+.viewer{flex:1;position:relative}
+.info-bar{position:absolute;top:10px;left:10px;background:#0a0e18cc;border:1px solid #1a2844;border-radius:4px;padding:8px 12px;font-size:11px;color:#8aa0b8}
+.info-bar span{color:#ffd54f;font-weight:500}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#0a0e18}::-webkit-scrollbar-thumb{background:#1a3050;border-radius:3px}
+</style>
+</head>
+<body>
+<div class="tab-bar">
+  <a href="/ship_designer">Ship Generator</a>
+  <a href="/ship_designer/station.html">Station Generator</a>
+  <a href="/ship_designer/gate.html">Gate Generator</a>
+  <a href="/ship_designer/asteroid.html" class="active">Asteroid Generator</a>
+  <a href="/ship_designer/gallery.html">Component Library</a>
+  <a href="/ship_designer/review.html">Review</a>
+</div>
+<div class="page">
+<div class="sidebar">
+  <h1>Asteroid Generator</h1>
+  <div>
+    <label>Ore Type</label>
+    <select id="oreType"></select>
+  </div>
+  <div>
+    <label>Size Class</label>
+    <select id="sizeClass">
+      <option value="small">Small (20-60m)</option>
+      <option value="medium" selected>Medium (80-200m)</option>
+      <option value="large">Large (300-800m)</option>
+    </select>
+  </div>
+  <div>
+    <label>Seed (blank = random)</label>
+    <input type="number" id="seed" placeholder="Random">
+  </div>
+  <button class="btn" id="generateBtn">Generate Asteroid</button>
+  <div class="info-bar" style="position:static;margin-top:12px" id="info">
+    Click Generate to create an asteroid.
+  </div>
+</div>
+<div class="viewer" id="viewer"></div>
+</div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+
+const viewer = document.getElementById('viewer');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050810);
+const camera = new THREE.PerspectiveCamera(50, viewer.clientWidth/viewer.clientHeight, 0.01, 100);
+camera.position.set(2, 1.5, 2);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(viewer.clientWidth, viewer.clientHeight);
+viewer.appendChild(renderer.domElement);
+const controls = new OrbitControls(camera, renderer.domElement);
+scene.add(new THREE.AmbientLight(0xffd54f, 0.2));
+const dir = new THREE.DirectionalLight(0xffffff, 0.6);
+dir.position.set(3, 2, 1);
+scene.add(dir);
+
+let currentModel = null;
+
+// Load ore types
+fetch('/api/asteroid/types').then(r=>r.json()).then(data=>{
+  const sel = document.getElementById('oreType');
+  data.ore_types.forEach(t=>{
+    const opt = document.createElement('option');
+    opt.value = t; opt.textContent = t.replace(/_/g,' ');
+    sel.appendChild(opt);
+  });
+});
+
+document.getElementById('generateBtn').addEventListener('click', async()=>{
+  const ore_type = document.getElementById('oreType').value;
+  const size_class = document.getElementById('sizeClass').value;
+  const seedVal = document.getElementById('seed').value;
+  const body = {ore_type, size_class};
+  if(seedVal) body.seed = parseInt(seedVal);
+  const r = await fetch('/api/asteroid/generate', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  const data = await r.json();
+  displayAsteroid(data);
+});
+
+function displayAsteroid(data){
+  if(currentModel) scene.remove(currentModel);
+  currentModel = buildAsteroidMesh(data);
+  scene.add(currentModel);
+  document.getElementById('info').innerHTML = `<span>${data.ore_type}</span> (${data.size_class}) | ${data.meta.vertex_count} verts, ${data.meta.face_count} faces | radius: ${data.meta.radius}m`;
+}
+
+function buildAsteroidMesh(data){
+  // Raw vertex/face data from generator
+  const verts = new Float32Array(data.vertices);
+  const indices = new Uint16Array(data.faces);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+  geo.setIndex(new THREE.BufferAttribute(indices, 1));
+  geo.computeVertexNormals();
+  const mat = new THREE.MeshPhongMaterial({color:0x2a2018, emissive:0x0a0805, shininess:2, transparent:true, opacity:0.85});
+  const mesh = new THREE.Mesh(geo, mat);
+  // Edge wireframe
+  const edgeMat = new THREE.LineBasicMaterial({color:0x8d6e4a, transparent:true, opacity:0.5});
+  mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25), edgeMat));
+  return mesh;
+}
+
+function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);}
+animate();
+window.addEventListener('resize',()=>{camera.aspect=viewer.clientWidth/viewer.clientHeight;camera.updateProjectionMatrix();renderer.setSize(viewer.clientWidth,viewer.clientHeight);});
+</script>
+</body>
+</html>

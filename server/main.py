@@ -462,6 +462,55 @@ def api_station_batch():
     return jsonify(results)
 
 
+@app.route("/api/gate/generate", methods=["POST"])
+def api_gate_generate():
+    import sys
+    sys.path.insert(0, os.path.join(BASE_DIR, "tools", "ship_designer"))
+    from gate_generator import generate_gate, GATE_STYLES
+    params = request.get_json() or {}
+    faction = params.get("faction", "terran")
+    seed = params.get("seed")
+    if seed == "" or seed is None:
+        seed = None
+    else:
+        seed = int(seed)
+    data = generate_gate(faction=faction, seed=seed)
+    return jsonify(data)
+
+
+@app.route("/api/gate/factions")
+def api_gate_factions():
+    import sys
+    sys.path.insert(0, os.path.join(BASE_DIR, "tools", "ship_designer"))
+    from gate_generator import GATE_STYLES
+    return jsonify(list(GATE_STYLES.keys()))
+
+
+@app.route("/api/asteroid/generate", methods=["POST"])
+def api_asteroid_generate():
+    import sys
+    sys.path.insert(0, os.path.join(BASE_DIR, "tools", "ship_designer"))
+    from asteroid_generator import generate_asteroid, ASTEROID_STYLES, SIZE_CLASSES
+    params = request.get_json() or {}
+    ore_type = params.get("ore_type", "generic")
+    size_class = params.get("size_class", "medium")
+    seed = params.get("seed")
+    if seed == "" or seed is None:
+        seed = None
+    else:
+        seed = int(seed)
+    data = generate_asteroid(ore_type=ore_type, size_class=size_class, seed=seed)
+    return jsonify(data)
+
+
+@app.route("/api/asteroid/types")
+def api_asteroid_types():
+    import sys
+    sys.path.insert(0, os.path.join(BASE_DIR, "tools", "ship_designer"))
+    from asteroid_generator import ASTEROID_STYLES, SIZE_CLASSES
+    return jsonify({"ore_types": list(ASTEROID_STYLES.keys()), "size_classes": list(SIZE_CLASSES.keys())})
+
+
 @app.route("/api/saved")
 def api_designer_saved():
     save_dir = os.path.join(BASE_DIR, "tools", "ship_designer", "saved_designs")
@@ -631,7 +680,110 @@ def api_station_model(station_id):
     with open(path) as f:
         designs = json.load(f)
     idx = variant % len(designs)
+    result = designs[idx]
+    if isinstance(result, dict):
+        result['station_type'] = row['station_type']
+    else:
+        result = {'components': result, 'station_type': row['station_type']}
+    return jsonify(result)
+
+
+@app.route("/api/gate_model/<system_id>/<gate_id>")
+def api_gate_model(system_id, gate_id):
+    """Get a jump gate 3D model for a system's gate object."""
+    from server.game_data_db import get_data_db
+    conn = get_data_db()
+    sys_row = conn.execute("SELECT faction_id FROM systems WHERE id=?", (system_id,)).fetchone()
+    conn.close()
+    faction_map = {'terran_fed':'terran','science_collective':'science','merchants_guild':'merchants',
+                   'free_states':'frontier','iron_compact':'iron_compact','corsairs':'frontier','':'frontier'}
+    faction = faction_map.get(sys_row['faction_id'] if sys_row else '', 'frontier')
+    path = os.path.join(BASE_DIR, "tools", "ship_designer", "gate_designs", f"gates_{faction}.json")
+    if not os.path.exists(path):
+        path = os.path.join(BASE_DIR, "tools", "ship_designer", "gate_designs", "gates_frontier.json")
+    if not os.path.exists(path):
+        return jsonify({"error": "no gate designs"}), 404
+    with open(path) as f:
+        designs = json.load(f)
+    # Pick variant based on gate_id hash
+    idx = hash(gate_id) % len(designs)
     return jsonify(designs[idx])
+
+
+@app.route("/api/asteroid_model/<field_id>")
+def api_asteroid_model(field_id):
+    """Generate asteroid models for a specific field. Uses field ID as seed for determinism."""
+    import sys
+    sys.path.insert(0, os.path.join(BASE_DIR, "tools", "ship_designer"))
+    from asteroid_generator import generate_asteroid
+    from server.game_data_db import get_data_db
+
+    # Look up field ore types from DB
+    conn = get_data_db()
+    field_row = conn.execute("SELECT field_type, density FROM asteroid_fields WHERE id=?", (field_id,)).fetchone()
+    ore_rows = conn.execute("SELECT commodity_id FROM field_yields WHERE field_id=?", (field_id,)).fetchall()
+    conn.close()
+
+    if not field_row:
+        # Fallback: generate generic asteroids
+        ore_types = ['iron_ore', 'silicon_ore']
+        density = 1.0
+    else:
+        ore_types = [r['commodity_id'] for r in ore_rows] if ore_rows else ['iron_ore']
+        density = field_row['density'] or 1.0
+
+    # Ore-specific colors (hex values for client-side rendering)
+    ORE_COLORS = {
+        'hydral_ice': 0x8ecae6, 'calcite': 0xc4b99a, 'carbonite': 0x3a3a3a,
+        'iron_ore': 0x6b4e3a, 'silicon_ore': 0x7a7a8a, 'copper_ore': 0x8b5a2b,
+        'nitrogen_ice': 0xa8d8ea, 'methane_ice': 0x7eb8c9, 'zinc_ore': 0x9a9a7a,
+        'tin_ore': 0x8a8a8a, 'nickel_ore': 0x6a7a5a, 'cobalt_ore': 0x4a5a8a,
+        'biomass': 0x4a8a3a, 'spore_clusters': 0x6a9a4a, 'chromium_ore': 0xaaaaaa,
+        'titanium_ore': 0xc0c0c8, 'amino_gel': 0x5abc7a, 'tungsten_ore': 0x5a5a6a,
+        'xenon_gas': 0x9a7abc, 'helium3': 0xffe4b5, 'quartz_crystal': 0xe8e8ff,
+        'lithium_crystal': 0xc8a0d8, 'beryllium_crystal': 0xa0d8c8,
+        'gold_ore': 0xdaa520, 'platinum_ore': 0xe5e4e2, 'palladium_ore': 0xb8c4d0,
+        'kraxolite': 0xff4500, 'void_shard': 0x2a0040, 'neutronium': 0x1a0a2a,
+    }
+
+    # Ore-specific base sizes (cheaper = larger rocks, expensive = smaller/rarer)
+    ORE_SIZES = {
+        'hydral_ice': (80, 300), 'calcite': (80, 250), 'carbonite': (100, 350),
+        'iron_ore': (100, 400), 'silicon_ore': (80, 300), 'copper_ore': (80, 280),
+        'nitrogen_ice': (60, 200), 'methane_ice': (60, 200), 'zinc_ore': (60, 200),
+        'tin_ore': (50, 180), 'nickel_ore': (50, 180), 'cobalt_ore': (40, 150),
+        'biomass': (30, 120), 'spore_clusters': (20, 100), 'chromium_ore': (40, 150),
+        'titanium_ore': (35, 130), 'amino_gel': (25, 90), 'tungsten_ore': (30, 120),
+        'xenon_gas': (20, 80), 'helium3': (15, 60), 'quartz_crystal': (15, 60),
+        'lithium_crystal': (12, 50), 'beryllium_crystal': (10, 45),
+        'gold_ore': (10, 40), 'platinum_ore': (8, 35), 'palladium_ore': (8, 35),
+        'kraxolite': (5, 25), 'void_shard': (4, 20), 'neutronium': (3, 15),
+    }
+
+    # Use field_id as deterministic seed
+    import hashlib
+    seed_val = int(hashlib.md5(field_id.encode()).hexdigest()[:8], 16)
+
+    # Generate 30-50 asteroids based on density
+    count = int(20 + density * 15)
+    count = min(50, max(20, count))
+
+    import random as _rnd
+    _rnd.seed(seed_val)
+
+    asteroids = []
+    for i in range(count):
+        ore = _rnd.choice(ore_types)
+        size_range = ORE_SIZES.get(ore, (50, 200))
+        color = ORE_COLORS.get(ore, 0x6b4e3a)
+
+        ast = generate_asteroid(ore_type=ore, size_class='medium', seed=seed_val * 1000 + i)
+        # Override radius based on ore-specific size
+        ast['radius'] = _rnd.uniform(*size_range)
+        ast['color'] = color
+        asteroids.append(ast)
+
+    return jsonify({'asteroids': asteroids, 'field_id': field_id, 'density': density, 'ore_types': ore_types})
 
 
 @app.route("/system_view")
@@ -657,7 +809,8 @@ def _check_sim_ready():
               '/api/all_components', '/api/component_categories', '/api/generate_component',
               '/api/save_component', '/api/saved_components', '/api/load_component/',
               '/api/export_tagged', '/api/ship_model/', '/api/agents', '/api/data/',
-              '/api/station_designs/', '/api/station_model/', '/api/player')
+              '/api/station_designs/', '/api/station_model/', '/api/gate_model/', '/api/asteroid_model/',
+              '/api/gate/', '/api/asteroid/', '/api/player')
     if request.path.startswith('/api/') and not _sim_ready.is_set():
         if not any(request.path.startswith(p) for p in exempt):
             return jsonify({"error": "Simulation loading, please wait..."}), 503
@@ -1285,22 +1438,27 @@ def _init_local_space():
         return
     conn = get_data_db()
     p = conn.execute("SELECT system_id, ship_class, station_id, intra_position FROM player WHERE id='player1'").fetchone()
-    conn.close()
     if not p or not p['system_id']:
+        conn.close()
         return
     sys_obj = sim.universe.get(p['system_id'])
     if not sys_obj:
+        conn.close()
         return
-    # Load system objects into local space
+    # Build a speed lookup from ships DB (real m/s speeds)
+    ship_speed_rows = conn.execute("SELECT id, speed FROM ships").fetchall()
+    ship_speed_map = {r['id']: r['speed'] for r in ship_speed_rows}
+    # Load system objects into local space (pass speed map for NPC speed lookup)
     local_space.load_system(p['system_id'], sys_obj.objects,
-                            [s for s in sim.ships if s.location == p['system_id']])
+                            [s for s in sim.ships if s.location == p['system_id']],
+                            ship_speed_map, anchor_station_id=p['station_id'] or '')
     # Place player
-    conn2 = get_data_db()
-    ship_row = conn2.execute("SELECT speed FROM ships WHERE id=?", (p['ship_class'],)).fetchone()
-    conn2.close()
+    ship_row = conn.execute("SELECT speed, align_time FROM ships WHERE id=?", (p['ship_class'],)).fetchone()
+    conn.close()
     speed = ship_row['speed'] if ship_row else 100
+    align_time = ship_row['align_time'] if ship_row else 5
     pos_id = p['intra_position'] or ''
-    local_space.set_player_ship('player1', p['ship_class'], speed, pos_id)
+    local_space.set_player_ship('player1', p['ship_class'], speed, align_time, pos_id)
     log.info(f"LocalSpace loaded: system={p['system_id']}, {len(local_space.objects)} objects, {len(local_space.ships)} ships")
 
 threading.Thread(target=_init_local_space, daemon=True).start()
@@ -1474,7 +1632,7 @@ def api_player_dock():
                 if d < nearest_dist:
                     nearest_dist = d
                     nearest_station = o
-        if not nearest_station or nearest_dist > 7000:
+        if not nearest_station or nearest_dist > 3000:
             return jsonify({"error": "not near a station"}), 400
         ps.state = 'docked'
         ps.speed = 0
@@ -1496,6 +1654,118 @@ def api_player_warp():
         return jsonify({"error": "no target"}), 400
     local_space.player_warp(target_obj_id)
     return jsonify({"status": "warping", "target": target_obj_id})
+
+
+@app.route("/api/player/warp_arrive", methods=["POST"])
+def api_player_warp_arrive():
+    """Called when client warp completes. Re-centers LSG on the target."""
+    data = request.get_json() or {}
+    target_obj_id = data.get('target')
+    from_x = float(data.get('from_x', 0))
+    from_z = float(data.get('from_z', 0))
+    if not target_obj_id:
+        return jsonify({"error": "no target"}), 400
+    local_space.recenter_on_target(target_obj_id, from_x, from_z)
+    return jsonify({"status": "arrived", "target": target_obj_id})
+
+
+@app.route("/api/player/jump", methods=["POST"])
+def api_player_jump():
+    """Jump through a gate to a connected system."""
+    from server.game_data_db import get_data_db
+    import math
+    data = request.get_json() or {}
+    gate_obj_id = data.get('gate_id')
+    if not gate_obj_id:
+        return jsonify({"error": "no gate specified"}), 400
+
+    # Find the gate and its destination
+    with local_space._lock:
+        gate_obj = None
+        for o in local_space.objects:
+            if o.id == gate_obj_id and o.obj_type == 'gate':
+                gate_obj = o
+                break
+        if not gate_obj:
+            return jsonify({"error": "gate not found"}), 404
+        if not gate_obj.connects_to:
+            return jsonify({"error": "gate has no destination"}), 400
+
+        # Check player is near the gate (within 10km)
+        ps = local_space.player_ship
+        if not ps:
+            return jsonify({"error": "no player ship"}), 400
+        dx = gate_obj.x - ps.x
+        dy = gate_obj.y - ps.y
+        dz = gate_obj.z - ps.z
+        dist = math.sqrt(dx*dx + dy*dy + dz*dz)
+        if dist > 2000:
+            return jsonify({"error": "too far from gate", "distance": round(dist)}), 400
+
+    dest_system_id = gate_obj.connects_to
+
+    # Verify destination system exists
+    dest_sys = sim.universe.get(dest_system_id)
+    if not dest_sys:
+        return jsonify({"error": "destination system not found"}), 404
+
+    # Update player DB
+    conn = get_data_db()
+    conn.execute("UPDATE player SET system_id=?, station_id='', docked=0, state='idle', intra_position='' WHERE id='player1'",
+                 (dest_system_id,))
+    conn.commit()
+
+    # Get ship speed and align_time for new local space
+    ship_row = conn.execute("SELECT speed, align_time FROM ships WHERE id=(SELECT ship_class FROM player WHERE id='player1')").fetchone()
+    conn.close()
+    speed = ship_row['speed'] if ship_row else 100
+    align_time = ship_row['align_time'] if ship_row else 5
+
+    # Build speed map for NPC ships
+    conn2 = get_data_db()
+    ship_speed_rows = conn2.execute("SELECT id, speed FROM ships").fetchall()
+    ship_speed_map = {r['id']: r['speed'] for r in ship_speed_rows}
+    conn2.close()
+
+    # Reload local space for destination system
+    source_system_id = gate_obj.connects_to  # wait, this is the dest. Source is the current system before jump
+    # Actually, source is where we came from. gate_obj.connects_to IS the dest. The source is local_space.system_id before reload.
+    # But we already have it stored - the gate we jumped through is in the SOURCE system connecting TO dest.
+    # So in the DEST system, we want the gate that connects back to the SOURCE.
+    source_sys_id = local_space.system_id  # current system before we reload
+
+    local_space.load_system(dest_system_id, dest_sys.objects,
+                            [s for s in sim.ships if s.location == dest_system_id],
+                            ship_speed_map)
+
+    # Find the arrival gate (gate in dest system that connects back to source)
+    arrival_gate_id = None
+    with local_space._lock:
+        for o in local_space.objects:
+            if o.obj_type == 'gate' and o.connects_to == source_sys_id:
+                arrival_gate_id = o.id
+                break
+        # Fallback: first gate
+        if not arrival_gate_id:
+            for o in local_space.objects:
+                if o.obj_type == 'gate':
+                    arrival_gate_id = o.id
+                    break
+
+    local_space.set_player_ship('player1', '', speed, align_time, '')
+
+    # Recenter on the arrival gate (player spawns 10km from it)
+    if arrival_gate_id:
+        local_space.recenter_on_target(arrival_gate_id)
+
+    # Get destination system info for client
+    dest_name = dest_sys.name if hasattr(dest_sys, 'name') else dest_system_id
+
+    return jsonify({
+        "status": "jumped",
+        "system_id": dest_system_id,
+        "system_name": dest_name,
+    })
 
 
 if __name__ == "__main__":

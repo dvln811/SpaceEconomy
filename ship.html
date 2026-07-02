@@ -6,18 +6,20 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:12px;height:100vh;overflow:hidden}
-.layout{display:grid;height:100vh}
+.layout{display:grid;height:100vh;gap:0}
 .layout.docked{grid-template-columns:1fr 300px}
 .layout.flight{grid-template-columns:1fr 240px}
 .viewport{position:relative;overflow:hidden;background:#080c14}
-.panel{background:#0a0e18;border-left:1px solid #1a2844;padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;resize:horizontal;overflow:auto;min-width:200px;max-width:500px}
+.viewport canvas{display:block}
+.panel{background:#0a0e18;border-left:1px solid #1a2844;padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
 h2{color:#4fc3f7;font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
 .stat-row{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #0f1520}
 .stat-row .label{color:#5a7a9a}.stat-row .val{color:#e0e8f0}
 .btn{padding:6px 12px;border:1px solid #4fc3f7;background:#0d1a2f;color:#4fc3f7;border-radius:3px;cursor:pointer;font:inherit;font-size:11px;text-transform:uppercase;letter-spacing:1px}
 .btn:hover{background:#4fc3f7;color:#05080f}
 .btn-red{border-color:#ef5350;color:#ef5350}.btn-red:hover{background:#ef5350;color:#fff}
-.location-bar{position:absolute;top:8px;left:8px;background:rgba(10,14,24,0.9);border:1px solid #1a2844;border-radius:4px;padding:6px 12px;font-size:11px;z-index:5}
+.location-bar{position:absolute;top:8px;left:8px;background:rgba(10,14,24,0.9);border:1px solid #1a2844;border-radius:4px;padding:6px 12px;font-size:11px;z-index:5;cursor:pointer;transition:border-color 0.2s}
+.location-bar:hover{border-color:#4fc3f7}
 .location-bar .sys{color:#4fc3f7;font-weight:600}
 .location-bar .sec{margin-left:8px}
 .status-bar{position:absolute;bottom:8px;left:8px;background:rgba(10,14,24,0.9);border:1px solid #1a2844;border-radius:4px;padding:6px 12px;font-size:10px;z-index:5;display:flex;gap:8px;align-items:center;max-width:300px}
@@ -98,22 +100,29 @@ let interpShips = {};
 const container = document.getElementById('viewport');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x020305);
-const camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight, 0.1, 50000);
+const camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight, 1, 5000000);
 camera.position.set(30, 20, 30);
 const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(container.clientWidth, container.clientHeight);
 container.appendChild(renderer.domElement);
 
 // ── Custom Camera Controller (replaces OrbitControls) ──
-let camTheta = Math.PI / 4;  // horizontal orbit angle
-let camPhi = Math.PI / 6;    // vertical orbit angle (from horizontal)
-let camRadius = 80;           // orbit distance
+let camTheta = Math.PI / 4;  // current horizontal orbit angle
+let camPhi = Math.PI / 6;    // current vertical orbit angle
+let camRadius = 80;           // current orbit distance
+let camTargetTheta = Math.PI / 4;  // target (smoothed toward)
+let camTargetPhi = Math.PI / 6;
+let camTargetRadius = 80;
 let camMinRadius = 10;
 let camMaxRadius = 2000;
 let isOrbiting = false;
 let orbitStart = {x:0, y:0};
 
 function updateCameraOrbit() {
+  // Smooth toward target values
+  camTheta += (camTargetTheta - camTheta) * 0.12;
+  camPhi += (camTargetPhi - camPhi) * 0.12;
+  camRadius += (camTargetRadius - camRadius) * 0.12;
   // Spherical to cartesian offset from target
   const x = camRadius * Math.cos(camPhi) * Math.sin(camTheta);
   const y = camRadius * Math.sin(camPhi);
@@ -143,25 +152,98 @@ window.addEventListener('mousemove', e => {
     const dy = e.clientY - orbitStart.y;
     orbitStart = {x: e.clientX, y: e.clientY};
     if (Math.abs(dx) > 0 || Math.abs(dy) > 0) orbitDragged = true;
-    camTheta -= dx * 0.005;
-    camPhi += dy * 0.005;
-    camPhi = Math.max(-Math.PI/2 + 0.05, Math.min(Math.PI/2 - 0.05, camPhi));
-    updateCameraOrbit();
+    camTargetTheta -= dx * 0.005;
+    camTargetPhi += dy * 0.005;
+    camTargetPhi = Math.max(-Math.PI/2 + 0.05, Math.min(Math.PI/2 - 0.05, camTargetPhi));
   }
 });
 
 // Scroll: zoom
 renderer.domElement.addEventListener('wheel', e => {
   e.preventDefault();
-  camRadius *= 1 + e.deltaY * 0.001;
-  camRadius = Math.max(camMinRadius, Math.min(camMaxRadius, camRadius));
-  updateCameraOrbit();
+  camTargetRadius *= 1 + e.deltaY * 0.001;
+  camTargetRadius = Math.max(camMinRadius, Math.min(camMaxRadius, camTargetRadius));
 }, {passive: false});
 
-scene.add(new THREE.AmbientLight(0x4fc3f7, 0.3));
-const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+scene.add(new THREE.AmbientLight(0x8aa8cc, 0.4));
+const dirLight = new THREE.DirectionalLight(0xfff5e0, 1.5);
 dirLight.position.set(50, 30, 20);
 scene.add(dirLight);
+
+// Sun/star visual (always visible in flight, emits light + lens flare)
+let sunMesh = null;
+let sunLight = null;
+let sunInitialized = false;
+let sunDirection = new THREE.Vector3(1, 0.3, 0).normalize();
+
+function makeFlareTexture(size, r, g, b, falloff){
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const gradient = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  gradient.addColorStop(0, `rgba(${r},${g},${b},1)`);
+  gradient.addColorStop(falloff, `rgba(${r},${g},${b},0.3)`);
+  gradient.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  return new THREE.CanvasTexture(canvas);
+}
+
+function initSun(){
+  if(sunInitialized || !localState || !localState.objects) return;
+  const starObj = localState.objects.find(o => o.type === 'star');
+  if(!starObj) return;
+  sunInitialized = true;
+
+  const starPos = new THREE.Vector3(starObj.x, starObj.y, starObj.z);
+  sunDirection = starPos.clone().normalize();
+  if(sunDirection.length() < 0.1) sunDirection.set(1, 0.2, 0);
+
+  const sunDist = 2000000;
+  const sunPos = sunDirection.clone().multiplyScalar(sunDist);
+
+  // Sun sphere (bright)
+  const sunGeo = new THREE.SphereGeometry(20000, 16, 12);
+  sunMesh = new THREE.Mesh(sunGeo, new THREE.MeshBasicMaterial({color: 0xffffaa}));
+  sunMesh.position.copy(sunPos);
+  scene.add(sunMesh);
+
+  // Lens flare with radial gradient textures (circles, not squares)
+  const flare1 = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: makeFlareTexture(256, 255, 255, 220, 0.2),
+    transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending
+  }));
+  flare1.scale.set(60000, 60000, 1);
+  flare1.position.copy(sunPos);
+  scene.add(flare1);
+
+  const flare2 = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: makeFlareTexture(256, 255, 200, 100, 0.4),
+    transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending
+  }));
+  flare2.scale.set(180000, 180000, 1);
+  flare2.position.copy(sunPos);
+  scene.add(flare2);
+
+  const flare3 = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: makeFlareTexture(128, 255, 150, 50, 0.6),
+    transparent: true, opacity: 0.2, depthWrite: false, blending: THREE.AdditiveBlending
+  }));
+  flare3.scale.set(400000, 400000, 1);
+  flare3.position.copy(sunPos);
+  scene.add(flare3);
+
+  sunMesh.userData.flares = [flare1, flare2, flare3];
+
+  // Strong directional light from sun
+  dirLight.position.copy(sunDirection.clone().multiplyScalar(100));
+  dirLight.intensity = 2.0;
+
+  // Point light at sun
+  sunLight = new THREE.PointLight(0xfff0d0, 1.5, sunDist * 3);
+  sunLight.position.copy(sunPos);
+  scene.add(sunLight);
+}
 
 // ── Hangar (docked view) ──
 function buildHangar(){
@@ -178,21 +260,28 @@ function buildHangar(){
   scene.add(hangarPedestal);
 }
 
-// ── Starfield ──
+// ── Starfield (skybox-style: follows camera, no parallax) ──
 let starField = null;
+let starFieldBasePositions = null; // store base positions for warp jitter
 function buildStarfield(){
   const geo = new THREE.BufferGeometry();
-  const verts = new Float32Array(3000*3);
-  for(let i=0;i<3000*3;i+=3){
-    const r=5000+Math.random()*40000;
+  const count = 4000;
+  const verts = new Float32Array(count*3);
+  for(let i=0;i<count*3;i+=3){
     const th=Math.random()*Math.PI*2;
     const ph=Math.acos(2*Math.random()-1);
-    verts[i]=r*Math.sin(ph)*Math.cos(th);
-    verts[i+1]=r*Math.sin(ph)*Math.sin(th);
-    verts[i+2]=r*Math.cos(ph);
+    // All stars on a unit sphere, scaled by a large fixed radius
+    verts[i]=Math.sin(ph)*Math.cos(th);
+    verts[i+1]=Math.sin(ph)*Math.sin(th);
+    verts[i+2]=Math.cos(ph);
   }
   geo.setAttribute('position',new THREE.BufferAttribute(verts,3));
-  starField = new THREE.Points(geo,new THREE.PointsMaterial({color:0xffffff,size:15,sizeAttenuation:true}));
+  starFieldBasePositions = new Float32Array(verts);
+  // Use non-attenuating size so stars are always the same screen size
+  starField = new THREE.Points(geo,new THREE.PointsMaterial({color:0xffffff,size:1.5,sizeAttenuation:false}));
+  starField.frustumCulled = false;
+  starField.renderOrder = -1; // render behind everything
+  starField.scale.setScalar(4000000); // huge radius sphere, stays inside far plane
 }
 buildStarfield();
 
@@ -203,6 +292,26 @@ function setDockedScene(){
   if(!hangarPedestal) buildHangar();
   else scene.add(hangarPedestal);
   if(stationModel){ stationModel.removeFromParent(); stationModel=null; }
+  // Remove all station models
+  Object.values(stationModels).forEach(m => m.removeFromParent());
+  stationModels = {};
+  stationWorldPos = null;
+  // Remove gate models
+  Object.values(gateModels).forEach(m => m.removeFromParent());
+  gateModels = {};
+  // Remove asteroid models
+  Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => r.removeFromParent()));
+  asteroidModels = {};
+  // Remove planet/moon models
+  Object.values(planetModels).forEach(m => m.removeFromParent());
+  planetModels = {};
+  // Remove sun
+  if(sunMesh){
+    if(sunMesh.userData.flares) sunMesh.userData.flares.forEach(f => f.removeFromParent());
+    sunMesh.removeFromParent(); sunMesh = null;
+  }
+  if(sunLight){ sunLight.removeFromParent(); sunLight = null; }
+  sunInitialized = false;
   // Remove NPC meshes and object sprites
   Object.values(npcMeshes).forEach(s=>s.removeFromParent());
   npcMeshes = {};
@@ -210,9 +319,14 @@ function setDockedScene(){
   objectSprites = {};
   // Remove directional labels
   clearDirectionalLabels();
-  camRadius = 80;
-  camTheta = Math.PI / 4;
-  camPhi = Math.PI / 6;
+  // Reset warp state
+  warpState = 'none';
+  warpTargetId = null;
+  warpTargetPos = null;
+  warpSpeed = 0;
+  camRadius = 80; camTargetRadius = 80;
+  camTheta = Math.PI / 4; camTargetTheta = Math.PI / 4;
+  camPhi = Math.PI / 6; camTargetPhi = Math.PI / 6;
   camMaxRadius = 100;
   if(shipGroup){
     shipGroup.position.set(0,0,0);
@@ -220,6 +334,10 @@ function setDockedScene(){
   }
   updateCameraOrbit();
   isDocked = true;
+  // Fade in (overlay starts at opacity 1 on page load)
+  const overlay = document.getElementById('fadeOverlay');
+  overlay.style.transition = 'opacity 2s';
+  setTimeout(()=>{ overlay.style.opacity = '0'; }, 100);
 }
 
 function setFlightScene(){
@@ -227,10 +345,15 @@ function setFlightScene(){
   if(hangarPedestal) hangarPedestal.removeFromParent();
   scene.add(starField);
   camMaxRadius = 2000;
+  camTargetRadius = Math.min(camTargetRadius, 200);
   camRadius = Math.min(camRadius, 200);
   updateCameraOrbit();
   isDocked = false;
-  loadNearbyStation();
+  loadAllStations();
+  loadAllGates();
+  loadAsteroidFields();
+  loadPlanetsAndMoons();
+  initSun();
   // Fade in after 0.5s delay (let everything position first)
   const overlay = document.getElementById('fadeOverlay');
   overlay.style.opacity = '1';
@@ -244,8 +367,17 @@ function connectStream(){
   evtSource = new EventSource('/api/player/local_space/stream');
   evtSource.onmessage = (e) => {
     const state = JSON.parse(e.data);
+    const firstState = !localState;
     localState = state;
     lastTickTime = performance.now();
+    // On first state received, load 3D objects (they need localState to work)
+    if(firstState && !isDocked){
+      loadAllStations();
+      loadAllGates();
+      loadAsteroidFields();
+      loadPlanetsAndMoons();
+      initSun();
+    }
     // Update interpolation targets
     for(const ship of state.ships){
       interpShips[ship.id] = {
@@ -254,7 +386,8 @@ function connectStream(){
         speed: ship.speed, state: ship.state,
         heading: ship.heading, name: ship.name,
         is_player: ship.is_player, ship_class: ship.ship_class,
-        max_speed: ship.max_speed, target_obj: ship.target_obj
+        max_speed: ship.max_speed, target_obj: ship.target_obj,
+        role: ship.role
       };
     }
     // Remove ships no longer in state
@@ -281,10 +414,10 @@ function buildNpcShipMesh(shipClass, role) {
   if (!allShipGeos || !allShipGeos[shipClass]) {
     // Fallback: simple ship-like shape (cone + body)
     const edgeColor = NPC_EDGE_COLORS[role] || 0x8aa0b8;
-    const body = new THREE.ConeGeometry(6, 25, 4);
+    const body = new THREE.ConeGeometry(8, 35, 4);
     body.rotateZ(-Math.PI/2);  // nose forward along +X
     const mesh = new THREE.Mesh(body, new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1428, shininess:0, transparent:true, opacity:0.7}));
-    mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(body, 15), new THREE.LineBasicMaterial({color:edgeColor, transparent:true, opacity:0.5})));
+    mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(body, 15), new THREE.LineBasicMaterial({color:edgeColor, transparent:true, opacity:0.7})));
     const grp = new THREE.Group();
     grp.add(mesh);
     npcShipCache[cacheKey] = grp;
@@ -325,11 +458,11 @@ function buildNpcShipMesh(shipClass, role) {
     allG.forEach(g => g.dispose());
     geos.forEach(g => g.dispose());
   }
-  // Scale to ~30m (30 units)
+  // Scale to ~50m (visible at reasonable distance)
   const box = new THREE.Box3().setFromObject(grp);
   const size = box.getSize(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z) || 1;
-  grp.scale.setScalar(30 / maxDim);
+  grp.scale.setScalar(50 / maxDim);
   npcShipCache[cacheKey] = grp;
   return grp.clone();
 }
@@ -375,10 +508,11 @@ function updateFromState(state){
 
   // Update player ship stats from server
   if(p.max_speed) playerMaxSpeed = p.max_speed;
+  if(p.align_time) playerAlignTime = p.align_time;
 
   // Set initial player position from server if not yet set
   // Restore player position from server on first connect (page switch recovery)
-  if(!playerPosInitialized && p.x !== undefined){
+  if(!playerPosInitialized && !warpRecenterPending && p.x !== undefined){
     playerPos.set(p.x, p.y, p.z);
     playerPosInitialized = true;
     if(p.speed > 0 && p.state === 'flying'){
@@ -386,6 +520,17 @@ function updateFromState(state){
       const [hx,hy,hz] = p.heading || [1,0,0];
       playerHeading.set(hx, hy, hz);
       flyDirection = playerHeading.clone();
+    }
+    // If we just arrived from warp, reload all models with new positions
+    if(warpState === 'arriving'){
+      Object.values(stationModels).forEach(m => m.removeFromParent()); stationModels = {};
+      Object.values(gateModels).forEach(m => m.removeFromParent()); gateModels = {};
+      Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => r.removeFromParent())); asteroidModels = {};
+      Object.values(planetModels).forEach(m => m.removeFromParent()); planetModels = {};
+      loadAllStations();
+      loadAllGates();
+      loadAsteroidFields();
+      loadPlanetsAndMoons();
     }
   }
 
@@ -396,9 +541,6 @@ function updateFromState(state){
   if(isDockedNow && !wasDockedBefore){
     setDockedScene();
   } else if(!isDockedNow && wasDockedBefore){
-    setFlightScene();
-  } else if(!isDockedNow && !stationModel){
-    // Player already in flight on page load -- set up flight scene
     setFlightScene();
   }
 
@@ -430,6 +572,18 @@ let playerHeading = new THREE.Vector3(1, 0, 0);
 let targetHeading = new THREE.Vector3(1, 0, 0);
 let posReportTimer = 0;
 
+// Warp state
+let warpState = 'none'; // 'none', 'aligning', 'warping', 'arriving'
+let warpTargetId = null;
+let warpTargetPos = null;  // THREE.Vector3 (real position for final placement)
+let warpTargetType = null; // 'station', 'gate', 'planet', 'moon', etc.
+let warpHeading = new THREE.Vector3(1, 0, 0);
+let warpAlignTimer = 0;
+let warpTravelTimer = 0;  // how long warp takes (based on AU distance)
+let warpTravelDuration = 0; // total warp time in seconds
+let warpSpeed = 0; // visual speed display
+let warpRecenterPending = false; // true while waiting for server recenter
+
 // Engine trail
 let trailLine = null;
 let trailDrawCount = 0;
@@ -448,25 +602,105 @@ createTrail();
 let lastFrameTime = 0;
 function animate(now){
   requestAnimationFrame(animate);
+  resizeRenderer();
   const dt = Math.min(0.1, (now - (lastFrameTime||now)) / 1000);
   lastFrameTime = now;
 
   if(!isDocked && shipGroup){
-    // ── Player Ship Physics (CLIENT-AUTHORITATIVE, ship moves in world space) ──
-    if(flyDirection){
-      const lerpRate = 1.0 / (playerAlignTime * 60) * 3;
-      playerHeading.lerp(flyDirection, lerpRate).normalize();
-      const alignment = Math.max(0, playerHeading.dot(flyDirection));
-      playerSpeed += (playerMaxSpeed * alignment - playerSpeed) * 0.03;
-    } else {
-      playerSpeed *= 0.95;
-      if(playerSpeed < 0.5) playerSpeed = 0;
+    // ── Warp Logic (overrides normal flight when active) ──
+    if(warpState === 'aligning'){
+      // Turn ship toward warp target using ship's align_time spec
+      const toTarget = warpTargetPos.clone().sub(playerPos).normalize();
+      warpHeading.copy(toTarget);
+      // Lerp rate: reach alignment within align_time seconds
+      const alignLerp = (dt / playerAlignTime) * 3.0;
+      playerHeading.lerp(toTarget, alignLerp).normalize();
+      const alignment = playerHeading.dot(toTarget);
+      // Accelerate toward warp trigger speed during alignment
+      const warpTriggerSpeed = playerMaxSpeed * 0.75;
+      if(playerSpeed < warpTriggerSpeed){
+        playerSpeed += (warpTriggerSpeed - playerSpeed) * 0.04;
+      }
+      // Move along heading while aligning
+      if(playerSpeed > 0.1){
+        playerPos.addScaledVector(playerHeading, playerSpeed * dt);
+      }
+      flyDirection = null;
+      warpAlignTimer += dt;
+      // Enter warp ONLY when fully aligned AND at speed (no timeout shortcut)
+      const atSpeed = playerSpeed >= warpTriggerSpeed * 0.95;
+      if(alignment > 0.997 && atSpeed){
+        warpState = 'warping';
+        warpSpeed = 0;
+        playerSpeed = 0;
+      }
+    } else if(warpState === 'warping'){
+      // Time-based warp: move along heading rapidly so departure scene flies away
+      warpTravelTimer += dt;
+      const progress = Math.min(1.0, warpTravelTimer / warpTravelDuration);
+      // Visual warp speed ramps up then down
+      const speedCurve = Math.sin(progress * Math.PI); // 0->1->0
+      warpSpeed = speedCurve * 50000; // peak 50 km/s visual display
+      // Move player rapidly along heading - departure objects fly away behind
+      const warpMoveSpeed = speedCurve * 50000; // 50 km/s peak
+      playerPos.addScaledVector(warpHeading, warpMoveSpeed * dt);
+
+      if(progress >= 1.0){
+        // Warp complete: tell server to recenter LSG on target
+        const fromX = playerPos.x, fromZ = playerPos.z;
+        warpState = 'arriving';
+        warpSpeed = 0;
+        playerSpeed = 0;
+        flyDirection = null;
+        playerPosInitialized = false; // block SSE from setting position until recenter done
+        // Brief flash for transition
+        const overlay = document.getElementById('fadeOverlay');
+        overlay.style.transition = 'opacity 0.15s';
+        overlay.style.opacity = '0.4';
+        setTimeout(()=>{ overlay.style.transition = 'opacity 0.8s'; overlay.style.opacity = '0'; }, 150);
+        // Tell server to recenter. Ignore SSE data until this completes.
+        warpRecenterPending = true;
+        fetch('/api/player/warp_arrive', {method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({target: warpTargetId, from_x: fromX, from_z: fromZ})
+        }).then(()=>{
+          // Server has recentered. Allow next SSE to set position.
+          warpRecenterPending = false;
+        }).catch(()=>{ warpRecenterPending = false; });
+        // Model reload happens when SSE delivers new position (see playerPosInitialized handler)
+      }
+      // Override display speed during warp
+      displaySpeed = warpSpeed;
+      document.getElementById('speedBar').style.width = (progress * 100) + '%';
+      document.getElementById('shipSpeed').textContent = warpSpeed > 1000 ? (warpSpeed/1000).toFixed(1) + ' km/s' : Math.round(warpSpeed) + ' m/s';
+      document.getElementById('warpTarget').textContent = 'Warp ' + Math.round(progress * 100) + '%';
+    } else if(warpState === 'arriving'){
+      // Wait for recenter to finish AND server to provide new position via SSE
+      if(playerPosInitialized && !warpRecenterPending){
+        warpState = 'none';
+        warpTargetId = null;
+        warpTargetPos = null;
+        playerSpeed = 0;
+        document.getElementById('warpTarget').textContent = '';
+      }
     }
 
-    // Move ship in world space (1 unit = 1 meter, speed in m/s)
-    if(playerSpeed > 0.1){
-      const moveM = playerSpeed * dt; // meters this frame
-      playerPos.addScaledVector(playerHeading, moveM);
+    // ── Player Ship Physics (CLIENT-AUTHORITATIVE, ship moves in world space) ──
+    if(warpState === 'none' || warpState === 'arriving'){
+      if(flyDirection){
+        const lerpRate = 1.0 / (playerAlignTime * 60) * 3;
+        playerHeading.lerp(flyDirection, lerpRate).normalize();
+        const alignment = Math.max(0, playerHeading.dot(flyDirection));
+        playerSpeed += (playerMaxSpeed * alignment - playerSpeed) * 0.03;
+      } else {
+        playerSpeed *= 0.95;
+        if(playerSpeed < 0.5) playerSpeed = 0;
+      }
+
+      // Move ship in world space (1 unit = 1 meter, speed in m/s)
+      if(playerSpeed > 0.1){
+        const moveM = playerSpeed * dt; // meters this frame
+        playerPos.addScaledVector(playerHeading, moveM);
+      }
     }
 
     // Position ship model at world pos
@@ -528,16 +762,48 @@ function animate(now){
     displaySpeed += (playerSpeed - displaySpeed) * 0.1;
     document.getElementById('speedBar').style.width = (displaySpeed / playerMaxSpeed * 100) + '%';
     document.getElementById('shipSpeed').textContent = Math.round(displaySpeed) + ' m/s';
-    document.getElementById('shipState').textContent = flyDirection ? (displaySpeed > playerMaxSpeed*0.9 ? 'Full Speed' : 'Aligning') : (playerSpeed > 1 ? 'Decelerating' : 'Idle');
+    document.getElementById('shipState').textContent = warpState === 'warping' ? 'Warping' : warpState === 'aligning' ? 'Aligning' : flyDirection ? (displaySpeed > playerMaxSpeed*0.9 ? 'Full Speed' : 'Aligning') : (playerSpeed > 1 ? 'Decelerating' : 'Idle');
+
+    // ── Starfield: follow camera (skybox behavior, no parallax) ──
+    if(starField){
+      starField.position.copy(camera.position);
+      // Warp jitter effect
+      if(warpState === 'warping' && starFieldBasePositions){
+        const arr = starField.geometry.attributes.position.array;
+        const time = now * 0.01;
+        for(let i=0; i<arr.length; i+=3){
+          // Stretch stars along the warp direction
+          const bx = starFieldBasePositions[i], by = starFieldBasePositions[i+1], bz = starFieldBasePositions[i+2];
+          // Add a slight jitter/streak along warp heading
+          const dot = bx*warpHeading.x + by*warpHeading.y + bz*warpHeading.z;
+          const streak = 0.15 * Math.sin(time + i*0.1);
+          arr[i] = bx + warpHeading.x * dot * streak;
+          arr[i+1] = by + warpHeading.y * dot * streak;
+          arr[i+2] = bz + warpHeading.z * dot * streak;
+        }
+        starField.geometry.attributes.position.needsUpdate = true;
+        // Also scale star size during warp for motion blur feel
+        starField.material.size = 1.5 + Math.abs(Math.sin(time*0.5))*1.5;
+      } else {
+        // Reset if not warping
+        if(starField.material.size !== 1.5) starField.material.size = 1.5;
+      }
+    }
 
     // ── NPC Ships (SERVER-AUTHORITATIVE, interpolated, world space) ──
     const timeSinceTick = (now - lastTickTime) / 1000;
     for(const [id, ship] of Object.entries(interpShips)){
       if(ship.is_player) continue;
+      // Hide docked ships
+      if(ship.state === 'docked' || ship.state === 'idle' && ship.speed < 0.5){
+        if(npcMeshes[id]) npcMeshes[id].visible = false;
+        continue;
+      }
       const sx = ship.x + ship.vx * timeSinceTick;
       const sy = ship.y + ship.vy * timeSinceTick;
       const sz = ship.z + ship.vz * timeSinceTick;
       const mesh = getOrCreateNpcMesh(ship);
+      mesh.visible = true;
       mesh.position.set(sx, sy, sz);
       // Rotate ship to face heading
       if(ship.heading && (ship.heading[0]!==0 || ship.heading[1]!==0 || ship.heading[2]!==0)){
@@ -566,9 +832,44 @@ function animate(now){
         sprite.position.set(obj.x, obj.y, obj.z);
       }
     }
-    // Station model at fixed world position (doesn't move)
-    if(stationModel && stationWorldPos){
-      stationModel.position.set(stationWorldPos.x, stationWorldPos.y, stationWorldPos.z);
+    // Station models positioned on load (no per-frame update needed)
+
+    // ── Distance-based visibility for large objects ──
+    if(localState && localState.objects){
+      // All objects in LSG are at real positions
+      // During warp: hide everything (no-man's-land)
+      // After arrival: show based on distance
+      const inWarp = warpState === 'warping' || warpState === 'aligning';
+      if(localState && localState.objects){
+        for(const [id, mesh] of Object.entries(stationModels)){
+          if(inWarp){ mesh.visible = false; continue; }
+          const obj = localState.objects.find(o => o.station_id === id);
+          if(!obj){ mesh.visible = false; continue; }
+          const dist = Math.sqrt((obj.x-playerPos.x)**2 + (obj.y-playerPos.y)**2 + (obj.z-playerPos.z)**2);
+          mesh.visible = dist < 30000;
+        }
+        for(const [id, mesh] of Object.entries(gateModels)){
+          if(inWarp){ mesh.visible = false; continue; }
+          const obj = localState.objects.find(o => o.id === id);
+          if(!obj){ mesh.visible = false; continue; }
+          const dist = Math.sqrt((obj.x-playerPos.x)**2 + (obj.y-playerPos.y)**2 + (obj.z-playerPos.z)**2);
+          mesh.visible = dist < 30000;
+        }
+        for(const [id, mesh] of Object.entries(planetModels)){
+          if(inWarp){ mesh.visible = false; continue; }
+          const obj = localState.objects.find(o => o.id === id);
+          if(!obj){ mesh.visible = false; continue; }
+          const dist = Math.sqrt((obj.x-playerPos.x)**2 + (obj.y-playerPos.y)**2 + (obj.z-playerPos.z)**2);
+          mesh.visible = dist < 30000;
+        }
+        for(const [id, rocks] of Object.entries(asteroidModels)){
+          if(inWarp){ rocks.forEach(r => r.visible = false); continue; }
+          const obj = localState.objects.find(o => o.id === id);
+          if(!obj){ rocks.forEach(r => r.visible = false); continue; }
+          const dist = Math.sqrt((obj.x-playerPos.x)**2 + (obj.y-playerPos.y)**2 + (obj.z-playerPos.z)**2);
+          rocks.forEach(r => r.visible = dist < 25000);
+        }
+      }
     }
 
     // ── Directional labels for distant objects ──
@@ -593,6 +894,7 @@ function animate(now){
 // ── Input: Double-click to fly ──
 container.addEventListener('dblclick', e=>{
   if(isDocked) return;
+  if(warpState !== 'none') return; // can't redirect during warp
   const rect = renderer.domElement.getBoundingClientRect();
   const mouse = new THREE.Vector2(
     ((e.clientX - rect.left) / rect.width) * 2 - 1,
@@ -613,6 +915,17 @@ container.addEventListener('dblclick', e=>{
 document.addEventListener('keydown', e=>{
   if(e.key === 's' || e.key === 'S'){
     if(isDocked) return;
+    if(warpState !== 'none'){
+      // Cancel warp
+      warpState = 'none';
+      warpSpeed = 0;
+      warpTargetId = null;
+      warpTargetPos = null;
+      playerSpeed = 0;
+      document.getElementById('warpTarget').textContent = '';
+      fetch('/api/player/stop', {method:'POST'}).catch(()=>{});
+      return;
+    }
     flyDirection = null;
     fetch('/api/player/stop', {method:'POST'}).catch(()=>{});
   }
@@ -650,10 +963,86 @@ window.addEventListener('mousemove', e=>{
 // ── Warp command (called from nav list) ──
 window.warpTo = function(objId){
   closeCtx();
-  fetch('/api/player/warp', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({target: objId})
-  });
+  if(warpState !== 'none') return; // already warping
+  // Find target position from local state objects
+  if(!localState || !localState.objects) return;
+  const obj = localState.objects.find(o => o.id === objId);
+  if(!obj) return;
+  // Don't warp if already at this location (within 25km)
+  const dx = obj.x - playerPos.x, dy = obj.y - playerPos.y, dz = obj.z - playerPos.z;
+  const distToTarget = Math.sqrt(dx*dx + dy*dy + dz*dz);
+  if(distToTarget < 25000) return; // already here
+  // Set warp target
+  warpTargetId = objId;
+  warpTargetPos = new THREE.Vector3(obj.x, obj.y, obj.z);
+  warpTargetType = obj.type;
+  // Compute warp duration: ~3 seconds per AU, minimum 3s, max 15s
+  const auDist = obj.au_distance || 0.1;
+  warpTravelDuration = Math.max(3, Math.min(15, auDist * 3));
+  warpTravelTimer = 0;
+  warpState = 'aligning';
+  warpAlignTimer = 0;
+  document.getElementById('warpTarget').textContent = 'Aligning...';
+};
+
+// ── Jump Gate (system transition) ──
+window.jumpGate = async function(gateId){
+  closeCtx();
+  // Show jump transition overlay
+  const overlay = document.getElementById('fadeOverlay');
+  overlay.style.transition = 'opacity 1s';
+  overlay.style.opacity = '1';
+  document.getElementById('shipState').textContent = 'Jumping...';
+
+  try{
+    const r = await fetch('/api/player/jump', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({gate_id: gateId})
+    });
+    const data = await r.json();
+    if(data.status === 'jumped'){
+      // Clear current scene objects
+      Object.values(stationModels).forEach(m => m.removeFromParent());
+      stationModels = {};
+      Object.values(gateModels).forEach(m => m.removeFromParent());
+      gateModels = {};
+      Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => r.removeFromParent()));
+      asteroidModels = {};
+      Object.values(planetModels).forEach(m => m.removeFromParent());
+      planetModels = {};
+      Object.values(npcMeshes).forEach(m => m.removeFromParent());
+      npcMeshes = {};
+      interpShips = {};
+      Object.values(objectSprites).forEach(s => s.removeFromParent());
+      objectSprites = {};
+      clearDirectionalLabels();
+      // Reset player position (server will provide new position via SSE)
+      playerPosInitialized = false;
+      playerSpeed = 0;
+      flyDirection = null;
+      warpState = 'none';
+      // Update location bar
+      document.getElementById('sysName').textContent = data.system_name || data.system_id;
+      // Wait for SSE to deliver new state, then load objects
+      setTimeout(()=>{
+        loadAllStations();
+        loadAllGates();
+        loadAsteroidFields();
+        loadPlanetsAndMoons();
+        // Fade back in
+        overlay.style.transition = 'opacity 2s';
+        overlay.style.opacity = '0';
+      }, 1500);
+    } else {
+      // Failed
+      overlay.style.transition = 'opacity 0.5s';
+      overlay.style.opacity = '0';
+      document.getElementById('shipState').textContent = data.error || 'Jump failed';
+    }
+  }catch(e){
+    overlay.style.transition = 'opacity 0.5s';
+    overlay.style.opacity = '0';
+  }
 };
 
 // ── Context Menu ──
@@ -662,6 +1051,17 @@ window.showCtx = function(e, objId, name, type){
   const menu = document.getElementById('ctxMenu');
   let items = '';
   items += `<div class="ctx-item" onclick="warpTo('${objId}')">Warp to ${name}</div>`;
+  // If it's a gate and player is near, show Jump option
+  if(type === 'gate' && localState && localState.objects){
+    const gateObj = localState.objects.find(o => o.id === objId);
+    if(gateObj && gateObj.connects_to){
+      const dx = gateObj.x - playerPos.x, dy = gateObj.y - playerPos.y, dz = gateObj.z - playerPos.z;
+      const dist = Math.sqrt(dx*dx+dy*dy+dz*dz);
+      if(dist < 2000){
+        items += `<div class="ctx-item" style="color:#ab47bc" onclick="jumpGate('${objId}')">Jump to ${gateObj.connects_to}</div>`;
+      }
+    }
+  }
   items += `<div class="ctx-item" onclick="closeCtx()">Cancel</div>`;
   menu.innerHTML = items;
   menu.style.left = e.clientX+'px';
@@ -705,28 +1105,73 @@ function updateUI(state){
 }
 
 function renderNavList(objects, playerShip){
+  const px = playerShip.x, py = playerShip.y, pz = playerShip.z;
   const nav = document.getElementById('navObjects');
   nav.innerHTML = objects.filter(o=>o.type!=='star').map(o=>{
     const icon = o.type==='gate'?'&#9674;':o.type==='station'?'&#9632;':o.type==='planet'?'&#9679;':'&#8226;';
     const color = o.type==='gate'?'#ab47bc':o.type==='station'?'#4fc3f7':'#8aa0b8';
-    const distAU = o.au_distance || 0;
-    const distStr = distAU < 0.01 ? '<0.01 AU' : distAU.toFixed(2)+' AU';
-    return `<div class="nav-obj" style="padding:3px 4px;cursor:pointer;border-bottom:1px solid #0f1520;display:flex;justify-content:space-between" data-id="${o.id}" data-name="${o.name}" data-type="${o.type}">
-      <span><span style="color:${color}">${icon}</span> ${o.name}</span>
-      <span style="color:#c8d4e0;font-size:10px">${distStr}</span>
+    // Compute actual distance from player to this object (meters)
+    const dx = o.x - px, dy = o.y - py, dz = o.z - pz;
+    const distM = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    const distKm = distM / 1000;
+    // Show km when within 50km, AU when far
+    let distStr;
+    if(distKm < 50){
+      distStr = distKm < 1 ? Math.round(distM) + ' m' : distKm.toFixed(1) + ' km';
+    } else {
+      const distAU = o.au_distance || 0;
+      distStr = distAU < 0.01 ? '<0.01 AU' : distAU.toFixed(2) + ' AU';
+    }
+    // Mark if player is at this object's LSG (within 25km)
+    const atLocation = distKm < 25;
+    const destLabel = (o.type==='gate' && o.connects_to) ? ` &rarr; ${o.connects_to}` : '';
+    const atStyle = atLocation ? 'opacity:0.5' : '';
+    return `<div class="nav-obj" style="padding:3px 4px;cursor:pointer;border-bottom:1px solid #0f1520;display:flex;justify-content:space-between;${atStyle}" data-id="${o.id}" data-name="${o.name}" data-type="${o.type}">
+      <span><span style="color:${color}">${icon}</span> ${o.name}<span style="color:#5a7a9a;font-size:9px">${destLabel}</span></span>
+      <span style="color:${atLocation ? '#66bb6a' : '#c8d4e0'};font-size:10px">${atLocation ? 'HERE' : distStr}</span>
     </div>`;
   }).join('');
-  // Show dock button if near a station (within ~5km of any station)
-  const px = playerShip.x, py = playerShip.y, pz = playerShip.z;
+  // Show dock button if near a station (within ~3km of any station)
   const nearStation = objects.find(o=>{
     if(o.type!=='station') return false;
     const dx=o.x-px, dy=o.y-py, dz=o.z-pz;
-    return Math.sqrt(dx*dx+dy*dy+dz*dz) < 7000;
+    return Math.sqrt(dx*dx+dy*dy+dz*dz) < 3000;
   });
   document.getElementById('dockBtn').style.display = nearStation ? '' : 'none';
+  // Show jump button if near a gate with connection (within 10km)
+  const nearGate = objects.find(o=>{
+    if(o.type!=='gate' || !o.connects_to) return false;
+    const dx=o.x-px, dy=o.y-py, dz=o.z-pz;
+    return Math.sqrt(dx*dx+dy*dy+dz*dz) < 2000;
+  });
+  let jumpBtn = document.getElementById('jumpBtn');
+  if(!jumpBtn){
+    jumpBtn = document.createElement('button');
+    jumpBtn.id = 'jumpBtn';
+    jumpBtn.className = 'btn';
+    jumpBtn.style.cssText = 'margin-top:8px;border-color:#ab47bc;color:#ab47bc;display:none';
+    jumpBtn.textContent = 'Jump';
+    document.getElementById('dockBtn').parentNode.insertBefore(jumpBtn, document.getElementById('dockBtn').nextSibling);
+  }
+  if(nearGate){
+    jumpBtn.style.display = '';
+    jumpBtn.textContent = `Jump to ${nearGate.connects_to}`;
+    jumpBtn.onclick = ()=> window.jumpGate(nearGate.id);
+  } else {
+    jumpBtn.style.display = 'none';
+  }
 }
 
 // ── Actions ──
+document.getElementById('locationBar').addEventListener('click', ()=>{
+  const sysId = localState && localState.system_id ? localState.system_id : '';
+  if(!sysId) return;
+  // Ship page runs in iframe inside game.html - call parent's openSystemView
+  if(window.parent && window.parent.openSystemView){
+    window.parent.openSystemView(sysId);
+  }
+});
+
 document.getElementById('undockBtn').addEventListener('click', async()=>{
   const r = await fetch('/api/player/undock',{method:'POST'});
   if(r.ok){
@@ -792,64 +1237,212 @@ function updatePlayerUI(){
   }
 }
 
-// ── Load Station Model (flight view) ──
-async function loadNearbyStation(){
-  if(!player || !player.station_id) return;
-  try{
-    const r = await fetch('/api/station_model/'+player.station_id);
-    if(!r.ok) return;
-    const data = await r.json();
-    if(stationModel) stationModel.removeFromParent();
-    stationModel = new THREE.Group();
-    const tempGroup = new THREE.Group();
-    for(const comp of data.components){
-      const [px,py,pz]=comp.pos;const [rx,ry,rz]=comp.rot||[0,0,0];let mesh=null;
-      const mat=new THREE.MeshPhongMaterial({color:0x0a1428,emissive:0x0a1428,shininess:0,transparent:true,opacity:0.7});
-      switch(comp.type){
-        case'pod':{const{length,height,width}=comp.params;mesh=new THREE.Mesh(new THREE.BoxGeometry(length,height,width),mat);break;}
-        case'cylinder':{const{r_top,r_bot,length}=comp.params;mesh=new THREE.Mesh(new THREE.CylinderGeometry(r_top,r_bot,length,6),mat);if(!rx&&!ry&&!rz)mesh.rotation.z=Math.PI/2;break;}
-        case'cone':{const{radius,length}=comp.params;mesh=new THREE.Mesh(new THREE.ConeGeometry(radius,length,6),mat);if(!rx&&!ry&&!rz)mesh.rotation.z=Math.PI/2;break;}
-        case'box':{const{x,y,z}=comp.params;mesh=new THREE.Mesh(new THREE.BoxGeometry(x,y,z),mat);break;}
-        case'sphere':{const{radius,half}=comp.params;mesh=new THREE.Mesh(half?new THREE.SphereGeometry(radius,5,3,0,Math.PI*2,0,Math.PI/2):new THREE.SphereGeometry(radius,5,3),mat);break;}
-        case'torus':{const{radius,tube}=comp.params;mesh=new THREE.Mesh(new THREE.TorusGeometry(radius,tube,5,10),mat);if(!rx&&!ry&&!rz)mesh.rotation.y=Math.PI/2;break;}
-        case'spine':{const{length,radius}=comp.params;mesh=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,length,4),mat);mesh.rotation.z=Math.PI/2;break;}
-        default:continue;
+// ── Load ALL Station Models (flight view) ──
+let stationModels = {}; // station_id -> THREE.Group
+
+async function loadAllStations(){
+  if(!localState || !localState.objects) return;
+  const stationObjs = localState.objects.filter(o => o.station_id);
+  for(const obj of stationObjs){
+    if(stationModels[obj.station_id]) continue; // already loaded
+    try{
+      const r = await fetch('/api/station_model/'+obj.station_id);
+      if(!r.ok) continue;
+      const data = await r.json();
+      const model = buildStationMesh(data);
+      if(!model) continue;
+      // Scale based on station type
+      const box = new THREE.Box3().setFromObject(model);
+      const sz = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
+      const typeScale = {'trade_hub':10000, 'military_base':8000, 'shipyard':12000, 'factory':6000, 'refinery':5000, 'component_works':4000, 'mining_colony':3000};
+      const targetSize = typeScale[data.station_type] || 500;
+      model.scale.setScalar(targetSize / maxDim);
+      // Position at object world coords
+      model.position.set(obj.x, obj.y, obj.z);
+      scene.add(model);
+      stationModels[obj.station_id] = model;
+    }catch(e){}
+  }
+  // Set legacy references for compatibility
+  if(player && player.station_id && stationModels[player.station_id]){
+    stationModel = stationModels[player.station_id];
+    stationWorldPos = stationModel.position;
+  }
+}
+
+function buildStationMesh(data){
+  const tempGroup = new THREE.Group();
+  for(const comp of data.components){
+    const [px,py,pz]=comp.pos;const [rx,ry,rz]=comp.rot||[0,0,0];let mesh=null;
+    const mat=new THREE.MeshPhongMaterial({color:0x0a1428,emissive:0x0a1428,shininess:0,transparent:true,opacity:0.7});
+    switch(comp.type){
+      case'pod':{const{length,height,width}=comp.params;mesh=new THREE.Mesh(new THREE.BoxGeometry(length,height,width),mat);break;}
+      case'cylinder':{const{r_top,r_bot,length}=comp.params;mesh=new THREE.Mesh(new THREE.CylinderGeometry(r_top,r_bot,length,6),mat);if(!rx&&!ry&&!rz)mesh.rotation.z=Math.PI/2;break;}
+      case'cone':{const{radius,length}=comp.params;mesh=new THREE.Mesh(new THREE.ConeGeometry(radius,length,6),mat);if(!rx&&!ry&&!rz)mesh.rotation.z=Math.PI/2;break;}
+      case'box':{const{x,y,z}=comp.params;mesh=new THREE.Mesh(new THREE.BoxGeometry(x,y,z),mat);break;}
+      case'sphere':{const{radius,half}=comp.params;mesh=new THREE.Mesh(half?new THREE.SphereGeometry(radius,5,3,0,Math.PI*2,0,Math.PI/2):new THREE.SphereGeometry(radius,5,3),mat);break;}
+      case'torus':{const{radius,tube}=comp.params;mesh=new THREE.Mesh(new THREE.TorusGeometry(radius,tube,5,10),mat);if(!rx&&!ry&&!rz)mesh.rotation.y=Math.PI/2;break;}
+      case'spine':{const{length,radius}=comp.params;mesh=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,length,4),mat);mesh.rotation.z=Math.PI/2;break;}
+      default:continue;
+    }
+    if(mesh){mesh.position.set(px,py,pz);mesh.rotation.x+=rx;mesh.rotation.y+=ry;mesh.rotation.z+=rz;tempGroup.add(mesh);}
+  }
+  tempGroup.updateMatrixWorld(true);
+  const geos=[];
+  tempGroup.traverse(c=>{if(c.isMesh&&c.geometry){const g=c.geometry.clone();g.applyMatrix4(c.matrixWorld);geos.push(g);}});
+  if(!geos.length) return null;
+  const allG=geos.map(g=>g.index?g.toNonIndexed():g);
+  let tv=0;allG.forEach(g=>tv+=g.attributes.position.count);
+  const pos=new Float32Array(tv*3);let off=0;
+  for(const g of allG){pos.set(g.attributes.position.array,off*3);off+=g.attributes.position.count;}
+  const merged=new THREE.BufferGeometry();
+  merged.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  merged.computeVertexNormals();
+  const m=new THREE.Mesh(merged,new THREE.MeshPhongMaterial({color:0x0a1428,emissive:0x0a1428,shininess:0,transparent:true,opacity:0.7}));
+  m.add(new THREE.LineSegments(new THREE.EdgesGeometry(merged,15),new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.4})));
+  const grp = new THREE.Group();
+  grp.add(m);
+  allG.forEach(g=>g.dispose());geos.forEach(g=>g.dispose());
+  return grp;
+}
+
+// ── Gate Models ──
+let gateModels = {}; // obj_id -> THREE.Group
+async function loadAllGates(){
+  if(!localState || !localState.objects) return;
+  const gateObjs = localState.objects.filter(o => o.type === 'gate');
+  for(const obj of gateObjs){
+    if(gateModels[obj.id]) continue;
+    try{
+      const sysId = localState.system_id || '';
+      const r = await fetch(`/api/gate_model/${sysId}/${obj.id}`);
+      if(!r.ok) continue;
+      const data = await r.json();
+      const model = buildStationMesh(data);
+      if(!model) continue;
+      // Scale gate to ~1000m
+      const box = new THREE.Box3().setFromObject(model);
+      const sz = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
+      model.scale.setScalar(1000 / maxDim);
+      model.position.set(obj.x, obj.y, obj.z);
+      // Give gates a bright purple/magenta edge color
+      model.traverse(c => {
+        if(c.isLineSegments && c.material){
+          c.material.color.setHex(0xd066f0);
+          c.material.opacity = 0.7;
+        }
+      });
+      scene.add(model);
+      gateModels[obj.id] = model;
+    }catch(e){}
+  }
+}
+
+// ── Asteroid Field Models (single-mesh displaced icospheres) ──
+let asteroidModels = {}; // obj_id -> [THREE.Mesh]
+async function loadAsteroidFields(){
+  if(!localState || !localState.objects) return;
+  const beltObjs = localState.objects.filter(o => o.type === 'asteroid_belt' || o.type === 'belt');
+  for(const obj of beltObjs){
+    if(asteroidModels[obj.id]) continue;
+    try{
+      // Use field_id from connects_to, or fall back to obj.id
+      const fieldId = obj.connects_to || obj.id;
+      const r = await fetch('/api/asteroid_model/' + fieldId);
+      if(!r.ok) continue;
+      const fieldData = await r.json();
+      const asteroids = fieldData.asteroids || fieldData;
+      const rocks = [];
+      // Seeded random for consistent field layout (based on field_id hash)
+      let fieldSeed = 0;
+      for(let c = 0; c < fieldId.length; c++) fieldSeed = ((fieldSeed << 5) - fieldSeed) + fieldId.charCodeAt(c);
+      const seededRand = (function(s){return function(){s=(s*1664525+1013904223)&0xFFFFFFFF;return(s>>>0)/4294967296;};})(Math.abs(fieldSeed));
+      
+      for(let i = 0; i < asteroids.length; i++){
+        const data = asteroids[i];
+        const mesh = buildAsteroidMesh(data);
+        if(!mesh) continue;
+        // Apply ore-specific color if provided
+        if(data.color){
+          mesh.material.color.setHex(data.color);
+          mesh.material.emissive.setHex(data.color).multiplyScalar(0.1);
+        }
+        // Spread asteroids in a 15km radius disk, 3km vertical
+        const angle = seededRand() * Math.PI * 2;
+        const dist = seededRand() * 15000;
+        const vert = (seededRand() - 0.5) * 3000;
+        mesh.position.set(
+          obj.x + Math.cos(angle) * dist,
+          obj.y + vert,
+          obj.z + Math.sin(angle) * dist
+        );
+        mesh.rotation.set(seededRand()*6.28, seededRand()*6.28, seededRand()*6.28);
+        scene.add(mesh);
+        rocks.push(mesh);
       }
-      if(mesh){mesh.position.set(px,py,pz);mesh.rotation.x+=rx;mesh.rotation.y+=ry;mesh.rotation.z+=rz;tempGroup.add(mesh);}
-    }
-    tempGroup.updateMatrixWorld(true);
-    const geos=[];
-    tempGroup.traverse(c=>{if(c.isMesh&&c.geometry){const g=c.geometry.clone();g.applyMatrix4(c.matrixWorld);geos.push(g);}});
-    if(geos.length){
-      const allG=geos.map(g=>g.index?g.toNonIndexed():g);
-      let tv=0;allG.forEach(g=>tv+=g.attributes.position.count);
-      const pos=new Float32Array(tv*3);let off=0;
-      for(const g of allG){pos.set(g.attributes.position.array,off*3);off+=g.attributes.position.count;}
-      const merged=new THREE.BufferGeometry();
-      merged.setAttribute('position',new THREE.BufferAttribute(pos,3));
-      merged.computeVertexNormals();
-      const m=new THREE.Mesh(merged,new THREE.MeshPhongMaterial({color:0x0a1428,emissive:0x0a1428,shininess:0,transparent:true,opacity:0.7}));
-      m.add(new THREE.LineSegments(new THREE.EdgesGeometry(merged,15),new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.4})));
-      stationModel.add(m);
-      allG.forEach(g=>g.dispose());geos.forEach(g=>g.dispose());
-    }
-    const box=new THREE.Box3().setFromObject(stationModel);
-    const sz=box.getSize(new THREE.Vector3());
-    const maxDim=Math.max(sz.x,sz.y,sz.z)||1;
-    // Scale based on station type (meters)
-    const typeScale = {'trade_hub':10000, 'military_base':8000, 'shipyard':12000, 'factory':6000, 'refinery':5000, 'component_works':4000, 'mining_colony':3000};
-    const stationType = (localState && localState.player && localState.player.station_type) || 'trade_hub';
-    const targetSize = typeScale[stationType] || 5000;
-    stationModel.scale.setScalar(targetSize/maxDim);
-    // Set world position from local state objects
-    if(localState && localState.objects){
-      const stObj = localState.objects.find(o=>o.station_id);
-      if(stObj) stationWorldPos = {x:stObj.x, y:stObj.y, z:stObj.z};
-    }
-    if(!stationWorldPos) stationWorldPos = {x:2000, y:0, z:0};
-    stationModel.position.set(stationWorldPos.x, stationWorldPos.y, stationWorldPos.z);
-    scene.add(stationModel);
-  }catch(e){}
+      asteroidModels[obj.id] = rocks;
+    }catch(e){}
+  }
+}
+
+function buildAsteroidMesh(data){
+  // data has: vertices (flat [x,y,z,...]), faces (flat [i,j,k,...]), radius
+  if(!data.vertices || !data.faces) return null;
+  const verts = new Float32Array(data.vertices);
+  const indices = new Uint16Array(data.faces);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+  geo.setIndex(new THREE.BufferAttribute(indices, 1));
+  geo.computeVertexNormals();
+  // Scale to actual radius (vertices are unit-scale)
+  const radius = data.radius || 100;
+  const mat = new THREE.MeshPhongMaterial({color:0x2a2018, emissive:0x0a0805, shininess:2, transparent:true, opacity:0.85});
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.scale.setScalar(radius);
+  // Add edge wireframe for the low-poly look
+  const edgeMat = new THREE.LineBasicMaterial({color:0x8d6e4a, transparent:true, opacity:0.4});
+  mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25), edgeMat));
+  return mesh;
+}
+
+// ── Planet/Moon Models (simple spheres with color) ──
+let planetModels = {}; // obj_id -> THREE.Group
+const PLANET_COLORS = {
+  'planet': [0x2a4a6b, 0x4a6b3a, 0x6b4a2a, 0x3a2a6b, 0x6b6b4a, 0x4a3a2a],
+  'moon': [0x555555, 0x6a6a6a, 0x4a4a4a, 0x5a5a6a],
+};
+
+function loadPlanetsAndMoons(){
+  if(!localState || !localState.objects) return;
+  const bodies = localState.objects.filter(o => o.type === 'planet' || o.type === 'moon');
+  for(const obj of bodies){
+    if(planetModels[obj.id]) continue;
+    const isPlanet = obj.type === 'planet';
+    // Size: planets 1-3km radius, moons 0.5-1.5km. Small enough to be dots from across system.
+    const radius = isPlanet ? 1000 + Math.abs(hash(obj.id)) % 2000 : 500 + Math.abs(hash(obj.id)) % 1000;
+    const colors = PLANET_COLORS[obj.type] || PLANET_COLORS['planet'];
+    const color = colors[Math.abs(hash(obj.id)) % colors.length];
+    const geo = new THREE.SphereGeometry(radius, isPlanet ? 24 : 14, isPlanet ? 18 : 10);
+    const mat = new THREE.MeshPhongMaterial({color: color, emissive: 0x030508, shininess: 8});
+    const mesh = new THREE.Mesh(geo, mat);
+    // Place at actual position
+    mesh.position.set(obj.x, obj.y, obj.z);
+    mesh.userData = {radius, type: obj.type};
+    scene.add(mesh);
+    planetModels[obj.id] = mesh;
+  }
+}
+
+// Simple string hash for deterministic planet sizing/coloring
+function hash(str){
+  let h = 0;
+  for(let i = 0; i < str.length; i++){
+    h = ((h << 5) - h) + str.charCodeAt(i);
+    h |= 0;
+  }
+  return h;
 }
 
 // ── Directional Labels for Distant Solar Bodies ──
@@ -894,65 +1487,105 @@ function updateDirectionalLabels(){
     dirLabels[i].el.style.display = 'none';
   }
 
+  // Get camera forward vector for behind-camera detection
+  const camForward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+
   for(let i = 0; i < objs.length; i++){
     const obj = objs[i];
     const label = dirLabels[i];
     label.el.style.display = '';
     const color = DIR_LABEL_COLORS[obj.type] || '#8aa0b8';
-    const icon = DIR_LABEL_ICONS[obj.type] || '•';
+    const icon = DIR_LABEL_ICONS[obj.type] || '\u2022';
 
-    // Get direction from camera to object (for screen projection)
-    const dir = new THREE.Vector3(obj.x - camera.position.x, obj.y - camera.position.y, obj.z - camera.position.z);
-    const dist = dir.length();
+    // Direction from camera to object
+    const toObj = new THREE.Vector3(obj.x - camera.position.x, obj.y - camera.position.y, obj.z - camera.position.z);
+    const dist = toObj.length();
     if(dist < 100) { label.el.style.display = 'none'; continue; }
-    dir.normalize();
+    toObj.normalize();
 
-    // Project: put a point in that direction from camera, project to screen
-    const projPoint = camera.position.clone().addScaledVector(dir, 100);
-    projPoint.project(camera);
+    // Dot product: positive = in front of camera, negative = behind
+    const dotForward = toObj.dot(camForward);
+
+    // Project to screen
+    const projPoint = new THREE.Vector3(obj.x, obj.y, obj.z).project(camera);
 
     let sx = (projPoint.x * 0.5 + 0.5) * w;
     let sy = (-projPoint.y * 0.5 + 0.5) * h;
 
-    // Behind camera check
-    const behind = projPoint.z > 1;
+    const behind = dotForward < 0;
+
     if(behind){
-      sx = w - sx;
-      sy = h - sy;
+      // Object is behind camera. Compute screen-space direction from center
+      // and project to edge. When directly behind, use camera-relative direction.
+      // Project the direction vector onto the camera's right/up plane
+      const camRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+      const camUp = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+      const screenX = toObj.dot(camRight);
+      const screenY = toObj.dot(camUp);
+      // Normalize to get direction on screen (if both ~0, default to bottom)
+      const mag = Math.sqrt(screenX*screenX + screenY*screenY);
+      let dirX, dirY;
+      if(mag < 0.001){
+        // Directly behind center: push to bottom of screen
+        dirX = 0;
+        dirY = 1;
+      } else {
+        dirX = screenX / mag;
+        dirY = -screenY / mag; // flip Y for screen coords
+      }
+      // Place at edge of viewport along this direction
+      // Find intersection with viewport rectangle from center
+      const cx = w / 2, cy = h / 2;
+      const halfW = cx - margin - 30, halfH = cy - margin - 7;
+      let t = Infinity;
+      if(Math.abs(dirX) > 0.001) t = Math.min(t, halfW / Math.abs(dirX));
+      if(Math.abs(dirY) > 0.001) t = Math.min(t, halfH / Math.abs(dirY));
+      sx = cx + dirX * t;
+      sy = cy + dirY * t;
     }
 
-    // Clamp to viewport edges
+    // Determine if truly on-screen (in frustum and within margins)
     const onScreen = !behind && sx >= margin && sx <= w - margin && sy >= margin && sy <= h - margin;
-    sx = Math.max(margin, Math.min(w - margin - 60, sx));
-    sy = Math.max(margin, Math.min(h - margin - 14, sy));
+
+    if(!onScreen){
+      // Clamp to viewport edges with room for text
+      sx = Math.max(margin, Math.min(w - margin - 120, sx));
+      sy = Math.max(margin, Math.min(h - margin - 14, sy));
+    }
 
     // Arrow indicator when off-screen
     let arrow = '';
     if(!onScreen){
-      if(sx <= margin + 1) arrow = '◀ ';
-      else if(sx >= w - margin - 61) arrow = ' ▶';
-      else if(sy <= margin + 1) arrow = '▲ ';
-      else arrow = '▼ ';
+      if(sx <= margin + 1) arrow = '\u25C0 ';
+      else if(sx >= w - margin - 121) arrow = ' \u25B6';
+      else if(sy <= margin + 1) arrow = '\u25B2 ';
+      else arrow = '\u25BC ';
     }
 
-    // Short name (first 12 chars)
-    const shortName = obj.name.length > 12 ? obj.name.substring(0,12) : obj.name;
+    // Full name - no truncation
+    const displayName = obj.name;
 
     label.el.style.left = sx + 'px';
     label.el.style.top = sy + 'px';
     label.el.style.color = color;
     label.el.style.opacity = onScreen ? '0.6' : '0.9';
     label.el.style.textShadow = '0 0 4px rgba(0,0,0,0.9)';
-    label.el.innerHTML = `${arrow}${icon} ${shortName}`;
+    label.el.innerHTML = `${arrow}${icon} ${displayName}`;
   }
 }
 
 // ── Resize Handler ──
 window.addEventListener('resize',()=>{
-  camera.aspect=container.clientWidth/container.clientHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(container.clientWidth,container.clientHeight);
+  resizeRenderer();
 });
+function resizeRenderer(){
+  const w = container.clientWidth, h = container.clientHeight;
+  if(w > 0 && h > 0 && (renderer.domElement.width !== w * (window.devicePixelRatio||1) || renderer.domElement.height !== h * (window.devicePixelRatio||1))){
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+  }
+}
 
 // ── Init ──
 loadShipModel().then(()=>{

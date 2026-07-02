@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gate Generator</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#05080f;color:#c8d4e0;font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.tab-bar{background:#0a0f1a;border-bottom:1px solid #1a2844;display:flex;gap:4px;padding:6px 12px;flex-shrink:0}
+.tab-bar a{padding:5px 14px;border:1px solid #1a2844;color:#5a7a9a;border-radius:3px;text-decoration:none;font-size:11px}
+.tab-bar a.active{background:#0d1a2f;border-color:#4fc3f7;color:#4fc3f7;font-weight:600}
+.page{display:flex;flex:1;overflow:hidden}
+.sidebar{width:280px;background:#0a0e18;border-right:1px solid #1a2844;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.sidebar h1{font-size:16px;color:#ab47bc;letter-spacing:1px;margin-bottom:4px}
+label{display:block;font-size:11px;color:#8aa0b8;margin-bottom:3px}
+select,input[type=number]{width:100%;background:#0a1020;border:1px solid #1a3050;color:#c8d4e0;padding:6px 8px;border-radius:3px;font-family:inherit;font-size:12px}
+.btn{display:block;width:100%;padding:10px;border:1px solid #ab47bc;background:#1a0d2f;color:#ab47bc;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;transition:all .15s}
+.btn:hover{background:#ab47bc;color:#05080f}
+.viewer{flex:1;position:relative}
+.info-bar{position:absolute;top:10px;left:10px;background:#0a0e18cc;border:1px solid #1a2844;border-radius:4px;padding:8px 12px;font-size:11px;color:#8aa0b8}
+.info-bar span{color:#ab47bc;font-weight:500}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#0a0e18}::-webkit-scrollbar-thumb{background:#1a3050;border-radius:3px}
+</style>
+</head>
+<body>
+<div class="tab-bar">
+  <a href="/ship_designer">Ship Generator</a>
+  <a href="/ship_designer/station.html">Station Generator</a>
+  <a href="/ship_designer/gate.html" class="active">Gate Generator</a>
+  <a href="/ship_designer/asteroid.html">Asteroid Generator</a>
+  <a href="/ship_designer/gallery.html">Component Library</a>
+  <a href="/ship_designer/review.html">Review</a>
+</div>
+<div class="page">
+<div class="sidebar">
+  <h1>Gate Generator</h1>
+  <div>
+    <label>Faction</label>
+    <select id="faction"></select>
+  </div>
+  <div>
+    <label>Seed (blank = random)</label>
+    <input type="number" id="seed" placeholder="Random">
+  </div>
+  <button class="btn" id="generateBtn">Generate Gate</button>
+  <div class="info-bar" style="position:static;margin-top:12px" id="info">
+    Click Generate to create a jump gate design.
+  </div>
+</div>
+<div class="viewer" id="viewer"></div>
+</div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+
+const viewer = document.getElementById('viewer');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050810);
+const camera = new THREE.PerspectiveCamera(50, viewer.clientWidth/viewer.clientHeight, 0.01, 100);
+camera.position.set(2, 1.5, 2);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(viewer.clientWidth, viewer.clientHeight);
+viewer.appendChild(renderer.domElement);
+const controls = new OrbitControls(camera, renderer.domElement);
+scene.add(new THREE.AmbientLight(0x4fc3f7, 0.3));
+const dir = new THREE.DirectionalLight(0xffffff, 0.5);
+dir.position.set(3, 2, 1);
+scene.add(dir);
+
+let currentModel = null;
+
+// Load factions
+fetch('/api/gate/factions').then(r=>r.json()).then(factions=>{
+  const sel = document.getElementById('faction');
+  factions.forEach(f=>{
+    const opt = document.createElement('option');
+    opt.value = f; opt.textContent = f.replace('_',' ');
+    sel.appendChild(opt);
+  });
+});
+
+document.getElementById('generateBtn').addEventListener('click', async()=>{
+  const faction = document.getElementById('faction').value;
+  const seedVal = document.getElementById('seed').value;
+  const body = {faction};
+  if(seedVal) body.seed = parseInt(seedVal);
+  const r = await fetch('/api/gate/generate', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  const data = await r.json();
+  displayGate(data);
+});
+
+function displayGate(data){
+  if(currentModel) scene.remove(currentModel);
+  currentModel = buildMesh(data.components);
+  scene.add(currentModel);
+  document.getElementById('info').innerHTML = `<span>${data.faction}</span> gate | ${data.meta.component_count} components`;
+}
+
+function buildMesh(components){
+  const tempGroup = new THREE.Group();
+  const mat = new THREE.MeshPhongMaterial({color:0x0a1428,emissive:0x0a1428,shininess:0,transparent:true,opacity:0.7});
+  for(const comp of components){
+    const [px,py,pz]=comp.pos;const [rx,ry,rz]=comp.rot||[0,0,0];let mesh=null;
+    switch(comp.type){
+      case'box':{const{x,y,z}=comp.params;mesh=new THREE.Mesh(new THREE.BoxGeometry(x,y,z),mat.clone());break;}
+      case'sphere':{const{radius}=comp.params;mesh=new THREE.Mesh(new THREE.SphereGeometry(radius,8,6),mat.clone());break;}
+      case'cylinder':{const{r_top,r_bot,length}=comp.params;mesh=new THREE.Mesh(new THREE.CylinderGeometry(r_top,r_bot,length,8),mat.clone());break;}
+      case'cone':{const{radius,length}=comp.params;mesh=new THREE.Mesh(new THREE.ConeGeometry(radius,length,6),mat.clone());break;}
+      case'torus':{const{radius,tube}=comp.params;mesh=new THREE.Mesh(new THREE.TorusGeometry(radius,tube,8,24),mat.clone());break;}
+      default:continue;
+    }
+    if(mesh){mesh.position.set(px,py,pz);mesh.rotation.set(rx,ry,rz);tempGroup.add(mesh);}
+  }
+  // Merge
+  tempGroup.updateMatrixWorld(true);
+  const geos=[];
+  tempGroup.traverse(c=>{if(c.isMesh&&c.geometry){const g=c.geometry.clone();g.applyMatrix4(c.matrixWorld);geos.push(g);}});
+  const grp = new THREE.Group();
+  if(geos.length){
+    const allG=geos.map(g=>g.index?g.toNonIndexed():g);
+    let tv=0;allG.forEach(g=>tv+=g.attributes.position.count);
+    const pos=new Float32Array(tv*3);let off=0;
+    for(const g of allG){pos.set(g.attributes.position.array,off*3);off+=g.attributes.position.count;}
+    const merged=new THREE.BufferGeometry();
+    merged.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    merged.computeVertexNormals();
+    const m=new THREE.Mesh(merged,new THREE.MeshPhongMaterial({color:0x0a1428,emissive:0x0a1428,shininess:0,transparent:true,opacity:0.7}));
+    m.add(new THREE.LineSegments(new THREE.EdgesGeometry(merged,15),new THREE.LineBasicMaterial({color:0xd066f0,transparent:true,opacity:0.7})));
+    grp.add(m);
+    allG.forEach(g=>g.dispose());geos.forEach(g=>g.dispose());
+  }
+  return grp;
+}
+
+function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);}
+animate();
+window.addEventListener('resize',()=>{camera.aspect=viewer.clientWidth/viewer.clientHeight;camera.updateProjectionMatrix();renderer.setSize(viewer.clientWidth,viewer.clientHeight);});
+</script>
+</body>
+</html>
