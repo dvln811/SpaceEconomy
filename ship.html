@@ -855,33 +855,53 @@ function animate(now){
 
     // ── Distance-based visibility for large objects ──
     if(localState && localState.objects){
-      // All objects in LSG are at real positions
-      // During warp: hide everything (no-man's-land)
-      // After arrival: show based on distance
-      // Distance-based visibility. Skip during warp (handled above).
-      if(warpState !== 'warping' && localState && localState.objects){
+      // During warp tunnel: handled by the warp block (hides everything)
+      // During deceleration: only show objects near the WARP TARGET
+      // Normal flight: show objects near PLAYER
+      if(warpState !== 'warping'){
+        const visCenter = (warpState === 'decelerating' && warpTargetPos) ? warpTargetPos : playerPos;
+        const visDist = 50000; // 50km visibility always - at astronomical scales nothing is visible further
+        // DEBUG: log visibility state once per second
+        if(!window._lastVisLog || now - window._lastVisLog > 1000){
+          window._lastVisLog = now;
+          if(warpState === 'decelerating' || warpState === 'aligning'){
+            const visStations = Object.entries(stationModels).map(([id,m])=>{
+              const obj = localState.objects.find(o=>o.station_id===id);
+              const d = obj ? Math.sqrt((obj.x-visCenter.x)**2+(obj.y-visCenter.y)**2+(obj.z-visCenter.z)**2) : 99999999;
+              return {id, dist:Math.round(d), show: d < visDist};
+            });
+            console.log('VIS CHECK:', {warpState, visDist, visCenter: visCenter===playerPos?'player':'target', stations: visStations});
+          }
+        }
         for(const [id, mesh] of Object.entries(stationModels)){
           const obj = localState.objects.find(o => o.station_id === id);
           if(!obj){ mesh.visible = false; continue; }
-          const dist = Math.sqrt((obj.x-playerPos.x)**2 + (obj.y-playerPos.y)**2 + (obj.z-playerPos.z)**2);
-          mesh.visible = dist < 600000;
+          const dist = Math.sqrt((obj.x-visCenter.x)**2 + (obj.y-visCenter.y)**2 + (obj.z-visCenter.z)**2);
+          mesh.visible = dist < visDist;
+        }
+        // DEBUG: count visible meshes in scene
+        if(warpState === 'decelerating' && !window._lastMeshLog || now - window._lastMeshLog > 2000){
+          window._lastMeshLog = now;
+          let visCount = 0;
+          scene.traverse(c => { if(c.isMesh && c.visible) visCount++; });
+          console.log('SCENE VISIBLE MESHES:', visCount, 'stationModels tracked:', Object.keys(stationModels).length);
         }
         for(const [id, mesh] of Object.entries(gateModels)){
           const obj = localState.objects.find(o => o.id === id);
           if(!obj){ mesh.visible = false; continue; }
-          const dist = Math.sqrt((obj.x-playerPos.x)**2 + (obj.y-playerPos.y)**2 + (obj.z-playerPos.z)**2);
-          mesh.visible = dist < 600000;
+          const dist = Math.sqrt((obj.x-visCenter.x)**2 + (obj.y-visCenter.y)**2 + (obj.z-visCenter.z)**2);
+          mesh.visible = dist < visDist;
         }
         for(const [id, mesh] of Object.entries(planetModels)){
           const obj = localState.objects.find(o => o.id === id);
           if(!obj){ mesh.visible = false; continue; }
-          const dist = Math.sqrt((obj.x-playerPos.x)**2 + (obj.y-playerPos.y)**2 + (obj.z-playerPos.z)**2);
-          mesh.visible = dist < 600000;
+          const dist = Math.sqrt((obj.x-visCenter.x)**2 + (obj.y-visCenter.y)**2 + (obj.z-visCenter.z)**2);
+          mesh.visible = dist < visDist;
         }
         for(const [id, rocks] of Object.entries(asteroidModels)){
           const obj = localState.objects.find(o => o.id === id);
           if(!obj){ rocks.forEach(r => r.visible = false); continue; }
-          const dist = Math.sqrt((obj.x-playerPos.x)**2 + (obj.y-playerPos.y)**2 + (obj.z-playerPos.z)**2);
+          const dist = Math.sqrt((obj.x-visCenter.x)**2 + (obj.y-visCenter.y)**2 + (obj.z-visCenter.z)**2);
           rocks.forEach(r => r.visible = dist < 25000);
         }
       }
