@@ -619,7 +619,7 @@ function animate(now){
       warpAlignTimer += dt;
       // Enter warp ONLY when fully aligned AND at speed (no timeout shortcut)
       const atSpeed = playerSpeed >= warpTriggerSpeed * 0.95;
-      if(alignment > 0.997 && atSpeed){
+      if(alignment > 0.9995 && atSpeed){
         warpState = 'warping';
         warpSpeed = 0;
         playerSpeed = 0;
@@ -665,17 +665,6 @@ function animate(now){
         warpSpeed = 0;
         document.getElementById('warpTarget').textContent = 'Arriving';
         
-        // DEBUG
-        console.log('WARP ARRIVE:', {
-          targetPos: {x: warpTargetPos.x, y: warpTargetPos.y, z: warpTargetPos.z},
-          playerPos: {x: playerPos.x, y: playerPos.y, z: playerPos.z},
-          distToTarget: playerPos.distanceTo(warpTargetPos),
-          exitSpeed, decelTime, travelDist, stopDist,
-          heading: {x: playerHeading.x, y: playerHeading.y, z: playerHeading.z},
-          stationCount: Object.keys(stationModels).length,
-          gateCount: Object.keys(gateModels).length,
-          planetCount: Object.keys(planetModels).length
-        });
       }
       // Override display speed during warp
       displaySpeed = warpSpeed;
@@ -688,10 +677,6 @@ function animate(now){
       if(playerSpeed <= 0){
         playerSpeed = 0;
         warpState = 'none';
-        console.log('WARP STOPPED:', {
-          playerPos: {x: playerPos.x, y: playerPos.y, z: playerPos.z},
-          distToNearestStation: Object.entries(stationModels).map(([id,m])=>({id, dist: playerPos.distanceTo(m.position), visible: m.visible}))
-        });
         warpTargetId = null;
         warpTargetPos = null;
         document.getElementById('warpTarget').textContent = '';
@@ -862,29 +847,11 @@ function animate(now){
         const visCenter = (warpState === 'decelerating' && warpTargetPos) ? warpTargetPos : playerPos;
         const visDist = 50000; // 50km visibility always - at astronomical scales nothing is visible further
         // DEBUG: log visibility state once per second
-        if(!window._lastVisLog || now - window._lastVisLog > 1000){
-          window._lastVisLog = now;
-          if(warpState === 'decelerating' || warpState === 'aligning'){
-            const visStations = Object.entries(stationModels).map(([id,m])=>{
-              const obj = localState.objects.find(o=>o.station_id===id);
-              const d = obj ? Math.sqrt((obj.x-visCenter.x)**2+(obj.y-visCenter.y)**2+(obj.z-visCenter.z)**2) : 99999999;
-              return {id, dist:Math.round(d), show: d < visDist};
-            });
-            console.log('VIS CHECK:', {warpState, visDist, visCenter: visCenter===playerPos?'player':'target', stations: visStations});
-          }
-        }
         for(const [id, mesh] of Object.entries(stationModels)){
           const obj = localState.objects.find(o => o.station_id === id);
           if(!obj){ mesh.visible = false; continue; }
           const dist = Math.sqrt((obj.x-visCenter.x)**2 + (obj.y-visCenter.y)**2 + (obj.z-visCenter.z)**2);
           mesh.visible = dist < visDist;
-        }
-        // DEBUG: count visible meshes in scene
-        if(warpState === 'decelerating' && !window._lastMeshLog || now - window._lastMeshLog > 2000){
-          window._lastMeshLog = now;
-          let visCount = 0;
-          scene.traverse(c => { if(c.isMesh && c.visible) visCount++; });
-          console.log('SCENE VISIBLE MESHES:', visCount, 'stationModels tracked:', Object.keys(stationModels).length);
         }
         for(const [id, mesh] of Object.entries(gateModels)){
           const obj = localState.objects.find(o => o.id === id);
@@ -892,12 +859,20 @@ function animate(now){
           const dist = Math.sqrt((obj.x-visCenter.x)**2 + (obj.y-visCenter.y)**2 + (obj.z-visCenter.z)**2);
           mesh.visible = dist < visDist;
         }
-        for(const [id, mesh] of Object.entries(planetModels)){
+        for(const [id, rocks] of Object.entries(asteroidModels)){
+          const obj = localState.objects.find(o => o.id === id);
+          if(!obj){ rocks.forEach(r => r.visible = false); continue; }
+          const dist = Math.sqrt((obj.x-visCenter.x)**2 + (obj.y-visCenter.y)**2 + (obj.z-visCenter.z)**2);
+          rocks.forEach(r => r.visible = dist < 25000);
+        }
+      }
+      // ── PLANETS: run in ALL states (including warping) ──
+      for(const [id, mesh] of Object.entries(planetModels)){
           const obj = localState.objects.find(o => o.id === id);
           if(!obj){ mesh.visible = false; continue; }
           // Only show planet when player is at its nav point (within 50km)
-          const distToNav = Math.sqrt((obj.x-visCenter.x)**2 + (obj.y-visCenter.y)**2 + (obj.z-visCenter.z)**2);
-          if(distToNav > visDist){
+          const distToNav = Math.sqrt((obj.x-playerPos.x)**2 + (obj.y-playerPos.y)**2 + (obj.z-playerPos.z)**2);
+          if(distToNav > 50000){
             mesh.visible = false;
             continue;
           }
@@ -928,19 +903,39 @@ function animate(now){
           const l = Math.sqrt(pdirX*pdirX+pdirY*pdirY+pdirZ*pdirZ) || 1;
 
           // Scale effect: during deceleration, scale up from 5% to 100%
-          // During aligning (departure), scale down from 100% to 5%
+          // Planet state machine for scale and position
           let scaleT = 1.0;
           if(warpState === 'decelerating' && warpDecelRate > 0){
-            // Progress: 0 at start of decel, 1 when stopped
+            // Arrival: scale up from 5% to 100%
             const totalTime = playerSpeed > 0 ? (playerSpeed / warpDecelRate) : 0;
             const elapsed = totalTime > 0 ? 1.0 - (totalTime / (mesh.userData._decelStartTime || totalTime)) : 1.0;
             scaleT = 0.05 + elapsed * 0.95;
             if(!mesh.userData._decelStartTime) mesh.userData._decelStartTime = playerSpeed / warpDecelRate;
           } else if(warpState === 'aligning'){
-            // Departure: shrink based on align timer
-            scaleT = Math.max(0.05, 1.0 - (warpAlignTimer / playerAlignTime));
+            // Do NOTHING. Planet stays put, full size.
+            scaleT = 1.0;
+          } else if(warpState === 'warping'){
+            // Departure: move planet backward relative to player and shrink over 4 seconds
+            if(!mesh.userData._departTimer) mesh.userData._departTimer = 0;
+            mesh.userData._departTimer += dt;
+            const t = Math.min(1.0, mesh.userData._departTimer / 1.5); // 1.5 seconds to fully shrink
+            scaleT = Math.max(0.02, 1.0 - t * 0.98); // 100% -> 2%
+            // Position: normal position (relative to player) PLUS backward shift
+            const shiftAmt = t * orbitDist * 2.0;
+            mesh.position.set(
+              playerPos.x + (pdirX/l) * orbitDist - warpHeading.x * shiftAmt,
+              playerPos.y + (pdirY/l) * orbitDist - warpHeading.y * shiftAmt,
+              playerPos.z + (pdirZ/l) * orbitDist - warpHeading.z * shiftAmt
+            );
+            if(t >= 1.0){ mesh.visible = false; }
+            mesh.scale.set(scaleT, scaleT, scaleT);
+            // DEBUG to file
+            continue;
           } else {
-            mesh.userData._decelStartTime = 0; // reset for next warp
+            mesh.userData._decelStartTime = 0;
+            mesh.userData._departDir = null;
+            mesh.userData._departTimer = 0;
+            mesh.userData._departStartPos = null;
             scaleT = 1.0;
           }
 
@@ -953,15 +948,7 @@ function animate(now){
           );
 
           // Apply scale
-          const s = scaleT;
-          mesh.scale.set(s, s, s);
-        }
-        for(const [id, rocks] of Object.entries(asteroidModels)){
-          const obj = localState.objects.find(o => o.id === id);
-          if(!obj){ rocks.forEach(r => r.visible = false); continue; }
-          const dist = Math.sqrt((obj.x-visCenter.x)**2 + (obj.y-visCenter.y)**2 + (obj.z-visCenter.z)**2);
-          rocks.forEach(r => r.visible = dist < 25000);
-        }
+          mesh.scale.set(scaleT, scaleT, scaleT);
       }
     }
 
