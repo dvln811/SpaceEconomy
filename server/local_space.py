@@ -97,6 +97,7 @@ class LocalSpaceWorker:
 
     def __init__(self):
         self.system_id = ''
+        self._anchor_id = ''
         self.objects = []  # SystemObject list
         self.ships = {}  # id -> LocalShip
         self.player_ship = None  # reference to player's LocalShip
@@ -347,6 +348,7 @@ class LocalSpaceWorker:
                 anchor_obj.x = 0
                 anchor_obj.y = 0
                 anchor_obj.z = 0
+            self._anchor_id = anchor_obj.id if anchor_obj else ''
 
             # Place NPC ships around the anchor (within 30 units = 3000cm = 30m scaled)
             self.ships = {}
@@ -544,7 +546,8 @@ class LocalSpaceWorker:
                              'au_distance': round(o.au_distance, 4),
                              'connects_to': o.connects_to,
                              'parent': o.parent,
-                             'ss_x': round(o.ss_x, 4), 'ss_z': round(o.ss_z, 4)} for o in self.objects],
+                             'ss_x': round(o.ss_x, 4), 'ss_z': round(o.ss_z, 4),
+                             'is_anchor': (o.id == self._anchor_id)} for o in self.objects],
                 'ships': [s.to_dict() for s in self.ships.values() if not s.is_player],
                 'player': self.player_ship.to_dict() if self.player_ship else None,
             }

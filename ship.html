@@ -100,8 +100,8 @@ let interpShips = {};
 const container = document.getElementById('viewport');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x020305);
-const camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight, 1, 50000000);
-camera.position.set(30, 20, 30);
+const camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight, 0.01, 500000);
+camera.position.set(0.3, 0.2, 0.3);
 const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(container.clientWidth, container.clientHeight);
 container.appendChild(renderer.domElement);
@@ -109,12 +109,12 @@ container.appendChild(renderer.domElement);
 // ── Custom Camera Controller (replaces OrbitControls) ──
 let camTheta = Math.PI / 4;  // current horizontal orbit angle
 let camPhi = Math.PI / 6;    // current vertical orbit angle
-let camRadius = 80;           // current orbit distance
+let camRadius = 0.8;           // current orbit distance
 let camTargetTheta = Math.PI / 4;  // target (smoothed toward)
 let camTargetPhi = Math.PI / 6;
-let camTargetRadius = 80;
-let camMinRadius = 10;
-let camMaxRadius = 2000;
+let camTargetRadius = 0.8;
+let camMinRadius = 0.1;
+let camMaxRadius = 20;
 let isOrbiting = false;
 let orbitStart = {x:0, y:0};
 
@@ -167,7 +167,7 @@ renderer.domElement.addEventListener('wheel', e => {
 
 scene.add(new THREE.AmbientLight(0x8aa8cc, 0.4));
 const dirLight = new THREE.DirectionalLight(0xfff5e0, 1.5);
-dirLight.position.set(50, 30, 20);
+dirLight.position.set(0.5, 0.3, 0.2);
 scene.add(dirLight);
 
 // Sun/star visual (always visible in flight, emits light + lens flare)
@@ -199,7 +199,7 @@ function initSun(){
   sunDirection = starPos.clone().normalize();
   if(sunDirection.length() < 0.1) sunDirection.set(1, 0.2, 0);
 
-  const sunDist = 2000000;
+  const sunDist = 20000;
   const sunPos = sunDirection.clone().multiplyScalar(sunDist);
 
   // Sun: flares only (no sphere)
@@ -212,7 +212,7 @@ function initSun(){
     map: makeFlareTexture(256, 255, 255, 230, 0.15),
     transparent: true, opacity: 1.0, depthWrite: false, blending: THREE.AdditiveBlending
   }));
-  flare1.scale.set(80000, 80000, 1);
+  flare1.scale.set(800, 800, 1);
   flare1.position.copy(sunPos);
   scene.add(flare1);
 
@@ -220,7 +220,7 @@ function initSun(){
     map: makeFlareTexture(256, 255, 220, 120, 0.3),
     transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending
   }));
-  flare2.scale.set(200000, 200000, 1);
+  flare2.scale.set(2000, 2000, 1);
   flare2.position.copy(sunPos);
   scene.add(flare2);
 
@@ -228,14 +228,14 @@ function initSun(){
     map: makeFlareTexture(128, 255, 180, 80, 0.5),
     transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending
   }));
-  flare3.scale.set(450000, 450000, 1);
+  flare3.scale.set(4500, 4500, 1);
   flare3.position.copy(sunPos);
   scene.add(flare3);
 
   sunMesh.userData.flares = [flare1, flare2, flare3];
 
   // Strong directional light from sun
-  dirLight.position.copy(sunDirection.clone().multiplyScalar(100));
+  dirLight.position.copy(sunDirection.clone().multiplyScalar(1));
   dirLight.intensity = 2.0;
 
   // Point light at sun
@@ -246,15 +246,15 @@ function initSun(){
 
 // ── Hangar (docked view) ──
 function buildHangar(){
-  const floorGeo = new THREE.CylinderGeometry(25, 25, 0.5, 32);
+  const floorGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.005, 32);
   const floorMat = new THREE.MeshPhongMaterial({color:0x0a0e18, emissive:0x050810, shininess:0});
   hangarPedestal = new THREE.Mesh(floorGeo, floorMat);
-  hangarPedestal.position.y = -8;
-  const ringGeo = new THREE.TorusGeometry(25, 0.2, 8, 64);
+  hangarPedestal.position.y = -0.08;
+  const ringGeo = new THREE.TorusGeometry(0.25, 0.002, 8, 64);
   const ringMat = new THREE.MeshBasicMaterial({color:0x1a3050, transparent:true, opacity:0.6});
   const ring = new THREE.Mesh(ringGeo, ringMat);
   ring.rotation.x = Math.PI/2;
-  ring.position.y = 0.3;
+  ring.position.y = 0.003;
   hangarPedestal.add(ring);
   scene.add(hangarPedestal);
 }
@@ -280,7 +280,7 @@ function buildStarfield(){
   starField = new THREE.Points(geo,new THREE.PointsMaterial({color:0xffffff,size:1.5,sizeAttenuation:false}));
   starField.frustumCulled = false;
   starField.renderOrder = -1; // render behind everything
-  starField.scale.setScalar(45000000); // stays inside far plane
+  starField.scale.setScalar(450000); // stays inside far plane
 }
 buildStarfield();
 
@@ -323,10 +323,10 @@ function setDockedScene(){
   warpTargetId = null;
   warpTargetPos = null;
   warpSpeed = 0;
-  camRadius = 80; camTargetRadius = 80;
+  camRadius = 0.8; camTargetRadius = 0.8;
   camTheta = Math.PI / 4; camTargetTheta = Math.PI / 4;
   camPhi = Math.PI / 6; camTargetPhi = Math.PI / 6;
-  camMaxRadius = 100;
+  camMaxRadius = 1;
   if(shipGroup){
     shipGroup.position.set(0,0,0);
     shipGroup.quaternion.identity(); // reset rotation for hangar display
@@ -343,9 +343,9 @@ function setFlightScene(){
   scene.background = new THREE.Color(0x020308);
   if(hangarPedestal) hangarPedestal.removeFromParent();
   scene.add(starField);
-  camMaxRadius = 2000;
-  camTargetRadius = Math.min(camTargetRadius, 200);
-  camRadius = Math.min(camRadius, 200);
+  camMaxRadius = 20;
+  camTargetRadius = Math.min(camTargetRadius, 2);
+  camRadius = Math.min(camRadius, 2);
   updateCameraOrbit();
   isDocked = false;
   loadAllStations();
@@ -413,7 +413,7 @@ function buildNpcShipMesh(shipClass, role) {
   if (!allShipGeos || !allShipGeos[shipClass]) {
     // Fallback: simple ship-like shape (cone + body)
     const edgeColor = NPC_EDGE_COLORS[role] || 0x8aa0b8;
-    const body = new THREE.ConeGeometry(8, 35, 4);
+    const body = new THREE.ConeGeometry(0.08, 0.35, 4);
     body.rotateZ(-Math.PI/2);  // nose forward along +X
     const mesh = new THREE.Mesh(body, new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1428, shininess:0, transparent:true, opacity:0.7}));
     mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(body, 15), new THREE.LineBasicMaterial({color:edgeColor, transparent:true, opacity:0.7})));
@@ -461,7 +461,7 @@ function buildNpcShipMesh(shipClass, role) {
   const box = new THREE.Box3().setFromObject(grp);
   const size = box.getSize(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z) || 1;
-  grp.scale.setScalar(50 / maxDim);
+  grp.scale.setScalar(0.5 / maxDim);
   npcShipCache[cacheKey] = grp;
   return grp.clone();
 }
@@ -493,7 +493,7 @@ function getOrCreateObjSprite(obj){
   const tex = new THREE.CanvasTexture(canvas);
   const mat = new THREE.SpriteMaterial({map:tex, transparent:true, opacity:0.9});
   const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(20,5,1);
+  sprite.scale.set(0.2, 0.05, 1);
   scene.add(sprite);
   objectSprites[obj.id] = sprite;
   return sprite;
@@ -560,7 +560,7 @@ function updateFromState(state){
 // ── Player Ship Local Physics ──
 let flyDirection = null;  // THREE.Vector3 or null
 let playerSpeed = 0;
-let playerMaxSpeed = 95;  // from ship stats, updated on load
+let playerMaxSpeed = 0.95;  // from ship stats, updated on load
 let playerAlignTime = 5;
 let playerPos = new THREE.Vector3(0, 0, 0);
 let playerPosInitialized = false;  // world position
@@ -619,7 +619,7 @@ function animate(now){
         playerSpeed += (warpTriggerSpeed - playerSpeed) * 0.04;
       }
       // Move along heading while aligning
-      if(playerSpeed > 0.1){
+      if(playerSpeed > 0.001){
         playerPos.addScaledVector(playerHeading, playerSpeed * dt);
       }
       flyDirection = null;
@@ -639,10 +639,10 @@ function animate(now){
       const progress = Math.min(1.0, warpTravelTimer / warpTravelDuration);
       // Visual warp speed ramps up then down
       const speedCurve = Math.sin(progress * Math.PI); // 0->1->0
-      warpSpeed = speedCurve * 50000; // peak 50 km/s visual display
+      warpSpeed = speedCurve * 500; // peak 50 km/s visual display
       // Only move player during departure (first 40% of warp) - after that, tunnel
       if(progress < 0.4){
-        const warpMoveSpeed = speedCurve * 50000;
+        const warpMoveSpeed = speedCurve * 500;
         playerPos.addScaledVector(warpHeading, warpMoveSpeed * dt);
       } else {
         // In tunnel - hide all objects
@@ -653,22 +653,24 @@ function animate(now){
       }
 
       if(progress >= 1.0){
-        // Warp complete - ALL CLIENT SIDE. No server needed until we've stopped.
-        // Place player 500km from target, facing it. Decelerate to stop at 10-15km.
-        const stopDist = 10000 + Math.random() * 5000; // stop 10-15km from target
-        const spawnDist = 500000; // 500km out
-        const travelDist = spawnDist - stopDist;
-        const decelTime = 4.0; // seconds
-
-        // Position player 500km from target along approach vector (opposite of warp heading)
-        playerPos.copy(warpTargetPos).addScaledVector(warpHeading, -spawnDist);
-        // Face toward target
-        playerHeading.copy(warpHeading);
-
-        // Calculate exit speed for exact stop: v0 = 2 * distance / time
-        const exitSpeed = 2 * travelDist / decelTime;
-        warpDecelRate = exitSpeed / decelTime;
-        playerSpeed = exitSpeed;
+        // Warp complete. Tell server to recenter LSG on new target.
+        // Then spawn player at offset from origin (new target is at 0,0,0).
+        warpState = 'arriving';
+        warpSpeed = 0;
+        playerSpeed = 0;
+        flyDirection = null;
+        // Tell server to recenter
+        fetch('/api/player/warp_arrive', {method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({target: warpTargetId})
+        }).then(()=>{
+          // Server has recentered. Reset player position from next SSE.
+          playerPosInitialized = false;
+          // Clear old models
+          Object.values(stationModels).forEach(m => m.removeFromParent()); stationModels = {};
+          Object.values(gateModels).forEach(m => m.removeFromParent()); gateModels = {};
+          Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => r.removeFromParent())); asteroidModels = {};
+          Object.values(planetModels).forEach(m => m.removeFromParent()); planetModels = {};
+        }).catch(()=>{ playerPosInitialized = false; });
         flyDirection = null;
         warpState = 'decelerating';
         warpSpeed = 0;
@@ -678,8 +680,27 @@ function animate(now){
       // Override display speed during warp
       displaySpeed = warpSpeed;
       document.getElementById('speedBar').style.width = (progress * 100) + '%';
-      document.getElementById('shipSpeed').textContent = warpSpeed > 1000 ? (warpSpeed/1000).toFixed(1) + ' km/s' : Math.round(warpSpeed) + ' m/s';
+      document.getElementById('shipSpeed').textContent = (warpSpeed*100) > 1000 ? ((warpSpeed*100)/1000).toFixed(1) + ' km/s' : Math.round(warpSpeed*100) + ' m/s';
       document.getElementById('warpTarget').textContent = 'Warp ' + Math.round(progress * 100) + '%';
+    } else if(warpState === 'arriving'){
+      // Wait for server recenter + SSE to provide new position
+      if(playerPosInitialized){
+        // Server has recentered. Load new models and start decel.
+        loadAllStations(); loadAllGates(); loadAsteroidFields(); loadPlanetsAndMoons(); initSun();
+        // Set up deceleration from spawn point toward origin (target at 0,0,0)
+        const distToOrigin = playerPos.length();
+        const stopDist = 1 + Math.random() * 0.5; // stop 100-150m from target (1-1.5 units)
+        const travelDist = Math.max(1, distToOrigin - stopDist);
+        const decelTime = 4.0;
+        const exitSpeed = 2 * travelDist / decelTime;
+        warpDecelRate = exitSpeed / decelTime;
+        playerSpeed = exitSpeed;
+        // Face toward origin
+        playerHeading.set(-playerPos.x, -playerPos.y, -playerPos.z).normalize();
+        flyDirection = null;
+        warpState = 'decelerating';
+        document.getElementById('warpTarget').textContent = 'Arriving';
+      }
     } else if(warpState === 'decelerating'){
       // Linear deceleration toward target
       playerSpeed -= warpDecelRate * dt;
@@ -706,12 +727,12 @@ function animate(now){
         playerSpeed += (playerMaxSpeed * alignment - playerSpeed) * 0.03;
       } else {
         playerSpeed *= 0.95;
-        if(playerSpeed < 0.5) playerSpeed = 0;
+        if(playerSpeed < 0.005) playerSpeed = 0;
       }
     }
 
     // Move ship in world space (always, regardless of state)
-    if(playerSpeed > 0.1){
+    if(playerSpeed > 0.001){
       const moveM = playerSpeed * dt;
       playerPos.addScaledVector(playerHeading, moveM);
     }
@@ -746,13 +767,13 @@ function animate(now){
       const right = new THREE.Vector3().crossVectors(baseDir, new THREE.Vector3(0,1,0)).normalize();
       const up = new THREE.Vector3(0,1,0);
       const lookAt = playerPos.clone();
-      lookAt.addScaledVector(right, freelookYaw * 50);
-      lookAt.addScaledVector(up, -freelookPitch * 50);
+      lookAt.addScaledVector(right, freelookYaw * 0.5);
+      lookAt.addScaledVector(up, -freelookPitch * 0.5);
       camera.lookAt(lookAt);
     }
 
     // Trail
-    if(playerSpeed > 1){
+    if(playerSpeed > 0.01){
       trailLine.visible = true;
       const arr = trailLine.geometry.attributes.position.array;
       if(trailDrawCount < 150){
@@ -774,8 +795,8 @@ function animate(now){
     // Speed UI
     displaySpeed += (playerSpeed - displaySpeed) * 0.1;
     document.getElementById('speedBar').style.width = (displaySpeed / playerMaxSpeed * 100) + '%';
-    document.getElementById('shipSpeed').textContent = Math.round(displaySpeed) + ' m/s';
-    document.getElementById('shipState').textContent = warpState === 'warping' ? 'Warping' : warpState === 'aligning' ? 'Aligning' : warpState === 'decelerating' ? 'Decelerating' : flyDirection ? (displaySpeed > playerMaxSpeed*0.9 ? 'Full Speed' : 'Aligning') : (playerSpeed > 1 ? 'Decelerating' : 'Idle');
+    document.getElementById('shipSpeed').textContent = Math.round(displaySpeed * 100) + ' m/s';
+    document.getElementById('shipState').textContent = warpState === 'warping' ? 'Warping' : warpState === 'aligning' ? 'Aligning' : warpState === 'decelerating' ? 'Decelerating' : flyDirection ? (displaySpeed > playerMaxSpeed*0.9 ? 'Full Speed' : 'Aligning') : (playerSpeed > 0.01 ? 'Decelerating' : 'Idle');
 
     // ── Starfield: follow camera (skybox behavior, no parallax) ──
     if(starField){
@@ -808,7 +829,7 @@ function animate(now){
     for(const [id, ship] of Object.entries(interpShips)){
       if(ship.is_player) continue;
       // Hide docked ships
-      if(ship.state === 'docked' || ship.state === 'idle' && ship.speed < 0.5){
+      if(ship.state === 'docked' || ship.state === 'idle' && ship.speed < 0.005){
         if(npcMeshes[id]) npcMeshes[id].visible = false;
         continue;
       }
@@ -835,7 +856,7 @@ function animate(now){
       for(const obj of localState.objects){
         if(obj.type==='star') continue;
         const dist = Math.sqrt((obj.x-playerPos.x)**2 + (obj.y-playerPos.y)**2 + (obj.z-playerPos.z)**2);
-        if(dist > 50000){ // >50km, just nav marker
+        if(dist > 500){ // >50km, just nav marker
           if(objectSprites[obj.id]){ objectSprites[obj.id].visible = false; }
           continue;
         }
@@ -854,7 +875,7 @@ function animate(now){
       // Normal flight: show objects near PLAYER
       if(warpState !== 'warping'){
         const visCenter = (warpState === 'decelerating' && warpTargetPos) ? warpTargetPos : playerPos;
-        const visDist = 50000;
+        const visDist = 500;
         // Reset scales from any previous warp departure (restore original scale)
         for(const [id, mesh] of Object.entries(stationModels)){
           if(mesh.userData._origScale) mesh.scale.setScalar(mesh.userData._origScale);
@@ -881,7 +902,7 @@ function animate(now){
           const obj = localState.objects.find(o => o.id === id);
           if(!obj){ rocks.forEach(r => r.visible = false); continue; }
           const dist = Math.sqrt((obj.x-visCenter.x)**2 + (obj.y-visCenter.y)**2 + (obj.z-visCenter.z)**2);
-          rocks.forEach(r => r.visible = dist < 25000);
+          rocks.forEach(r => r.visible = dist < 250);
         }
       } else {
         // During warping: shrink all visible stations/gates/asteroids (departure effect)
@@ -911,7 +932,7 @@ function animate(now){
           if(!obj){ mesh.visible = false; continue; }
           // Only show planet when player is at its nav point (within 50km)
           const distToNav = Math.sqrt((obj.x-playerPos.x)**2 + (obj.y-playerPos.y)**2 + (obj.z-playerPos.z)**2);
-          if(distToNav > 50000){
+          if(distToNav > 500){
             mesh.visible = false;
             continue;
           }
@@ -1111,21 +1132,26 @@ window.addEventListener('mousemove', e=>{
 // ── Warp command (called from nav list) ──
 window.warpTo = function(objId){
   closeCtx();
-  if(warpState !== 'none') return; // already warping
-  // Find target position from local state objects
+  if(warpState !== 'none') return;
   if(!localState || !localState.objects) return;
   const obj = localState.objects.find(o => o.id === objId);
   if(!obj) return;
-  // Don't warp if already at this location (within 25km)
-  const dx = obj.x - playerPos.x, dy = obj.y - playerPos.y, dz = obj.z - playerPos.z;
-  const distToTarget = Math.sqrt(dx*dx + dy*dy + dz*dz);
-  if(distToTarget < 25000) return; // already here
-  // Set warp target
+  // Don't warp if this is the anchor (we're already here)
+  if(obj.is_anchor) return;
+  // Compute warp direction from SS coordinates (current anchor -> target)
+  const anchorObj = localState.objects.find(o => o.is_anchor);
+  if(!anchorObj) return;
+  const ssDx = obj.ss_x - anchorObj.ss_x;
+  const ssDz = obj.ss_z - anchorObj.ss_z;
+  const ssLen = Math.sqrt(ssDx*ssDx + ssDz*ssDz) || 0.01;
+  // Set warp heading from SS direction
+  warpHeading.set(ssDx/ssLen, 0, ssDz/ssLen).normalize();
+  // Set warp target position far away in that direction (for departure animation)
   warpTargetId = objId;
-  warpTargetPos = new THREE.Vector3(obj.x, obj.y, obj.z);
+  warpTargetPos = new THREE.Vector3(warpHeading.x * 100000, 0, warpHeading.z * 100000);
   warpTargetType = obj.type;
-  // Compute warp duration: ~3 seconds per AU, minimum 3s, max 15s
-  const auDist = obj.au_distance || 0.1;
+  // Compute warp duration from AU distance between objects
+  const auDist = ssLen;
   warpTravelDuration = Math.max(3, Math.min(15, auDist * 3));
   warpTravelTimer = 0;
   warpState = 'aligning';
@@ -1205,7 +1231,7 @@ window.showCtx = function(e, objId, name, type){
     if(gateObj && gateObj.connects_to){
       const dx = gateObj.x - playerPos.x, dy = gateObj.y - playerPos.y, dz = gateObj.z - playerPos.z;
       const dist = Math.sqrt(dx*dx+dy*dy+dz*dz);
-      if(dist < 2000){
+      if(dist < 20){
         items += `<div class="ctx-item" style="color:#ab47bc" onclick="jumpGate('${objId}')">Jump to ${gateObj.connects_to}</div>`;
       }
     }
@@ -1258,25 +1284,29 @@ function renderNavList(objects, playerShip){
   nav.innerHTML = objects.filter(o=>o.type!=='star').map(o=>{
     const icon = o.type==='gate'?'&#9674;':o.type==='station'?'&#9632;':o.type==='planet'?'&#9679;':'&#8226;';
     const color = o.type==='gate'?'#ab47bc':o.type==='station'?'#4fc3f7':'#8aa0b8';
-    // Compute actual distance from player to this object (meters)
-    const dx = o.x - px, dy = o.y - py, dz = o.z - pz;
-    let distM = Math.sqrt(dx*dx + dy*dy + dz*dz);
-    // For planets/moons at their LSG, show realistic orbit distance instead
-    if((o.type === 'planet' || o.type === 'moon') && distM < 50000 && planetModels[o.id]){
-      distM = planetModels[o.id].userData.orbitDist || distM;
-    }
-    const distKm = distM / 1000;
-    // Show km when within 50km, AU when far
+    // Distance display: anchor objects use local LSG distance, others use SS AU distance
     let distStr;
-    if(distKm < 50){
-      distStr = distKm < 1 ? Math.round(distM) + ' m' : distKm.toFixed(1) + ' km';
+    if(o.is_anchor){
+      // Local distance from player to anchor (in LSG units, 1 unit = 1cm)
+      const dx = o.x - px, dy = o.y - py, dz = o.z - pz;
+      const distUnits = Math.sqrt(dx*dx + dy*dy + dz*dz);
+      const distM = distUnits * 0.01; // convert cm units to meters for display
+      if(distM < 1000) distStr = Math.round(distM) + ' m';
+      else distStr = (distM / 1000).toFixed(1) + ' km';
     } else {
-      // Convert meters to AU (1 AU = 100,000m in our local space scale)
-      const distAU = distM / 100000;
-      distStr = distAU.toFixed(2) + ' AU';
+      // SS AU distance from anchor's SS position
+      const anchorObj = objects.find(a => a.is_anchor);
+      if(anchorObj){
+        const adx = o.ss_x - anchorObj.ss_x, adz = o.ss_z - anchorObj.ss_z;
+        const auDist = Math.sqrt(adx*adx + adz*adz);
+        distStr = auDist.toFixed(2) + ' AU';
+      } else {
+        distStr = o.au_distance.toFixed(2) + ' AU';
+      }
     }
-    // Mark if player is at this object's LSG (within 25km)
-    const atLocation = distKm < 25;
+    const distKm = o.is_anchor ? 0.01 : 999; // for atLocation check
+    // Mark if player is at this object's LSG
+    const atLocation = o.is_anchor;
     const destLabel = (o.type==='gate' && o.connects_to) ? ` &rarr; ${o.connects_to}` : '';
     const atStyle = atLocation ? 'opacity:0.5' : '';
     return `<div class="nav-obj" style="padding:3px 4px;cursor:pointer;border-bottom:1px solid #0f1520;display:flex;justify-content:space-between;${atStyle}" data-id="${o.id}" data-name="${o.name}" data-type="${o.type}">
@@ -1288,14 +1318,14 @@ function renderNavList(objects, playerShip){
   const nearStation = objects.find(o=>{
     if(o.type!=='station') return false;
     const dx=o.x-px, dy=o.y-py, dz=o.z-pz;
-    return Math.sqrt(dx*dx+dy*dy+dz*dz) < 3000;
+    return Math.sqrt(dx*dx+dy*dy+dz*dz) < 30;
   });
   document.getElementById('dockBtn').style.display = nearStation ? '' : 'none';
   // Show jump button if near a gate with connection (within 10km)
   const nearGate = objects.find(o=>{
     if(o.type!=='gate' || !o.connects_to) return false;
     const dx=o.x-px, dy=o.y-py, dz=o.z-pz;
-    return Math.sqrt(dx*dx+dy*dy+dz*dz) < 2000;
+    return Math.sqrt(dx*dx+dy*dy+dz*dz) < 20;
   });
   let jumpBtn = document.getElementById('jumpBtn');
   if(!jumpBtn){
@@ -1364,7 +1394,7 @@ async function loadShipModel(){
   const box = new THREE.Box3().setFromObject(shipGroup);
   const size = box.getSize(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z);
-  shipGroup.scale.setScalar(20/maxDim);
+  shipGroup.scale.setScalar(0.2/maxDim);
   scene.add(shipGroup);
 
   // Update docked UI with player info
@@ -1402,7 +1432,7 @@ let stationModels = {}; // station_id -> THREE.Group
 
 async function loadAllStations(){
   if(!localState || !localState.objects) return;
-  const stationObjs = localState.objects.filter(o => o.station_id);
+  const stationObjs = localState.objects.filter(o => o.station_id && o.is_anchor);
   for(const obj of stationObjs){
     if(stationModels[obj.station_id]) continue; // already loaded
     try{
@@ -1415,8 +1445,8 @@ async function loadAllStations(){
       const box = new THREE.Box3().setFromObject(model);
       const sz = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
-      const typeScale = {'trade_hub':10000, 'military_base':8000, 'shipyard':12000, 'factory':6000, 'refinery':5000, 'component_works':4000, 'mining_colony':3000};
-      const targetSize = typeScale[data.station_type] || 500;
+      const typeScale = {'trade_hub':100, 'military_base':80, 'shipyard':120, 'factory':60, 'refinery':50, 'component_works':40, 'mining_colony':30};
+      const targetSize = typeScale[data.station_type] || 5;
       model.scale.setScalar(targetSize / maxDim);
       model.userData._origScale = targetSize / maxDim;
       // Position at object world coords
@@ -1472,7 +1502,7 @@ function buildStationMesh(data){
 let gateModels = {}; // obj_id -> THREE.Group
 async function loadAllGates(){
   if(!localState || !localState.objects) return;
-  const gateObjs = localState.objects.filter(o => o.type === 'gate');
+  const gateObjs = localState.objects.filter(o => o.type === 'gate' && o.is_anchor);
   for(const obj of gateObjs){
     if(gateModels[obj.id]) continue;
     try{
@@ -1486,8 +1516,8 @@ async function loadAllGates(){
       const box = new THREE.Box3().setFromObject(model);
       const sz = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
-      model.scale.setScalar(1000 / maxDim);
-      model.userData._origScale = 1000 / maxDim;
+      model.scale.setScalar(10 / maxDim);
+      model.userData._origScale = 10 / maxDim;
       model.position.set(obj.x, obj.y, obj.z);
       // Give gates a bright purple/magenta edge color
       model.traverse(c => {
@@ -1506,7 +1536,7 @@ async function loadAllGates(){
 let asteroidModels = {}; // obj_id -> [THREE.Mesh]
 async function loadAsteroidFields(){
   if(!localState || !localState.objects) return;
-  const beltObjs = localState.objects.filter(o => o.type === 'asteroid_belt' || o.type === 'belt');
+  const beltObjs = localState.objects.filter(o => (o.type === 'asteroid_belt' || o.type === 'belt') && o.is_anchor);
   for(const obj of beltObjs){
     if(asteroidModels[obj.id]) continue;
     try{
@@ -1531,10 +1561,10 @@ async function loadAsteroidFields(){
           mesh.material.color.setHex(data.color);
           mesh.material.emissive.setHex(data.color).multiplyScalar(0.1);
         }
-        // Spread asteroids in a 15km radius disk, 3km vertical
+        // Spread asteroids in a 150-unit radius disk, 30-unit vertical
         const angle = seededRand() * Math.PI * 2;
-        const dist = seededRand() * 15000;
-        const vert = (seededRand() - 0.5) * 3000;
+        const dist = seededRand() * 150;
+        const vert = (seededRand() - 0.5) * 30;
         mesh.position.set(
           obj.x + Math.cos(angle) * dist,
           obj.y + vert,
@@ -1654,14 +1684,14 @@ function generatePlanetTexture(id, baseColor, isPlanet){
 
 function loadPlanetsAndMoons(){
   if(!localState || !localState.objects) return;
-  const bodies = localState.objects.filter(o => o.type === 'planet' || o.type === 'moon');
+  const bodies = localState.objects.filter(o => (o.type === 'planet' || o.type === 'moon') && o.is_anchor);
   for(const obj of bodies){
     if(planetModels[obj.id]) continue;
     const isPlanet = obj.type === 'planet';
     // Planets: 1500-5000km radius, placed 5000-10000km from player
     // Moons: 300-1000km radius, placed 3000-5000km from player
-    const radius = isPlanet ? 1500000 + Math.abs(hash(obj.id)) % 3500000 : 300000 + Math.abs(hash(obj.id)) % 700000;
-    const orbitDist = isPlanet ? 5000000 + Math.abs(hash(obj.id + 'dist')) % 5000000 : 3000000 + Math.abs(hash(obj.id + 'dist')) % 2000000;
+    const radius = isPlanet ? 15000 + Math.abs(hash(obj.id)) % 35000 : 3000 + Math.abs(hash(obj.id)) % 7000;
+    const orbitDist = isPlanet ? 50000 + Math.abs(hash(obj.id + 'dist')) % 50000 : 30000 + Math.abs(hash(obj.id + 'dist')) % 20000;
     const colors = PLANET_COLORS[obj.type] || PLANET_COLORS['planet'];
     const color = colors[Math.abs(hash(obj.id)) % colors.length];
     const geo = new THREE.SphereGeometry(radius, isPlanet ? 48 : 24, isPlanet ? 32 : 16);
@@ -1753,7 +1783,7 @@ function updateDirectionalLabels(){
     const labelX = obj.x, labelY = obj.y, labelZ = obj.z;
     const toObj = new THREE.Vector3(labelX - camera.position.x, labelY - camera.position.y, labelZ - camera.position.z);
     const dist = new THREE.Vector3(labelX - labelRefPos.x, labelY - labelRefPos.y, labelZ - labelRefPos.z).length();
-    if(dist < 100) { label.el.style.display = 'none'; continue; }
+    if(dist < 1) { label.el.style.display = 'none'; continue; }
     toObj.normalize();
 
     // Dot product: positive = in front of camera, negative = behind
@@ -1821,8 +1851,7 @@ function updateDirectionalLabels(){
     const distKm = dist / 1000;
     let distLabel;
     if(distKm < 1) distLabel = Math.round(dist) + 'm';
-    else if(distKm < 100) distLabel = distKm.toFixed(1) + 'km';
-    else distLabel = (dist / 100000).toFixed(2) + 'AU';
+    else distLabel = (dist / 1000).toFixed(2) + 'AU';
 
     label.el.style.left = sx + 'px';
     label.el.style.top = sy + 'px';
