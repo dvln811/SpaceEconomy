@@ -85,6 +85,7 @@ let shipGroup = null;
 let hangarPedestal = null;
 let stationModel = null;
 let stationWorldPos = null;
+let lsgGroup = null; // THREE.Group container for all LSG objects (moves during warp)
 let npcMeshes = {};  // id -> THREE.Group (merged ship models)
 let npcShipCache = {};  // ship_class -> {mesh: THREE.BufferGeometry, edges: THREE.EdgesGeometry}
 let allShipGeos = null;  // loaded from /api/ship_model/all
@@ -100,7 +101,7 @@ let interpShips = {};
 const container = document.getElementById('viewport');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x020305);
-const camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight, 0.01, 500000);
+const camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight, 0.01, 5000000);
 camera.position.set(0.3, 0.2, 0.3);
 const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(container.clientWidth, container.clientHeight);
@@ -280,7 +281,7 @@ function buildStarfield(){
   starField = new THREE.Points(geo,new THREE.PointsMaterial({color:0xffffff,size:1.5,sizeAttenuation:false}));
   starField.frustumCulled = false;
   starField.renderOrder = -1; // render behind everything
-  starField.scale.setScalar(450000); // stays inside far plane
+  starField.scale.setScalar(4500000); // stays inside far plane
 }
 buildStarfield();
 
@@ -366,19 +367,13 @@ function connectStream(){
   evtSource = new EventSource('/api/player/local_space/stream');
   evtSource.onmessage = (e) => {
     const state = JSON.parse(e.data);
-    // DEBUG: log to file when in arriving state
-    if(warpState === 'arriving' && !window._rawSSElog){
-      window._rawSSElog = true;
-      fetch('/api/debug_log', {method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({type:'RAW_SSE', warpState, hasPlayer: !!state.player, playerX: state.player?.x, playerPosInitialized, warpRecenterPending})
-      }).catch(()=>{});
-      setTimeout(()=>{ window._rawSSElog = false; }, 500);
-    }
     const firstState = !localState;
     localState = state;
     lastTickTime = performance.now();
     // On first state received, load 3D objects (they need localState to work)
     if(firstState && !isDocked){
+      // Create LSG group for initial load
+      if(!lsgGroup){ lsgGroup = new THREE.Group(); scene.add(lsgGroup); }
       loadAllStations();
       loadAllGates();
       loadAsteroidFields();
@@ -511,14 +506,6 @@ function getOrCreateObjSprite(obj){
 function updateFromState(state){
   if(!state) return;
   const p = state.player;
-  // Debug during arriving
-  if(warpState === 'arriving' && !window._sseDebugDone2){
-    window._sseDebugDone2 = true;
-    fetch('/api/debug_log', {method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({type:'SSE_STATE', hasPlayer: !!p, playerPosInitialized, warpRecenterPending, warpState})
-    }).catch(()=>{});
-    setTimeout(()=>{ window._sseDebugDone2 = false; }, 500);
-  }
   if(!p) return;
 
   // Update player ship stats from server
@@ -527,13 +514,8 @@ function updateFromState(state){
 
   // Set initial player position from server if not yet set
   // Restore player position from server on first connect (page switch recovery)
-  if(warpState === 'arriving' && !window._sseDebugDone){
-    window._sseDebugDone = true;
-    fetch('/api/debug_log', {method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({type:'SSE_ARRIVE', playerPosInitialized, warpRecenterPending, px: p.x, py: p.y, pz: p.z, pState: p.state})
-    }).catch(()=>{});
-    setTimeout(()=>{ window._sseDebugDone = false; }, 500);
-  }
+
+  // Set initial player position from server if not yet set
   if(!playerPosInitialized && !warpRecenterPending && p.x !== undefined){
     playerPos.set(p.x, p.y, p.z);
     playerPosInitialized = true;
@@ -647,6 +629,8 @@ function animate(now){
         warpState = 'warping';
         warpSpeed = 0;
         playerSpeed = 0;
+        // Reset group position for clean departure
+        if(lsgGroup) lsgGroup.position.set(0, 0, 0);
       }
     } else if(warpState === 'warping'){
       // ── SHIP STAYS STATIONARY. Objects move around it. ──
@@ -655,17 +639,17 @@ function animate(now){
       const speedCurve = Math.sin(progress * Math.PI);
       warpSpeed = speedCurve * 500;
 
-      // ── PHASE 1: DEPARTURE (0-40%) - move current LSG objects away along -heading ──
-      if(progress < 0.4){
-        const moveAmt = speedCurve * 500 * dt;
-        Object.values(stationModels).forEach(m => { m.position.x -= warpHeading.x * moveAmt; m.position.z -= warpHeading.z * moveAmt; });
-        Object.values(gateModels).forEach(m => { m.position.x -= warpHeading.x * moveAmt; m.position.z -= warpHeading.z * moveAmt; });
-        Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => { r.position.x -= warpHeading.x * moveAmt; r.position.z -= warpHeading.z * moveAmt; }));
-        Object.values(planetModels).forEach(m => { m.position.x -= warpHeading.x * moveAmt; m.position.z -= warpHeading.z * moveAmt; });
+      // ── PHASE 1: DEPARTURE (0-10%) - move LSG group away FAST ──
+      if(progress < 0.1){
+        const moveAmt = speedCurve * 50000 * dt;
+        if(lsgGroup){
+          lsgGroup.position.x -= warpHeading.x * moveAmt;
+          lsgGroup.position.z -= warpHeading.z * moveAmt;
+        }
       }
 
-      // ── PHASE 2: TUNNEL (40-100%) - departure objects hidden ──
-      if(progress >= 0.4 && progress < 1.0){
+      // ── PHASE 2: TUNNEL (10-100%) - departure objects hidden ──
+      if(progress >= 0.1 && progress < 1.0){
         Object.values(stationModels).forEach(m => m.visible = false);
         Object.values(gateModels).forEach(m => m.visible = false);
         Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => r.visible = false));
@@ -674,46 +658,58 @@ function animate(now){
       // ── FETCH: At 20% progress, fetch destination LSG data ──
       if(progress > 0.2 && !window._lsgFetched){
         window._lsgFetched = true;
-        fetch('/api/lsg_data/' + warpTargetId).then(r=>r.json()).then(lsgData=>{
+        // Fetch LSG data AND build all models during tunnel
+        fetch('/api/lsg_data/' + warpTargetId).then(r=>r.json()).then(async (lsgData)=>{
           window._lsgData = lsgData;
+          // Clear old departure models
+          Object.values(stationModels).forEach(m => m.removeFromParent()); stationModels = {};
+          Object.values(gateModels).forEach(m => m.removeFromParent()); gateModels = {};
+          Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => r.removeFromParent())); asteroidModels = {};
+          Object.values(planetModels).forEach(m => m.removeFromParent()); planetModels = {};
+          if(lsgGroup){ scene.remove(lsgGroup); }
+          // Create new group, hidden for now
+          lsgGroup = new THREE.Group();
+          lsgGroup.visible = false;
+          scene.add(lsgGroup);
+          // Update localState so loaders can read it
+          localState = {system_id: lsgData.system_id, objects: lsgData.objects, ships: lsgData.ships, player: localState?.player};
+          // Load all models (they add to lsgGroup via (lsgGroup||scene).add)
+          await loadAllStations();
+          await loadAllGates();
+          await loadAsteroidFields();
+          loadPlanetsAndMoons();
+          // Mark ready
+          window._lsgReady = true;
+          // DEBUG: where are the models?
+          fetch('/api/debug_log', {method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({type:'MODELS_BUILT',
+              stations: Object.entries(stationModels).map(([id,m])=>({id, x:Math.round(m.position.x), z:Math.round(m.position.z)})),
+              gates: Object.entries(gateModels).map(([id,m])=>({id, x:Math.round(m.position.x), z:Math.round(m.position.z)})),
+              planets: Object.entries(planetModels).map(([id,m])=>({id, x:Math.round(m.position.x), z:Math.round(m.position.z)})),
+              groupPos: lsgGroup ? {x:Math.round(lsgGroup.position.x), z:Math.round(lsgGroup.position.z)} : null,
+              anchorObj: localState?.objects?.find(o=>o.is_anchor)
+            })
+          }).catch(()=>{});
         }).catch(()=>{});
       }
 
-      // ── PHASE 3: ARRIVAL (at 100%) - spawn destination far ahead, start moving it in ──
-      if(progress >= 1.0){
+      // ── PHASE 3: ARRIVAL (at 100%) - position pre-built group, start animation ──
+      if(progress >= 1.0 && window._lsgReady){
         window._lsgFetched = false;
-        // Clear departure models
-        Object.values(stationModels).forEach(m => m.removeFromParent()); stationModels = {};
-        Object.values(gateModels).forEach(m => m.removeFromParent()); gateModels = {};
-        Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => r.removeFromParent())); asteroidModels = {};
-        Object.values(planetModels).forEach(m => m.removeFromParent()); planetModels = {};
-        // Update localState with destination data
-        if(window._lsgData){
-          localState = {system_id: window._lsgData.system_id, objects: window._lsgData.objects, ships: window._lsgData.ships, player: localState?.player};
-        }
-        // Load destination models at origin (0,0,0)
-        loadAllStations(); loadAllGates(); loadAsteroidFields(); loadPlanetsAndMoons();
-        // Now offset all destination models far ahead along +heading
+        window._lsgReady = false;
+        // Position group far ahead along warp heading
         const arrDist = (window._lsgData && window._lsgData.arrival_dist) || 100;
-        const spawnDist = arrDist * 5; // start 5x arrival distance ahead
-        const offsetX = warpHeading.x * spawnDist;
-        const offsetZ = warpHeading.z * spawnDist;
-        Object.values(stationModels).forEach(m => { m.position.x += offsetX; m.position.z += offsetZ; });
-        Object.values(gateModels).forEach(m => { m.position.x += offsetX; m.position.z += offsetZ; });
-        Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => { r.position.x += offsetX; r.position.z += offsetZ; }));
-        Object.values(planetModels).forEach(m => { m.position.x += offsetX; m.position.z += offsetZ; });
-        // Update anchor position in localState for visibility/labels
-        if(localState && localState.objects){
-          for(const obj of localState.objects){
-            if(obj.is_anchor){ obj.x = offsetX; obj.y = 0; obj.z = offsetZ; }
-          }
-        }
-        // Set up arrival: move objects toward ship over 4 seconds
-        window._arrivalOffset = {x: offsetX, z: offsetZ};
+        const spawnDist = 2000000;
+        lsgGroup.position.set(warpHeading.x * spawnDist, 0, warpHeading.z * spawnDist);
+        lsgGroup.visible = true;
+        // DEBUG
+        fetch('/api/debug_log', {method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({type:'ARRIVAL_POSITION', groupChildren: lsgGroup.children.length, groupPos:{x:Math.round(lsgGroup.position.x),z:Math.round(lsgGroup.position.z)}, warpHeading:{x:warpHeading.x.toFixed(3),z:warpHeading.z.toFixed(3)}, spawnDist})
+        }).catch(()=>{});
+        // Set up arrival animation
         window._arrivalTimer = 0;
         window._arrivalDuration = 4.0;
         window._arrivalDist = spawnDist;
-        window._arrivalStopDist = arrDist;
         warpState = 'arriving';
         warpSpeed = 0;
         document.getElementById('warpTarget').textContent = 'Arriving';
@@ -726,28 +722,34 @@ function animate(now){
       document.getElementById('warpTarget').textContent = 'Warp ' + Math.round(progress * 100) + '%';
 
     } else if(warpState === 'arriving'){
-      // ── Move destination objects TOWARD the ship (ship stays still) ──
+      // ── Move LSG GROUP toward the ship, stop at arrDist ──
+      if(!window._arriveFrames) window._arriveFrames = 0;
+      window._arriveFrames++;
       window._arrivalTimer += dt;
       const t = Math.min(1.0, window._arrivalTimer / window._arrivalDuration);
-      // Deceleration curve: fast at start, slow at end
-      const moveSpeed = (1.0 - t) * window._arrivalDist / window._arrivalDuration * 2;
+      // Total travel = spawnDist - arrDist (stop arrDist from player, not AT player)
+      const travelDist = window._arrivalDist - (window._arrivalStopDist || 100);
+      const moveSpeed = (1.0 - t) * travelDist / window._arrivalDuration * 2;
       const moveAmt = moveSpeed * dt;
-      // Move all destination objects toward ship (along -heading)
-      Object.values(stationModels).forEach(m => { m.position.x -= warpHeading.x * moveAmt; m.position.z -= warpHeading.z * moveAmt; });
-      Object.values(gateModels).forEach(m => { m.position.x -= warpHeading.x * moveAmt; m.position.z -= warpHeading.z * moveAmt; });
-      Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => { r.position.x -= warpHeading.x * moveAmt; r.position.z -= warpHeading.z * moveAmt; }));
-      Object.values(planetModels).forEach(m => { m.position.x -= warpHeading.x * moveAmt; m.position.z -= warpHeading.z * moveAmt; });
-      // Update anchor localState position for visibility/labels
-      if(localState && localState.objects){
-        for(const obj of localState.objects){
-          if(obj.is_anchor){ obj.x -= warpHeading.x * moveAmt; obj.z -= warpHeading.z * moveAmt; }
-        }
+      // Move the group toward ship (along -heading)
+      if(lsgGroup){
+        lsgGroup.position.x -= warpHeading.x * moveAmt;
+        lsgGroup.position.z -= warpHeading.z * moveAmt;
       }
-      // Display arrival speed
+      // Display arrival speed (just show "Arriving")
       displaySpeed = moveSpeed;
       document.getElementById('shipSpeed').textContent = (moveSpeed*100) > 1000 ? ((moveSpeed*100)/1000).toFixed(1) + ' km/s' : Math.round(moveSpeed*100) + ' m/s';
       // Done arriving
       if(t >= 1.0){
+        // Snap group to origin (anchor is at 0,0,0 which is the correct final position)
+        if(lsgGroup) lsgGroup.position.set(0, 0, 0);
+        // Place player at arrDist from anchor (along -warpHeading = behind the approach)
+        const finalDist = (window._lsgData && window._lsgData.arrival_dist) || 100;
+        playerPos.set(-warpHeading.x * finalDist, 0, -warpHeading.z * finalDist);
+        fetch('/api/debug_log', {method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({type:'ARRIVAL_DONE', frames: window._arriveFrames, groupPos: lsgGroup?{x:Math.round(lsgGroup.position.x),z:Math.round(lsgGroup.position.z)}:null, playerPos:{x:Math.round(playerPos.x),z:Math.round(playerPos.z)}})
+        }).catch(()=>{});
+        window._arriveFrames = 0;
         warpState = 'none';
         warpTargetId = null;
         warpTargetPos = null;
@@ -905,7 +907,7 @@ function animate(now){
       // Normal flight: show objects near PLAYER
       if(warpState !== 'warping' && warpState !== 'arriving'){
         const visCenter = (warpState === 'decelerating' && warpTargetPos) ? warpTargetPos : playerPos;
-        const visDist = 5000;
+        const visDist = 500000; // 500k units = 50,000km - enough to see nearby planets
         // Reset scales from any previous warp departure (restore original scale)
         for(const [id, mesh] of Object.entries(stationModels)){
           if(mesh.userData._origScale) mesh.scale.setScalar(mesh.userData._origScale);
@@ -1395,7 +1397,7 @@ async function loadAllStations(){
       model.userData._origScale = targetSize / maxDim;
       // Position at object world coords
       model.position.set(obj.x, obj.y, obj.z);
-      scene.add(model);
+      (lsgGroup||scene).add(model);
       stationModels[obj.station_id] = model;
     }catch(e){}
   }
@@ -1447,9 +1449,6 @@ let gateModels = {}; // obj_id -> THREE.Group
 async function loadAllGates(){
   if(!localState || !localState.objects) return;
   const gateObjs = localState.objects.filter(o => o.type === 'gate' && o.is_anchor);
-  fetch('/api/debug_log', {method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({type:'LOAD_GATES', gateCount: gateObjs.length, gateIds: gateObjs.map(o=>o.id), systemId: localState.system_id})
-  }).catch(()=>{});
   for(const obj of gateObjs){
     if(gateModels[obj.id]) continue;
     try{
@@ -1473,7 +1472,7 @@ async function loadAllGates(){
           c.material.opacity = 0.7;
         }
       });
-      scene.add(model);
+      (lsgGroup||scene).add(model);
       gateModels[obj.id] = model;
     }catch(e){}
   }
@@ -1518,7 +1517,7 @@ async function loadAsteroidFields(){
           obj.z + Math.sin(angle) * dist
         );
         mesh.rotation.set(seededRand()*6.28, seededRand()*6.28, seededRand()*6.28);
-        scene.add(mesh);
+        (lsgGroup||scene).add(mesh);
         rocks.push(mesh);
       }
       asteroidModels[obj.id] = rocks;
@@ -1631,12 +1630,12 @@ function generatePlanetTexture(id, baseColor, isPlanet){
 
 function loadPlanetsAndMoons(){
   if(!localState || !localState.objects) return;
-  const bodies = localState.objects.filter(o => (o.type === 'planet' || o.type === 'moon') && o.is_anchor);
+  const bodies = localState.objects.filter(o => (o.type === 'planet' || o.type === 'moon') && (o.x !== 0 || o.z !== 0 || o.is_anchor));
   for(const obj of bodies){
     if(planetModels[obj.id]) continue;
     const isPlanet = obj.type === 'planet';
-    // Planet radius: 500-1500 units (represents 50-150km). Moon: 50-150 units (5-15km).
-    const radius = isPlanet ? 500 + Math.abs(hash(obj.id)) % 1000 : 50 + Math.abs(hash(obj.id)) % 100;
+    // Planet radius: 5000-30000 units (500-3000km). Moon: 1000-5000 units (100-500km).
+    const radius = isPlanet ? 5000 + Math.abs(hash(obj.id)) % 25000 : 1000 + Math.abs(hash(obj.id)) % 4000;
     const colors = PLANET_COLORS[obj.type] || PLANET_COLORS['planet'];
     const color = colors[Math.abs(hash(obj.id)) % colors.length];
     const geo = new THREE.SphereGeometry(radius, isPlanet ? 32 : 16, isPlanet ? 24 : 12);
@@ -1646,7 +1645,7 @@ function loadPlanetsAndMoons(){
     // Place at LSG position (like stations/gates)
     mesh.position.set(obj.x, obj.y, obj.z);
     mesh.userData = {radius, type: obj.type};
-    scene.add(mesh);
+    (lsgGroup||scene).add(mesh);
     planetModels[obj.id] = mesh;
   }
 }

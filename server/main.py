@@ -827,25 +827,45 @@ def api_lsg_data(target_obj_id):
 
         # Build response
         # Build object list with positions
-        # Planets/moons get placed at large offset from anchor (you orbit them, not land on them)
+        # Anchor at (0,0,0). Nearby planets/moons placed at large LSG offsets.
+        # "Nearby" = within 3 AU in SS space (same orbital neighborhood)
         import random as _rnd2
-        planet_offset_angle = _rnd2.uniform(0, 3.14159 * 2)
+        target_ss_x = target.ss_x
+        target_ss_z = target.ss_z
         objects = []
         for o in local_space.objects:
             ox, oy, oz = 0, 0, 0
-            if o.id == target_obj_id and o.obj_type in ('planet', 'moon'):
-                # Place planet far from anchor so player is in "orbit"
-                orbit_dist = 5000 if o.obj_type == 'planet' else 2000
-                ox = orbit_dist * _math.cos(planet_offset_angle)
-                oz = orbit_dist * _math.sin(planet_offset_angle)
+            is_anchor = (o.id == target_obj_id)
+            
+            if is_anchor and o.obj_type in ('planet', 'moon'):
+                # Anchor IS a planet/moon: place it far from origin (orbit view)
+                angle = hash(o.id) * 0.001 if hasattr(__builtins__, 'hash') else _rnd2.uniform(0, 6.28)
+                orbit_dist = 100000 if o.obj_type == 'planet' else 50000
+                ox = orbit_dist * _math.cos(angle)
+                oz = orbit_dist * _math.sin(angle)
+            elif not is_anchor and o.obj_type in ('planet', 'moon'):
+                # Nearby planet/moon: place if within 3 AU of anchor in SS space
+                ss_dist = _math.sqrt((o.ss_x - target_ss_x)**2 + (o.ss_z - target_ss_z)**2)
+                if ss_dist < 3.0 and ss_dist > 0.01:
+                    # Place at large offset based on SS direction from anchor
+                    dir_x = o.ss_x - target_ss_x
+                    dir_z = o.ss_z - target_ss_z
+                    d = _math.sqrt(dir_x**2 + dir_z**2) or 1
+                    # Scale: 1 AU of SS separation = 100,000 LSG units offset
+                    lsg_dist = ss_dist * 100000
+                    ox = (dir_x / d) * lsg_dist
+                    oz = (dir_z / d) * lsg_dist
+                else:
+                    continue  # too far, don't include in LSG
+            
             objects.append({'id': o.id, 'name': o.name, 'type': o.obj_type,
-                    'x': ox, 'y': oy, 'z': oz,
+                    'x': round(ox, 1), 'y': round(oy, 1), 'z': round(oz, 1),
                     'station_id': o.station_id,
                     'au_distance': round(o.au_distance, 4),
                     'connects_to': o.connects_to,
                     'parent': o.parent,
                     'ss_x': round(o.ss_x, 4), 'ss_z': round(o.ss_z, 4),
-                    'is_anchor': (o.id == target_obj_id)})
+                    'is_anchor': is_anchor})
 
         # Get ships near the target
         ships = [s.to_dict() for s in local_space.ships.values() if not s.is_player][:20]
