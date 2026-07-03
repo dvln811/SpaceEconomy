@@ -702,6 +702,11 @@ function animate(now){
         const spawnDist = 2000000;
         lsgGroup.position.set(warpHeading.x * spawnDist, 0, warpHeading.z * spawnDist);
         lsgGroup.visible = true;
+        // Force all models visible (tunnel phase set them to false individually)
+        Object.values(stationModels).forEach(m => m.visible = true);
+        Object.values(gateModels).forEach(m => m.visible = true);
+        Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => r.visible = true));
+        Object.values(planetModels).forEach(m => m.visible = true);
         // DEBUG
         fetch('/api/debug_log', {method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({type:'ARRIVAL_POSITION', groupChildren: lsgGroup.children.length, groupPos:{x:Math.round(lsgGroup.position.x),z:Math.round(lsgGroup.position.z)}, warpHeading:{x:warpHeading.x.toFixed(3),z:warpHeading.z.toFixed(3)}, spawnDist})
@@ -741,11 +746,11 @@ function animate(now){
       document.getElementById('shipSpeed').textContent = (moveSpeed*100) > 1000 ? ((moveSpeed*100)/1000).toFixed(1) + ' km/s' : Math.round(moveSpeed*100) + ' m/s';
       // Done arriving
       if(t >= 1.0){
-        // Snap group to origin (anchor is at 0,0,0 which is the correct final position)
+        // Snap group to origin and place player at stopping point
         if(lsgGroup) lsgGroup.position.set(0, 0, 0);
-        // Place player at arrDist from anchor (along -warpHeading = behind the approach)
         const finalDist = (window._lsgData && window._lsgData.arrival_dist) || 100;
         playerPos.set(-warpHeading.x * finalDist, 0, -warpHeading.z * finalDist);
+        playerHeading.copy(warpHeading);
         fetch('/api/debug_log', {method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({type:'ARRIVAL_DONE', frames: window._arriveFrames, groupPos: lsgGroup?{x:Math.round(lsgGroup.position.x),z:Math.round(lsgGroup.position.z)}:null, playerPos:{x:Math.round(playerPos.x),z:Math.round(playerPos.z)}})
         }).catch(()=>{});
