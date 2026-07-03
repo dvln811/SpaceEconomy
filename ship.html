@@ -657,76 +657,114 @@ function animate(now){
         playerSpeed = 0;
       }
     } else if(warpState === 'warping'){
-      // Time-based warp: move along heading rapidly so departure scene flies away
+      // ── SHIP STAYS STATIONARY. Objects move around it. ──
       warpTravelTimer += dt;
       const progress = Math.min(1.0, warpTravelTimer / warpTravelDuration);
       const speedCurve = Math.sin(progress * Math.PI);
       warpSpeed = speedCurve * 500;
-      // First 40%: departure (move away from origin, objects shrink)
+
+      // ── PHASE 1: DEPARTURE (0-40%) - move current LSG objects away along -heading ──
       if(progress < 0.4){
-        playerPos.addScaledVector(warpHeading, speedCurve * 500 * dt);
-      } else {
-        // Tunnel phase: hide departure objects
+        const moveAmt = speedCurve * 500 * dt;
+        Object.values(stationModels).forEach(m => { m.position.x -= warpHeading.x * moveAmt; m.position.z -= warpHeading.z * moveAmt; });
+        Object.values(gateModels).forEach(m => { m.position.x -= warpHeading.x * moveAmt; m.position.z -= warpHeading.z * moveAmt; });
+        Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => { r.position.x -= warpHeading.x * moveAmt; r.position.z -= warpHeading.z * moveAmt; }));
+        Object.values(planetModels).forEach(m => { m.position.x -= warpHeading.x * moveAmt; m.position.z -= warpHeading.z * moveAmt; });
+      }
+
+      // ── PHASE 2: TUNNEL (40-100%) - departure objects hidden ──
+      if(progress >= 0.4 && progress < 1.0){
         Object.values(stationModels).forEach(m => m.visible = false);
         Object.values(gateModels).forEach(m => m.visible = false);
         Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => r.visible = false));
       }
-      // At 50% progress: fetch destination LSG data and pre-build scene
+
+      // ── FETCH: At 20% progress, fetch destination LSG data ──
       if(progress > 0.2 && !window._lsgFetched){
         window._lsgFetched = true;
         fetch('/api/lsg_data/' + warpTargetId).then(r=>r.json()).then(lsgData=>{
           window._lsgData = lsgData;
-          // Pre-build destination models (hidden until arrival)
-          // Clear old models
-          Object.values(stationModels).forEach(m => m.removeFromParent()); stationModels = {};
-          Object.values(gateModels).forEach(m => m.removeFromParent()); gateModels = {};
-          Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => r.removeFromParent())); asteroidModels = {};
-          Object.values(planetModels).forEach(m => m.removeFromParent()); planetModels = {};
-          // Update localState with new destination data
-          localState = {system_id: lsgData.system_id, objects: lsgData.objects, ships: lsgData.ships, player: null};
-          // Load new models (at origin, hidden by distance for now)
-          loadAllStations(); loadAllGates(); loadAsteroidFields(); loadPlanetsAndMoons();
         }).catch(()=>{});
       }
-      // At 100%: arrive
+
+      // ── PHASE 3: ARRIVAL (at 100%) - spawn destination far ahead, start moving it in ──
       if(progress >= 1.0){
         window._lsgFetched = false;
-        // Place player at edge of LSG, heading toward origin (target)
-        const arrDist = (window._lsgData && window._lsgData.arrival_dist) || 500;
-        playerPos.set(-warpHeading.x * arrDist, 0, -warpHeading.z * arrDist);
-        playerHeading.copy(warpHeading);
-        // Start deceleration
-        const stopDist = arrDist * 0.1; // stop at 10% of arrival dist from origin
-        const travelDist = arrDist - stopDist;
-        const decelTime = 4.0;
-        const exitSpeed = 2 * travelDist / decelTime;
-        warpDecelRate = exitSpeed / decelTime;
-        playerSpeed = exitSpeed;
-        flyDirection = null;
-        warpState = 'decelerating';
+        // Clear departure models
+        Object.values(stationModels).forEach(m => m.removeFromParent()); stationModels = {};
+        Object.values(gateModels).forEach(m => m.removeFromParent()); gateModels = {};
+        Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => r.removeFromParent())); asteroidModels = {};
+        Object.values(planetModels).forEach(m => m.removeFromParent()); planetModels = {};
+        // Update localState with destination data
+        if(window._lsgData){
+          localState = {system_id: window._lsgData.system_id, objects: window._lsgData.objects, ships: window._lsgData.ships, player: localState?.player};
+        }
+        // Load destination models at origin (0,0,0)
+        loadAllStations(); loadAllGates(); loadAsteroidFields(); loadPlanetsAndMoons();
+        // Now offset all destination models far ahead along +heading
+        const arrDist = (window._lsgData && window._lsgData.arrival_dist) || 100;
+        const spawnDist = arrDist * 5; // start 5x arrival distance ahead
+        const offsetX = warpHeading.x * spawnDist;
+        const offsetZ = warpHeading.z * spawnDist;
+        Object.values(stationModels).forEach(m => { m.position.x += offsetX; m.position.z += offsetZ; });
+        Object.values(gateModels).forEach(m => { m.position.x += offsetX; m.position.z += offsetZ; });
+        Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => { r.position.x += offsetX; r.position.z += offsetZ; }));
+        // Update anchor position in localState for visibility/labels
+        if(localState && localState.objects){
+          for(const obj of localState.objects){
+            if(obj.is_anchor){ obj.x = offsetX; obj.y = 0; obj.z = offsetZ; }
+          }
+        }
+        // Set up arrival: move objects toward ship over 4 seconds
+        window._arrivalOffset = {x: offsetX, z: offsetZ};
+        window._arrivalTimer = 0;
+        window._arrivalDuration = 4.0;
+        window._arrivalDist = spawnDist;
+        window._arrivalStopDist = arrDist;
+        warpState = 'arriving';
         warpSpeed = 0;
         document.getElementById('warpTarget').textContent = 'Arriving';
       }
-      // Override display speed during warp
+
+      // Override display
       displaySpeed = warpSpeed;
       document.getElementById('speedBar').style.width = (progress * 100) + '%';
       document.getElementById('shipSpeed').textContent = (warpSpeed*100) > 1000 ? ((warpSpeed*100)/1000).toFixed(1) + ' km/s' : Math.round(warpSpeed*100) + ' m/s';
       document.getElementById('warpTarget').textContent = 'Warp ' + Math.round(progress * 100) + '%';
-    } else if(warpState === 'decelerating'){
-      // Linear deceleration toward target
-      playerSpeed -= warpDecelRate * dt;
-      if(playerSpeed <= 0){
-        playerSpeed = 0;
+
+    } else if(warpState === 'arriving'){
+      // ── Move destination objects TOWARD the ship (ship stays still) ──
+      window._arrivalTimer += dt;
+      const t = Math.min(1.0, window._arrivalTimer / window._arrivalDuration);
+      // Deceleration curve: fast at start, slow at end
+      const moveSpeed = (1.0 - t) * window._arrivalDist / window._arrivalDuration * 2;
+      const moveAmt = moveSpeed * dt;
+      // Move all destination objects toward ship (along -heading)
+      Object.values(stationModels).forEach(m => { m.position.x -= warpHeading.x * moveAmt; m.position.z -= warpHeading.z * moveAmt; });
+      Object.values(gateModels).forEach(m => { m.position.x -= warpHeading.x * moveAmt; m.position.z -= warpHeading.z * moveAmt; });
+      Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => { r.position.x -= warpHeading.x * moveAmt; r.position.z -= warpHeading.z * moveAmt; }));
+      Object.values(planetModels).forEach(m => { m.position.x -= warpHeading.x * moveAmt; m.position.z -= warpHeading.z * moveAmt; });
+      // Update anchor localState position for visibility/labels
+      if(localState && localState.objects){
+        for(const obj of localState.objects){
+          if(obj.is_anchor){ obj.x -= warpHeading.x * moveAmt; obj.z -= warpHeading.z * moveAmt; }
+        }
+      }
+      // Display arrival speed
+      displaySpeed = moveSpeed;
+      document.getElementById('shipSpeed').textContent = (moveSpeed*100) > 1000 ? ((moveSpeed*100)/1000).toFixed(1) + ' km/s' : Math.round(moveSpeed*100) + ' m/s';
+      // Done arriving
+      if(t >= 1.0){
         warpState = 'none';
         warpTargetId = null;
         warpTargetPos = null;
+        playerSpeed = 0;
         document.getElementById('warpTarget').textContent = '';
-        // NOW tell server where we ended up
+        // Tell server we arrived
         fetch('/api/player/position', {method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({x:playerPos.x, y:playerPos.y, z:playerPos.z, speed:0,
             hx:playerHeading.x, hy:playerHeading.y, hz:playerHeading.z, state:'idle'})
         }).catch(()=>{});
-        // Reconnect SSE to sync with server state
         connectStream();
       }
     }
@@ -809,7 +847,7 @@ function animate(now){
     displaySpeed += (playerSpeed - displaySpeed) * 0.1;
     document.getElementById('speedBar').style.width = (displaySpeed / playerMaxSpeed * 100) + '%';
     document.getElementById('shipSpeed').textContent = Math.round(displaySpeed * 100) + ' m/s';
-    document.getElementById('shipState').textContent = warpState === 'warping' ? 'Warping' : warpState === 'aligning' ? 'Aligning' : warpState === 'decelerating' ? 'Decelerating' : flyDirection ? (displaySpeed > playerMaxSpeed*0.9 ? 'Full Speed' : 'Aligning') : (playerSpeed > 0.01 ? 'Decelerating' : 'Idle');
+    document.getElementById('shipState').textContent = warpState === 'warping' ? 'Warping' : warpState === 'aligning' ? 'Aligning' : warpState === 'arriving' ? 'Arriving' : flyDirection ? (displaySpeed > playerMaxSpeed*0.9 ? 'Full Speed' : 'Aligning') : (playerSpeed > 0.01 ? 'Decelerating' : 'Idle');
 
     // ── Starfield: follow camera (skybox behavior, no parallax) ──
     if(starField){
@@ -1613,7 +1651,7 @@ function buildAsteroidMesh(data){
   geo.setIndex(new THREE.BufferAttribute(indices, 1));
   geo.computeVertexNormals();
   // Scale to actual radius (vertices are unit-scale)
-  const radius = data.radius || 100;
+  const radius = (data.radius || 100) / 100; // scale to cm-units
   const mat = new THREE.MeshPhongMaterial({color:0x2a2018, emissive:0x0a0805, shininess:2, transparent:true, opacity:0.85});
   const mesh = new THREE.Mesh(geo, mat);
   mesh.scale.setScalar(radius);
