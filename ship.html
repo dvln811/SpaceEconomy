@@ -672,7 +672,7 @@ function animate(now){
         Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => r.visible = false));
       }
       // At 50% progress: fetch destination LSG data and pre-build scene
-      if(progress > 0.5 && !window._lsgFetched){
+      if(progress > 0.2 && !window._lsgFetched){
         window._lsgFetched = true;
         fetch('/api/lsg_data/' + warpTargetId).then(r=>r.json()).then(lsgData=>{
           window._lsgData = lsgData;
@@ -1169,6 +1169,9 @@ window.warpTo = function(objId){
   warpTravelTimer = 0;
   warpState = 'aligning';
   warpAlignTimer = 0;
+  // Save departure SS coords for label interpolation throughout warp
+  window._warpFromSS = {x: anchorObj.ss_x, z: anchorObj.ss_z};
+  window._warpToSS = {x: obj.ss_x, z: obj.ss_z};
   document.getElementById('warpTarget').textContent = 'Aligning...';
 };
 
@@ -1308,15 +1311,15 @@ function renderNavList(objects, playerShip){
       else distStr = (distM / 1000).toFixed(1) + ' km';
     } else {
       // SS AU distance from current position (interpolated during warp)
-      const anchorObj = objects.find(a => a.is_anchor);
-      let curX = anchorObj ? anchorObj.ss_x : 0, curZ = anchorObj ? anchorObj.ss_z : 0;
-      if(warpState === 'warping' && warpTargetId){
-        const tgt = objects.find(t => t.id === warpTargetId);
-        if(tgt){
-          const progress = Math.min(1.0, warpTravelTimer / warpTravelDuration);
-          curX += (tgt.ss_x - curX) * progress;
-          curZ += (tgt.ss_z - curZ) * progress;
-        }
+      let curX = 0, curZ = 0;
+      if((warpState === 'warping' || warpState === 'aligning') && window._warpFromSS){
+        const progress = (warpState === 'warping') ? Math.min(1.0, warpTravelTimer / warpTravelDuration) : 0;
+        curX = window._warpFromSS.x + (window._warpToSS.x - window._warpFromSS.x) * progress;
+        curZ = window._warpFromSS.z + (window._warpToSS.z - window._warpFromSS.z) * progress;
+      } else {
+        const anchorObj = objects.find(a => a.is_anchor);
+        curX = anchorObj ? anchorObj.ss_x : 0;
+        curZ = anchorObj ? anchorObj.ss_z : 0;
       }
       const adx = o.ss_x - curX, adz = o.ss_z - curZ;
       const auDist = Math.sqrt(adx*adx + adz*adz);
@@ -1334,7 +1337,7 @@ function renderNavList(objects, playerShip){
   }).join('');
   // Show dock button if near a station (within ~3km of any station)
   const nearStation = objects.find(o=>{
-    if(o.type!=='station') return false;
+    if(o.type!=='station' || !o.is_anchor) return false;
     const dx=o.x-px, dy=o.y-py, dz=o.z-pz;
     return Math.sqrt(dx*dx+dy*dy+dz*dz) < 30;
   });
@@ -1801,22 +1804,24 @@ function updateDirectionalLabels(){
 
     // Direction from current SS position to this object's SS position
     // During warp, interpolate our SS position toward the warp target
-    const anchorSS = localState.objects.find(o => o.is_anchor);
-    let curSSx = anchorSS ? anchorSS.ss_x : 0, curSSz = anchorSS ? anchorSS.ss_z : 0;
-    if(warpState === 'warping' && warpTargetId){
-      const targetSS = localState.objects.find(o => o.id === warpTargetId);
-      if(targetSS){
-        const progress = Math.min(1.0, warpTravelTimer / warpTravelDuration);
-        curSSx += (targetSS.ss_x - curSSx) * progress;
-        curSSz += (targetSS.ss_z - curSSz) * progress;
-      }
+    // Current SS position: interpolate from departure to destination during warp
+    let curSSx = 0, curSSz = 0;
+    if((warpState === 'warping' || warpState === 'aligning') && window._warpFromSS){
+      const progress = (warpState === 'warping') ? Math.min(1.0, warpTravelTimer / warpTravelDuration) : 0;
+      curSSx = window._warpFromSS.x + (window._warpToSS.x - window._warpFromSS.x) * progress;
+      curSSz = window._warpFromSS.z + (window._warpToSS.z - window._warpFromSS.z) * progress;
+    } else {
+      const anchorSS = localState.objects.find(o => o.is_anchor);
+      curSSx = anchorSS ? anchorSS.ss_x : 0;
+      curSSz = anchorSS ? anchorSS.ss_z : 0;
     }
     const ssDirX = obj.ss_x - curSSx, ssDirZ = obj.ss_z - curSSz;
     const ssDirLen = Math.sqrt(ssDirX*ssDirX + ssDirZ*ssDirZ);
     
-    // For anchor object, use its LSG position (it's at origin). For others, project from SS direction.
+    // For anchor object (when NOT warping), use its LSG position. Otherwise project from SS direction.
     let labelX, labelY, labelZ;
-    if(obj.is_anchor){
+    const useLocal = obj.is_anchor && warpState !== 'warping' && warpState !== 'aligning';
+    if(useLocal){
       labelX = obj.x; labelY = obj.y; labelZ = obj.z;
     } else if(ssDirLen > 0.001){
       // Place label point very far away in the SS direction (effectively at infinity)
@@ -1828,8 +1833,8 @@ function updateDirectionalLabels(){
     }
     const toObj = new THREE.Vector3(labelX - camera.position.x, labelY - camera.position.y, labelZ - camera.position.z);
     // Distance in AU for display
-    const dist = obj.is_anchor ? new THREE.Vector3(obj.x - labelRefPos.x, obj.y - labelRefPos.y, obj.z - labelRefPos.z).length() : ssDirLen;
-    if(dist < 0.001 && !obj.is_anchor) { label.el.style.display = 'none'; continue; }
+    const dist = useLocal ? new THREE.Vector3(obj.x - labelRefPos.x, obj.y - labelRefPos.y, obj.z - labelRefPos.z).length() : ssDirLen;
+    if(dist < 0.001 && !useLocal) { label.el.style.display = 'none'; continue; }
     toObj.normalize();
 
     // Dot product: positive = in front of camera, negative = behind
@@ -1895,9 +1900,9 @@ function updateDirectionalLabels(){
     const displayName = obj.name;
     // Format distance
     let distLabel;
-    if(obj.is_anchor){
+    if(useLocal){
       // Local distance in meters (dist is in cm-scale units)
-      const distM = dist * 0.01;
+      const distM = dist * 100;
       distLabel = distM < 1000 ? Math.round(distM) + 'm' : (distM/1000).toFixed(1) + 'km';
     } else {
       // dist is AU
