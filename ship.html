@@ -568,15 +568,7 @@ function updateFromState(state){
 
   // Position system objects (only in flight)
   if(!isDockedNow && state.objects){
-    // Position objects relative to player (player at origin)
-    for(const obj of state.objects){
-      if(obj.type === 'star') continue;
-      const sprite = getOrCreateObjSprite(obj);
-      const rx = (obj.x - p.x) * 0.1;  // Scale down for viewport
-      const ry = (obj.y - p.y) * 0.1;
-      const rz = (obj.z - p.z) * 0.1;
-      sprite.position.set(rx, ry, rz);
-    }
+    // Old sprite system disabled - directional labels handle all display
   }
 }
 
@@ -709,6 +701,7 @@ function animate(now){
         Object.values(stationModels).forEach(m => { m.position.x += offsetX; m.position.z += offsetZ; });
         Object.values(gateModels).forEach(m => { m.position.x += offsetX; m.position.z += offsetZ; });
         Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => { r.position.x += offsetX; r.position.z += offsetZ; }));
+        Object.values(planetModels).forEach(m => { m.position.x += offsetX; m.position.z += offsetZ; });
         // Update anchor position in localState for visibility/labels
         if(localState && localState.objects){
           for(const obj of localState.objects){
@@ -902,21 +895,7 @@ function animate(now){
       }
     }
 
-    // ── System Objects (fixed world positions, only render if within 50km) ──
-    if(localState && localState.objects){
-      for(const obj of localState.objects){
-        if(obj.type==='star') continue;
-        const dist = Math.sqrt((obj.x-playerPos.x)**2 + (obj.y-playerPos.y)**2 + (obj.z-playerPos.z)**2);
-        if(dist > 500){ // >50km, just nav marker
-          if(objectSprites[obj.id]){ objectSprites[obj.id].visible = false; }
-          continue;
-        }
-        const sprite = objectSprites[obj.id];
-        if(!sprite) continue;
-        sprite.visible = true;
-        sprite.position.set(obj.x, obj.y, obj.z);
-      }
-    }
+    // ── Old sprite system disabled (directional labels handle all display now) ──
     // Station models positioned on load (no per-frame update needed)
 
     // ── Distance-based visibility for large objects ──
@@ -924,7 +903,7 @@ function animate(now){
       // During warp tunnel: handled by the warp block (hides everything)
       // During deceleration: only show objects near the WARP TARGET
       // Normal flight: show objects near PLAYER
-      if(warpState !== 'warping'){
+      if(warpState !== 'warping' && warpState !== 'arriving'){
         const visCenter = (warpState === 'decelerating' && warpTargetPos) ? warpTargetPos : playerPos;
         const visDist = 5000;
         // Reset scales from any previous warp departure (restore original scale)
@@ -977,101 +956,7 @@ function animate(now){
       }
       // Reset departure timer when not warping
       if(warpState !== 'warping') window._objDepartTimer = 0;
-      // ── PLANETS: run in ALL states (including warping) ──
-      for(const [id, mesh] of Object.entries(planetModels)){
-          const obj = localState.objects.find(o => o.id === id);
-          if(!obj){ mesh.visible = false; continue; }
-          // Only show planet when player is at its nav point (within 50km)
-          const distToNav = Math.sqrt((obj.x-playerPos.x)**2 + (obj.y-playerPos.y)**2 + (obj.z-playerPos.z)**2);
-          if(distToNav > 500){
-            mesh.visible = false;
-            continue;
-          }
-          mesh.visible = true;
-          const orbitDist = mesh.userData.orbitDist;
-          const baseRadius = mesh.userData.radius;
-
-          // Direction: during deceleration, planet is IN FRONT (along player heading)
-          // After decel, keep the last position (don't snap)
-          let pdirX, pdirY, pdirZ;
-          if(warpState === 'decelerating'){
-            pdirX = playerHeading.x;
-            pdirY = playerHeading.y;
-            pdirZ = playerHeading.z;
-            // For moons: offset to the side so they orbit the planet, not stack on it
-            if(mesh.userData.type === 'moon'){
-              const moonAngle = hash(id) * 0.7;
-              const perpX = -pdirZ;
-              const perpZ = pdirX;
-              const offsetAmt = 1.2; // fully offset to the side of the planet
-              pdirX += perpX * Math.cos(moonAngle) * offsetAmt;
-              pdirY += 0.2 * Math.sin(moonAngle);
-              pdirZ += perpZ * Math.cos(moonAngle) * offsetAmt;
-              const nl = Math.sqrt(pdirX*pdirX+pdirY*pdirY+pdirZ*pdirZ);
-              pdirX/=nl; pdirY/=nl; pdirZ/=nl;
-            }
-            mesh.userData._lastDirX = pdirX;
-            mesh.userData._lastDirY = pdirY;
-            mesh.userData._lastDirZ = pdirZ;
-          } else if(mesh.userData._lastDirX !== undefined){
-            // Use saved direction from end of decel
-            pdirX = mesh.userData._lastDirX;
-            pdirY = mesh.userData._lastDirY;
-            pdirZ = mesh.userData._lastDirZ;
-          } else {
-            const a = hash(id) * 0.001;
-            pdirX = Math.cos(a); pdirZ = Math.sin(a); pdirY = -0.2;
-          }
-          const l = Math.sqrt(pdirX*pdirX+pdirY*pdirY+pdirZ*pdirZ) || 1;
-
-          // Scale effect: during deceleration, scale up from 5% to 100%
-          // Planet state machine for scale and position
-          let scaleT = 1.0;
-          if(warpState === 'decelerating' && warpDecelRate > 0){
-            // Arrival: scale up from 5% to 100%
-            const totalTime = playerSpeed > 0 ? (playerSpeed / warpDecelRate) : 0;
-            const elapsed = totalTime > 0 ? 1.0 - (totalTime / (mesh.userData._decelStartTime || totalTime)) : 1.0;
-            scaleT = 0.05 + elapsed * 0.95;
-            if(!mesh.userData._decelStartTime) mesh.userData._decelStartTime = playerSpeed / warpDecelRate;
-          } else if(warpState === 'aligning'){
-            // Do NOTHING. Planet stays put, full size.
-            scaleT = 1.0;
-          } else if(warpState === 'warping'){
-            // Departure: move planet backward relative to player and shrink over 4 seconds
-            if(!mesh.userData._departTimer) mesh.userData._departTimer = 0;
-            mesh.userData._departTimer += dt;
-            const t = Math.min(1.0, mesh.userData._departTimer / 1.5); // 1.5 seconds to fully shrink
-            scaleT = Math.max(0.02, 1.0 - t * 0.98); // 100% -> 2%
-            // Position: normal position (relative to player) PLUS backward shift
-            const shiftAmt = t * orbitDist * 2.0;
-            mesh.position.set(
-              playerPos.x + (pdirX/l) * orbitDist - warpHeading.x * shiftAmt,
-              playerPos.y + (pdirY/l) * orbitDist - warpHeading.y * shiftAmt,
-              playerPos.z + (pdirZ/l) * orbitDist - warpHeading.z * shiftAmt
-            );
-            if(t >= 1.0){ mesh.visible = false; }
-            mesh.scale.set(scaleT, scaleT, scaleT);
-            // DEBUG to file
-            continue;
-          } else {
-            mesh.userData._decelStartTime = 0;
-            mesh.userData._departDir = null;
-            mesh.userData._departTimer = 0;
-            mesh.userData._departStartPos = null;
-            scaleT = 1.0;
-          }
-
-          // Position planet at orbital distance, apply slight parallax from player movement
-          const parallaxOffset = playerSpeed * 0.0001;
-          mesh.position.set(
-            playerPos.x + (pdirX/l) * orbitDist + playerHeading.x * parallaxOffset,
-            playerPos.y + (pdirY/l) * orbitDist,
-            playerPos.z + (pdirZ/l) * orbitDist + playerHeading.z * parallaxOffset
-          );
-
-          // Apply scale
-          mesh.scale.set(scaleT, scaleT, scaleT);
-      }
+      // ── Planets are now placed like stations - no per-frame positioning needed ──
     }
 
     // ── Directional labels for distant objects ──
@@ -1750,19 +1635,17 @@ function loadPlanetsAndMoons(){
   for(const obj of bodies){
     if(planetModels[obj.id]) continue;
     const isPlanet = obj.type === 'planet';
-    // Planets: 1500-5000km radius, placed 5000-10000km from player
-    // Moons: 300-1000km radius, placed 3000-5000km from player
-    const radius = isPlanet ? 15000 + Math.abs(hash(obj.id)) % 35000 : 3000 + Math.abs(hash(obj.id)) % 7000;
-    const orbitDist = isPlanet ? 50000 + Math.abs(hash(obj.id + 'dist')) % 50000 : 30000 + Math.abs(hash(obj.id + 'dist')) % 20000;
+    // Planet radius: 500-1500 units (represents 50-150km). Moon: 50-150 units (5-15km).
+    const radius = isPlanet ? 500 + Math.abs(hash(obj.id)) % 1000 : 50 + Math.abs(hash(obj.id)) % 100;
     const colors = PLANET_COLORS[obj.type] || PLANET_COLORS['planet'];
     const color = colors[Math.abs(hash(obj.id)) % colors.length];
-    const geo = new THREE.SphereGeometry(radius, isPlanet ? 48 : 24, isPlanet ? 32 : 16);
+    const geo = new THREE.SphereGeometry(radius, isPlanet ? 32 : 16, isPlanet ? 24 : 12);
     const tex = generatePlanetTexture(obj.id, color, isPlanet);
     const mat = new THREE.MeshPhongMaterial({map: tex, shininess: isPlanet ? 15 : 5});
     const mesh = new THREE.Mesh(geo, mat);
-    mesh.visible = false;
-    // Store metadata for per-frame positioning
-    mesh.userData = {radius, type: obj.type, orbitDist, objId: obj.id};
+    // Place at LSG position (like stations/gates)
+    mesh.position.set(obj.x, obj.y, obj.z);
+    mesh.userData = {radius, type: obj.type};
     scene.add(mesh);
     planetModels[obj.id] = mesh;
   }

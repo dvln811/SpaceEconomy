@@ -122,3 +122,292 @@
 {"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 1.7, "playerPosInitialized": true, "warpRecenterPending": false}
 {"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
 {"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 1.7, "py": -3.8, "pz": -13, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 1.8, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 1.8, "py": -0.1, "pz": -0.9, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 1.8, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 1.8, "py": -0.1, "pz": -0.9, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 1.8, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 1.8, "py": -0.1, "pz": -0.9, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 1.8, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 1.8, "py": -0.1, "pz": -0.9, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -0.5, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -0.5, "py": 0.3, "pz": -1.2, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -0.5, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -0.5, "py": 0.3, "pz": -1.2, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -0.5, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -0.5, "py": 0.3, "pz": -1.2, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -0.5, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -0.5, "py": 0.3, "pz": -1.2, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -0.9, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -0.9, "py": 0.3, "pz": 0.9, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -0.9, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -0.9, "py": 0.3, "pz": 0.9, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -0.9, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -0.9, "py": 0.3, "pz": 0.9, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -0.9, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -0.9, "py": 0.3, "pz": 0.9, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -6.1, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -6.1, "py": 0.5, "pz": -34.4, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -6.1, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -6.1, "py": 0.5, "pz": -34.4, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -6.1, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -6.1, "py": 0.5, "pz": -34.4, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -6.1, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -6.1, "py": 0.5, "pz": -34.4, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 1.2, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 1.2, "py": -0.3, "pz": 1.3, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 1.2, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 1.2, "py": -0.3, "pz": 1.3, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 1.2, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 1.2, "py": -0.3, "pz": 1.3, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 1.2, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 1.2, "py": -0.3, "pz": 1.3, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 1, "gateIds": ["obj_019720"], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 3.2, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 3.2, "py": -0.3, "pz": 1.9, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 3.2, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 3.2, "py": -0.3, "pz": 1.9, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 3.2, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 3.2, "py": -0.3, "pz": 1.9, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 3.2, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 3.2, "py": -0.3, "pz": 1.9, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 1.9, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 1.9, "py": -0.3, "pz": 3.3, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 1.9, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 1.9, "py": -0.3, "pz": 3.3, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 1.9, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 1.9, "py": -0.3, "pz": 3.3, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 1.9, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 1.9, "py": -0.3, "pz": 3.3, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 1, "gateIds": ["obj_019721"], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 0.1, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 0.1, "py": -0.3, "pz": 4.7, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 0.1, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 0.1, "py": -0.3, "pz": 4.7, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 0.1, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 0.1, "py": -0.3, "pz": 4.7, "pState": "idle"}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 0.1, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 0.1, "py": -0.3, "pz": 4.7, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -0.2, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -0.2, "py": -0.3, "pz": 2.8, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -0.2, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -0.2, "py": -0.3, "pz": 2.8, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -0.2, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -0.2, "py": -0.3, "pz": 2.8, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -0.2, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -0.2, "py": -0.3, "pz": 2.8, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "LOAD_GATES", "gateCount": 1, "gateIds": ["obj_019720"], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -2.5, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -2.5, "py": -1.3, "pz": 26.4, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -2.5, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -2.5, "py": -1.3, "pz": 26.4, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -2.5, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -2.5, "py": -1.3, "pz": 26.4, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -2.5, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -2.5, "py": -1.3, "pz": 26.4, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -1.7, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -1.7, "py": -0.1, "pz": 5.2, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -1.7, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -1.7, "py": -0.1, "pz": 5.2, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -1.7, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -1.7, "py": -0.1, "pz": 5.2, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -1.7, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -1.7, "py": -0.1, "pz": 5.2, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 0.6, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 0.6, "py": -0.4, "pz": 2.4, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 0.6, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 0.6, "py": -0.4, "pz": 2.4, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 0.6, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 0.6, "py": -0.4, "pz": 2.4, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 0.6, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 0.6, "py": -0.4, "pz": 2.4, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 2, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 2, "py": -0.4, "pz": 3.8, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 2, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 2, "py": -0.4, "pz": 3.8, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 2, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 2, "py": -0.4, "pz": 3.8, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 2, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 2, "py": -0.4, "pz": 3.8, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -24, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -24, "py": 0.3, "pz": -4.9, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -24, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -24, "py": 0.3, "pz": -4.9, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -24, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -24, "py": 0.3, "pz": -4.9, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -24, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -24, "py": 0.3, "pz": -4.9, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 1, "gateIds": ["obj_019722"], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -24.7, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -24.7, "py": 0.3, "pz": -6.1, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -24.7, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -24.7, "py": 0.3, "pz": -6.1, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -24.7, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -24.7, "py": 0.3, "pz": -6.1, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -24.7, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -24.7, "py": 0.3, "pz": -6.1, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 1, "gateIds": ["obj_019720"], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -22.6, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -22.6, "py": 0.3, "pz": -6.2, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -22.6, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -22.6, "py": 0.3, "pz": -6.2, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -22.6, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -22.6, "py": 0.3, "pz": -6.2, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -22.6, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -22.6, "py": 0.3, "pz": -6.2, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -24.5, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -24.5, "py": 0.3, "pz": -5.3, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -24.5, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -24.5, "py": 0.3, "pz": -5.3, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -24.5, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -24.5, "py": 0.3, "pz": -5.3, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": -24.5, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": -24.5, "py": 0.3, "pz": -5.3, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 20.6, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 20.6, "py": 0.4, "pz": 7.7, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 20.6, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 20.6, "py": 0.4, "pz": 7.7, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 20.6, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 20.6, "py": 0.4, "pz": 7.7, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 20.6, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 20.6, "py": 0.4, "pz": 7.7, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 22.4, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 22.4, "py": 0.4, "pz": 8.1, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 22.4, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 22.4, "py": 0.4, "pz": 8.1, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 22.4, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 22.4, "py": 0.4, "pz": 8.1, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 22.4, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 22.4, "py": 0.4, "pz": 8.1, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 23.6, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 23.6, "py": 0.4, "pz": 6.6, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 23.6, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 23.6, "py": 0.4, "pz": 6.6, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 23.6, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 23.6, "py": 0.4, "pz": 6.6, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 23.6, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 23.6, "py": 0.4, "pz": 6.6, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 22, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 22, "py": 0.4, "pz": 7.9, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 22, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 22, "py": 0.4, "pz": 7.9, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 22, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 22, "py": 0.4, "pz": 7.9, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 22, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 22, "py": 0.4, "pz": 7.9, "pState": "idle"}
+{"type": "LOAD_GATES", "gateCount": 1, "gateIds": ["obj_019721"], "systemId": "qpt_331"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 21, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 21, "py": 0.4, "pz": 9.7, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 21, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 21, "py": 0.4, "pz": 9.7, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 21, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 21, "py": 0.4, "pz": 9.7, "pState": "idle"}
+{"type": "RAW_SSE", "warpState": "arriving", "hasPlayer": true, "playerX": 21, "playerPosInitialized": true, "warpRecenterPending": false}
+{"type": "SSE_STATE", "hasPlayer": true, "playerPosInitialized": true, "warpRecenterPending": false, "warpState": "arriving"}
+{"type": "SSE_ARRIVE", "playerPosInitialized": true, "warpRecenterPending": false, "px": 21, "py": 0.4, "pz": 9.7, "pState": "idle"}

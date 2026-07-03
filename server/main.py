@@ -817,7 +817,7 @@ def api_lsg_data(target_obj_id):
         import random as _rnd
         import math as _math
         angle = _rnd.uniform(0, 3.14159 * 2)
-        arrival_dist = 100 if target.obj_type == 'gate' else 500
+        arrival_dist = {'gate': 100, 'station': 500, 'planet': 500, 'moon': 500}.get(target.obj_type, 500)
         if local_space.player_ship:
             local_space.player_ship.x = arrival_dist * _math.cos(angle)
             local_space.player_ship.y = 0
@@ -826,14 +826,26 @@ def api_lsg_data(target_obj_id):
             local_space.player_ship.state = 'idle'
 
         # Build response
-        objects = [{'id': o.id, 'name': o.name, 'type': o.obj_type,
-                    'x': 0, 'y': 0, 'z': 0,
+        # Build object list with positions
+        # Planets/moons get placed at large offset from anchor (you orbit them, not land on them)
+        import random as _rnd2
+        planet_offset_angle = _rnd2.uniform(0, 3.14159 * 2)
+        objects = []
+        for o in local_space.objects:
+            ox, oy, oz = 0, 0, 0
+            if o.id == target_obj_id and o.obj_type in ('planet', 'moon'):
+                # Place planet far from anchor so player is in "orbit"
+                orbit_dist = 5000 if o.obj_type == 'planet' else 2000
+                ox = orbit_dist * _math.cos(planet_offset_angle)
+                oz = orbit_dist * _math.sin(planet_offset_angle)
+            objects.append({'id': o.id, 'name': o.name, 'type': o.obj_type,
+                    'x': ox, 'y': oy, 'z': oz,
                     'station_id': o.station_id,
                     'au_distance': round(o.au_distance, 4),
                     'connects_to': o.connects_to,
                     'parent': o.parent,
                     'ss_x': round(o.ss_x, 4), 'ss_z': round(o.ss_z, 4),
-                    'is_anchor': (o.id == target_obj_id)} for o in local_space.objects]
+                    'is_anchor': (o.id == target_obj_id)})
 
         # Get ships near the target
         ships = [s.to_dict() for s in local_space.ships.values() if not s.is_player][:20]

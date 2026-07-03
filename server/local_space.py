@@ -499,7 +499,7 @@ class LocalSpaceWorker:
             # Determine arrival distance based on object type (in cm-scale units)
             # Planet: 800 units (= 800m real), Moon: 500, Gate: 100, Station: 500
             if target.obj_type == 'planet':
-                arrival_dist = 800
+                arrival_dist = 500
             elif target.obj_type == 'moon':
                 arrival_dist = 500
             elif target.obj_type == 'gate':
