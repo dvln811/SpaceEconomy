@@ -791,6 +791,63 @@ def system_view_page():
     return send_from_directory(BASE_DIR, "system_view.html")
 
 
+@app.route("/api/lsg_data/<target_obj_id>")
+def api_lsg_data(target_obj_id):
+    """Return all data needed to build a destination LSG scene.
+    Client calls this before/during warp to pre-build the arrival scene.
+    Returns: anchor object, system_id, nearby ships, all objects with SS coords.
+    Also updates server state (anchor, player position) for when client arrives.
+    """
+    from server.game_data_db import get_data_db
+    # Find which system this object is in
+    with local_space._lock:
+        target = None
+        for o in local_space.objects:
+            if o.id == target_obj_id:
+                target = o
+                break
+        if not target:
+            return jsonify({"error": "target not found"}), 404
+
+        # Update anchor
+        local_space._anchor_id = target_obj_id
+
+        # Place player at arrival offset from target (target at 0,0,0)
+        # Direction: use a default since we don't know approach vector yet
+        import random as _rnd
+        import math as _math
+        angle = _rnd.uniform(0, 3.14159 * 2)
+        arrival_dist = 100 if target.obj_type == 'gate' else 500
+        if local_space.player_ship:
+            local_space.player_ship.x = arrival_dist * _math.cos(angle)
+            local_space.player_ship.y = 0
+            local_space.player_ship.z = arrival_dist * _math.sin(angle)
+            local_space.player_ship.speed = 0
+            local_space.player_ship.state = 'idle'
+
+        # Build response
+        objects = [{'id': o.id, 'name': o.name, 'type': o.obj_type,
+                    'x': 0, 'y': 0, 'z': 0,
+                    'station_id': o.station_id,
+                    'au_distance': round(o.au_distance, 4),
+                    'connects_to': o.connects_to,
+                    'parent': o.parent,
+                    'ss_x': round(o.ss_x, 4), 'ss_z': round(o.ss_z, 4),
+                    'is_anchor': (o.id == target_obj_id)} for o in local_space.objects]
+
+        # Get ships near the target
+        ships = [s.to_dict() for s in local_space.ships.values() if not s.is_player][:20]
+
+        return jsonify({
+            'system_id': local_space.system_id,
+            'target_id': target_obj_id,
+            'target_type': target.obj_type,
+            'objects': objects,
+            'ships': ships,
+            'arrival_dist': arrival_dist,
+        })
+
+
 @app.route("/api/debug_log", methods=["POST"])
 def api_debug_log():
     data = request.get_json() or {}

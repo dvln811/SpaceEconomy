@@ -1,0 +1,12 @@
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "LOAD_GATES", "gateCount": 1, "gateIds": ["obj_019720"], "systemId": "qpt_331"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "LOAD_GATES", "gateCount": 0, "gateIds": [], "systemId": "qpt_331"}
+{"type": "LOAD_GATES", "gateCount": 1, "gateIds": ["obj_019722"], "systemId": "qpt_331"}
+{"type": "LOAD_GATES", "gateCount": 1, "gateIds": ["obj_019721"], "systemId": "qpt_331"}
