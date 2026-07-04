@@ -349,6 +349,29 @@ function setFlightScene(){
   camRadius = Math.min(camRadius, 2);
   updateCameraOrbit();
   isDocked = false;
+  // Reset lsgGroup to origin for clean state after docking
+  if(lsgGroup){
+    scene.remove(lsgGroup);
+    lsgGroup.traverse(c => {
+      if(c.geometry) c.geometry.dispose();
+      if(c.material){
+        if(c.material.map) c.material.map.dispose();
+        c.material.dispose();
+      }
+    });
+  }
+  lsgGroup = new THREE.Group();
+  lsgGroup.position.set(0, 0, 0);
+  scene.add(lsgGroup);
+  // Reset player to origin (server will provide correct position via SSE)
+  playerPos.set(0, 0, 0);
+  playerPosInitialized = false;
+  // Clear old model dicts
+  stationModels = {};
+  gateModels = {};
+  asteroidModels = {};
+  planetModels = {};
+  // Load fresh models into the clean group
   loadAllStations();
   loadAllGates();
   loadAsteroidFields();
