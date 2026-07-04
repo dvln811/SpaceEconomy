@@ -699,7 +699,7 @@ function animate(now){
         window._lsgReady = false;
         // Position group far ahead along warp heading
         const arrDist = (window._lsgData && window._lsgData.arrival_dist) || 100;
-        const spawnDist = 2000000;
+        const spawnDist = 10000; // 10k units (1000km) - close enough to see stations during approach
         lsgGroup.position.set(warpHeading.x * spawnDist, 0, warpHeading.z * spawnDist);
         lsgGroup.visible = true;
         // Force all models visible (tunnel phase set them to false individually)

@@ -817,7 +817,7 @@ def api_lsg_data(target_obj_id):
         import random as _rnd
         import math as _math
         angle = _rnd.uniform(0, 3.14159 * 2)
-        arrival_dist = {'gate': 100, 'station': 500, 'planet': 500, 'moon': 500}.get(target.obj_type, 500)
+        arrival_dist = {'gate': 100, 'station': 100, 'planet': 100, 'moon': 100, 'belt': 100}.get(target.obj_type, 100)
         if local_space.player_ship:
             local_space.player_ship.x = arrival_dist * _math.cos(angle)
             local_space.player_ship.y = 0
