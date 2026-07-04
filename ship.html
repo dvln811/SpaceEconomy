@@ -779,9 +779,10 @@ function animate(now){
             hx:playerHeading.x, hy:playerHeading.y, hz:playerHeading.z, state:'idle'})
         }).catch(()=>{});
 
-        // Reconnect SSE stream (warpLock is already false so firstState loaders are safe,
-        // but models already exist in dicts so they won't re-create)
-        connectStream();
+        // Reconnect SSE stream after a short delay (let visuals settle)
+        // warpLock is already false so firstState loaders are safe,
+        // but models already exist in dicts so they won't re-create
+        setTimeout(()=> connectStream(), 1000);
       }
 
       // ── HUD ──
@@ -935,6 +936,10 @@ function animate(now){
       if(warpState !== 'warping'){
         const visCenter = (warpState === 'decelerating' && warpTargetPos) ? warpTargetPos : playerPos;
         const visDist = 500000; // 500k units = 50,000km - enough to see nearby planets
+        // Group offset (group may not be at origin after warp arrival)
+        const gx = lsgGroup ? lsgGroup.position.x : 0;
+        const gy = lsgGroup ? lsgGroup.position.y : 0;
+        const gz = lsgGroup ? lsgGroup.position.z : 0;
         // Reset scales from any previous warp departure (restore original scale)
         for(const [id, mesh] of Object.entries(stationModels)){
           if(mesh.userData._origScale) mesh.scale.setScalar(mesh.userData._origScale);
@@ -948,19 +953,19 @@ function animate(now){
         for(const [id, mesh] of Object.entries(stationModels)){
           const obj = localState.objects.find(o => o.station_id === id);
           if(!obj){ mesh.visible = false; continue; }
-          const dist = Math.sqrt((obj.x-visCenter.x)**2 + (obj.y-visCenter.y)**2 + (obj.z-visCenter.z)**2);
+          const dist = Math.sqrt((obj.x+gx-visCenter.x)**2 + (obj.y+gy-visCenter.y)**2 + (obj.z+gz-visCenter.z)**2);
           mesh.visible = dist < visDist;
         }
         for(const [id, mesh] of Object.entries(gateModels)){
           const obj = localState.objects.find(o => o.id === id);
           if(!obj){ mesh.visible = false; continue; }
-          const dist = Math.sqrt((obj.x-visCenter.x)**2 + (obj.y-visCenter.y)**2 + (obj.z-visCenter.z)**2);
+          const dist = Math.sqrt((obj.x+gx-visCenter.x)**2 + (obj.y+gy-visCenter.y)**2 + (obj.z+gz-visCenter.z)**2);
           mesh.visible = dist < visDist;
         }
         for(const [id, rocks] of Object.entries(asteroidModels)){
           const obj = localState.objects.find(o => o.id === id);
           if(!obj){ rocks.forEach(r => r.visible = false); continue; }
-          const dist = Math.sqrt((obj.x-visCenter.x)**2 + (obj.y-visCenter.y)**2 + (obj.z-visCenter.z)**2);
+          const dist = Math.sqrt((obj.x+gx-visCenter.x)**2 + (obj.y+gy-visCenter.y)**2 + (obj.z+gz-visCenter.z)**2);
           rocks.forEach(r => r.visible = dist < 250);
         }
       } else {
