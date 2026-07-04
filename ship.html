@@ -781,6 +781,7 @@ function animate(now){
 
       // ── FINALIZE ──
       if(elapsed >= arriveEnd){
+        // Ensure group is exactly at arrDist (interpolation may not have hit t=1.0 exactly)
         const arrDist = (window._warpLsgData && window._warpLsgData.arrival_dist) || 100;
         if(lsgGroup) lsgGroup.position.set(warpHeading.x * arrDist, 0, warpHeading.z * arrDist);
         playerPos.set(0, 0, 0);
@@ -803,7 +804,6 @@ function animate(now){
         window._departDespawned = false;
         window._warpBuildResult = null;
         window._warpLsgData = null;
-        window._postWarpGrace = 0.5;
 
         document.getElementById('warpTarget').textContent = '';
         fetch('/api/player/position', {method:'POST', headers:{'Content-Type':'application/json'},
