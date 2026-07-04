@@ -1893,11 +1893,13 @@ function updateDirectionalLabels(){
     const ssDirX = obj.ss_x - curSSx, ssDirZ = obj.ss_z - curSSz;
     const ssDirLen = Math.sqrt(ssDirX*ssDirX + ssDirZ*ssDirZ);
     
-    // For anchor object (when NOT warping), use its LSG position. Otherwise project from SS direction.
+    // For anchor object (when NOT warping), use its LSG position + group offset. Otherwise project from SS direction.
     let labelX, labelY, labelZ;
     const useLocal = obj.is_anchor && warpState !== 'warping' && warpState !== 'aligning';
     if(useLocal){
-      labelX = obj.x; labelY = obj.y; labelZ = obj.z;
+      // obj position is local to lsgGroup, so add group's world position
+      const gOff = lsgGroup ? lsgGroup.position : new THREE.Vector3(0,0,0);
+      labelX = obj.x + gOff.x; labelY = obj.y + gOff.y; labelZ = obj.z + gOff.z;
     } else if(ssDirLen > 0.001){
       // Place label point very far away in the SS direction (effectively at infinity)
       labelX = (ssDirX / ssDirLen) * 100000;
@@ -1907,8 +1909,8 @@ function updateDirectionalLabels(){
       label.el.style.display = 'none'; continue;
     }
     const toObj = new THREE.Vector3(labelX - camera.position.x, labelY - camera.position.y, labelZ - camera.position.z);
-    // Distance in AU for display
-    const dist = useLocal ? new THREE.Vector3(obj.x - labelRefPos.x, obj.y - labelRefPos.y, obj.z - labelRefPos.z).length() : ssDirLen;
+    // Distance: for local anchors, measure from player position to anchor world position
+    const dist = useLocal ? new THREE.Vector3(labelX - playerPos.x, labelY - playerPos.y, labelZ - playerPos.z).length() : ssDirLen;
     if(dist < 0.001 && !useLocal) { label.el.style.display = 'none'; continue; }
     toObj.normalize();
 
