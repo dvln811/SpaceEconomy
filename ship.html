@@ -1382,12 +1382,23 @@ document.getElementById('undockBtn').addEventListener('click', async()=>{
 });
 
 document.getElementById('dockBtn').addEventListener('click', async()=>{
+  // Find which station we're docking at
+  const gx2d = lsgGroup ? lsgGroup.position.x : 0;
+  const gy2d = lsgGroup ? lsgGroup.position.y : 0;
+  const gz2d = lsgGroup ? lsgGroup.position.z : 0;
+  const dockStation = localState && localState.objects && localState.objects.find(o=>{
+    if(o.type!=='station' || !o.is_anchor) return false;
+    const dx=(o.x+gx2d)-playerPos.x, dy=(o.y+gy2d)-playerPos.y, dz=(o.z+gz2d)-playerPos.z;
+    return Math.sqrt(dx*dx+dy*dy+dz*dz) < 30;
+  });
+  if(!dockStation) return;
   // Fade out before docking
   const overlay = document.getElementById('fadeOverlay');
   overlay.style.transition = 'opacity 1s';
   overlay.style.opacity = '1';
   setTimeout(async()=>{
-    const r = await fetch('/api/player/dock',{method:'POST'});
+    const r = await fetch('/api/player/dock',{method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({station_id: dockStation.station_id})});
     // SSE will trigger setDockedScene which fades back in
   }, 1000);
 });

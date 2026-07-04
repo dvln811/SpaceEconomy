@@ -1714,27 +1714,39 @@ def api_player_undock():
 
 @app.route("/api/player/dock", methods=["POST"])
 def api_player_dock():
-    """Dock player at nearest station (based on local space proximity)."""
+    """Dock player at specified station (or nearest if not specified)."""
     from server.game_data_db import get_data_db
     import math
-    # Check if player is near a station in local space
+    data = request.get_json() or {}
+    target_station_id = data.get('station_id', '')
     with local_space._lock:
         ps = local_space.player_ship
         if not ps:
             return jsonify({"error": "no player ship"}), 400
-        nearest_station = None
-        nearest_dist = 99999999
-        for o in local_space.objects:
-            if o.obj_type == 'station' and o.station_id:
-                dx = o.x - ps.x
-                dy = o.y - ps.y
-                dz = o.z - ps.z
-                d = math.sqrt(dx*dx + dy*dy + dz*dz)
-                if d < nearest_dist:
-                    nearest_dist = d
+        # If client specified a station, use it directly
+        if target_station_id:
+            nearest_station = None
+            for o in local_space.objects:
+                if o.station_id == target_station_id:
                     nearest_station = o
-        if not nearest_station or nearest_dist > 30:
-            return jsonify({"error": "not near a station"}), 400
+                    break
+            if not nearest_station:
+                return jsonify({"error": "station not found"}), 400
+        else:
+            # Fallback: find nearest station by proximity
+            nearest_station = None
+            nearest_dist = 99999999
+            for o in local_space.objects:
+                if o.obj_type == 'station' and o.station_id:
+                    dx = o.x - ps.x
+                    dy = o.y - ps.y
+                    dz = o.z - ps.z
+                    d = math.sqrt(dx*dx + dy*dy + dz*dz)
+                    if d < nearest_dist:
+                        nearest_dist = d
+                        nearest_station = o
+            if not nearest_station or nearest_dist > 30:
+                return jsonify({"error": "not near a station"}), 400
         ps.state = 'docked'
         ps.speed = 0
         ps.vx = ps.vy = ps.vz = 0
