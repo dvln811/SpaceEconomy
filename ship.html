@@ -634,6 +634,7 @@ function animate(now){
         warpBuildReady = false;
         warpLock = false;
         window._approachStarted = false;
+        window._objDepartTimer = 0;
         // Don't reset lsgGroup position - departure moves it from wherever it is
       }
     } else if(warpState === 'warping'){
@@ -665,10 +666,11 @@ function animate(now){
       // ── At 10%: hide departure, disconnect SSE, start fetch ──
       if(progress >= 0.1 && !warpLock){
         warpLock = true;
-        // Hide and disconnect
+        // Hide departure group and disconnect SSE
         if(lsgGroup) lsgGroup.visible = false;
         if(evtSource){ evtSource.close(); evtSource = null; }
-        localState = null; // force firstState on reconnect
+        // Keep localState alive (labels/nav need objects for SS coords during warp)
+        // warpLock prevents any loaders from firing
 
         // Start building destination into isolated warpGroup
         warpGroup = new THREE.Group();
@@ -745,9 +747,11 @@ function animate(now){
 
       // ── FINALIZE at 100% ──
       if(progress >= 1.0){
-        const arrDist = (window._warpLsgData && window._warpLsgData.arrival_dist) || 100;
-        lsgGroup.position.set(warpHeading.x * arrDist, 0, warpHeading.z * arrDist);
-        playerPos.set(-warpHeading.x * arrDist, 0, -warpHeading.z * arrDist);
+        // Group is already at heading*arrDist from approach interpolation.
+        // Player is at origin (0,0,0) since ship stayed stationary during warp.
+        // This means the anchor is arrDist units ahead of the player - correct!
+        // Just set playerPos to origin and heading to warp direction.
+        playerPos.set(0, 0, 0);
         playerHeading.copy(warpHeading);
         playerSpeed = 0;
 
@@ -960,23 +964,26 @@ function animate(now){
           rocks.forEach(r => r.visible = dist < 250);
         }
       } else {
-        // During warping: shrink all visible stations/gates/asteroids (departure effect)
-        if(!window._objDepartTimer) window._objDepartTimer = 0;
-        window._objDepartTimer += dt;
-        const ot = Math.min(1.0, window._objDepartTimer / 1.5);
-        const objScale = Math.max(0.02, 1.0 - ot * 0.98);
-        for(const [id, mesh] of Object.entries(stationModels)){
-          const os = mesh.userData._origScale || 1;
-          mesh.scale.setScalar(os * objScale);
-          if(ot >= 1.0) mesh.visible = false;
-        }
-        for(const [id, mesh] of Object.entries(gateModels)){
-          const os = mesh.userData._origScale || 1;
-          mesh.scale.setScalar(os * objScale);
-          if(ot >= 1.0) mesh.visible = false;
-        }
-        for(const [id, rocks] of Object.entries(asteroidModels)){
-          rocks.forEach(r => { const os = r.userData._origScale || 1; r.scale.setScalar(os * objScale); if(ot >= 1.0) r.visible = false; });
+        // During warping DEPARTURE ONLY: shrink all visible stations/gates/asteroids
+        // Skip this during approach (when _approachStarted is true)
+        if(!window._approachStarted){
+          if(!window._objDepartTimer) window._objDepartTimer = 0;
+          window._objDepartTimer += dt;
+          const ot = Math.min(1.0, window._objDepartTimer / 1.5);
+          const objScale = Math.max(0.02, 1.0 - ot * 0.98);
+          for(const [id, mesh] of Object.entries(stationModels)){
+            const os = mesh.userData._origScale || 1;
+            mesh.scale.setScalar(os * objScale);
+            if(ot >= 1.0) mesh.visible = false;
+          }
+          for(const [id, mesh] of Object.entries(gateModels)){
+            const os = mesh.userData._origScale || 1;
+            mesh.scale.setScalar(os * objScale);
+            if(ot >= 1.0) mesh.visible = false;
+          }
+          for(const [id, rocks] of Object.entries(asteroidModels)){
+            rocks.forEach(r => { const os = r.userData._origScale || 1; r.scale.setScalar(os * objScale); if(ot >= 1.0) r.visible = false; });
+          }
         }
       }
       // Reset departure timer when not warping
