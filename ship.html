@@ -1327,16 +1327,20 @@ function renderNavList(objects, playerShip){
     </div>`;
   }).join('');
   // Show dock button if near a station (within ~3km of any station)
-  const nearStation = objects.find(o=>{
+  // Account for lsgGroup offset and hide during warp
+  const gx2 = lsgGroup ? lsgGroup.position.x : 0;
+  const gy2 = lsgGroup ? lsgGroup.position.y : 0;
+  const gz2 = lsgGroup ? lsgGroup.position.z : 0;
+  const nearStation = (warpState === 'none') && objects.find(o=>{
     if(o.type!=='station' || !o.is_anchor) return false;
-    const dx=o.x-px, dy=o.y-py, dz=o.z-pz;
+    const dx=(o.x+gx2)-px, dy=(o.y+gy2)-py, dz=(o.z+gz2)-pz;
     return Math.sqrt(dx*dx+dy*dy+dz*dz) < 30;
   });
   document.getElementById('dockBtn').style.display = nearStation ? '' : 'none';
   // Show jump button if near a gate with connection (within 10km)
-  const nearGate = objects.find(o=>{
+  const nearGate = (warpState === 'none') && objects.find(o=>{
     if(o.type!=='gate' || !o.connects_to) return false;
-    const dx=o.x-px, dy=o.y-py, dz=o.z-pz;
+    const dx=(o.x+gx2)-px, dy=(o.y+gy2)-py, dz=(o.z+gz2)-pz;
     return Math.sqrt(dx*dx+dy*dy+dz*dz) < 20;
   });
   let jumpBtn = document.getElementById('jumpBtn');
@@ -1929,13 +1933,21 @@ function updateDirectionalLabels(){
     const ssDirX = obj.ss_x - curSSx, ssDirZ = obj.ss_z - curSSz;
     const ssDirLen = Math.sqrt(ssDirX*ssDirX + ssDirZ*ssDirZ);
     
-    // For anchor object (when NOT warping), use its LSG position + group offset. Otherwise project from SS direction.
+    // For anchor object (when NOT warping), use its actual model position + group offset. Otherwise project from SS direction.
     let labelX, labelY, labelZ;
     const useLocal = obj.is_anchor && warpState !== 'warping' && warpState !== 'aligning';
     if(useLocal){
-      // obj position is local to lsgGroup, so add group's world position
+      // Find the actual model position from the dicts (more reliable than localState.objects)
       const gOff = lsgGroup ? lsgGroup.position : new THREE.Vector3(0,0,0);
-      labelX = obj.x + gOff.x; labelY = obj.y + gOff.y; labelZ = obj.z + gOff.z;
+      let modelPos = null;
+      if(obj.station_id && stationModels[obj.station_id]) modelPos = stationModels[obj.station_id].position;
+      else if(gateModels[obj.id]) modelPos = gateModels[obj.id].position;
+      else if(planetModels[obj.id]) modelPos = planetModels[obj.id].position;
+      if(modelPos){
+        labelX = modelPos.x + gOff.x; labelY = modelPos.y + gOff.y; labelZ = modelPos.z + gOff.z;
+      } else {
+        labelX = obj.x + gOff.x; labelY = obj.y + gOff.y; labelZ = obj.z + gOff.z;
+      }
     } else if(ssDirLen > 0.001){
       // Place label point very far away in the SS direction (effectively at infinity)
       labelX = (ssDirX / ssDirLen) * 100000;
