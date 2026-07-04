@@ -101,9 +101,9 @@ let interpShips = {};
 const container = document.getElementById('viewport');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x020305);
-const camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight, 0.01, 5000000);
+const camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight, 0.01, 50000000);
 camera.position.set(0.3, 0.2, 0.3);
-const renderer = new THREE.WebGLRenderer({antialias:true});
+const renderer = new THREE.WebGLRenderer({antialias:true, logarithmicDepthBuffer:true});
 renderer.setSize(container.clientWidth, container.clientHeight);
 container.appendChild(renderer.domElement);
 
@@ -281,7 +281,7 @@ function buildStarfield(){
   starField = new THREE.Points(geo,new THREE.PointsMaterial({color:0xffffff,size:1.5,sizeAttenuation:false}));
   starField.frustumCulled = false;
   starField.renderOrder = -1; // render behind everything
-  starField.scale.setScalar(4500000); // stays inside far plane
+  starField.scale.setScalar(45000000); // stays inside far plane
 }
 buildStarfield();
 
@@ -658,8 +658,10 @@ function animate(now){
       // ── DEPARTURE (0–10%): move current lsgGroup backward ──
       if(progress < 0.1){
         if(lsgGroup){
-          lsgGroup.position.x -= warpHeading.x * warpSpeed * dt;
-          lsgGroup.position.z -= warpHeading.z * warpSpeed * dt;
+          // Use a high departure speed so even distant planets visibly move
+          const departSpeed = warpSpeed + 50000 * (progress / 0.1);
+          lsgGroup.position.x -= warpHeading.x * departSpeed * dt;
+          lsgGroup.position.z -= warpHeading.z * departSpeed * dt;
         }
       }
 
@@ -683,7 +685,9 @@ function animate(now){
           // Store the build result for the swap
           window._warpBuildResult = result;
           warpBuildReady = true;
-          console.log('[WARP] Destination built:', warpGroup.children.length, 'objects');
+          console.log('[WARP] Destination built:', warpGroup.children.length, 'objects',
+            '| planets:', Object.keys(result.planets).length,
+            Object.entries(result.planets).map(([id,m])=> id.slice(0,8)+'@('+Math.round(m.position.x)+','+Math.round(m.position.z)+')').join(' '));
         });
       }
 
@@ -692,7 +696,13 @@ function animate(now){
         // First frame of approach: swap the group into the scene
         if(!window._approachStarted){
           window._approachStarted = true;
-          const spawnDist = 5000; // spawn 5000 units ahead
+          // Spawn distance: at least 2x the farthest object so approach parallax is visible
+          let maxChildDist = 0;
+          lsgGroup.children.forEach(c => {
+            const d = Math.sqrt(c.position.x*c.position.x + c.position.z*c.position.z);
+            if(d > maxChildDist) maxChildDist = d;
+          });
+          const spawnDist = Math.max(5000, maxChildDist * 2);
           window._approachSpawnDist = spawnDist;
 
           // Remove old lsgGroup and all its contents
