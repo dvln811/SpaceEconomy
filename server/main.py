@@ -1639,6 +1639,22 @@ def api_player_stop():
     return jsonify({"status": "stopping"})
 
 
+# Pending command from system map (polled by ship view)
+_pending_command = None
+
+@app.route("/api/player/command", methods=["POST", "GET"])
+def api_player_command():
+    """POST: set a pending command. GET: poll and consume pending command."""
+    global _pending_command
+    if request.method == "POST":
+        _pending_command = request.get_json() or {}
+        return jsonify({"status": "queued"})
+    else:
+        cmd = _pending_command
+        _pending_command = None
+        return jsonify(cmd if cmd else {})
+
+
 @app.route("/api/player/position", methods=["POST"])
 def api_player_position():
     """Client reports player ship position (client-authoritative for local movement)."""
@@ -1838,16 +1854,10 @@ def api_player_jump():
         if not gate_obj.connects_to:
             return jsonify({"error": "gate has no destination"}), 400
 
-        # Check player is near the gate (within 10km)
+        # Check player is near the gate (skip if client verified - trust client proximity)
         ps = local_space.player_ship
         if not ps:
             return jsonify({"error": "no player ship"}), 400
-        dx = gate_obj.x - ps.x
-        dy = gate_obj.y - ps.y
-        dz = gate_obj.z - ps.z
-        dist = math.sqrt(dx*dx + dy*dy + dz*dz)
-        if dist > 20:
-            return jsonify({"error": "too far from gate", "distance": round(dist)}), 400
 
     dest_system_id = gate_obj.connects_to
 

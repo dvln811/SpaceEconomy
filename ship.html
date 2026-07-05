@@ -249,6 +249,80 @@ function initSun(){
   scene.add(sunLight);
 }
 
+// Update sun/flare position during warp (star is at SS 0,0 - project direction from current SS pos)
+let _sunOccludeCheck = 0;
+function updateSunPosition(){
+  if(!sunMesh || !sunMesh.userData.flares) return;
+  if(!localState || !localState.objects) return;
+  
+  // Compute direction to star from current SS position
+  let curSSx = 0, curSSz = 0;
+  if((warpState === 'warping' || warpState === 'aligning') && window._warpFromSS){
+    const progress = (warpState === 'warping') ? Math.min(1.0, warpTravelTimer / warpTravelDuration) : 0;
+    curSSx = window._warpFromSS.x + (window._warpToSS.x - window._warpFromSS.x) * progress;
+    curSSz = window._warpFromSS.z + (window._warpToSS.z - window._warpFromSS.z) * progress;
+  } else {
+    const anchorSS = localState.objects.find(o => o.is_anchor);
+    curSSx = anchorSS ? anchorSS.ss_x : 0;
+    curSSz = anchorSS ? anchorSS.ss_z : 0;
+  }
+  
+  // Star is at SS (0,0). Direction from player to star:
+  const toStarX = -curSSx, toStarZ = -curSSz;
+  const starDist = Math.sqrt(toStarX*toStarX + toStarZ*toStarZ);
+  if(starDist < 0.001) return; // at the star? skip
+  
+  const dirX = toStarX / starDist;
+  const dirZ = toStarZ / starDist;
+  // Small Y component for variety
+  sunDirection.set(dirX, 0.05, dirZ).normalize();
+  
+  const sunDist = 20000;
+  const sunPos = sunDirection.clone().multiplyScalar(sunDist);
+  sunMesh.position.copy(sunPos);
+  sunMesh.userData.flares.forEach(f => f.position.copy(sunPos));
+  if(sunLight) sunLight.position.copy(sunPos);
+  if(dirLight) dirLight.position.copy(sunDirection);
+  
+  // ── Occlusion check (every 10 frames) ──
+  _sunOccludeCheck++;
+  if(_sunOccludeCheck % 10 !== 0) return;
+  
+  let occluded = false;
+  if(lsgGroup && planetModels){
+    for(const [id, mesh] of Object.entries(planetModels)){
+      // Get planet world position
+      const planetWorld = new THREE.Vector3();
+      mesh.getWorldPosition(planetWorld);
+      const toPlanet = planetWorld.clone().sub(camera.position);
+      const toSun = sunPos.clone().sub(camera.position);
+      
+      // Check if planet is between camera and sun (roughly same direction, closer)
+      const dotDir = toPlanet.clone().normalize().dot(toSun.clone().normalize());
+      if(dotDir > 0.99){ // within ~8 degrees
+        const planetDist = toPlanet.length();
+        const sunDistCam = toSun.length();
+        if(planetDist < sunDistCam){
+          // Check angular size of planet vs angle to sun
+          const planetRadius = mesh.userData.radius || 5000;
+          const angularSize = planetRadius / planetDist;
+          const angularOffset = Math.acos(Math.min(1, dotDir));
+          if(angularOffset < angularSize * 0.5){
+            occluded = true;
+            break;
+          }
+        }
+      }
+    }
+  }
+  
+  // Show/hide flares based on occlusion
+  const targetOpacity = occluded ? 0 : 1;
+  sunMesh.userData.flares.forEach(f => {
+    f.material.opacity += (targetOpacity * (f===sunMesh.userData.flares[0]?1.0:f===sunMesh.userData.flares[1]?0.7:0.35) - f.material.opacity) * 0.15;
+  });
+}
+
 // ── Hangar (docked view) ──
 function buildHangar(){
   const floorGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.005, 32);
@@ -850,6 +924,7 @@ function animate(now){
 
     // ── Player Ship Physics (CLIENT-AUTHORITATIVE, ship moves in world space) ──
     if(warpState === 'none'){
+      checkApproachArrival();
       if(flyDirection){
         const lerpRate = 1.0 / (playerAlignTime * 60) * 3;
         playerHeading.lerp(flyDirection, lerpRate).normalize();
@@ -1055,6 +1130,7 @@ function animate(now){
 
     // ── Directional labels for distant objects ──
     updateDirectionalLabels();
+    updateSunPosition();
 
     // ── Update nav card distances every 2s during flight ──
     if(!window._navRefreshTimer) window._navRefreshTimer = 0;
@@ -1083,6 +1159,14 @@ function animate(now){
           hx:playerHeading.x, hy:playerHeading.y, hz:playerHeading.z,
           state: flyDirection?'flying':'idle'})
       }).catch(()=>{});
+      // Poll for commands from system map
+      fetch('/api/player/command').then(r=>r.json()).then(cmd=>{
+        if(!cmd || !cmd.action) return;
+        if(cmd.action==='warp' && cmd.target_id) window.warpTo(cmd.target_id);
+        else if(cmd.action==='approach' && cmd.target_id) window.approachObj(cmd.target_id);
+        else if(cmd.action==='dock' && cmd.target_id) window.approachAndDock(cmd.target_id);
+        else if(cmd.action==='jump' && cmd.target_id) window.approachAndJump(cmd.target_id);
+      }).catch(()=>{});
     }
   }
 
@@ -1103,6 +1187,7 @@ container.addEventListener('dblclick', e=>{
   raycaster.setFromCamera(mouse, camera);
   flyDirection = raycaster.ray.direction.clone().normalize();
   targetHeading.copy(flyDirection);
+  approachTarget = null; // cancel any active approach
   // Report to server
   fetch('/api/player/fly', {
     method:'POST', headers:{'Content-Type':'application/json'},
@@ -1126,6 +1211,7 @@ document.addEventListener('keydown', e=>{
       return;
     }
     flyDirection = null;
+    approachTarget = null;
     fetch('/api/player/stop', {method:'POST'}).catch(()=>{});
   }
 });
@@ -1258,19 +1344,64 @@ window.showCtx = function(e, objId, name, type){
   e.preventDefault();
   const menu = document.getElementById('ctxMenu');
   let items = '';
-  items += `<div class="ctx-item" onclick="warpTo('${objId}')">Warp to ${name}</div>`;
-  // If it's a gate and player is near, show Jump option
-  if(type === 'gate' && localState && localState.objects){
-    const gateObj = localState.objects.find(o => o.id === objId);
-    if(gateObj && gateObj.connects_to){
-      const dx = gateObj.x - playerPos.x, dy = gateObj.y - playerPos.y, dz = gateObj.z - playerPos.z;
-      const dist = Math.sqrt(dx*dx+dy*dy+dz*dz);
-      if(dist < 20){
-        items += `<div class="ctx-item" style="color:#ab47bc" onclick="jumpGate('${objId}')">Jump to ${gateObj.connects_to}</div>`;
-      }
+  
+  // Find the object in localState
+  const obj = localState && localState.objects && localState.objects.find(o => o.id === objId);
+  const isAnchor = obj && obj.is_anchor;
+  
+  // Determine if object is in the local space (anchor, or has LSG position via model dicts)
+  const isLocal = isAnchor || (obj && (stationModels[obj.station_id] || gateModels[obj.id] || asteroidModels[obj.id] || planetModels[obj.id]));
+  
+  // Compute distance to object (for range checks)
+  let distToObj = Infinity;
+  if(isLocal && lsgGroup){
+    const gOff = lsgGroup.position;
+    // Use model position if available, else obj.x/y/z
+    let ox = obj.x, oy = obj.y, oz = obj.z;
+    if(obj.station_id && stationModels[obj.station_id]){
+      const mp = stationModels[obj.station_id].position;
+      ox = mp.x; oy = mp.y; oz = mp.z;
+    } else if(gateModels[obj.id]){
+      const mp = gateModels[obj.id].position;
+      ox = mp.x; oy = mp.y; oz = mp.z;
+    }
+    const dx = (ox + gOff.x) - playerPos.x;
+    const dy = (oy + gOff.y) - playerPos.y;
+    const dz = (oz + gOff.z) - playerPos.z;
+    distToObj = Math.sqrt(dx*dx + dy*dy + dz*dz);
+  }
+  
+  // Warp To (for objects NOT in local space)
+  if(!isLocal){
+    items += `<div class="ctx-item" onclick="warpTo('${objId}')">Warp to ${name}</div>`;
+  }
+  
+  // Approach (for objects in local space)
+  if(isLocal){
+    items += `<div class="ctx-item" onclick="approachObj('${objId}')">Approach ${name}</div>`;
+  }
+  
+  // Dock (stations in local space)
+  if(type === 'station' && isLocal){
+    const inRange = distToObj < 30;
+    if(inRange){
+      items += `<div class="ctx-item" onclick="approachAndDock('${objId}')">Dock</div>`;
+    } else {
+      items += `<div class="ctx-item" onclick="approachAndDock('${objId}')">Approach &amp; Dock</div>`;
     }
   }
-  items += `<div class="ctx-item" onclick="closeCtx()">Cancel</div>`;
+  
+  // Jump (gates with connection, in local space)
+  if(type === 'gate' && obj && obj.connects_to && isLocal){
+    const inRange = distToObj < 20;
+    if(inRange){
+      items += `<div class="ctx-item" style="color:#ab47bc" onclick="jumpGate('${objId}')">Jump to ${obj.connects_to}</div>`;
+    } else {
+      items += `<div class="ctx-item" style="color:#ab47bc" onclick="approachAndJump('${objId}')">Approach &amp; Jump</div>`;
+    }
+  }
+  
+  items += `<div class="ctx-item" style="color:#5a7a9a" onclick="closeCtx()">Cancel</div>`;
   menu.innerHTML = items;
   menu.style.left = e.clientX+'px';
   menu.style.top = e.clientY+'px';
@@ -1278,6 +1409,67 @@ window.showCtx = function(e, objId, name, type){
 };
 window.closeCtx = function(){ document.getElementById('ctxMenu').classList.remove('open'); };
 document.addEventListener('click',()=>closeCtx());
+
+// ── Approach System ──
+let approachTarget = null;   // {objId, action: 'stop'|'dock'|'jump'}
+window.approachObj = function(objId){
+  closeCtx();
+  approachTarget = {objId, action: 'stop'};
+  setApproachDirection(objId);
+};
+window.approachAndDock = function(objId){
+  closeCtx();
+  approachTarget = {objId, action: 'dock'};
+  setApproachDirection(objId);
+};
+window.approachAndJump = function(objId){
+  closeCtx();
+  approachTarget = {objId, action: 'jump'};
+  setApproachDirection(objId);
+};
+function setApproachDirection(objId){
+  if(!localState || !localState.objects || !lsgGroup) return;
+  const obj = localState.objects.find(o => o.id === objId);
+  if(!obj) return;
+  const gOff = lsgGroup.position;
+  const targetWorld = new THREE.Vector3(obj.x + gOff.x, obj.y + gOff.y, obj.z + gOff.z);
+  const dir = targetWorld.clone().sub(playerPos).normalize();
+  flyDirection = dir;
+}
+function checkApproachArrival(){
+  if(!approachTarget || !localState || !localState.objects || !lsgGroup) return;
+  const obj = localState.objects.find(o => o.id === approachTarget.objId);
+  if(!obj) return;
+  const gOff = lsgGroup.position;
+  const dx = (obj.x + gOff.x) - playerPos.x;
+  const dy = (obj.y + gOff.y) - playerPos.y;
+  const dz = (obj.z + gOff.z) - playerPos.z;
+  const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+  
+  // Update fly direction continuously toward target
+  const targetWorld = new THREE.Vector3(obj.x + gOff.x, obj.y + gOff.y, obj.z + gOff.z);
+  flyDirection = targetWorld.clone().sub(playerPos).normalize();
+  
+  // Check arrival thresholds
+  const stopDist = 0.5; // 50m in PU
+  const dockDist = 30;  // dock range
+  const jumpDist = 20;  // jump range
+  
+  if(approachTarget.action === 'stop' && dist < stopDist){
+    flyDirection = null;
+    approachTarget = null;
+  } else if(approachTarget.action === 'dock' && dist < dockDist){
+    flyDirection = null;
+    const targetId = approachTarget.objId;
+    approachTarget = null;
+    document.getElementById('dockBtn').click();
+  } else if(approachTarget.action === 'jump' && dist < jumpDist){
+    flyDirection = null;
+    const targetId = approachTarget.objId;
+    approachTarget = null;
+    window.jumpGate(targetId);
+  }
+}
 
 // Nav list right-click and double-click
 document.getElementById('navObjects').addEventListener('contextmenu', e=>{
@@ -1956,7 +2148,12 @@ function updateDirectionalLabels(){
   const objs = localState.objects.filter(o => o.type !== 'star');
   while(dirLabels.length < objs.length){
     const el = document.createElement('div');
-    el.style.cssText = 'position:absolute;font-family:JetBrains Mono,monospace;font-size:10px;white-space:nowrap;transition:opacity 0.3s';
+    el.style.cssText = 'position:absolute;font-family:JetBrains Mono,monospace;font-size:10px;white-space:nowrap;transition:opacity 0.3s;pointer-events:auto;cursor:default';
+    el.addEventListener('contextmenu', function(ev){
+      ev.preventDefault(); ev.stopPropagation();
+      const d = this._labelData;
+      if(d) window.showCtx(ev, d.id, d.name, d.type);
+    });
     dirLabelContainer.appendChild(el);
     dirLabels.push({el, objId:'', name:'', type:''});
   }
@@ -2112,6 +2309,7 @@ function updateDirectionalLabels(){
     label.el.style.opacity = onScreen ? '0.85' : '1.0';
     label.el.style.textShadow = '0 0 4px rgba(0,0,0,0.9)';
     label.el.innerHTML = `${arrow}${icon} ${displayName} <span style="opacity:0.9">${distLabel}</span>`;
+    label.el._labelData = {id: obj.id, name: obj.name, type: obj.type};
   }
 
   // ── LABEL CLUSTERING: detect overlaps and group ──
@@ -2165,12 +2363,16 @@ function updateDirectionalLabels(){
       const obj = objs[lp.idx];
       const col = DIR_LABEL_COLORS[obj.type] || '#8aa0b8';
       const ic = DIR_LABEL_ICONS[obj.type] || '\u2022';
-      return `<div style="padding:2px 0;color:${col}">${ic} ${obj.name}</div>`;
+      return `<div class="cluster-item" data-id="${obj.id}" data-name="${obj.name}" data-type="${obj.type}" style="padding:2px 0;color:${col};cursor:default">${ic} ${obj.name}</div>`;
     }).join('');
     // Hover: show expanded vertical list
     const expandEl = document.createElement('div');
     expandEl.style.cssText = 'display:none;position:absolute;left:0;top:14px;background:rgba(10,14,24,0.95);border:1px solid #1a2844;border-radius:3px;padding:4px 8px;white-space:nowrap;z-index:25;pointer-events:auto;cursor:default;user-select:none';
     expandEl.innerHTML = listItems;
+    expandEl.addEventListener('contextmenu', ev=>{
+      const item = ev.target.closest('.cluster-item');
+      if(item){ ev.preventDefault(); ev.stopPropagation(); window.showCtx(ev, item.dataset.id, item.dataset.name, item.dataset.type); }
+    });
     clusterEl.appendChild(expandEl);
     clusterEl.addEventListener('mouseenter', ()=>{ expandEl.style.display = ''; clusterEl._hovered = true; clusterEl.classList.add('_hovered'); });
     clusterEl.addEventListener('mouseleave', ()=>{ expandEl.style.display = 'none'; clusterEl._hovered = false; clusterEl.classList.remove('_hovered'); });
