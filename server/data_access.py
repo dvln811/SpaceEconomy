@@ -132,6 +132,9 @@ def load_universe(conn=None) -> dict:
             distance=o["distance"], angle=o["angle"],
             parent=o["parent"], connects_to=o["connects_to"],
             station_id=o["station_id"] if "station_id" in o.keys() else "",
+            planet_type=o["planet_type"] if "planet_type" in o.keys() else "",
+            radius_km=o["radius_km"] if "radius_km" in o.keys() else 0.0,
+            stats=o["stats"] if "stats" in o.keys() else "",
         ) for o in obj_rows]
 
         universe[sid] = System(

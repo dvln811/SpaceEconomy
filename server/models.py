@@ -33,6 +33,9 @@ class SystemObject:
     parent: str = ""
     connects_to: str = ""
     station_id: str = ""
+    planet_type: str = ""
+    radius_km: float = 0.0
+    stats: str = ""
 
 
 @dataclass

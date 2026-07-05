@@ -817,7 +817,14 @@ def api_lsg_data(target_obj_id):
         import random as _rnd
         import math as _math
         angle = _rnd.uniform(0, 3.14159 * 2)
-        arrival_dist = {'gate': 100, 'station': 100, 'planet': 100, 'moon': 100, 'belt': 100}.get(target.obj_type, 100)
+        # Arrival distance: for planets/moons, orbit at 1.5x radius (in PU = km/100*1000 = km*10)
+        # For stations/gates/belts: 10km = 100 PU
+        if target.obj_type in ('planet', 'moon') and getattr(target, 'radius_km', 0):
+            # radius_km -> PU: radius_km * 1000m / 100 = radius_km * 10
+            radius_pu = target.radius_km * 10
+            arrival_dist = int(radius_pu * 1.8)  # orbit at 1.8x radius
+        else:
+            arrival_dist = {'gate': 100, 'station': 100, 'belt': 100}.get(target.obj_type, 100)
         if local_space.player_ship:
             local_space.player_ship.x = arrival_dist * _math.cos(angle)
             local_space.player_ship.y = 0
@@ -871,7 +878,9 @@ def api_lsg_data(target_obj_id):
                     'connects_to': o.connects_to,
                     'parent': o.parent,
                     'ss_x': round(o.ss_x, 4), 'ss_z': round(o.ss_z, 4),
-                    'is_anchor': is_anchor})
+                    'is_anchor': is_anchor,
+                    'radius_km': getattr(o, 'radius_km', 0) or 0,
+                    'planet_type': getattr(o, 'planet_type', '') or ''})
 
         # Second pass: place moons relative to their parent planet
         planet_positions = {obj['id']: (obj['x'], obj['y'], obj['z']) for obj in objects if obj['type'] == 'planet'}
@@ -895,7 +904,9 @@ def api_lsg_data(target_obj_id):
                     'connects_to': o.connects_to,
                     'parent': o.parent,
                     'ss_x': round(o.ss_x, 4), 'ss_z': round(o.ss_z, 4),
-                    'is_anchor': False})
+                    'is_anchor': False,
+                    'radius_km': getattr(o, 'radius_km', 0) or 0,
+                    'planet_type': getattr(o, 'planet_type', '') or ''})
 
         # Get ships near the target
         ships = [s.to_dict() for s in local_space.ships.values() if not s.is_player][:20]

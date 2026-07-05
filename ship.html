@@ -1872,15 +1872,16 @@ async function buildWarpDestination(targetId, targetGroup){
     const bodies = objects.filter(o => (o.type === 'planet' || o.type === 'moon') && (o.x !== 0 || o.z !== 0 || o.is_anchor));
     for(const obj of bodies){
       const isPlanet = obj.type === 'planet';
-      const radius = isPlanet ? 5000 + Math.abs(hash(obj.id)) % 25000 : 1000 + Math.abs(hash(obj.id)) % 4000;
+      // Use real radius from server (km -> PU: km * 10), fallback to hash-based
+      const radiusPU = obj.radius_km ? obj.radius_km * 10 : (isPlanet ? 5000 + Math.abs(hash(obj.id)) % 25000 : 1000 + Math.abs(hash(obj.id)) % 4000);
       const colors = PLANET_COLORS[obj.type] || PLANET_COLORS['planet'];
       const color = colors[Math.abs(hash(obj.id)) % colors.length];
-      const geo = new THREE.SphereGeometry(radius, isPlanet ? 32 : 16, isPlanet ? 24 : 12);
+      const geo = new THREE.SphereGeometry(radiusPU, isPlanet ? 32 : 16, isPlanet ? 24 : 12);
       const tex = generatePlanetTexture(obj.id, color, isPlanet);
       const mat = new THREE.MeshPhongMaterial({map: tex, shininess: isPlanet ? 15 : 5});
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(obj.x, obj.y, obj.z);
-      mesh.userData = {radius, type: obj.type};
+      mesh.userData = {radius: radiusPU, type: obj.type, planet_type: obj.planet_type || '', radius_km: obj.radius_km || 0};
       targetGroup.add(mesh);
       newPlanets[obj.id] = mesh;
     }
@@ -2157,17 +2158,17 @@ function loadPlanetsAndMoons(){
   for(const obj of bodies){
     if(planetModels[obj.id]) continue;
     const isPlanet = obj.type === 'planet';
-    // Planet radius: 5000-30000 units (500-3000km). Moon: 1000-5000 units (100-500km).
-    const radius = isPlanet ? 5000 + Math.abs(hash(obj.id)) % 25000 : 1000 + Math.abs(hash(obj.id)) % 4000;
+    // Use real radius from server (km -> PU: km * 10), fallback to hash-based
+    const radiusPU = obj.radius_km ? obj.radius_km * 10 : (isPlanet ? 5000 + Math.abs(hash(obj.id)) % 25000 : 1000 + Math.abs(hash(obj.id)) % 4000);
     const colors = PLANET_COLORS[obj.type] || PLANET_COLORS['planet'];
     const color = colors[Math.abs(hash(obj.id)) % colors.length];
-    const geo = new THREE.SphereGeometry(radius, isPlanet ? 32 : 16, isPlanet ? 24 : 12);
+    const geo = new THREE.SphereGeometry(radiusPU, isPlanet ? 32 : 16, isPlanet ? 24 : 12);
     const tex = generatePlanetTexture(obj.id, color, isPlanet);
     const mat = new THREE.MeshPhongMaterial({map: tex, shininess: isPlanet ? 15 : 5});
     const mesh = new THREE.Mesh(geo, mat);
     // Place at LSG position (like stations/gates)
     mesh.position.set(obj.x, obj.y, obj.z);
-    mesh.userData = {radius, type: obj.type};
+    mesh.userData = {radius: radiusPU, type: obj.type, planet_type: obj.planet_type || '', radius_km: obj.radius_km || 0};
     (lsgGroup||scene).add(mesh);
     planetModels[obj.id] = mesh;
   }
