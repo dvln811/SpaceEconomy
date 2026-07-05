@@ -702,6 +702,79 @@ function createTrail(){
 }
 createTrail();
 
+// ── Warp Streaks (E:D style speed particles) ──
+const WARP_STREAK_COUNT = 200;
+let warpStreaks = null;
+let warpStreakVelocities = null;
+function createWarpStreaks(){
+  const geo = new THREE.BufferGeometry();
+  const positions = new Float32Array(WARP_STREAK_COUNT * 6); // 2 verts per streak (line)
+  const colors = new Float32Array(WARP_STREAK_COUNT * 6);    // r,g,b per vert
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  const mat = new THREE.LineBasicMaterial({vertexColors: true, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending});
+  warpStreaks = new THREE.LineSegments(geo, mat);
+  warpStreaks.frustumCulled = false;
+  warpStreaks.visible = false;
+  scene.add(warpStreaks);
+  // Initialize velocities (random lateral offsets)
+  warpStreakVelocities = new Float32Array(WARP_STREAK_COUNT * 3);
+  for(let i = 0; i < WARP_STREAK_COUNT; i++){
+    resetStreak(i);
+  }
+}
+function resetStreak(i){
+  const pos = warpStreaks.geometry.attributes.position.array;
+  const col = warpStreaks.geometry.attributes.color.array;
+  // Random position in a cylinder around the camera forward axis
+  const lateral = 0.5 + Math.random() * 4;  // distance from center
+  const angle = Math.random() * Math.PI * 2;
+  const x = Math.cos(angle) * lateral;
+  const y = Math.sin(angle) * lateral;
+  const z = -(Math.random() * 10 + 2); // ahead of camera
+  // Head position
+  pos[i*6+0] = x; pos[i*6+1] = y; pos[i*6+2] = z;
+  // Tail position (slightly behind head)
+  pos[i*6+3] = x; pos[i*6+4] = y; pos[i*6+5] = z + 0.1;
+  // Color: blue-white, brighter near center
+  const brightness = Math.max(0.3, 1.0 - lateral / 5);
+  col[i*6+0] = 0.6*brightness; col[i*6+1] = 0.8*brightness; col[i*6+2] = brightness;
+  col[i*6+3] = 0.3*brightness; col[i*6+4] = 0.5*brightness; col[i*6+5] = 0.8*brightness;
+  // Velocity (z speed)
+  warpStreakVelocities[i*3+0] = 0;
+  warpStreakVelocities[i*3+1] = 0;
+  warpStreakVelocities[i*3+2] = 20 + Math.random() * 40; // speed along z
+}
+function updateWarpStreaks(dt, speedFactor){
+  if(!warpStreaks) return;
+  const pos = warpStreaks.geometry.attributes.position.array;
+  const col = warpStreaks.geometry.attributes.color.array;
+  const streakLength = 0.05 + speedFactor * 2.0; // streaks elongate with speed
+  for(let i = 0; i < WARP_STREAK_COUNT; i++){
+    const speed = warpStreakVelocities[i*3+2] * speedFactor;
+    // Move head forward (toward camera = +z)
+    pos[i*6+2] += speed * dt;
+    // Tail trails behind
+    pos[i*6+5] = pos[i*6+2] - streakLength;
+    // Fade color based on speed (dimmer during decel)
+    const fade = Math.min(1.0, speedFactor * 1.5);
+    col[i*6+0] *= 0.99; col[i*6+1] *= 0.99; col[i*6+2] *= 0.99;
+    col[i*6+3] *= 0.99; col[i*6+4] *= 0.99; col[i*6+5] *= 0.99;
+    // Reset if past camera, but only spawn new ones proportional to speed
+    if(pos[i*6+2] > 3){
+      if(Math.random() < speedFactor){
+        resetStreak(i);
+      } else {
+        // Hide this streak (move off-screen)
+        pos[i*6+2] = -100; pos[i*6+5] = -100;
+      }
+    }
+  }
+  warpStreaks.geometry.attributes.position.needsUpdate = true;
+  warpStreaks.geometry.attributes.color.needsUpdate = true;
+}
+createWarpStreaks();
+
 // ── Animation Loop ──
 let lastFrameTime = 0;
 function animate(now){
@@ -907,6 +980,7 @@ function animate(now){
         window._warpLsgData = null;
 
         document.getElementById('warpTarget').textContent = '';
+        if(warpStreaks) warpStreaks.visible = false;
         fetch('/api/player/position', {method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({x:playerPos.x, y:playerPos.y, z:playerPos.z, speed:0,
             hx:playerHeading.x, hy:playerHeading.y, hz:playerHeading.z, state:'idle'})
@@ -920,6 +994,20 @@ function animate(now){
       document.getElementById('speedBar').style.width = Math.min(100, (elapsed / arriveEnd) * 100) + '%';
       document.getElementById('shipSpeed').textContent = displayMs > 1000000 ? (displayMs/1000000).toFixed(1) + ' Mm/s' : displayMs > 1000 ? (displayMs/1000).toFixed(1) + ' km/s' : Math.round(displayMs) + ' m/s';
       document.getElementById('warpTarget').textContent = elapsed < departEnd ? 'Departing' : elapsed < cruiseEnd ? 'Warping' : 'Arriving';
+      // Warp streaks: visible during transit, intensity based on speed
+      const streakIntensity = Math.min(1.0, warpSpeed / WARP_AU_SPEED);
+      if(warpStreaks){
+        warpStreaks.visible = streakIntensity > 0.05;
+        if(warpStreaks.visible){
+          // Keep streaks centered on camera, oriented along warp heading (not camera look)
+          warpStreaks.position.copy(camera.position);
+          // Build quaternion from warp heading direction
+          const lookMat = new THREE.Matrix4().lookAt(new THREE.Vector3(0,0,0), warpHeading, new THREE.Vector3(0,1,0));
+          warpStreaks.quaternion.setFromRotationMatrix(lookMat);
+          updateWarpStreaks(dt, streakIntensity);
+        }
+        warpStreaks.material.opacity = 0.3 + streakIntensity * 0.5;
+      }
     }
 
     // ── Player Ship Physics (CLIENT-AUTHORITATIVE, ship moves in world space) ──
@@ -1006,27 +1094,7 @@ function animate(now){
     // ── Starfield: follow camera (skybox behavior, no parallax) ──
     if(starField){
       starField.position.copy(camera.position);
-      // Warp jitter effect
-      if(warpState === 'warping' && starFieldBasePositions){
-        const arr = starField.geometry.attributes.position.array;
-        const time = now * 0.01;
-        for(let i=0; i<arr.length; i+=3){
-          // Stretch stars along the warp direction
-          const bx = starFieldBasePositions[i], by = starFieldBasePositions[i+1], bz = starFieldBasePositions[i+2];
-          // Add a slight jitter/streak along warp heading
-          const dot = bx*warpHeading.x + by*warpHeading.y + bz*warpHeading.z;
-          const streak = 0.15 * Math.sin(time + i*0.1);
-          arr[i] = bx + warpHeading.x * dot * streak;
-          arr[i+1] = by + warpHeading.y * dot * streak;
-          arr[i+2] = bz + warpHeading.z * dot * streak;
-        }
-        starField.geometry.attributes.position.needsUpdate = true;
-        // Also scale star size during warp for motion blur feel
-        starField.material.size = 1.5 + Math.abs(Math.sin(time*0.5))*1.5;
-      } else {
-        // Reset if not warping
-        if(starField.material.size !== 1.5) starField.material.size = 1.5;
-      }
+      starField.position.copy(camera.position);
     }
 
     // ── NPC Ships (SERVER-AUTHORITATIVE, interpolated, world space) ──
