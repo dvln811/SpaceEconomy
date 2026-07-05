@@ -58,9 +58,10 @@ def generate():
                 obj_count += 1
                 mid = f"obj_{obj_count:06d}"
                 mname = f"{pname}-{'abc'[mi]}"
-                mdist = dist + 0.3 + mi * 0.2
-                mangle = angle + random.uniform(-0.3, 0.3)
-                objects.append((mid, mname, sid, 'moon', round(mdist, 2), round(mangle, 4), pid, ''))
+                # Moon distance/angle are RELATIVE TO PARENT PLANET
+                mdist = 0.003 + mi * 0.002 + random.uniform(0, 0.001)  # 0.003-0.007 AU from parent (~450k-1M km)
+                mangle = random.uniform(0, 2 * math.pi)  # angle around parent
+                objects.append((mid, mname, sid, 'moon', round(mdist, 4), round(mangle, 4), pid, ''))
 
         # Stations (placed at mid-range distances)
         stations = conn.execute("SELECT id, name FROM stations WHERE system_id=?", (sid,)).fetchall()

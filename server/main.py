@@ -843,20 +843,26 @@ def api_lsg_data(target_obj_id):
                 orbit_dist = 100000 if o.obj_type == 'planet' else 50000
                 ox = orbit_dist * _math.cos(angle)
                 oz = orbit_dist * _math.sin(angle)
-            elif not is_anchor and o.obj_type in ('planet', 'moon'):
-                # Nearby planet/moon: place if within 3 AU of anchor in SS space
+                # Y offset from orbital inclination (hash-based, matches map view)
+                h = sum(ord(c) * (31**i) for i, c in enumerate(o.id)) & 0xFFFFFFFF
+                oy = ((h % 100) / 100.0 - 0.5) * orbit_dist * 0.05
+            elif not is_anchor and o.obj_type == 'planet':
+                # Nearby planet: place if within 3 AU of anchor in SS space
                 ss_dist = _math.sqrt((o.ss_x - target_ss_x)**2 + (o.ss_z - target_ss_z)**2)
                 if ss_dist < 3.0 and ss_dist > 0.01:
-                    # Place at large offset based on SS direction from anchor
                     dir_x = o.ss_x - target_ss_x
                     dir_z = o.ss_z - target_ss_z
                     d = _math.sqrt(dir_x**2 + dir_z**2) or 1
-                    # Scale: 1 AU of SS separation = 100,000 LSG units offset
                     lsg_dist = ss_dist * 100000
                     ox = (dir_x / d) * lsg_dist
                     oz = (dir_z / d) * lsg_dist
+                    h = sum(ord(c) * (31**i) for i, c in enumerate(o.id)) & 0xFFFFFFFF
+                    oy = ((h % 100) / 100.0 - 0.5) * lsg_dist * 0.05
                 else:
                     continue  # too far, don't include in LSG
+            elif not is_anchor and o.obj_type == 'moon':
+                # Moon: place relative to parent planet (skip for now, second pass below)
+                continue
             
             objects.append({'id': o.id, 'name': o.name, 'type': o.obj_type,
                     'x': round(ox, 1), 'y': round(oy, 1), 'z': round(oz, 1),
@@ -866,6 +872,30 @@ def api_lsg_data(target_obj_id):
                     'parent': o.parent,
                     'ss_x': round(o.ss_x, 4), 'ss_z': round(o.ss_z, 4),
                     'is_anchor': is_anchor})
+
+        # Second pass: place moons relative to their parent planet
+        planet_positions = {obj['id']: (obj['x'], obj['y'], obj['z']) for obj in objects if obj['type'] == 'planet'}
+        for o in local_space.objects:
+            if o.obj_type != 'moon' or o.id == target_obj_id:
+                continue  # skip non-moons and anchor moons (already placed)
+            if not o.parent or o.parent not in planet_positions:
+                continue  # no parent planet placed
+            px, py, pz = planet_positions[o.parent]
+            # Place moon at 50,000-80,000 PU from parent planet (outside planet radius)
+            h = sum(ord(c) * (31**i) for i, c in enumerate(o.id)) & 0xFFFFFFFF
+            moon_angle = (h % 628) / 100.0  # 0 to 6.28
+            moon_dist = 50000 + (h % 30000)  # 50k-80k PU from parent
+            mx = px + moon_dist * _math.cos(moon_angle)
+            mz = pz + moon_dist * _math.sin(moon_angle)
+            my = py + ((h % 50) / 50.0 - 0.5) * 1000  # slight Y offset from parent
+            objects.append({'id': o.id, 'name': o.name, 'type': o.obj_type,
+                    'x': round(mx, 1), 'y': round(my, 1), 'z': round(mz, 1),
+                    'station_id': o.station_id,
+                    'au_distance': round(o.au_distance, 4),
+                    'connects_to': o.connects_to,
+                    'parent': o.parent,
+                    'ss_x': round(o.ss_x, 4), 'ss_z': round(o.ss_z, 4),
+                    'is_anchor': False})
 
         # Get ships near the target
         ships = [s.to_dict() for s in local_space.ships.values() if not s.is_player][:20]
@@ -1249,7 +1279,7 @@ def api_system(system_id):
                 return jsonify({"tick": sim.tick_count, "changed": False})
 
     sys_obj = sim.universe[system_id]
-    objects = [{"id": o.id, "name": o.name, "type": o.obj_type, "distance": o.distance, "angle": round(o.angle, 4), "connects_to": o.connects_to, "parent": o.parent, "station_id": getattr(o, 'station_id', '')} for o in sys_obj.objects]
+    objects = [{"id": o.id, "name": o.name, "type": o.obj_type, "distance": o.distance, "angle": round(o.angle, 4), "connects_to": o.connects_to, "parent": o.parent, "station_id": getattr(o, 'station_id', ''), "is_anchor": (o.id == local_space._anchor_id)} for o in sys_obj.objects]
     # Ships in this system
     ships_here = []
     for s in sim.ships:

@@ -316,10 +316,24 @@ class LocalSpaceWorker:
             # Camera orbit: 80m = 0.8 units.
 
             self.objects = []
+            # First pass: compute all SS positions (need parent positions for moons)
+            obj_ss = {}  # id -> (ss_x, ss_z)
             for obj in system_objects:
-                # Store SS coordinates (AU-based polar -> cartesian) for nav display
+                if obj.obj_type == 'moon' and obj.parent:
+                    continue  # handle in second pass
                 ss_x = obj.distance * math.cos(obj.angle)
                 ss_z = obj.distance * math.sin(obj.angle)
+                obj_ss[obj.id] = (ss_x, ss_z)
+            # Second pass: moons relative to parent
+            for obj in system_objects:
+                if obj.obj_type == 'moon' and obj.parent:
+                    parent_ss = obj_ss.get(obj.parent, (0, 0))
+                    ss_x = parent_ss[0] + obj.distance * math.cos(obj.angle)
+                    ss_z = parent_ss[1] + obj.distance * math.sin(obj.angle)
+                    obj_ss[obj.id] = (ss_x, ss_z)
+            # Build object list
+            for obj in system_objects:
+                ss_x, ss_z = obj_ss.get(obj.id, (0, 0))
                 # LSG position: not placed in grid by default (0,0,0 means "not in local space")
                 # Only the anchor target and nearby objects get real LSG positions
                 self.objects.append(SystemObject(obj.id, obj.name, obj.obj_type, 0, 0, 0,

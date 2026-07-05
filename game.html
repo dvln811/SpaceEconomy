@@ -140,8 +140,9 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
 .sysview-titlebar .sv-close{margin-left:auto;width:18px;height:18px;border:none;background:none;color:#8aa0b8;cursor:pointer;font-size:15px;border-radius:3px}
 .sysview-titlebar .sv-close:hover{background:#1a0a0a;color:#ef5350}
 .sysview-body{flex:1;position:relative;overflow:hidden}
-.sysview-tooltip{position:absolute;pointer-events:none;background:#0a0f1a;border:1px solid #1a2844;border-radius:4px;padding:6px 10px;font-size:12px;max-width:180px;box-shadow:0 4px 12px rgba(0,0,0,0.5);opacity:0;transition:opacity .12s;z-index:10}
+.sysview-tooltip{position:fixed;background:#0a0f1a;border:1px solid #1a2844;border-radius:4px;padding:6px 10px;font-size:12px;max-width:220px;box-shadow:0 4px 12px rgba(0,0,0,0.5);opacity:0;transition:opacity .12s;z-index:100}
 .sysview-tooltip.visible{opacity:1}
+.sysview-tooltip.has-moons{pointer-events:auto}
 .sysview-tooltip .tt-name{color:#e0e8f0;font-weight:500;margin-bottom:2px}
 .sysview-tooltip .tt-type{color:#4fc3f7;font-size:12px;text-transform:uppercase;letter-spacing:1px}
 .sysview-tooltip .tt-detail{color:#8aa0b8;margin-top:3px}
@@ -236,13 +237,15 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
           <div class="tt-name"></div>
           <div class="tt-type"></div>
           <div class="tt-detail"></div>
+          <div class="mc-moons" id="moonCallout" style="display:none;margin-top:6px;border-top:1px solid #1a2844;padding-top:4px"></div>
         </div>
         <div class="sysview-zoom">
           <button id="svZoomIn">+</button>
           <button id="svZoomOut">&minus;</button>
         </div>
       </div>
-      <div id="svSidebar" style="width:180px;overflow-y:auto;background:#0a0e18;border-left:1px solid #1a2844;padding:8px;font-size:12px;flex-shrink:0;display:flex;flex-direction:column">
+      <div class="side-handle" id="sv-sidebar-handle"></div>
+      <div id="svSidebar" style="width:180px;overflow-y:auto;background:#0a0e18;border-left:none;padding:8px;font-size:12px;flex-shrink:0;display:flex;flex-direction:column">
         <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#8aa0b8;letter-spacing:1px;margin-bottom:4px">SOLAR BODIES</div>
         <div id="svBodiesList" style="max-height:45%;overflow-y:auto;margin-bottom:6px;border-bottom:1px solid #1a2844;padding-bottom:6px"></div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#8aa0b8;letter-spacing:1px;margin-bottom:4px">SHIPS</div>
@@ -326,6 +329,21 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   document.addEventListener('mouseup',()=>{
     if(rdrag){rdrag=false;document.body.style.cursor='';}
   });
+})();
+
+// System view sidebar resize
+(function(){
+  const sidebar=document.getElementById('svSidebar');
+  const handle=document.getElementById('sv-sidebar-handle');
+  if(!handle||!sidebar) return;
+  let dragging=false, startX, startW;
+  handle.addEventListener('mousedown',e=>{dragging=true;startX=e.clientX;startW=sidebar.offsetWidth;document.body.style.cursor='ew-resize';e.preventDefault();});
+  document.addEventListener('mousemove',e=>{
+    if(!dragging)return;
+    const newW=Math.max(140,Math.min(400,startW-(e.clientX-startX)));
+    sidebar.style.width=newW+'px';
+  });
+  document.addEventListener('mouseup',()=>{if(dragging){dragging=false;document.body.style.cursor='';}});
 })();
 </script>
 
@@ -1465,6 +1483,7 @@ const svTitlebar=document.getElementById('sysviewTitlebar');
 const svContainer=document.getElementById('svRenderer');
 const svBody=document.getElementById('sysviewBody');
 const svTooltip=document.getElementById('svTooltip');
+document.body.appendChild(svTooltip); // move to body so overflow:hidden parents can't clip
 
 let svData=null, svShipPos={}, svCurrentId='', svHovered=null;
 let svDragging=false, svDragOff={x:0,y:0};
@@ -1496,6 +1515,25 @@ const svRadarGroup=new THREE.Group(); svScene.add(svRadarGroup);
 const svObjectsGroup=new THREE.Group(); svScene.add(svObjectsGroup);
 const svLabelsGroup=new THREE.Group(); svScene.add(svLabelsGroup);
 const svShipsGroup=new THREE.Group(); svScene.add(svShipsGroup);
+// Player position marker (orange ring sprite, constant screen size)
+const svPlayerMarker = (function(){
+  // Create ring texture
+  const c=document.createElement('canvas'); c.width=64; c.height=64;
+  const cx=c.getContext('2d');
+  cx.strokeStyle='#f0a030'; cx.lineWidth=3;
+  cx.beginPath(); cx.arc(32,32,26,0,Math.PI*2); cx.stroke();
+  // Small crosshair
+  cx.lineWidth=1;
+  cx.beginPath(); cx.moveTo(32,20); cx.lineTo(32,12); cx.moveTo(32,44); cx.lineTo(32,52);
+  cx.moveTo(20,32); cx.lineTo(12,32); cx.moveTo(44,32); cx.lineTo(52,32); cx.stroke();
+  const tex = new THREE.CanvasTexture(c);
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, sizeAttenuation:false, depthTest:false}));
+  spr.scale.set(0.025, 0.025, 1);
+  spr.renderOrder = 999;
+  spr.visible = false;
+  svScene.add(spr);
+  return spr;
+})();
 
 // Lighting for 3D ship models
 svScene.add(new THREE.AmbientLight(0x4fc3f7, 0.4));
@@ -1542,6 +1580,13 @@ function makeDiamondTexture(color, size){
   cx.fillStyle=color; cx.fill();
   return new THREE.CanvasTexture(c);
 }
+function makeTriangleTexture(color, size){
+  const c=document.createElement('canvas'); c.width=size; c.height=size;
+  const cx=c.getContext('2d');
+  cx.beginPath(); cx.moveTo(size/2, 0); cx.lineTo(size, size); cx.lineTo(0, size); cx.closePath();
+  cx.fillStyle=color; cx.fill();
+  return new THREE.CanvasTexture(c);
+}
 
 // Resize
 function svResize(){
@@ -1568,9 +1613,9 @@ svEl.addEventListener('mousemove',e=>{svHandleHover(e);});
 
 function svPolar(d,a,name){
   const x=d*40*Math.cos(a), z=d*40*Math.sin(a);
-  // Slight Y variance based on name hash for 3D depth (realistic orbital inclination)
+  // Y variance based on name hash for 3D depth (orbital inclination)
   let h=0;if(name){for(let i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))|0;}
-  const y=((h%100)/100-0.5)*d*4; // ±2x distance as max Y offset
+  const y=((h%100)/100-0.5)*d*12; // ±6x distance as max Y offset (noticeable inclination)
   return{x,y,z};
 }
 
@@ -1587,13 +1632,16 @@ function svHandleHover(e){
   svMouse.x=(mx/rect.width)*2-1;
   svMouse.y=-(my/rect.height)*2+1;
   svRaycaster.setFromCamera(svMouse,svCam);
-  // Check objects by distance to ray
-  let closest=null, closestD=20;
+  // Check objects by distance to ray (scale threshold with camera distance for consistent hit area)
+  const camDist = svCam.position.length();
+  const hitThreshold = Math.max(3, camDist * 0.02); // ~2% of screen at any zoom
+  let closest=null, closestD=hitThreshold;
   for(const op of svObjPositions){
     const pt=new THREE.Vector3(op.x,op.y,op.z||0);
     const d=svRaycaster.ray.distanceToPoint(pt);
     if(d<closestD){closest=op.obj;closestD=d;}
   }
+  const moonCallout = document.getElementById('moonCallout');
   if(closest){
     svHovered=closest;
     svTooltip.querySelector('.tt-name').textContent=closest.name;
@@ -1604,9 +1652,32 @@ function svHandleHover(e){
     else if(closest.type==='asteroid_belt')det='Mineable field';
     else if(closest.type==='moon')det='Moon';
     svTooltip.querySelector('.tt-detail').textContent=det;
-    svTooltip.style.left=(mx+14)+'px';svTooltip.style.top=(my-8)+'px';
+    // Position: upper-left corner at cursor, only set on new object
+    if(svTooltip.dataset.objId !== closest.id){
+      svTooltip.dataset.objId = closest.id;
+      svTooltip.style.left = (e.clientX + 12) + 'px';
+      svTooltip.style.top = (e.clientY + 4) + 'px';
+    }
     svTooltip.classList.add('visible');
-  }else{svHovered=null;svTooltip.classList.remove('visible');}
+    // Moon callout for planets with moons (inline in tooltip)
+    const moonCallout = document.getElementById('moonCallout');
+    if(closest.type==='planet'){
+      const moons = svData.objects.filter(o => o.type==='moon' && o.parent===closest.id);
+      if(moons.length > 0){
+        moonCallout.style.display = '';
+        moonCallout.innerHTML = moons.map(m =>
+          `<div class="mc-moon-item" data-id="${m.id}" data-name="${m.name}" data-type="moon" style="padding:2px 0;cursor:pointer;color:#8aaaba;font-size:11px">○ ${m.name} <span style="color:#5a7a9a;font-size:9px">${(m.distance*150000).toFixed(0)}k km</span></div>`
+        ).join('');
+        svTooltip.classList.add('has-moons');
+      } else {
+        moonCallout.style.display = 'none';
+        svTooltip.classList.remove('has-moons');
+      }
+    } else {
+      moonCallout.style.display = 'none';
+      svTooltip.classList.remove('has-moons');
+    }
+  }else{svHovered=null;svTooltip.classList.remove('visible');svTooltip.classList.remove('has-moons');svTooltip.dataset.objId='';document.getElementById('moonCallout').style.display='none';}
 }
 
 // Click to select objects
@@ -1623,6 +1694,18 @@ svEl.addEventListener('click',e=>{
     if(d<closestD){closest=op.obj;closestD=d;}
   }
   if(closest){svSelectedShip=null;svShowObjectInfo(closest);}
+});
+// Moon callout click - select/warp to moon
+document.getElementById('svTooltip').addEventListener('click', e=>{
+  const item = e.target.closest('.mc-moon-item');
+  if(!item || !svData) return;
+  const moonObj = svData.objects.find(o => o.id === item.dataset.id);
+  if(moonObj){svSelectedShip=null;svShowObjectInfo(moonObj);}
+});
+document.getElementById('svTooltip').addEventListener('mouseleave', ()=>{
+  svTooltip.classList.remove('visible');
+  svTooltip.classList.remove('has-moons');
+  document.getElementById('moonCallout').style.display='none';
 });
 
 function svUpdateTargets(){
@@ -1738,67 +1821,58 @@ function svBuildScene(){
     if(obj.type==='planet'){
       const r=obj.distance*40;
       const pPos=svPolar(obj.distance,obj.angle,obj.name);
-      const pts=[];for(let i=0;i<=64;i++){const a=Math.PI*2*i/64;pts.push(new THREE.Vector3(Math.cos(a)*r,pPos.y,Math.sin(a)*r));}
+      // Tilted orbit: Y varies sinusoidally so planet's side is at pPos.y, opposite side at -pPos.y
+      const pts=[];for(let i=0;i<=64;i++){const a=Math.PI*2*i/64;pts.push(new THREE.Vector3(Math.cos(a)*r, pPos.y*Math.cos(a-obj.angle), Math.sin(a)*r));}
       const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0xccddee,transparent:true,opacity:0.2}));
       svOrbitsGroup.add(line);
     }else if(obj.type==='moon'&&obj.parent){
-      const par=svData.objects.find(p=>p.id===obj.parent);
-      if(par){
-        const pc=svPolar(par.distance,par.angle,par.name);
-        const mr=(obj.distance-par.distance)*40;
-        const pts=[];for(let i=0;i<=32;i++){const a=Math.PI*2*i/32;pts.push(new THREE.Vector3(pc.x+Math.cos(a)*mr,pc.y,pc.z+Math.sin(a)*mr));}
-        svOrbitsGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0xaabbcc,transparent:true,opacity:0.15})));
-      }
+      // Moons shown in planet hover callout, not on main map
     }
   }
 
   // Objects as sprites
   for(const obj of svData.objects){
-    const wp=svPolar(obj.distance,obj.angle,obj.name);
+    // Skip moons in main map (shown in planet hover callout instead)
+    if(obj.type === 'moon') continue;
+    // Position calculation
+    let wp;
+    if(obj.type==='moon' && obj.parent){
+      const par = svData.objects.find(p=>p.id===obj.parent);
+      if(par){
+        const pc = svPolar(par.distance, par.angle, par.name);
+        const mr = obj.distance * 40;
+        wp = {x: pc.x + Math.cos(obj.angle)*mr, y: pc.y, z: pc.z + Math.sin(obj.angle)*mr};
+      } else {
+        wp = svPolar(obj.distance, obj.angle, obj.name);
+      }
+    } else {
+      wp = svPolar(obj.distance, obj.angle, obj.name);
+    }
     const col=SV_HEX[obj.type]||'#8aa0b8';
     const colInt=SV_COLORS[obj.type]||0x5a7a9a;
     svObjPositions.push({obj,x:wp.x,y:wp.y,z:wp.z});
 
-    if(obj.type==='belt'){
-      // Dashed arc for asteroid belt
-      const r=obj.distance*40;
-      const pts=[];for(let i=0;i<=24;i++){const a=obj.angle-0.5+1.0*i/24;pts.push(new THREE.Vector3(Math.cos(a)*r,wp.y,Math.sin(a)*r));}
-      const bLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineDashedMaterial({color:0xccaa55,dashSize:4,gapSize:2,transparent:true,opacity:0.7}));
-      bLine.computeLineDistances();
-      svObjectsGroup.add(bLine);
-      // Scatter a few small dots along the arc for "rocks" look
-      for(let i=0;i<6;i++){const a=obj.angle-0.4+0.8*Math.random();const rr=r+_rng(-3,3);const dot=new THREE.Sprite(new THREE.SpriteMaterial({map:makeRockTexture(),transparent:true}));dot.position.set(Math.cos(a)*rr,wp.y+_rng(-2,2),Math.sin(a)*rr);dot.scale.set(_rng(3,6),_rng(3,6),1);dot.material.rotation=_rng(0,6.28);svObjectsGroup.add(dot);}
-    }else if(obj.type==='asteroid_belt'){
-      // Arc for belt
-      const r=obj.distance*40;
-      const pts=[];for(let i=0;i<=12;i++){const a=obj.angle-0.25+0.5*i/12;pts.push(new THREE.Vector3(Math.cos(a)*r,wp.y,Math.sin(a)*r));}
-      const bLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineDashedMaterial({color:colInt,dashSize:3,gapSize:3,transparent:true,opacity:0.8}));
-      bLine.computeLineDistances();
-      svObjectsGroup.add(bLine);
-      // Small dot at center
-      const dotSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDotTexture(col,32),transparent:true}));
-      dotSpr.position.set(wp.x,wp.y,wp.z);dotSpr.scale.set(5,5,1);
-      svObjectsGroup.add(dotSpr);
+    if(obj.type==='belt' || obj.type==='asteroid_belt'){
+      const dSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeTriangleTexture(col,64),transparent:true,sizeAttenuation:false}));
+      dSpr.position.set(wp.x,wp.y,wp.z);dSpr.scale.set(0.012,0.012,1);
+      svObjectsGroup.add(dSpr);
     }else if(obj.type==='gate'){
-      // Diamond sprite
-      const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDiamondTexture(col,64),transparent:true}));
-      spr.position.set(wp.x,wp.y,wp.z);spr.scale.set(10,10,1);
+      const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDiamondTexture(col,64),transparent:true,sizeAttenuation:false}));
+      spr.position.set(wp.x,wp.y,wp.z);spr.scale.set(0.015,0.015,1);
       svObjectsGroup.add(spr);
     }else if(obj.type==='star'){
-      // Star gets glow gradient
-      const gSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeGlowTexture(col,128),transparent:true,depthWrite:false}));
-      gSpr.position.set(wp.x,wp.y,wp.z);gSpr.scale.set(50,50,1);
+      const gSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeGlowTexture(col,128),transparent:true,depthWrite:false,sizeAttenuation:false}));
+      gSpr.position.set(wp.x,wp.y,wp.z);gSpr.scale.set(0.036,0.036,1);
       svObjectsGroup.add(gSpr);
-      const dSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDotTexture(col,64),transparent:true}));
-      dSpr.position.set(wp.x,wp.y,wp.z);dSpr.scale.set(12,12,1);
+      const dSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDotTexture(col,64),transparent:true,sizeAttenuation:false}));
+      dSpr.position.set(wp.x,wp.y,wp.z);dSpr.scale.set(0.015,0.015,1);
       svObjectsGroup.add(dSpr);
     }else{
-      // Planets, moons: solid dot. Stations: load 3D model
       if(obj.type==='station' && obj.station_id){
         svLoadStationModel(obj.station_id, wp);
       } else {
-        const dotSize=obj.type==='planet'?8:obj.type==='moon'?4:6;
-        const dSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDotTexture(col,64),transparent:true}));
+        const dotSize=obj.type==='planet'?0.015:0.01;
+        const dSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeDotTexture(col,64),transparent:true,sizeAttenuation:false}));
         dSpr.position.set(wp.x,wp.y,wp.z);dSpr.scale.set(dotSize,dotSize,1);
         svObjectsGroup.add(dSpr);
       }
@@ -1806,9 +1880,13 @@ function svBuildScene(){
     // Label for all bodies
     const lDiv=document.createElement('div');
     lDiv.className='system-label';lDiv.textContent=obj.name.replace(' Star','');
-    lDiv.style.fontSize='8px';lDiv.style.color=col;
+    // Brighten gates and asteroid fields for readability
+    let labelCol = col;
+    if(obj.type==='gate') labelCol = '#d090f0';
+    else if(obj.type==='belt' || obj.type==='asteroid_belt') labelCol = '#e0c060';
+    lDiv.style.cssText='font-size:10px;color:'+labelCol+';position:relative;top:-20px;text-align:center;pointer-events:none';
     const lbl=new CSS2DObject(lDiv);
-    lbl.position.set(wp.x,wp.y+5,wp.z);
+    lbl.position.set(wp.x,wp.y,wp.z);
     svLabelsGroup.add(lbl);
   }
 }
@@ -1817,14 +1895,63 @@ function svBuildBodiesList(){
   const el=document.getElementById('svBodiesList');
   if(!el||!svData)return;
   el.innerHTML='';
-  for(const obj of svData.objects){
+  // Find player anchor position
+  const anchor = svData.objects.find(o=>o.is_anchor);
+  let anchorSS = {x:0, z:0};
+  if(anchor){
+    if(anchor.type==='moon'){
+      const par = svData.objects.find(p=>p.id===anchor.parent);
+      if(par){ anchorSS = {x: par.distance*Math.cos(par.angle), z: par.distance*Math.sin(par.angle)}; }
+    } else {
+      anchorSS = {x: anchor.distance*Math.cos(anchor.angle), z: anchor.distance*Math.sin(anchor.angle)};
+    }
+  }
+  // Position player marker at anchor
+  if(anchor){
+    let pp;
+    if(anchor.type==='moon' && anchor.parent){
+      const par = svData.objects.find(p=>p.id===anchor.parent);
+      if(par){ pp = svPolar(par.distance, par.angle, par.name); }
+      else { pp = {x:0,y:0,z:0}; }
+    } else {
+      pp = svPolar(anchor.distance, anchor.angle, anchor.name);
+    }
+    svPlayerMarker.position.set(pp.x, pp.y, pp.z);
+    svPlayerMarker.visible = true;
+  } else {
+    svPlayerMarker.visible = false;
+  }
+  // Compute distances and sort
+  const sorted = svData.objects.filter(o=>o.type!=='star').map(o=>{
+    let ss;
+    if(o.type==='moon' && o.parent){
+      const par = svData.objects.find(p=>p.id===o.parent);
+      if(par){ ss={x: par.distance*Math.cos(par.angle)+o.distance*Math.cos(o.angle), z: par.distance*Math.sin(par.angle)+o.distance*Math.sin(o.angle)}; }
+      else { ss={x:o.distance*Math.cos(o.angle), z:o.distance*Math.sin(o.angle)}; }
+    } else {
+      ss={x: o.distance*Math.cos(o.angle), z: o.distance*Math.sin(o.angle)};
+    }
+    const dx=ss.x-anchorSS.x, dz=ss.z-anchorSS.z;
+    const auDist = Math.sqrt(dx*dx+dz*dz);
+    return {obj:o, auDist};
+  }).sort((a,b)=>a.auDist-b.auDist);
+
+  for(const {obj, auDist} of sorted){
     const div=document.createElement('div');
-    div.style.cssText='padding:3px 0;border-bottom:1px solid #0a1420;cursor:pointer;user-select:none;color:#b0c4d8';
+    div.style.cssText='padding:3px 0;border-bottom:1px solid #0a1420;cursor:pointer;user-select:none;color:#b0c4d8;display:flex;justify-content:space-between;font-size:11px';
     const col=SV_HEX[obj.type]||'#8aa0b8';
-    div.innerHTML=`<span style="color:${col}">● </span>${obj.name.replace(' Star','')}`;
+    const distStr = auDist < 0.001 ? 'HERE' : auDist.toFixed(2)+' AU';
+    div.innerHTML=`<span><span style="color:${col}">● </span>${obj.name.replace(' Star','')}</span><span style="color:#5a7a9a;font-size:10px">${distStr}</span>`;
     div.addEventListener('click',()=>{svSelectedShip=null;svShowObjectInfo(obj);});
     div.addEventListener('dblclick',()=>{
-      const pos=svPolar(obj.distance,obj.angle,obj.name);
+      let pos;
+      if(obj.type==='moon' && obj.parent){
+        const par = svData.objects.find(p=>p.id===obj.parent);
+        if(par){ pos = svPolar(par.distance, par.angle, par.name); }
+        else { pos = svPolar(obj.distance, obj.angle, obj.name); }
+      } else {
+        pos = svPolar(obj.distance, obj.angle, obj.name);
+      }
       svControls.target.set(pos.x,pos.y,pos.z);svCam.position.set(pos.x+30,pos.y+20,pos.z+30);svControls.update();
     });
     el.appendChild(div);
@@ -2023,7 +2150,8 @@ async function svFetch(){
   try{const r=await fetch('/api/system/'+svCurrentId);if(r.ok){
     svData=await r.json();
     svUpdateTargets();
-    if(svBuiltForId!==svCurrentId){svBuildScene();svBuildBodiesList();svBuiltForId=svCurrentId;}
+    if(svBuiltForId!==svCurrentId){svBuildScene();svBuiltForId=svCurrentId;}
+    svBuildBodiesList(); // always refresh (anchor/distances change after warp)
   }}catch(e){}
 }
 setInterval(svFetch,3000);

@@ -7,11 +7,14 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:12px;height:100vh;overflow:hidden}
 .layout{display:grid;height:100vh;gap:0}
-.layout.docked{grid-template-columns:1fr 300px}
-.layout.flight{grid-template-columns:1fr 240px}
+.layout.docked{grid-template-columns:1fr 4px 300px}
+.layout.flight{grid-template-columns:1fr 4px 240px}
 .viewport{position:relative;overflow:hidden;background:#080c14}
 .viewport canvas{display:block}
-.panel{background:#0a0e18;border-left:1px solid #1a2844;padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.panel{background:#0a0e18;border-left:none;padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.panel-handle{width:4px;background:#0a0f1a;cursor:ew-resize;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.panel-handle:hover{background:#1a2844}
+.panel-handle::after{content:'';width:2px;height:30px;background:#8aa0b8;border-radius:1px}
 h2{color:#4fc3f7;font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
 .stat-row{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #0f1520}
 .stat-row .label{color:#5a7a9a}.stat-row .val{color:#e0e8f0}
@@ -52,6 +55,7 @@ h2{color:#4fc3f7;font-size:12px;letter-spacing:1px;text-transform:uppercase;marg
     <div class="ctx-menu" id="ctxMenu"></div>
     <div id="fadeOverlay" style="position:absolute;inset:0;background:#020308;z-index:50;pointer-events:none;transition:opacity 2s;opacity:1"></div>
   </div>
+  <div class="panel-handle" id="panelHandle"></div>
   <div class="panel" id="panel">
     <div id="dockedPanel">
       <h2>Ship</h2>
@@ -1311,23 +1315,35 @@ function updateUI(state){
 function renderNavList(objects, playerShip){
   const px = playerShip.x, py = playerShip.y, pz = playerShip.z;
   const nav = document.getElementById('navObjects');
-  nav.innerHTML = objects.filter(o=>o.type!=='star').map(o=>{
-    const icon = o.type==='gate'?'&#9674;':o.type==='station'?'&#9632;':o.type==='planet'?'&#9679;':'&#8226;';
-    const color = o.type==='gate'?'#ab47bc':o.type==='station'?'#4fc3f7':'#8aa0b8';
-    // Distance display: anchor objects use local LSG distance, others use SS AU distance
-    let distStr;
-    if(o.is_anchor){
-      // Local distance from player to anchor (in LSG units, 1 unit = 1cm)
-      const dx = o.x - px, dy = o.y - py, dz = o.z - pz;
+  
+  // Compute distances for each object
+  const objsWithDist = objects.filter(o=>o.type!=='star').map(o=>{
+    let distVal, distStr;
+    const isWarping = (warpState === 'warping' || warpState === 'aligning');
+    const isApproaching = isWarping && window._approachStarted && lsgGroup;
+    const useLocal = (o.is_anchor && !isWarping && lsgGroup) || isApproaching;
+    
+    if(useLocal){
+      // Use local/group-based distance
+      const gx3 = lsgGroup ? lsgGroup.position.x : 0;
+      const gy3 = lsgGroup ? lsgGroup.position.y : 0;
+      const gz3 = lsgGroup ? lsgGroup.position.z : 0;
+      const dx = (o.x+gx3) - px, dy = (o.y+gy3) - py, dz = (o.z+gz3) - pz;
       const distUnits = Math.sqrt(dx*dx + dy*dy + dz*dz);
-      const distM = distUnits * 0.01; // convert cm units to meters for display
-      if(distM < 1000) distStr = Math.round(distM) + ' m';
-      else distStr = (distM / 1000).toFixed(1) + ' km';
+      const distM = distUnits * 100; // PU to meters
+      distVal = distM;
+      if(distM > 150000000){
+        distStr = (distM / 150000000000).toFixed(2) + ' AU';
+      } else if(distM > 1000){
+        distStr = (distM / 1000).toFixed(1) + ' km';
+      } else {
+        distStr = Math.round(distM) + ' m';
+      }
     } else {
-      // SS AU distance from current position (interpolated during warp)
+      // SS AU distance
       let curX = 0, curZ = 0;
-      if((warpState === 'warping' || warpState === 'aligning') && window._warpFromSS){
-        const progress = (warpState === 'warping') ? Math.min(1.0, warpTravelTimer / warpTravelDuration) : 0;
+      if(isWarping && window._warpFromSS){
+        const progress = Math.min(1.0, warpTravelTimer / warpTravelDuration);
         curX = window._warpFromSS.x + (window._warpToSS.x - window._warpFromSS.x) * progress;
         curZ = window._warpFromSS.z + (window._warpToSS.z - window._warpFromSS.z) * progress;
       } else {
@@ -1337,16 +1353,34 @@ function renderNavList(objects, playerShip){
       }
       const adx = o.ss_x - curX, adz = o.ss_z - curZ;
       const auDist = Math.sqrt(adx*adx + adz*adz);
+      distVal = auDist * 150000000000;
       distStr = auDist.toFixed(2) + ' AU';
     }
-    const distKm = o.is_anchor ? 0.01 : 999; // for atLocation check
-    // Mark if player is at this object's LSG
-    const atLocation = o.is_anchor;
+    return {...o, distVal, distStr};
+  });
+  
+  // Sort: default by distance, can be overridden
+  const sortMode = window._navSortMode || 'distance';
+  if(sortMode === 'distance') objsWithDist.sort((a,b) => a.distVal - b.distVal);
+  else if(sortMode === 'name') objsWithDist.sort((a,b) => a.name.localeCompare(b.name));
+  else if(sortMode === 'type') objsWithDist.sort((a,b) => a.type.localeCompare(b.type) || a.distVal - b.distVal);
+
+  // Sort header
+  const sortHtml = `<div style="display:flex;gap:6px;margin-bottom:4px;font-size:9px;color:#5a7a9a">
+    <span style="cursor:pointer;${sortMode==='distance'?'color:#4fc3f7':''}" onclick="window._navSortMode='distance'">Dist</span>
+    <span style="cursor:pointer;${sortMode==='name'?'color:#4fc3f7':''}" onclick="window._navSortMode='name'">Name</span>
+    <span style="cursor:pointer;${sortMode==='type'?'color:#4fc3f7':''}" onclick="window._navSortMode='type'">Type</span>
+  </div>`;
+
+  nav.innerHTML = sortHtml + objsWithDist.map(o=>{
+    const icon = o.type==='gate'?'&#9674;':o.type==='station'?'&#9632;':o.type==='planet'?'&#9679;':'&#8226;';
+    const color = o.type==='gate'?'#ab47bc':o.type==='station'?'#4fc3f7':'#8aa0b8';
+    const atLocation = o.is_anchor && warpState === 'none';
     const destLabel = (o.type==='gate' && o.connects_to) ? ` &rarr; ${o.connects_to}` : '';
     const atStyle = atLocation ? 'opacity:0.5' : '';
     return `<div class="nav-obj" style="padding:3px 4px;cursor:pointer;border-bottom:1px solid #0f1520;display:flex;justify-content:space-between;${atStyle}" data-id="${o.id}" data-name="${o.name}" data-type="${o.type}">
       <span><span style="color:${color}">${icon}</span> ${o.name}<span style="color:#5a7a9a;font-size:9px">${destLabel}</span></span>
-      <span style="color:${atLocation ? '#66bb6a' : '#c8d4e0'};font-size:10px">${atLocation ? 'HERE' : distStr}</span>
+      <span style="color:#c8d4e0;font-size:10px">${o.distStr}</span>
     </div>`;
   }).join('');
   // Show dock button if near a station (within ~3km of any station)
@@ -1984,8 +2018,12 @@ function updateDirectionalLabels(){
       }
     } else if(ssDirLen > 0.001){
       // Place label point very far away in the SS direction (effectively at infinity)
+      // Add Y offset from hash for orbital inclination (matches map/LSG placement)
+      let nameHash = 0;
+      for(let ci=0; ci<obj.name.length; ci++) nameHash = ((nameHash*31)+obj.name.charCodeAt(ci))|0;
+      const yFactor = ((Math.abs(nameHash) % 100) / 100 - 0.5) * 0.05;
       labelX = (ssDirX / ssDirLen) * 100000;
-      labelY = 0;
+      labelY = yFactor * 100000;
       labelZ = (ssDirZ / ssDirLen) * 100000;
     } else {
       label.el.style.display = 'none'; continue;
@@ -2075,7 +2113,100 @@ function updateDirectionalLabels(){
     label.el.style.textShadow = '0 0 4px rgba(0,0,0,0.9)';
     label.el.innerHTML = `${arrow}${icon} ${displayName} <span style="opacity:0.9">${distLabel}</span>`;
   }
+
+  // ── LABEL CLUSTERING: detect overlaps and group ──
+  const CLUSTER_DIST = 25; // px threshold for overlap detection
+  const labelPositions = [];
+  for(let i = 0; i < objs.length; i++){
+    const el = dirLabels[i].el;
+    if(el.style.display === 'none') continue;
+    labelPositions.push({idx: i, x: parseFloat(el.style.left), y: parseFloat(el.style.top), el});
+  }
+  // Find clusters using simple distance grouping
+  const clustered = new Set();
+  const clusters = [];
+  for(let i = 0; i < labelPositions.length; i++){
+    if(clustered.has(i)) continue;
+    const cluster = [labelPositions[i]];
+    clustered.add(i);
+    for(let j = i+1; j < labelPositions.length; j++){
+      if(clustered.has(j)) continue;
+      const dx = labelPositions[i].x - labelPositions[j].x;
+      const dy = labelPositions[i].y - labelPositions[j].y;
+      if(Math.sqrt(dx*dx+dy*dy) < CLUSTER_DIST){
+        cluster.push(labelPositions[j]);
+        clustered.add(j);
+      }
+    }
+    if(cluster.length > 1) clusters.push(cluster);
+  }
+  // For each cluster: hide individual labels, show a cluster indicator
+  // Only remove clusters that aren't being hovered
+  dirLabelContainer.querySelectorAll('.label-cluster').forEach(el => {
+    if(!el._hovered) el.remove();
+  });
+  for(const cluster of clusters){
+    // Hide individual labels in this cluster
+    cluster.forEach(lp => { lp.el.style.display = 'none'; });
+    // Skip creating new cluster element if one is currently hovered at similar position
+    const avgX = cluster.reduce((s,lp)=>s+lp.x, 0) / cluster.length;
+    const avgY = cluster.reduce((s,lp)=>s+lp.y, 0) / cluster.length;
+    const existing = dirLabelContainer.querySelector('.label-cluster._hovered');
+    if(existing){
+      const ex = parseFloat(existing.style.left), ey = parseFloat(existing.style.top);
+      if(Math.abs(ex-avgX)<40 && Math.abs(ey-avgY)<40) continue; // skip, existing hovered one covers this
+    }
+    const clusterEl = document.createElement('div');
+    clusterEl.className = 'label-cluster';
+    clusterEl.style.cssText = `position:absolute;left:${avgX}px;top:${avgY}px;font-family:JetBrains Mono,monospace;font-size:10px;color:#4fc3f7;white-space:nowrap;text-shadow:0 0 4px rgba(0,0,0,0.9);z-index:20;pointer-events:auto;cursor:default;user-select:none`;
+    clusterEl.textContent = `▪ ${cluster.length} objects`;
+    // Build expanded list content
+    const listItems = cluster.map(lp => {
+      const obj = objs[lp.idx];
+      const col = DIR_LABEL_COLORS[obj.type] || '#8aa0b8';
+      const ic = DIR_LABEL_ICONS[obj.type] || '\u2022';
+      return `<div style="padding:2px 0;color:${col}">${ic} ${obj.name}</div>`;
+    }).join('');
+    // Hover: show expanded vertical list
+    const expandEl = document.createElement('div');
+    expandEl.style.cssText = 'display:none;position:absolute;left:0;top:14px;background:rgba(10,14,24,0.95);border:1px solid #1a2844;border-radius:3px;padding:4px 8px;white-space:nowrap;z-index:25;pointer-events:auto;cursor:default;user-select:none';
+    expandEl.innerHTML = listItems;
+    clusterEl.appendChild(expandEl);
+    clusterEl.addEventListener('mouseenter', ()=>{ expandEl.style.display = ''; clusterEl._hovered = true; clusterEl.classList.add('_hovered'); });
+    clusterEl.addEventListener('mouseleave', ()=>{ expandEl.style.display = 'none'; clusterEl._hovered = false; clusterEl.classList.remove('_hovered'); });
+    dirLabelContainer.appendChild(clusterEl);
+  }
 }
+
+// ── Panel Resize (left-edge drag handle) ──
+(function(){
+  const layout = document.getElementById('layout');
+  const handle = document.getElementById('panelHandle');
+  let panelW = 260;
+  let dragging = false, startX, startW;
+
+  function updateGrid(){
+    const mode = isDocked ? 'docked' : 'flight';
+    layout.style.gridTemplateColumns = `1fr 4px ${panelW}px`;
+    window.dispatchEvent(new Event('resize'));
+  }
+
+  handle.addEventListener('mousedown', (e)=>{
+    dragging = true;
+    startX = e.clientX;
+    startW = panelW;
+    document.body.style.cursor = 'ew-resize';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e)=>{
+    if(!dragging) return;
+    panelW = Math.max(180, Math.min(500, startW - (e.clientX - startX)));
+    updateGrid();
+  });
+  document.addEventListener('mouseup', ()=>{
+    if(dragging){ dragging = false; document.body.style.cursor = ''; }
+  });
+})();
 
 // ── Resize Handler ──
 window.addEventListener('resize',()=>{
