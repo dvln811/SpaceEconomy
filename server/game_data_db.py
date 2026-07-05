@@ -133,7 +133,10 @@ def init_data_schema(conn: sqlite3.Connection):
         distance REAL DEFAULT 0,
         angle REAL DEFAULT 0,
         parent TEXT DEFAULT '',
-        connects_to TEXT DEFAULT ''
+        connects_to TEXT DEFAULT '',
+        planet_type TEXT DEFAULT '',
+        radius_km REAL DEFAULT 0,
+        stats TEXT DEFAULT ''
     );
 
     -- Civilian ship types
