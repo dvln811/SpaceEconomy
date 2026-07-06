@@ -690,7 +690,7 @@ let warpSpeed = 0; // current speed in PU/s (for group movement & display)
 let warpBuildReady = false; // true when destination models are built
 let warpGroup = null; // isolated THREE.Group for destination models during build
 // Warp phase timing (fixed departure/arrival, variable cruise)
-const WARP_DEPART_TIME = 4.0;  // seconds for departure phase
+const WARP_DEPART_TIME = 4.0;  // seconds for departure acceleration phase
 const WARP_ARRIVE_TIME = 6.0;  // seconds for arrival phase (longer so planets visible earlier)
 let warpCruiseTime = 0;        // variable: auDist / shipWarpSpeed
 let warpShipAUSpeed = 2.0;    // ship's warp speed in AU/s (from ship stats later)
@@ -846,17 +846,10 @@ function animate(now){
 
       // Determine which phase we're in and compute speed
       if(elapsed < departEnd){
-        // ── DEPARTURE (0 to departEnd): two sub-phases ──
+        // ── DEPARTURE (0 to departEnd): accelerate to AU speed ──
         const t = elapsed / departEnd; // 0→1 over departure
-        if(t < 0.4){
-          // LSG phase: 0→LSG_SPEED (stations fly away)
-          const st = t / 0.4;
-          warpSpeed = WARP_LSG_SPEED * st * st; // quadratic ramp
-        } else {
-          // AU phase: LSG_SPEED→AU_SPEED (planets fly away)
-          const st = (t - 0.4) / 0.6;
-          warpSpeed = WARP_LSG_SPEED + (WARP_AU_SPEED - WARP_LSG_SPEED) * st * st;
-        }
+        // Start at 80% of AU speed, ramp to full — ensures even large planets recede immediately
+        warpSpeed = WARP_AU_SPEED * (0.8 + 0.2 * t);
       } else if(elapsed < cruiseEnd){
         // ── CRUISE: hold at AU speed ──
         warpSpeed = WARP_AU_SPEED;
@@ -875,8 +868,8 @@ function animate(now){
         }
       }
 
-      // ── DEPARTURE MOVEMENT: move old group backward ──
-      if(elapsed < departEnd && !window._approachStarted && lsgGroup){
+      // ── DEPARTURE MOVEMENT: move old group backward until despawned ──
+      if(!window._departDespawned && !window._approachStarted && lsgGroup){
         lsgGroup.position.x -= warpHeading.x * warpSpeed * dt;
         lsgGroup.position.z -= warpHeading.z * warpSpeed * dt;
       }
@@ -900,7 +893,7 @@ function animate(now){
       }
 
       // ── DESPAWN old group at end of departure ──
-      if(elapsed >= departEnd && !window._departDespawned){
+      if(elapsed >= arriveStart && !window._departDespawned){
         window._departDespawned = true;
         if(lsgGroup){
           scene.remove(lsgGroup);
@@ -931,7 +924,7 @@ function animate(now){
           });
           // arrDist preview (need it to ensure spawnDist > arrDist)
           const arrDistPreview = (window._warpBuildResult && window._warpBuildResult.lsgData && window._warpBuildResult.lsgData.arrival_dist) || 100;
-          const spawnDist = Math.max(arrDistPreview * 4, maxChildDist * 3, 50000);
+          const spawnDist = Math.max(arrDistPreview * 20, maxChildDist * 5, 500000);
           window._approachSpawnDist = spawnDist;
 
           // Swap in new group

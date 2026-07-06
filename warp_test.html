@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8"><title>LSG Warp Test</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#05080f;color:#c8d4e0;font-family:monospace;font-size:12px;height:100vh;overflow:hidden}
+#viewport{width:100%;height:100%;position:relative}
+#hud{position:absolute;top:10px;left:10px;z-index:10;display:flex;flex-direction:column;gap:6px}
+button{padding:6px 14px;background:#0d1a2f;border:1px solid #4fc3f7;color:#4fc3f7;cursor:pointer;font:inherit}
+button:hover{background:#4fc3f7;color:#000}
+button:disabled{opacity:0.3;cursor:not-allowed;border-color:#2a3a5a;color:#2a3a5a}
+button:disabled:hover{background:#0d1a2f;color:#2a3a5a}
+#info{position:absolute;bottom:10px;left:10px;z-index:10;background:rgba(10,14,24,0.9);padding:8px 12px;border:1px solid #1a2844;border-radius:4px;max-width:90vw}
+</style>
+</head><body>
+<div id="viewport">
+  <div id="hud">
+    <button id="btn-gate">Warp to Gate</button>
+    <button id="btn-station">Warp to Station</button>
+    <button id="btn-reset-gate">Reset at Gate</button>
+    <button id="btn-reset-station">Reset at Station</button>
+  </div>
+  <div id="info">Speed: 0 m/s | State: idle</div>
+</div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+// ── SCENE SETUP ──
+const container = document.getElementById('viewport');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x020308);
+const camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight, 0.01, 5000000);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(container.clientWidth, container.clientHeight);
+container.appendChild(renderer.domElement);
+scene.add(new THREE.AmbientLight(0x8aa8cc, 0.4));
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+dirLight.position.set(50, 30, 20);
+scene.add(dirLight);
+
+// ── STARFIELD (inline, no external load) ──
+const starGeo = new THREE.BufferGeometry();
+const starVerts = new Float32Array(2000*3);
+for(let i=0;i<2000*3;i+=3){
+  const th=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1);
+  const r = 4500000;
+  starVerts[i]=r*Math.sin(ph)*Math.cos(th);
+  starVerts[i+1]=r*Math.sin(ph)*Math.sin(th);
+  starVerts[i+2]=r*Math.cos(ph);
+}
+starGeo.setAttribute('position',new THREE.BufferAttribute(starVerts,3));
+const starField = new THREE.Points(starGeo, new THREE.PointsMaterial({color:0xffffff,size:1.5,sizeAttenuation:false}));
+scene.add(starField);
+
+// ── SHIP MODEL (inline) ──
+// Simple cone pointing along +X by default
+const shipGeo = new THREE.ConeGeometry(0.08, 0.35, 4);
+shipGeo.rotateX(Math.PI/2); // tip points along +Z after this
+const shipMesh = new THREE.Mesh(shipGeo, new THREE.MeshPhongMaterial({color:0x4fc3f7, emissive:0x0a1428}));
+scene.add(shipMesh);
+
+// ── GATE MODEL (inline - torus + greebles) ──
+function makeGate(){
+  const g = new THREE.Group();
+  const torusGeo = new THREE.TorusGeometry(8, 0.6, 8, 24);
+  const torus = new THREE.Mesh(torusGeo, new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1428}));
+  torus.rotation.y = Math.PI/2;
+  torus.add(new THREE.LineSegments(new THREE.EdgesGeometry(torusGeo, 15), new THREE.LineBasicMaterial({color:0xd066f0, opacity:0.7, transparent:true})));
+  g.add(torus);
+  for(let i=0;i<6;i++){
+    const a = (Math.PI*2*i)/6;
+    const s = new THREE.Mesh(new THREE.SphereGeometry(0.8,6,4), new THREE.MeshPhongMaterial({color:0x0a1428}));
+    s.position.set(0, Math.cos(a)*10, Math.sin(a)*10);
+    g.add(s);
+  }
+  return g;
+}
+
+// ── STATION MODEL (inline - box + arm) ──
+function makeStation(){
+  const g = new THREE.Group();
+  const bodyGeo = new THREE.BoxGeometry(60, 30, 30);
+  const body = new THREE.Mesh(bodyGeo, new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1428}));
+  body.add(new THREE.LineSegments(new THREE.EdgesGeometry(bodyGeo, 15), new THREE.LineBasicMaterial({color:0x4fc3f7, opacity:0.5, transparent:true})));
+  g.add(body);
+  const armGeo = new THREE.CylinderGeometry(2, 2, 80, 6);
+  const arm1 = new THREE.Mesh(armGeo, new THREE.MeshPhongMaterial({color:0x0a1428}));
+  arm1.rotation.z = Math.PI/2;
+  arm1.add(new THREE.LineSegments(new THREE.EdgesGeometry(armGeo, 15), new THREE.LineBasicMaterial({color:0x4fc3f7, opacity:0.3, transparent:true})));
+  g.add(arm1);
+  return g;
+}
+
+// ── LSG GROUP ──
+let lsgGroup = new THREE.Group();
+scene.add(lsgGroup);
+
+const gateModel = makeGate();
+const stationModel = makeStation();
+gateModel.position.set(0, 0, 0);
+stationModel.position.set(0, 0, 0);
+lsgGroup.add(gateModel);
+lsgGroup.add(stationModel);
+
+// ── START AT STATION (so "Warp to Gate" works immediately) ──
+let currentAnchor = 'station';
+stationModel.visible = true;
+gateModel.visible = false;
+
+// ── CAMERA (orbit) ──
+let camTheta = Math.PI, camPhi = 0.3, camDist = 200;
+
+function updateCamera(){
+  const x = camDist * Math.cos(camPhi) * Math.sin(camTheta);
+  const y = camDist * Math.sin(camPhi);
+  const z = camDist * Math.cos(camPhi) * Math.cos(camTheta);
+  camera.position.set(x, y, z);
+  camera.lookAt(0, 0, 0);
+}
+updateCamera();
+
+let dragging = false, dragStart = {x:0,y:0};
+renderer.domElement.addEventListener('mousedown', e=>{ dragging=true; dragStart={x:e.clientX,y:e.clientY}; });
+window.addEventListener('mouseup', ()=>dragging=false);
+window.addEventListener('mousemove', e=>{
+  if(!dragging) return;
+  camTheta -= (e.clientX-dragStart.x)*0.005;
+  camPhi += (e.clientY-dragStart.y)*0.005;
+  camPhi = Math.max(-1.5, Math.min(1.5, camPhi));
+  dragStart = {x:e.clientX, y:e.clientY};
+  updateCamera();
+});
+renderer.domElement.addEventListener('wheel', e=>{
+  e.preventDefault();
+  camDist *= 1 + e.deltaY*0.001;
+  camDist = Math.max(1, Math.min(10000, camDist));
+  updateCamera();
+}, {passive:false});
+
+// ── WARP STATE ──
+let warpState = 'none'; // none, aligning, warping
+let warpTarget = null;
+let warpHeading = new THREE.Vector3(1, 0, 0);
+let shipHeading = new THREE.Vector3(1, 0, 0);
+let warpTimer = 0;
+const warpDuration = 5; // seconds
+let departureHidden = false;
+let approachStarted = false;
+const approachSpawnDist = 5000;
+
+// SSG positions (arbitrary test coordinates)
+const SSG = {
+  gate: {x: 5, z: 0},
+  station: {x: -3, z: 4}
+};
+
+// ── SHIP ORIENTATION HELPER ──
+// Points the ship mesh along a direction vector (XZ plane)
+function orientShip(direction){
+  // Ship cone tip points along +Z after the rotateX in geometry
+  // So we use lookAt to point the mesh in the travel direction
+  const target = direction.clone().add(shipMesh.position);
+  shipMesh.lookAt(target);
+}
+
+// ── BUTTON STATE ──
+const btnGate = document.getElementById('btn-gate');
+const btnStation = document.getElementById('btn-station');
+
+function updateButtons(){
+  // Disable the button for wherever you already are
+  btnGate.disabled = (currentAnchor === 'gate');
+  btnStation.disabled = (currentAnchor === 'station');
+  btnGate.style.opacity = (currentAnchor === 'gate') ? '0.3' : '1';
+  btnStation.style.opacity = (currentAnchor === 'station') ? '0.3' : '1';
+}
+updateButtons();
+
+// ── WARP FUNCTIONS ──
+function warpTo(target){
+  console.log(`[WARP] warpTo('${target}') called | currentAnchor='${currentAnchor}' | warpState='${warpState}'`);
+  if(warpState !== 'none'){
+    console.log('[WARP] Blocked: warpState is not none');
+    return;
+  }
+  if(target === currentAnchor){
+    console.log(`[WARP] Blocked: already at ${target}`);
+    return;
+  }
+  warpTarget = target;
+  // Compute heading from current SSG position to target
+  const from = SSG[currentAnchor];
+  const to = SSG[target];
+  const dx = to.x - from.x, dz = to.z - from.z;
+  const len = Math.sqrt(dx*dx + dz*dz);
+  warpHeading.set(dx/len, 0, dz/len);
+  shipHeading.copy(warpHeading);
+  orientShip(shipHeading);
+  warpTimer = 0;
+  warpState = 'warping';
+  departureHidden = false;
+  approachStarted = false;
+  console.log(`[WARP] Started warping! heading=(${warpHeading.x.toFixed(2)}, ${warpHeading.z.toFixed(2)})`);
+  updateButtons();
+}
+
+function resetToGate(){
+  console.log('[RESET] Reset to gate');
+  warpState = 'none';
+  warpTarget = null;
+  currentAnchor = 'gate';
+  lsgGroup.position.set(0,0,0);
+  gateModel.visible = true;
+  stationModel.visible = false;
+  updateButtons();
+}
+
+function resetToStation(){
+  console.log('[RESET] Reset to station');
+  warpState = 'none';
+  warpTarget = null;
+  currentAnchor = 'station';
+  lsgGroup.position.set(0,0,0);
+  stationModel.visible = true;
+  gateModel.visible = false;
+  updateButtons();
+}
+
+// ── BUTTON WIRING ──
+document.getElementById('btn-gate').addEventListener('click', ()=> {
+  console.log('[CLICK] Warp to Gate button clicked');
+  warpTo('gate');
+});
+document.getElementById('btn-station').addEventListener('click', ()=> {
+  console.log('[CLICK] Warp to Station button clicked');
+  warpTo('station');
+});
+document.getElementById('btn-reset-gate').addEventListener('click', ()=> {
+  console.log('[CLICK] Reset at Gate clicked');
+  resetToGate();
+});
+document.getElementById('btn-reset-station').addEventListener('click', ()=> {
+  console.log('[CLICK] Reset at Station clicked');
+  resetToStation();
+});
+
+// ── ANIMATION LOOP ──
+let lastTime = 0;
+function animate(now){
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, (now - (lastTime||now)) / 1000);
+  lastTime = now;
+
+  if(warpState === 'warping'){
+    warpTimer += dt;
+    const progress = Math.min(1.0, warpTimer / warpDuration);
+    
+    // Speed curve: ramp up first 50%, hold, decel last 15%
+    let speedFactor;
+    if(progress < 0.5) speedFactor = progress / 0.5;
+    else if(progress < 0.85) speedFactor = 1.0;
+    else speedFactor = (1.0 - progress) / 0.15;
+    const warpSpeed = speedFactor * 4500;
+    
+    // Keep ship oriented along warp heading during warp
+    orientShip(warpHeading);
+    
+    // DEPARTURE (0-10%): move group backward along -heading
+    if(progress < 0.1){
+      lsgGroup.position.x -= warpHeading.x * warpSpeed * dt;
+      lsgGroup.position.z -= warpHeading.z * warpSpeed * dt;
+    }
+    
+    // Hide departure models (once at 10%)
+    if(progress >= 0.1 && !departureHidden){
+      departureHidden = true;
+      gateModel.visible = false;
+      stationModel.visible = false;
+    }
+    
+    // APPROACH (at 70%): show target ahead, start sliding in
+    if(progress >= 0.7 && !approachStarted){
+      approachStarted = true;
+      lsgGroup.position.set(
+        warpHeading.x * approachSpawnDist,
+        0,
+        warpHeading.z * approachSpawnDist
+      );
+      // Show target model
+      if(warpTarget === 'gate'){ gateModel.visible = true; stationModel.visible = false; }
+      else { stationModel.visible = true; gateModel.visible = false; }
+    }
+    
+    // SLIDE IN (70-100%): interpolate group from spawn distance to arrival distance
+    if(approachStarted){
+      const approachT = Math.min(1.0, (progress - 0.7) / 0.3);
+      const arrDist = 100; // 100 units = 10km from anchor
+      const sx = warpHeading.x * approachSpawnDist;
+      const sz = warpHeading.z * approachSpawnDist;
+      const ex = warpHeading.x * arrDist;
+      const ez = warpHeading.z * arrDist;
+      // Smooth ease-out for nice deceleration feel
+      const eased = 1 - Math.pow(1 - approachT, 2);
+      lsgGroup.position.x = sx + (ex - sx) * eased;
+      lsgGroup.position.z = sz + (ez - sz) * eased;
+    }
+    
+    // DONE at 100%
+    if(progress >= 1.0){
+      const arrDist = 100;
+      lsgGroup.position.set(warpHeading.x * arrDist, 0, warpHeading.z * arrDist);
+      currentAnchor = warpTarget;
+      warpState = 'none';
+      warpTarget = null;
+      gateModel.visible = (currentAnchor === 'gate');
+      stationModel.visible = (currentAnchor === 'station');
+      console.log(`[WARP] Complete! Now at: ${currentAnchor}`);
+      updateButtons();
+    }
+    
+    // HUD
+    document.getElementById('info').textContent = `Speed: ${Math.round(warpSpeed*100)} m/s | State: warping ${Math.round(progress*100)}% | Group: (${Math.round(lsgGroup.position.x)}, ${Math.round(lsgGroup.position.z)})`;
+  } else {
+    document.getElementById('info').textContent = `Speed: 0 m/s | State: idle | Anchor: ${currentAnchor} | Group: (${Math.round(lsgGroup.position.x)}, ${Math.round(lsgGroup.position.z)})`;
+  }
+  
+  // Starfield follows camera so it appears infinitely far
+  starField.position.copy(camera.position);
+  
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(animate);
+
+// ── RESIZE ──
+window.addEventListener('resize',()=>{
+  camera.aspect = container.clientWidth/container.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(container.clientWidth, container.clientHeight);
+});
+</script>
+</body></html>
