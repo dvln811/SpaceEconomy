@@ -81,6 +81,7 @@ h2{color:#4fc3f7;font-size:12px;letter-spacing:1px;text-transform:uppercase;marg
 <script type="module">
 import * as THREE from 'three';
 import { buildShipFromData } from '/static/ship_renderer.js';
+import { generatePlanetTexture as genPlanetTex } from '/static/planet_textures.js';
 
 // ── State ──
 let player = null;
@@ -1888,14 +1889,8 @@ async function buildWarpDestination(targetId, targetGroup){
       const colors = PLANET_COLORS[obj.type] || PLANET_COLORS['planet'];
       const color = colors[Math.abs(hash(obj.id)) % colors.length];
       const geo = new THREE.SphereGeometry(radiusPU, isPlanet ? 64 : 32, isPlanet ? 48 : 24);
-      let mat;
-      if(isPlanet && obj.planet_type){
-        mat = makePlanetShaderMaterial(obj.planet_type, hash(obj.id));
-        mat.uniforms.radius.value = radiusPU;
-      } else {
-        const tex = generatePlanetTexture(obj.id, color, isPlanet, obj.planet_type);
-        mat = new THREE.MeshPhongMaterial({map: tex, shininess: isPlanet ? 15 : 5});
-      }
+      const tex = genPlanetTex(THREE, obj.id, obj.planet_type || '', isPlanet);
+      const mat = new THREE.MeshPhongMaterial({map: tex, shininess: isPlanet ? 15 : 5});
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(obj.x, obj.y, obj.z);
       mesh.userData = {radius: radiusPU, type: obj.type, planet_type: obj.planet_type || '', radius_km: obj.radius_km || 0};
@@ -2367,14 +2362,8 @@ function loadPlanetsAndMoons(){
     const colors = PLANET_COLORS[obj.type] || PLANET_COLORS['planet'];
     const color = colors[Math.abs(hash(obj.id)) % colors.length];
     const geo = new THREE.SphereGeometry(radiusPU, isPlanet ? 64 : 32, isPlanet ? 48 : 24);
-    let mat;
-    if(isPlanet && obj.planet_type){
-      mat = makePlanetShaderMaterial(obj.planet_type, hash(obj.id));
-      mat.uniforms.radius.value = radiusPU;
-    } else {
-      const tex = generatePlanetTexture(obj.id, color, isPlanet, obj.planet_type);
-      mat = new THREE.MeshPhongMaterial({map: tex, shininess: isPlanet ? 15 : 5});
-    }
+    const tex = genPlanetTex(THREE, obj.id, obj.planet_type || '', isPlanet);
+    const mat = new THREE.MeshPhongMaterial({map: tex, shininess: isPlanet ? 15 : 5});
     const mesh = new THREE.Mesh(geo, mat);
     // Place at LSG position (like stations/gates)
     mesh.position.set(obj.x, obj.y, obj.z);
