@@ -845,31 +845,32 @@ def api_lsg_data(target_obj_id):
             is_anchor = (o.id == target_obj_id)
             
             if is_anchor and o.obj_type in ('planet', 'moon'):
-                # Anchor IS a planet/moon: place it far from origin (orbit view)
-                angle = hash(o.id) * 0.001 if hasattr(__builtins__, 'hash') else _rnd2.uniform(0, 6.28)
-                orbit_dist = 100000 if o.obj_type == 'planet' else 50000
-                ox = orbit_dist * _math.cos(angle)
-                oz = orbit_dist * _math.sin(angle)
-                # Y offset from orbital inclination (hash-based, matches map view)
-                h = sum(ord(c) * (31**i) for i, c in enumerate(o.id)) & 0xFFFFFFFF
-                oy = ((h % 100) / 100.0 - 0.5) * orbit_dist * 0.05
+                # Anchor planet/moon at origin of the group
+                ox, oy, oz = 0, 0, 0
             elif not is_anchor and o.obj_type == 'planet':
-                # Nearby planet: place if within 3 AU of anchor in SS space
-                ss_dist = _math.sqrt((o.ss_x - target_ss_x)**2 + (o.ss_z - target_ss_z)**2)
-                if ss_dist < 3.0 and ss_dist > 0.01:
-                    dir_x = o.ss_x - target_ss_x
-                    dir_z = o.ss_z - target_ss_z
-                    d = _math.sqrt(dir_x**2 + dir_z**2) or 1
-                    lsg_dist = ss_dist * 100000
-                    ox = (dir_x / d) * lsg_dist
-                    oz = (dir_z / d) * lsg_dist
-                    h = sum(ord(c) * (31**i) for i, c in enumerate(o.id)) & 0xFFFFFFFF
-                    oy = ((h % 100) / 100.0 - 0.5) * lsg_dist * 0.05
+                # Only show parent planet if anchor is a moon of this planet
+                if target.obj_type == 'moon' and target.parent == o.id:
+                    # Place parent planet relative to moon (anchor is at 0,0,0)
+                    # Moon orbits parent at ~3x parent radius, so parent is that far away
+                    parent_radius_pu = (getattr(o, 'radius_km', 5000) or 5000) * 10
+                    h = sum(ord(c) * (31**i) for i, c in enumerate(target_obj_id)) & 0xFFFFFFFF
+                    p_angle = (h % 628) / 100.0
+                    orbit_dist = int(parent_radius_pu * 3)  # moon is 3x parent radius away
+                    # Parent is in the opposite direction from the moon's orbit
+                    ox = -orbit_dist * _math.cos(p_angle)
+                    oz = -orbit_dist * _math.sin(p_angle)
+                    oy = 0
                 else:
-                    continue  # too far, don't include in LSG
+                    continue  # don't show other planets
             elif not is_anchor and o.obj_type == 'moon':
-                # Moon: place relative to parent planet (skip for now, second pass below)
-                continue
+                # Moon: only show if parent is the anchor planet, or sibling of anchor moon
+                if target.obj_type == 'planet' and o.parent == target_obj_id:
+                    pass  # will be placed in second pass
+                elif target.obj_type == 'moon' and o.parent == target.parent:
+                    pass  # sibling moon, will be placed in second pass
+                else:
+                    continue  # unrelated moon
+                continue  # all moons handled in second pass
             
             objects.append({'id': o.id, 'name': o.name, 'type': o.obj_type,
                     'x': round(ox, 1), 'y': round(oy, 1), 'z': round(oz, 1),
@@ -884,19 +885,22 @@ def api_lsg_data(target_obj_id):
 
         # Second pass: place moons relative to their parent planet
         planet_positions = {obj['id']: (obj['x'], obj['y'], obj['z']) for obj in objects if obj['type'] == 'planet'}
+        planet_radii = {obj['id']: obj.get('radius_km', 5000) for obj in objects if obj['type'] == 'planet'}
         for o in local_space.objects:
             if o.obj_type != 'moon' or o.id == target_obj_id:
                 continue  # skip non-moons and anchor moons (already placed)
             if not o.parent or o.parent not in planet_positions:
                 continue  # no parent planet placed
             px, py, pz = planet_positions[o.parent]
-            # Place moon at 50,000-80,000 PU from parent planet (outside planet radius)
+            parent_radius_pu = planet_radii.get(o.parent, 5000) * 10  # km -> PU
+            # Place moon at 2.5-4x parent radius (always outside the planet)
             h = sum(ord(c) * (31**i) for i, c in enumerate(o.id)) & 0xFFFFFFFF
             moon_angle = (h % 628) / 100.0  # 0 to 6.28
-            moon_dist = 50000 + (h % 30000)  # 50k-80k PU from parent
+            moon_mult = 2.5 + (h % 150) / 100.0  # 2.5x to 4.0x parent radius
+            moon_dist = int(parent_radius_pu * moon_mult)
             mx = px + moon_dist * _math.cos(moon_angle)
             mz = pz + moon_dist * _math.sin(moon_angle)
-            my = py + ((h % 50) / 50.0 - 0.5) * 1000  # slight Y offset from parent
+            my = py + ((h % 50) / 50.0 - 0.5) * parent_radius_pu * 0.1  # slight Y offset
             objects.append({'id': o.id, 'name': o.name, 'type': o.obj_type,
                     'x': round(mx, 1), 'y': round(my, 1), 'z': round(mz, 1),
                     'station_id': o.station_id,

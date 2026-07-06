@@ -143,6 +143,7 @@ function updateCameraOrbit() {
 let orbitDragged = false;
 renderer.domElement.addEventListener('mousedown', e => {
   if (e.button === 0) {
+    if(document.getElementById('ctxMenu').classList.contains('open')) return;
     isOrbiting = true;
     orbitDragged = false;
     orbitStart = {x: e.clientX, y: e.clientY};
@@ -1410,6 +1411,11 @@ window.jumpGate = async function(gateId){
 // ── Context Menu ──
 window.showCtx = function(e, objId, name, type){
   e.preventDefault();
+  // Reset freelook state to prevent camera weirdness
+  isFreelooking = false;
+  freelookLerp = 1.0;
+  freelookYaw = 0;
+  freelookPitch = 0;
   const menu = document.getElementById('ctxMenu');
   let items = '';
   
@@ -1417,8 +1423,9 @@ window.showCtx = function(e, objId, name, type){
   const obj = localState && localState.objects && localState.objects.find(o => o.id === objId);
   const isAnchor = obj && obj.is_anchor;
   
-  // Determine if object is in the local space (anchor, or has LSG position via model dicts)
-  const isLocal = isAnchor || (obj && (stationModels[obj.station_id] || gateModels[obj.id] || asteroidModels[obj.id] || planetModels[obj.id]));
+  // isLocal = physically present at this object (anchor, or station/gate/belt with model in LSG)
+  // Planets/moons are NOT local unless they are the anchor - they're always warp targets
+  const isLocal = isAnchor || (obj && (obj.type === 'station' || obj.type === 'gate' || obj.type === 'belt') && (stationModels[obj.station_id] || gateModels[obj.id] || asteroidModels[obj.id]));
   
   // Compute distance to object (for range checks)
   let distToObj = Infinity;
@@ -1876,14 +1883,68 @@ async function buildWarpDestination(targetId, targetGroup){
       const radiusPU = obj.radius_km ? obj.radius_km * 10 : (isPlanet ? 5000 + Math.abs(hash(obj.id)) % 25000 : 1000 + Math.abs(hash(obj.id)) % 4000);
       const colors = PLANET_COLORS[obj.type] || PLANET_COLORS['planet'];
       const color = colors[Math.abs(hash(obj.id)) % colors.length];
-      const geo = new THREE.SphereGeometry(radiusPU, isPlanet ? 32 : 16, isPlanet ? 24 : 12);
-      const tex = generatePlanetTexture(obj.id, color, isPlanet);
-      const mat = new THREE.MeshPhongMaterial({map: tex, shininess: isPlanet ? 15 : 5});
+      const geo = new THREE.SphereGeometry(radiusPU, isPlanet ? 64 : 32, isPlanet ? 48 : 24);
+      let mat;
+      if(isPlanet && obj.planet_type){
+        mat = makePlanetShaderMaterial(obj.planet_type, hash(obj.id));
+        mat.uniforms.radius.value = radiusPU;
+      } else {
+        const tex = generatePlanetTexture(obj.id, color, isPlanet, obj.planet_type);
+        mat = new THREE.MeshPhongMaterial({map: tex, shininess: isPlanet ? 15 : 5});
+      }
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(obj.x, obj.y, obj.z);
       mesh.userData = {radius: radiusPU, type: obj.type, planet_type: obj.planet_type || '', radius_km: obj.radius_km || 0};
       targetGroup.add(mesh);
       newPlanets[obj.id] = mesh;
+      // Rings
+      if(obj.planet_type && obj.radius_km){
+        // Check stats for rings (passed via lsgData)
+        const statsStr = lsgData._stats && lsgData._stats[obj.id];
+        const hasRings = obj.planet_type === 'gas_giant' || obj.planet_type === 'ice_giant'; // simplified: check later with real stats
+        // Actually parse from server - we stored ring info. For now use planet_type heuristic + hash
+        const ringHash = Math.abs(hash(obj.id + '_ring'));
+        const shouldHaveRing = (obj.planet_type === 'gas_giant' && ringHash % 10 < 6) ||
+                               (obj.planet_type === 'ice_giant' && ringHash % 10 < 4) ||
+                               (obj.planet_type === 'ice' && ringHash % 10 < 2);
+        if(shouldHaveRing){
+          const innerR = radiusPU * 1.3;
+          const outerR = radiusPU * 2.2;
+          const ringGeo = new THREE.RingGeometry(innerR, outerR, 64);
+          // Fix UVs to map radially (V = 0 at inner, V = 1 at outer)
+          const uvAttr = ringGeo.attributes.uv;
+          const posAttr = ringGeo.attributes.position;
+          for(let i = 0; i < uvAttr.count; i++){
+            const x = posAttr.getX(i), y = posAttr.getY(i);
+            const dist = Math.sqrt(x*x + y*y);
+            const v = (dist - innerR) / (outerR - innerR); // 0 at inner, 1 at outer
+            uvAttr.setXY(i, v, v);
+          }
+          // Procedural ring texture (1D strip mapped radially via corrected UVs)
+          const ringCanvas = document.createElement('canvas');
+          ringCanvas.width = 256; ringCanvas.height = 1;
+          const rctx = ringCanvas.getContext('2d');
+          const ringColorSets = {'gas_giant': [194,160,96], 'ice_giant': [138,184,208], 'ice': [208,216,224]};
+          const baseRGB = ringColorSets[obj.planet_type] || [176,160,128];
+          let rSeed = Math.abs(hash(obj.id + '_ring'));
+          const rrand = ()=>{ rSeed=(rSeed*1664525+1013904223)&0xFFFFFFFF; return(rSeed>>>0)/4294967296; };
+          for(let rx=0; rx<256; rx++){
+            const band = Math.sin(rx*0.2)*0.3 + Math.sin(rx*0.5)*0.2 + Math.sin(rx*1.3)*0.15;
+            const gap = rrand() < 0.04 ? 0 : 1; // occasional gaps (Cassini division style)
+            const brightness = (0.5 + band * 0.5) * gap;
+            const alpha = (0.2 + rrand()*0.15 + Math.abs(Math.sin(rx*0.04))*0.15) * gap;
+            rctx.fillStyle = `rgba(${Math.round(baseRGB[0]*brightness)},${Math.round(baseRGB[1]*brightness)},${Math.round(baseRGB[2]*brightness)},${alpha})`;
+            rctx.fillRect(rx, 0, 1, 1);
+          }
+          const ringTex = new THREE.CanvasTexture(ringCanvas);
+          ringTex.wrapS = THREE.ClampToEdgeWrapping;
+          const ringMat = new THREE.MeshBasicMaterial({map: ringTex, side: THREE.DoubleSide, transparent: true, opacity: 0.4});
+          const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+          ringMesh.rotation.x = Math.PI / 2 + (ringHash % 30 - 15) * 0.01; // slight tilt
+          ringMesh.position.copy(mesh.position);
+          targetGroup.add(ringMesh);
+        }
+      }
     }
 
     return {stations: newStations, gates: newGates, asteroids: newAsteroids, planets: newPlanets, lsgData};
@@ -2078,73 +2139,212 @@ const PLANET_COLORS = {
 };
 
 // Generate procedural planet texture (noise-based canvas)
-function generatePlanetTexture(id, baseColor, isPlanet){
+// ── Planet Shader Materials (GLSL) ──
+// Shared noise functions (simplex 3D noise)
+const PLANET_NOISE_GLSL = `
+  vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
+  vec4 mod289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
+  vec4 permute(vec4 x){return mod289(((x*34.0)+1.0)*x);}
+  vec4 taylorInvSqrt(vec4 r){return 1.79284291400159-0.85373472095314*r;}
+  float snoise(vec3 v){
+    const vec2 C=vec2(1.0/6.0,1.0/3.0);const vec4 D=vec4(0.0,0.5,1.0,2.0);
+    vec3 i=floor(v+dot(v,C.yyy));vec3 x0=v-i+dot(i,C.xxx);
+    vec3 g=step(x0.yzx,x0.xyz);vec3 l=1.0-g;
+    vec3 i1=min(g.xyz,l.zxy);vec3 i2=max(g.xyz,l.zxy);
+    vec3 x1=x0-i1+C.xxx;vec3 x2=x0-i2+C.yyy;vec3 x3=x0-D.yyy;
+    i=mod289(i);
+    vec4 p=permute(permute(permute(i.z+vec4(0.0,i1.z,i2.z,1.0))+i.y+vec4(0.0,i1.y,i2.y,1.0))+i.x+vec4(0.0,i1.x,i2.x,1.0));
+    float n_=0.142857142857;vec3 ns=n_*D.wyz-D.xzx;
+    vec4 j=p-49.0*floor(p*ns.z*ns.z);
+    vec4 x_=floor(j*ns.z);vec4 y_=floor(j-7.0*x_);
+    vec4 x=x_*ns.x+ns.yyyy;vec4 y=y_*ns.x+ns.yyyy;
+    vec4 h=1.0-abs(x)-abs(y);
+    vec4 b0=vec4(x.xy,y.xy);vec4 b1=vec4(x.zw,y.zw);
+    vec4 s0=floor(b0)*2.0+1.0;vec4 s1=floor(b1)*2.0+1.0;
+    vec4 sh=-step(h,vec4(0.0));
+    vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy;vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+    vec3 p0=vec3(a0.xy,h.x);vec3 p1=vec3(a0.zw,h.y);
+    vec3 p2=vec3(a1.xy,h.z);vec3 p3=vec3(a1.zw,h.w);
+    vec4 norm=taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+    p0*=norm.x;p1*=norm.y;p2*=norm.z;p3*=norm.w;
+    vec4 m=max(0.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.0);
+    m=m*m;return 42.0*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
+  }
+  float fbm(vec3 p, int octaves){
+    float val=0.0;float amp=0.5;float freq=1.0;
+    for(int i=0;i<8;i++){
+      if(i>=octaves)break;
+      val+=amp*snoise(p*freq);
+      freq*=2.0;amp*=0.5;
+    }
+    return val;
+  }
+`;
+
+const PLANET_VERTEX = `
+  varying vec3 vNormal;
+  varying vec3 vPosition;
+  varying vec2 vUv;
+  void main(){
+    vNormal = normalize(normalMatrix * normal);
+    vPosition = position;
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+function makePlanetShaderMaterial(planetType, seed){
+  const seedF = (seed % 1000) / 1000.0;
+  
+  let fragmentBody = '';
+  let baseColor1 = 'vec3(0.3, 0.25, 0.15)';
+  let baseColor2 = 'vec3(0.5, 0.4, 0.25)';
+  
+  switch(planetType){
+    case 'gas_giant':
+      fragmentBody = `
+        // Gas giant: horizontal bands with turbulence
+        float lat = vPosition.y / radius;
+        float bands = sin(lat * 20.0 + fbm(vPosition * 0.003 + seed, 4) * 3.0) * 0.5 + 0.5;
+        float turb = fbm(vPosition * 0.005 + vec3(seed * 10.0), 5) * 0.3;
+        float storm = smoothstep(0.7, 1.0, fbm(vPosition * 0.01 + vec3(seed * 5.0, 0.0, 0.0), 6));
+        vec3 col1 = vec3(0.8, 0.55, 0.25); // warm band
+        vec3 col2 = vec3(0.6, 0.4, 0.2);   // dark band
+        vec3 col3 = vec3(0.9, 0.6, 0.3);   // storm
+        vec3 color = mix(col1, col2, bands) + turb * 0.2 + storm * col3 * 0.4;
+      `;
+      break;
+    case 'ice_giant':
+      fragmentBody = `
+        float lat = vPosition.y / radius;
+        float bands = sin(lat * 12.0 + fbm(vPosition * 0.004 + seed, 3) * 2.0) * 0.5 + 0.5;
+        float turb = fbm(vPosition * 0.006 + vec3(seed * 7.0), 4) * 0.2;
+        vec3 col1 = vec3(0.3, 0.5, 0.7);
+        vec3 col2 = vec3(0.2, 0.4, 0.6);
+        vec3 color = mix(col1, col2, bands) + turb;
+      `;
+      break;
+    case 'terrestrial':
+    case 'ocean':
+      fragmentBody = `
+        float n = fbm(vPosition * 0.008 + seed, 6);
+        float ocean = smoothstep(-0.05, 0.05, n);
+        vec3 waterCol = vec3(0.05, 0.15, 0.4);
+        vec3 landCol = vec3(0.15, 0.35, 0.1) + fbm(vPosition * 0.02 + seed, 3) * vec3(0.1, 0.05, 0.0);
+        vec3 snowCol = vec3(0.85, 0.9, 0.95);
+        float lat = abs(vPosition.y / radius);
+        float snow = smoothstep(0.7, 0.85, lat);
+        vec3 color = mix(waterCol, landCol, ocean);
+        color = mix(color, snowCol, snow * ocean);
+        // Clouds
+        float clouds = smoothstep(0.2, 0.6, fbm(vPosition * 0.012 + seed * 3.0, 4));
+        color = mix(color, vec3(0.9, 0.92, 0.95), clouds * 0.4);
+      `;
+      break;
+    case 'desert':
+      fragmentBody = `
+        float n = fbm(vPosition * 0.006 + seed, 5);
+        float dunes = sin(vPosition.x * 0.02 + n * 5.0) * 0.5 + 0.5;
+        vec3 col1 = vec3(0.7, 0.5, 0.3);
+        vec3 col2 = vec3(0.5, 0.35, 0.2);
+        vec3 darkRegion = vec3(0.3, 0.2, 0.1);
+        float dark = smoothstep(0.3, 0.7, fbm(vPosition * 0.004 + seed * 2.0, 4));
+        vec3 color = mix(col1, col2, dunes);
+        color = mix(color, darkRegion, dark * 0.5);
+        float lat = abs(vPosition.y / radius);
+        color = mix(color, vec3(0.8, 0.82, 0.85), smoothstep(0.85, 0.95, lat) * 0.3);
+      `;
+      break;
+    case 'volcanic':
+      fragmentBody = `
+        float n = fbm(vPosition * 0.007 + seed, 5);
+        float lava = smoothstep(0.5, 0.7, fbm(vPosition * 0.015 + seed * 4.0, 4));
+        vec3 rockCol = vec3(0.2, 0.12, 0.08);
+        vec3 lavaCol = vec3(1.0, 0.4, 0.0);
+        vec3 sulfurCol = vec3(0.7, 0.6, 0.1);
+        float sulfur = smoothstep(0.3, 0.6, fbm(vPosition * 0.01 + seed * 2.0, 3));
+        vec3 color = mix(rockCol, sulfurCol, sulfur * 0.4);
+        color = mix(color, lavaCol, lava * 0.8);
+      `;
+      break;
+    case 'ice':
+      fragmentBody = `
+        float n = fbm(vPosition * 0.005 + seed, 5);
+        float cracks = abs(fbm(vPosition * 0.02 + seed, 3));
+        cracks = smoothstep(0.0, 0.15, cracks);
+        vec3 iceCol = vec3(0.7, 0.8, 0.9);
+        vec3 crackCol = vec3(0.2, 0.3, 0.5);
+        vec3 smoothIce = vec3(0.8, 0.88, 0.95);
+        float smooth2 = smoothstep(0.3, 0.6, fbm(vPosition * 0.008 + seed * 3.0, 3));
+        vec3 color = mix(crackCol, iceCol, cracks);
+        color = mix(color, smoothIce, smooth2 * 0.3);
+      `;
+      break;
+    case 'rocky':
+      fragmentBody = `
+        float n = fbm(vPosition * 0.008 + seed, 6);
+        float craters = 1.0 - smoothstep(0.0, 0.1, abs(fbm(vPosition * 0.03 + seed, 4) - 0.3));
+        vec3 baseCol = vec3(0.4, 0.35, 0.3);
+        vec3 highCol = vec3(0.5, 0.45, 0.4);
+        vec3 craterCol = vec3(0.25, 0.22, 0.18);
+        float height = fbm(vPosition * 0.005 + seed, 5) * 0.5 + 0.5;
+        vec3 color = mix(baseCol, highCol, height);
+        color = mix(color, craterCol, craters * 0.6);
+      `;
+      break;
+    default: // super_earth or unknown
+      fragmentBody = `
+        float n = fbm(vPosition * 0.006 + seed, 5);
+        float bands = sin(vPosition.y / radius * 8.0 + n * 2.0) * 0.5 + 0.5;
+        vec3 col1 = vec3(0.3, 0.4, 0.3);
+        vec3 col2 = vec3(0.2, 0.3, 0.25);
+        vec3 color = mix(col1, col2, bands);
+        float clouds = smoothstep(0.2, 0.5, fbm(vPosition * 0.01 + seed * 2.0, 4));
+        color = mix(color, vec3(0.8), clouds * 0.25);
+      `;
+      break;
+  }
+  
+  const fragmentShader = `
+    ${PLANET_NOISE_GLSL}
+    varying vec3 vNormal;
+    varying vec3 vPosition;
+    varying vec2 vUv;
+    uniform float seed;
+    uniform float radius;
+    uniform vec3 lightDir;
+    void main(){
+      ${fragmentBody}
+      // Lighting
+      float diffuse = max(0.0, dot(vNormal, lightDir)) * 0.7 + 0.3;
+      // Rim/atmosphere glow
+      float rim = 1.0 - max(0.0, dot(vNormal, vec3(0.0, 0.0, 1.0)));
+      rim = pow(rim, 3.0) * 0.3;
+      vec3 final = color * diffuse + vec3(0.4, 0.6, 0.8) * rim;
+      gl_FragColor = vec4(final, 1.0);
+    }
+  `;
+  
+  return new THREE.ShaderMaterial({
+    vertexShader: PLANET_VERTEX,
+    fragmentShader: fragmentShader,
+    uniforms: {
+      seed: {value: seedF * 100.0},
+      radius: {value: 1.0}, // will be set per-planet
+      lightDir: {value: sunDirection.clone().normalize()}
+    }
+  });
+}
+
+function generatePlanetTexture(id, baseColor, isPlanet, planetType){
+  // Legacy fallback - returns a canvas texture for cases where shader isn't used
   const size = isPlanet ? 256 : 128;
   const canvas = document.createElement('canvas');
   canvas.width = size; canvas.height = size;
   const ctx = canvas.getContext('2d');
-  
-  // Seeded random from id
-  let s = Math.abs(hash(id));
-  const rand = ()=>{ s=(s*1664525+1013904223)&0xFFFFFFFF; return(s>>>0)/4294967296; };
-  
-  // Base color components
-  const r = (baseColor >> 16) & 0xFF;
-  const g = (baseColor >> 8) & 0xFF;
-  const b = baseColor & 0xFF;
-  
-  // Fill with base
+  const r = (baseColor >> 16) & 0xFF, g = (baseColor >> 8) & 0xFF, b = baseColor & 0xFF;
   ctx.fillStyle = `rgb(${r},${g},${b})`;
   ctx.fillRect(0, 0, size, size);
-  
-  if(isPlanet){
-    // Horizontal bands (gas giant style or climate zones)
-    const numBands = 4 + Math.floor(rand() * 6);
-    for(let i = 0; i < numBands; i++){
-      const y = rand() * size;
-      const h = 5 + rand() * 30;
-      const variation = Math.floor((rand() - 0.5) * 40);
-      ctx.fillStyle = `rgba(${Math.max(0,Math.min(255,r+variation))},${Math.max(0,Math.min(255,g+variation))},${Math.max(0,Math.min(255,b+variation))},0.4)`;
-      ctx.fillRect(0, y, size, h);
-    }
-    // Continent/cloud patches
-    const numPatches = 8 + Math.floor(rand() * 15);
-    for(let i = 0; i < numPatches; i++){
-      const px = rand() * size, py = rand() * size;
-      const pr = 10 + rand() * 40;
-      const variation = Math.floor((rand() - 0.5) * 60);
-      const gradient = ctx.createRadialGradient(px, py, 0, px, py, pr);
-      gradient.addColorStop(0, `rgba(${Math.max(0,Math.min(255,r+variation))},${Math.max(0,Math.min(255,g+variation))},${Math.max(0,Math.min(255,b+variation))},0.5)`);
-      gradient.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(px-pr, py-pr, pr*2, pr*2);
-    }
-    // Polar caps (for rocky/earth-like)
-    if(rand() > 0.4){
-      ctx.fillStyle = 'rgba(220,230,240,0.3)';
-      ctx.fillRect(0, 0, size, 10 + rand()*15);
-      ctx.fillRect(0, size - 10 - rand()*15, size, 20);
-    }
-  } else {
-    // Moon: craters and grey variation
-    const numCraters = 5 + Math.floor(rand() * 10);
-    for(let i = 0; i < numCraters; i++){
-      const cx = rand() * size, cy = rand() * size;
-      const cr = 3 + rand() * 15;
-      const dark = Math.floor(rand() * 30);
-      ctx.beginPath();
-      ctx.arc(cx, cy, cr, 0, Math.PI*2);
-      ctx.fillStyle = `rgba(${Math.max(0,r-dark)},${Math.max(0,g-dark)},${Math.max(0,b-dark)},0.6)`;
-      ctx.fill();
-      // Crater rim
-      ctx.beginPath();
-      ctx.arc(cx, cy, cr, 0, Math.PI*2);
-      ctx.strokeStyle = `rgba(${Math.min(255,r+15)},${Math.min(255,g+15)},${Math.min(255,b+15)},0.4)`;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
-  }
-  
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.ClampToEdgeWrapping;
@@ -2162,15 +2362,64 @@ function loadPlanetsAndMoons(){
     const radiusPU = obj.radius_km ? obj.radius_km * 10 : (isPlanet ? 5000 + Math.abs(hash(obj.id)) % 25000 : 1000 + Math.abs(hash(obj.id)) % 4000);
     const colors = PLANET_COLORS[obj.type] || PLANET_COLORS['planet'];
     const color = colors[Math.abs(hash(obj.id)) % colors.length];
-    const geo = new THREE.SphereGeometry(radiusPU, isPlanet ? 32 : 16, isPlanet ? 24 : 12);
-    const tex = generatePlanetTexture(obj.id, color, isPlanet);
-    const mat = new THREE.MeshPhongMaterial({map: tex, shininess: isPlanet ? 15 : 5});
+    const geo = new THREE.SphereGeometry(radiusPU, isPlanet ? 64 : 32, isPlanet ? 48 : 24);
+    let mat;
+    if(isPlanet && obj.planet_type){
+      mat = makePlanetShaderMaterial(obj.planet_type, hash(obj.id));
+      mat.uniforms.radius.value = radiusPU;
+    } else {
+      const tex = generatePlanetTexture(obj.id, color, isPlanet, obj.planet_type);
+      mat = new THREE.MeshPhongMaterial({map: tex, shininess: isPlanet ? 15 : 5});
+    }
     const mesh = new THREE.Mesh(geo, mat);
     // Place at LSG position (like stations/gates)
     mesh.position.set(obj.x, obj.y, obj.z);
     mesh.userData = {radius: radiusPU, type: obj.type, planet_type: obj.planet_type || '', radius_km: obj.radius_km || 0};
     (lsgGroup||scene).add(mesh);
     planetModels[obj.id] = mesh;
+    // Rings (same logic as buildWarpDestination)
+    if(obj.planet_type && obj.radius_km){
+      const ringHash = Math.abs(hash(obj.id + '_ring'));
+      const shouldHaveRing = (obj.planet_type === 'gas_giant' && ringHash % 10 < 6) ||
+                             (obj.planet_type === 'ice_giant' && ringHash % 10 < 4) ||
+                             (obj.planet_type === 'ice' && ringHash % 10 < 2);
+      if(shouldHaveRing){
+        const innerR = radiusPU * 1.3;
+        const outerR = radiusPU * 2.2;
+        const ringGeo = new THREE.RingGeometry(innerR, outerR, 64);
+        // Fix UVs to map radially
+        const uvAttr = ringGeo.attributes.uv;
+        const posAttr = ringGeo.attributes.position;
+        for(let i = 0; i < uvAttr.count; i++){
+          const x = posAttr.getX(i), y = posAttr.getY(i);
+          const dist = Math.sqrt(x*x + y*y);
+          const v = (dist - innerR) / (outerR - innerR);
+          uvAttr.setXY(i, v, v);
+        }
+        const ringCanvas = document.createElement('canvas');
+        ringCanvas.width = 256; ringCanvas.height = 1;
+        const rctx = ringCanvas.getContext('2d');
+        const ringColorSets2 = {'gas_giant': [194,160,96], 'ice_giant': [138,184,208], 'ice': [208,216,224]};
+        const baseRGB2 = ringColorSets2[obj.planet_type] || [176,160,128];
+        let rSeed2 = Math.abs(hash(obj.id + '_ring'));
+        const rrand2 = ()=>{ rSeed2=(rSeed2*1664525+1013904223)&0xFFFFFFFF; return(rSeed2>>>0)/4294967296; };
+        for(let rx=0; rx<256; rx++){
+          const band = Math.sin(rx*0.2)*0.3 + Math.sin(rx*0.5)*0.2 + Math.sin(rx*1.3)*0.15;
+          const gap = rrand2() < 0.04 ? 0 : 1;
+          const brightness = (0.5 + band * 0.5) * gap;
+          const alpha = (0.2 + rrand2()*0.15 + Math.abs(Math.sin(rx*0.04))*0.15) * gap;
+          rctx.fillStyle = `rgba(${Math.round(baseRGB2[0]*brightness)},${Math.round(baseRGB2[1]*brightness)},${Math.round(baseRGB2[2]*brightness)},${alpha})`;
+          rctx.fillRect(rx, 0, 1, 1);
+        }
+        const ringTex = new THREE.CanvasTexture(ringCanvas);
+        ringTex.wrapS = THREE.ClampToEdgeWrapping;
+        const ringMat = new THREE.MeshBasicMaterial({map: ringTex, side: THREE.DoubleSide, transparent: true, opacity: 0.4});
+        const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+        ringMesh.rotation.x = Math.PI / 2 + (ringHash % 30 - 15) * 0.01;
+        ringMesh.position.copy(mesh.position);
+        (lsgGroup||scene).add(ringMesh);
+      }
+    }
   }
 }
 
