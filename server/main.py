@@ -1590,7 +1590,7 @@ def _init_local_space():
     local_space.load_system(p['system_id'], sys_obj.objects,
                             [s for s in sim.ships if s.location == p['system_id']],
                             ship_speed_map, anchor_station_id=p['station_id'] or '',
-                            anchor_obj_id=p.get('intra_position', '') or '')
+                            anchor_obj_id=(p['intra_position'] if 'intra_position' in p.keys() else '') or '')
     # Place player
     ship_row = conn.execute("SELECT speed, align_time FROM ships WHERE id=?", (p['ship_class'],)).fetchone()
     conn.close()
