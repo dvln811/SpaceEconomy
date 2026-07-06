@@ -98,18 +98,70 @@ function _hash(str) {
  * @param {object} THREE - Three.js library reference
  * @param {string} planetId - unique ID for seeding
  * @param {string} planetType - e.g. 'terrestrial', 'gas_giant', 'ocean', etc.
- * @param {boolean} isPlanet - true for planets (512x256), false for moons (256x128)
+ * @param {boolean} isPlanet - true for planets (4096x2048), false for moons (1024x512)
  * @returns {THREE.CanvasTexture}
  */
 export function generatePlanetTexture(THREE, planetId, planetType, isPlanet = true) {
+  // Check cache first
+  if (_texCache.has(planetId)) return _texCache.get(planetId);
+  const tex = _generateTexture(THREE, planetId, planetType, isPlanet);
+  _texCache.set(planetId, tex);
+  return tex;
+}
+
+// Texture cache
+const _texCache = new Map();
+
+/**
+ * Pre-generate textures for all planets/moons in a system.
+ * Generates async in chunks to avoid blocking. Calls onDone when complete.
+ * Prioritizes the given priorityId (current anchor) first.
+ * @param {object} THREE
+ * @param {Array} objects - system objects with id, type, planet_type
+ * @param {string} priorityId - generate this one first
+ * @param {function} onDone - callback when all done
+ */
+export function pregenPlanetTextures(THREE, objects, priorityId, onDone) {
+  const bodies = objects.filter(o => (o.type === 'planet' || o.type === 'moon') && o.planet_type);
+  // Sort: priority first, then rest
+  bodies.sort((a, b) => {
+    if (a.id === priorityId) return -1;
+    if (b.id === priorityId) return 1;
+    return 0;
+  });
+
+  let idx = 0;
+  function next() {
+    if (idx >= bodies.length) { if (onDone) onDone(); return; }
+    const obj = bodies[idx++];
+    if (!_texCache.has(obj.id)) {
+      const isPlanet = obj.type === 'planet';
+      const tex = _generateTexture(THREE, obj.id, obj.planet_type, isPlanet);
+      _texCache.set(obj.id, tex);
+    }
+    // Yield to browser between each texture
+    setTimeout(next, 0);
+  }
+  next();
+}
+
+/**
+ * Clear the texture cache (call when leaving a system).
+ */
+export function clearPlanetTextureCache() {
+  _texCache.forEach(tex => { if (tex.dispose) tex.dispose(); });
+  _texCache.clear();
+}
+
+function _generateTexture(THREE, planetId, planetType, isPlanet) {
   const seed = Math.abs(_hash(planetId));
   const isGas = (planetType === 'gas_giant' || planetType === 'ice_giant');
   const isOcean = (planetType === 'ocean');
   const pr = isGas ? PRESETS.gas : isOcean ? PRESETS.ocean : PRESETS.terrestrial;
   const ramp = RAMPS[planetType] || RAMPS[isGas ? 'gas_giant' : 'terrestrial'];
 
-  const W = isPlanet ? 512 : 256;
-  const H = isPlanet ? 256 : 128;
+  const W = isPlanet ? 4096 : 1024;
+  const H = isPlanet ? 2048 : 512;
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');

@@ -81,7 +81,7 @@ h2{color:#4fc3f7;font-size:12px;letter-spacing:1px;text-transform:uppercase;marg
 <script type="module">
 import * as THREE from 'three';
 import { buildShipFromData } from '/static/ship_renderer.js';
-import { generatePlanetTexture as genPlanetTex } from '/static/planet_textures.js';
+import { generatePlanetTexture as genPlanetTex, pregenPlanetTextures, clearPlanetTextureCache } from '/static/planet_textures.js';
 
 // ── State ──
 let player = null;
@@ -461,10 +461,14 @@ function setFlightScene(){
   loadAsteroidFields();
   loadPlanetsAndMoons();
   initSun();
-  // Fade in after 0.5s delay (let everything position first)
+  // Pre-generate planet textures during fade-in, then reveal
   const overlay = document.getElementById('fadeOverlay');
   overlay.style.opacity = '1';
-  setTimeout(()=>{ overlay.style.opacity = '0'; }, 500);
+  const anchorId = localState && localState.objects && localState.objects.find(o => o.is_anchor);
+  const objs = (localState && localState.objects) || [];
+  pregenPlanetTextures(THREE, objs, anchorId ? anchorId.id : '', ()=>{
+    setTimeout(()=>{ overlay.style.opacity = '0'; }, 200);
+  });
 }
 
 // ── SSE Stream Connection ──
@@ -687,7 +691,7 @@ let warpBuildReady = false; // true when destination models are built
 let warpGroup = null; // isolated THREE.Group for destination models during build
 // Warp phase timing (fixed departure/arrival, variable cruise)
 const WARP_DEPART_TIME = 4.0;  // seconds for departure phase
-const WARP_ARRIVE_TIME = 4.0;  // seconds for arrival phase
+const WARP_ARRIVE_TIME = 6.0;  // seconds for arrival phase (longer so planets visible earlier)
 let warpCruiseTime = 0;        // variable: auDist / shipWarpSpeed
 let warpShipAUSpeed = 2.0;    // ship's warp speed in AU/s (from ship stats later)
 // Speed constants (PU/s)
@@ -925,7 +929,9 @@ function animate(now){
             const d = Math.sqrt(c.position.x*c.position.x + c.position.z*c.position.z);
             if(d > maxChildDist) maxChildDist = d;
           });
-          const spawnDist = Math.max(10000, maxChildDist * 3);
+          // arrDist preview (need it to ensure spawnDist > arrDist)
+          const arrDistPreview = (window._warpBuildResult && window._warpBuildResult.lsgData && window._warpBuildResult.lsgData.arrival_dist) || 100;
+          const spawnDist = Math.max(arrDistPreview * 4, maxChildDist * 3, 50000);
           window._approachSpawnDist = spawnDist;
 
           // Swap in new group
@@ -1393,13 +1399,17 @@ window.jumpGate = async function(gateId){
       document.getElementById('sysName').textContent = data.system_name || data.system_id;
       // Wait for SSE to deliver new state, then load objects
       setTimeout(()=>{
+        clearPlanetTextureCache();
         loadAllStations();
         loadAllGates();
         loadAsteroidFields();
         loadPlanetsAndMoons();
-        // Fade back in
-        overlay.style.transition = 'opacity 2s';
-        overlay.style.opacity = '0';
+        // Pre-gen textures then fade in
+        const jumpObjs = (localState && localState.objects) || [];
+        pregenPlanetTextures(THREE, jumpObjs, '', ()=>{
+          overlay.style.transition = 'opacity 2s';
+          overlay.style.opacity = '0';
+        });
       }, 1500);
     } else {
       // Failed
