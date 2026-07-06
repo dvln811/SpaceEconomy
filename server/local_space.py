@@ -585,7 +585,9 @@ class LocalSpaceWorker:
                              'connects_to': o.connects_to,
                              'parent': o.parent,
                              'ss_x': round(o.ss_x, 4), 'ss_z': round(o.ss_z, 4),
-                             'is_anchor': (o.id == self._anchor_id)} for o in self.objects],
+                             'is_anchor': (o.id == self._anchor_id),
+                             'radius_km': o.radius_km,
+                             'planet_type': o.planet_type} for o in self.objects],
                 'ships': [s.to_dict() for s in self.ships.values() if not s.is_player],
                 'player': self.player_ship.to_dict() if self.player_ship else None,
             }

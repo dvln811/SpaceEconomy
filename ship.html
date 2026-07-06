@@ -847,10 +847,17 @@ function animate(now){
 
       // Determine which phase we're in and compute speed
       if(elapsed < departEnd){
-        // ── DEPARTURE (0 to departEnd): accelerate to AU speed ──
+        // ── DEPARTURE (0 to departEnd): two sub-phases ──
         const t = elapsed / departEnd; // 0→1 over departure
-        // Start at 80% of AU speed, ramp to full — ensures even large planets recede immediately
-        warpSpeed = WARP_AU_SPEED * (0.8 + 0.2 * t);
+        if(t < 0.4){
+          // LSG phase: 0→LSG_SPEED (stations fly away)
+          const st = t / 0.4;
+          warpSpeed = WARP_LSG_SPEED * st * st; // quadratic ramp
+        } else {
+          // AU phase: LSG_SPEED→AU_SPEED (planets fly away)
+          const st = (t - 0.4) / 0.6;
+          warpSpeed = WARP_LSG_SPEED + (WARP_AU_SPEED - WARP_LSG_SPEED) * st * st;
+        }
       } else if(elapsed < cruiseEnd){
         // ── CRUISE: hold at AU speed ──
         warpSpeed = WARP_AU_SPEED;
@@ -2347,11 +2354,13 @@ function buildSSGPlanetMeshes(){
 
 function updateSSGPlanets(){
   if(!ssgPlanetGroup || !localState || !localState.objects) return;
-  
-  // Build meshes if not yet done
-  if(Object.keys(ssgPlanetMeshes).length === 0) buildSSGPlanetMeshes();
-  
-  // Get player's current SS position (interpolated during warp)
+  // Build meshes if needed
+  const planetCount = localState.objects.filter(o => o.type === 'planet' || o.type === 'moon').length;
+  if(Object.keys(ssgPlanetMeshes).length === 0 || window._ssgLastPlanetCount !== planetCount){
+    window._ssgLastPlanetCount = planetCount;
+    clearSSGPlanets(); initSSGPlanets(); buildSSGPlanetMeshes();
+  }
+  // Player SS position (interpolated during warp)
   let curSSx = 0, curSSz = 0;
   if((warpState === 'warping' || warpState === 'aligning') && window._warpFromSS){
     const progress = (warpState === 'warping') ? Math.min(1.0, warpTravelTimer / warpTravelDuration) : 0;
@@ -2362,41 +2371,31 @@ function updateSSGPlanets(){
     curSSx = anchorSS ? anchorSS.ss_x : 0;
     curSSz = anchorSS ? anchorSS.ss_z : 0;
   }
-  
-  // Position each planet based on SS offset from player
+  // Position each planet based on SS distance - always, including during warp
   for(const [id, pd] of Object.entries(ssgPlanetMeshes)){
     const dxAU = pd.ss_x - curSSx;
     const dzAU = pd.ss_z - curSSz;
     const distAU = Math.sqrt(dxAU*dxAU + dzAU*dzAU);
-    const distKm = distAU * 150000000; // AU to km
-    
+    const distKm = distAU * 150000000;
     // Angular size in radians
-    const angularSize = (distKm > 0.001) ? pd.radius_km / distKm : 999;
-    
-    if(angularSize > SSG_VISIBILITY_THRESHOLD && distAU > 0.0001){
-      // Visible: place at real PU offset, real scale
-      const distPU = distAU * AU_PU;
-      // Cap render distance to 500M PU for float32 safety, scale down if further
-      const maxRenderDist = 500000000;
+    const angularSize = (distKm > 1) ? pd.radius_km / distKm : 999;
+    // Visible if angular size > ~10px worth (0.01 rad at 50deg FOV ~1000px)
+    if(distKm < 1){
+      // At this planet - render at orbit distance
+      pd.mesh.position.set(pd.radius_pu * 2.5, 0, 0);
+      pd.mesh.scale.setScalar(pd.radius_pu);
+      pd.mesh.visible = true;
+    } else if(angularSize > 0.0001){
+      const distPU = distKm * 10;
+      // Cap at 400M PU, scale down to preserve angular size if beyond
+      const maxDist = 400000000;
       let renderDist, renderScale;
-      if(distPU <= maxRenderDist){
-        renderDist = distPU;
-        renderScale = pd.radius_pu;
-      } else {
-        // Place at max distance, scale to preserve angular size
-        renderDist = maxRenderDist;
-        renderScale = pd.radius_pu * (maxRenderDist / distPU);
-      }
-      
-      const dirX = dxAU / distAU;
-      const dirZ = dzAU / distAU;
+      if(distPU <= maxDist){ renderDist = distPU; renderScale = pd.radius_pu; }
+      else { renderDist = maxDist; renderScale = pd.radius_pu * (maxDist / distPU); }
+      const dirX = dxAU / (distAU || 1);
+      const dirZ = dzAU / (distAU || 1);
       pd.mesh.position.set(dirX * renderDist, 0, dirZ * renderDist);
       pd.mesh.scale.setScalar(renderScale);
-      pd.mesh.visible = true;
-    } else if(distAU < 0.0001){
-      // We're AT this planet — show it large and close (orbit view)
-      pd.mesh.position.set(0, 0, pd.radius_pu * 2.5); // place ahead
-      pd.mesh.scale.setScalar(pd.radius_pu);
       pd.mesh.visible = true;
     } else {
       pd.mesh.visible = false;
