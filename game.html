@@ -1970,32 +1970,51 @@ function svShowObjectInfo(obj){
   let h=0;for(let i=0;i<obj.name.length;i++)h=(h*31+obj.name.charCodeAt(i))|0;
   const abs=Math.abs;
   let html=`<div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:${col};margin-bottom:6px">${obj.name.replace(' Star','')}</div>`;
-  html+=`<div style="color:#8aa0b8;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-family:JetBrains Mono,monospace">${obj.type.replace('_',' ')}</div>`;
-  if(obj.distance)html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Orbit: ${obj.distance.toFixed(2)} AU</div>`;
-  if(obj.type==='planet'){
-    const radius=3000+abs(h%12000);const temp=-50+abs((h>>4)%400);
-    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Radius: ${radius} km</div>`;
-    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Surface Temp: ${temp}°C</div>`;
-    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Atmosphere: ${temp>0&&temp<100?'Breathable':'Hostile'}</div>`;
-    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Gravity: ${(0.3+abs((h>>8)%15)/10).toFixed(1)}g</div>`;
-  }else if(obj.type==='star'){
+  // Format type nicely
+  const typeDisplay = (obj.planet_type || obj.type || '').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+  html+=`<div style="color:#8aa0b8;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-family:JetBrains Mono,monospace">${typeDisplay}</div>`;
+  if(obj.distance)html+=`<div style="color:#5a7a9a;font-size:11px;font-family:JetBrains Mono,monospace;margin-bottom:4px">Orbit: ${obj.distance.toFixed(2)} AU</div>`;
+  
+  // Parse real stats if available
+  let stats = null;
+  try{ if(obj.stats) stats = typeof obj.stats === 'string' ? JSON.parse(obj.stats) : obj.stats; }catch(e){}
+  
+  if((obj.type==='planet' || obj.type==='moon') && stats){
+    const s = stats;
+    html+=`<div style="border-top:1px solid #1a2844;padding-top:4px;margin-top:4px">`;
+    html+=`<div style="color:#c8d4e0;font-size:11px">Radius: ${(s.radius_km||0).toLocaleString()} km</div>`;
+    html+=`<div style="color:#c8d4e0;font-size:11px">Surface Temp: ${s.temperature||'?'}°C</div>`;
+    html+=`<div style="color:#c8d4e0;font-size:11px">Gravity: ${s.gravity||'?'}g</div>`;
+    html+=`<div style="color:#c8d4e0;font-size:11px">Atmosphere: ${s.atmosphere||'None'}</div>`;
+    html+=`<div style="color:#c8d4e0;font-size:11px">Orbital Period: ${s.orbital_period_days||'?'} days</div>`;
+    html+=`<div style="color:#c8d4e0;font-size:11px">Rotation: ${s.rotation_hours||'?'} hours</div>`;
+    html+=`<div style="color:#c8d4e0;font-size:11px">Magnetic Field: ${s.magnetic_field||0} T</div>`;
+    if(s.has_rings) html+=`<div style="color:#c8d4e0;font-size:11px">Rings: ${(s.ring_type||'unknown').replace(/\b\w/g,c=>c.toUpperCase())}</div>`;
+    if(s.resources && s.resources.length){
+      html+=`<div style="margin-top:4px;border-top:1px solid #1a2844;padding-top:4px;color:#5a7a9a;font-size:10px;text-transform:uppercase;letter-spacing:1px">Resources</div>`;
+      for(const r of s.resources){
+        const richCol = {'Trace':'#3a4a5a','Low':'#5a7a9a','Moderate':'#8aa0b8','High':'#66bb6a','Rich':'#ffd54f'}[r.richness]||'#8aa0b8';
+        html+=`<div style="font-size:11px;display:flex;justify-content:space-between"><span style="color:#c8d4e0">${r.name}</span><span style="color:${richCol}">${r.richness}</span></div>`;
+      }
+    }
+    html+=`</div>`;
+  } else if((obj.type==='planet' || obj.type==='moon') && obj.radius_km){
+    // Fallback: just show radius
+    html+=`<div style="color:#c8d4e0;font-size:11px">Radius: ${obj.radius_km.toLocaleString()} km</div>`;
+  } else if(obj.type==='star'){
     const classes=['M','K','G','F','A','B','O'];const cls=classes[abs(h%7)];
-    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Class: ${cls}-type</div>`;
-    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Luminosity: ${(0.5+abs((h>>4)%30)/10).toFixed(1)} L☉</div>`;
-    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Mass: ${(0.4+abs((h>>8)%20)/10).toFixed(1)} M☉</div>`;
+    html+=`<div style="color:#c8d4e0;font-size:11px">Class: ${cls}-type</div>`;
+    html+=`<div style="color:#c8d4e0;font-size:11px">Luminosity: ${(0.5+abs((h>>4)%30)/10).toFixed(1)} L☉</div>`;
+    html+=`<div style="color:#c8d4e0;font-size:11px">Mass: ${(0.4+abs((h>>8)%20)/10).toFixed(1)} M☉</div>`;
   }else if(obj.type==='gate'){
-    html+=`<div style="color:#ab47bc;font-size:12px;font-family:JetBrains Mono,monospace">Destination: ${obj.connects_to||'Unknown'}</div>`;
-    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Status: Online</div>`;
-    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Clearance: Open</div>`;
+    html+=`<div style="color:#ab47bc;font-size:11px">Destination: ${(obj.connects_to||'Unknown').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</div>`;
+    html+=`<div style="color:#c8d4e0;font-size:11px">Status: Online</div>`;
   }else if(obj.type==='station'){
-    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Services: Dock, Trade, Repair</div>`;
-    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Population: ${(10+abs(h%990))}K</div>`;
-  }else if(obj.type==='asteroid_belt'){
-    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Density: ${['Sparse','Moderate','Dense','Rich'][abs(h%4)]}</div>`;
-    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Hazard: ${['Low','Moderate','High'][abs(h%3)]}</div>`;
-  }else if(obj.type==='moon'){
-    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Radius: ${200+abs(h%2000)} km</div>`;
-    html+=`<div style="color:#8aa0b8;font-size:12px;font-family:JetBrains Mono,monospace">Tidally Locked: ${abs(h%2)?'Yes':'No'}</div>`;
+    html+=`<div style="color:#c8d4e0;font-size:11px">Services: Dock, Trade, Repair</div>`;
+    html+=`<div style="color:#c8d4e0;font-size:11px">Population: ${(10+abs(h%990))}K</div>`;
+  }else if(obj.type==='belt' || obj.type==='asteroid_belt'){
+    html+=`<div style="color:#c8d4e0;font-size:11px">Density: ${['Sparse','Moderate','Dense','Rich'][abs(h%4)]}</div>`;
+    html+=`<div style="color:#c8d4e0;font-size:11px">Hazard: ${['Low','Moderate','High'][abs(h%3)]}</div>`;
   }
   // Ships at this location
   if(svData&&svData.ships){

@@ -298,17 +298,20 @@ function updateSunPosition(){
       const toPlanet = planetWorld.clone().sub(camera.position);
       const toSun = sunPos.clone().sub(camera.position);
       
-      // Check if planet is between camera and sun (roughly same direction, closer)
-      const dotDir = toPlanet.clone().normalize().dot(toSun.clone().normalize());
-      if(dotDir > 0.99){ // within ~8 degrees
+      // Check if planet is between camera and sun
+      const toPlanetNorm = toPlanet.clone().normalize();
+      const toSunNorm = toSun.clone().normalize();
+      const dotDir = toPlanetNorm.dot(toSunNorm);
+      if(dotDir > 0.95){ // within ~18 degrees
         const planetDist = toPlanet.length();
         const sunDistCam = toSun.length();
         if(planetDist < sunDistCam){
-          // Check angular size of planet vs angle to sun
+          // Angular size of planet from camera
           const planetRadius = mesh.userData.radius || 5000;
-          const angularSize = planetRadius / planetDist;
-          const angularOffset = Math.acos(Math.min(1, dotDir));
-          if(angularOffset < angularSize * 0.5){
+          const angularSize = Math.atan2(planetRadius, planetDist);
+          // Angular offset between planet center and sun direction
+          const angularOffset = Math.acos(Math.min(1.0, dotDir));
+          if(angularOffset < angularSize){
             occluded = true;
             break;
           }
