@@ -1938,7 +1938,7 @@ async function buildWarpDestination(targetId, targetGroup){
           }
           const ringTex = new THREE.CanvasTexture(ringCanvas);
           ringTex.wrapS = THREE.ClampToEdgeWrapping;
-          const ringMat = new THREE.MeshBasicMaterial({map: ringTex, side: THREE.DoubleSide, transparent: true, opacity: 0.4});
+          const ringMat = new THREE.MeshBasicMaterial({map: ringTex, side: THREE.DoubleSide, transparent: true, opacity: 0.4, depthWrite: false});
           const ringMesh = new THREE.Mesh(ringGeo, ringMat);
           ringMesh.rotation.x = Math.PI / 2 + (ringHash % 30 - 15) * 0.01; // slight tilt
           ringMesh.position.copy(mesh.position);
@@ -2185,11 +2185,13 @@ const PLANET_VERTEX = `
   varying vec3 vNormal;
   varying vec3 vPosition;
   varying vec2 vUv;
+  #include <logdepthbuf_pars_vertex>
   void main(){
     vNormal = normalize(normalMatrix * normal);
     vPosition = position;
     vUv = uv;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    #include <logdepthbuf_vertex>
   }
 `;
 
@@ -2313,6 +2315,7 @@ function makePlanetShaderMaterial(planetType, seed){
     uniform float seed;
     uniform float radius;
     uniform vec3 lightDir;
+    #include <logdepthbuf_pars_fragment>
     void main(){
       ${fragmentBody}
       // Lighting
@@ -2322,6 +2325,7 @@ function makePlanetShaderMaterial(planetType, seed){
       rim = pow(rim, 3.0) * 0.3;
       vec3 final = color * diffuse + vec3(0.4, 0.6, 0.8) * rim;
       gl_FragColor = vec4(final, 1.0);
+      #include <logdepthbuf_fragment>
     }
   `;
   
@@ -2413,7 +2417,7 @@ function loadPlanetsAndMoons(){
         }
         const ringTex = new THREE.CanvasTexture(ringCanvas);
         ringTex.wrapS = THREE.ClampToEdgeWrapping;
-        const ringMat = new THREE.MeshBasicMaterial({map: ringTex, side: THREE.DoubleSide, transparent: true, opacity: 0.4});
+        const ringMat = new THREE.MeshBasicMaterial({map: ringTex, side: THREE.DoubleSide, transparent: true, opacity: 0.4, depthWrite: false});
         const ringMesh = new THREE.Mesh(ringGeo, ringMat);
         ringMesh.rotation.x = Math.PI / 2 + (ringHash % 30 - 15) * 0.01;
         ringMesh.position.copy(mesh.position);
