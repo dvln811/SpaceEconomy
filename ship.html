@@ -357,7 +357,8 @@ function buildStarfield(){
   geo.setAttribute('position',new THREE.BufferAttribute(verts,3));
   starFieldBasePositions = new Float32Array(verts);
   // Use non-attenuating size so stars are always the same screen size
-  starField = new THREE.Points(geo,new THREE.PointsMaterial({color:0xffffff,size:1.5,sizeAttenuation:false}));
+  starField = new THREE.Points(geo,new THREE.PointsMaterial({color:0xffffff,size:1.5,sizeAttenuation:false,depthWrite:false,depthTest:false}));
+  starField.renderOrder = -1000; // render first, behind everything
   starField.frustumCulled = false;
   starField.renderOrder = -1; // render behind everything
   starField.scale.setScalar(45000000); // stays inside far plane
@@ -2185,13 +2186,11 @@ const PLANET_VERTEX = `
   varying vec3 vNormal;
   varying vec3 vPosition;
   varying vec2 vUv;
-  #include <logdepthbuf_pars_vertex>
   void main(){
     vNormal = normalize(normalMatrix * normal);
     vPosition = position;
     vUv = uv;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    #include <logdepthbuf_vertex>
   }
 `;
 
@@ -2315,7 +2314,6 @@ function makePlanetShaderMaterial(planetType, seed){
     uniform float seed;
     uniform float radius;
     uniform vec3 lightDir;
-    #include <logdepthbuf_pars_fragment>
     void main(){
       ${fragmentBody}
       // Lighting
@@ -2325,7 +2323,6 @@ function makePlanetShaderMaterial(planetType, seed){
       rim = pow(rim, 3.0) * 0.3;
       vec3 final = color * diffuse + vec3(0.4, 0.6, 0.8) * rim;
       gl_FragColor = vec4(final, 1.0);
-      #include <logdepthbuf_fragment>
     }
   `;
   
