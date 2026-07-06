@@ -67,9 +67,9 @@ class LocalShip:
 
 class SystemObject:
     """A fixed object in the system (station, gate, planet) with 3D position."""
-    __slots__ = ('id', 'name', 'obj_type', 'x', 'y', 'z', 'station_id', 'au_distance', 'connects_to', 'parent', 'ss_x', 'ss_z')
+    __slots__ = ('id', 'name', 'obj_type', 'x', 'y', 'z', 'station_id', 'au_distance', 'connects_to', 'parent', 'ss_x', 'ss_z', 'radius_km', 'planet_type')
 
-    def __init__(self, id, name, obj_type, x, y, z, station_id='', au_distance=0.0, connects_to='', parent='', ss_x=0.0, ss_z=0.0):
+    def __init__(self, id, name, obj_type, x, y, z, station_id='', au_distance=0.0, connects_to='', parent='', ss_x=0.0, ss_z=0.0, radius_km=0.0, planet_type=''):
         self.id = id
         self.name = name
         self.obj_type = obj_type
@@ -82,6 +82,8 @@ class SystemObject:
         self.parent = parent
         self.ss_x = ss_x
         self.ss_z = ss_z
+        self.radius_km = radius_km
+        self.planet_type = planet_type
 
 
 # Scale: 1 unit = 1 km. Local grid is ~500km radius.
@@ -298,7 +300,7 @@ class LocalSpaceWorker:
 
     # ── Public API (called from Flask endpoints) ──
 
-    def load_system(self, system_id, system_objects, npc_ships_in_system, ship_speed_map=None, anchor_station_id=''):
+    def load_system(self, system_id, system_objects, npc_ships_in_system, ship_speed_map=None, anchor_station_id='', anchor_obj_id=''):
         """Initialize local space for a system. Called when player enters."""
         if ship_speed_map is None:
             ship_speed_map = {}
@@ -341,20 +343,39 @@ class LocalSpaceWorker:
                                                 au_distance=obj.distance,
                                                 connects_to=getattr(obj, 'connects_to', ''),
                                                 parent=getattr(obj, 'parent', ''),
-                                                ss_x=ss_x, ss_z=ss_z))
+                                                ss_x=ss_x, ss_z=ss_z,
+                                                radius_km=getattr(obj, 'radius_km', 0) or 0,
+                                                planet_type=getattr(obj, 'planet_type', '') or ''))
 
             # Find anchor object and set it at origin
             anchor_obj = None
-            if anchor_station_id:
+            # Priority 1: explicit anchor_obj_id (from warp/jump target)
+            if anchor_obj_id:
+                for o in self.objects:
+                    if o.id == anchor_obj_id:
+                        anchor_obj = o
+                        break
+            # Priority 2: station by station_id (docked/undocked at station)
+            if not anchor_obj and anchor_station_id:
                 for o in self.objects:
                     if o.station_id == anchor_station_id:
                         anchor_obj = o
                         break
+            # Priority 3: any station in the system
             if not anchor_obj:
                 for o in self.objects:
                     if o.station_id:
                         anchor_obj = o
                         break
+            # Priority 4: first gate or planet
+            if not anchor_obj:
+                for o in self.objects:
+                    if o.obj_type in ('gate', 'planet', 'belt'):
+                        anchor_obj = o
+                        break
+            # Priority 5: literally anything
+            if not anchor_obj and self.objects:
+                anchor_obj = self.objects[0]
 
             # Place moons near their parent planet if anchor is a planet
             # (For now, just place anchor at origin - client handles the rest)
