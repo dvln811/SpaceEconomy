@@ -460,6 +460,7 @@ function setFlightScene(){
   loadAllGates();
   loadAsteroidFields();
   loadPlanetsAndMoons();
+  initSSGPlanets();
   initSun();
   // Pre-generate planet textures during fade-in, then reveal
   const overlay = document.getElementById('fadeOverlay');
@@ -1203,6 +1204,7 @@ function animate(now){
 
     // ── Directional labels for distant objects ──
     updateDirectionalLabels();
+    updateSSGPlanets();
     updateSunPosition();
 
     // ── Update nav card distances every 2s during flight ──
@@ -1393,6 +1395,8 @@ window.jumpGate = async function(gateId){
       // Wait for SSE to deliver new state, then load objects
       setTimeout(()=>{
         clearPlanetTextureCache();
+        clearSSGPlanets();
+        initSSGPlanets();
         loadAllStations();
         loadAllGates();
         loadAsteroidFields();
@@ -1883,72 +1887,7 @@ async function buildWarpDestination(targetId, targetGroup){
       }catch(e){}
     }
 
-    // ── Planets & Moons ──
-    const bodies = objects.filter(o => (o.type === 'planet' || o.type === 'moon') && (o.x !== 0 || o.z !== 0 || o.is_anchor));
-    for(const obj of bodies){
-      const isPlanet = obj.type === 'planet';
-      // Use real radius from server (km -> PU: km * 10), fallback to hash-based
-      const radiusPU = obj.radius_km ? obj.radius_km * 10 : (isPlanet ? 5000 + Math.abs(hash(obj.id)) % 25000 : 1000 + Math.abs(hash(obj.id)) % 4000);
-      const colors = PLANET_COLORS[obj.type] || PLANET_COLORS['planet'];
-      const color = colors[Math.abs(hash(obj.id)) % colors.length];
-      const geo = new THREE.SphereGeometry(radiusPU, isPlanet ? 64 : 32, isPlanet ? 48 : 24);
-      const tex = genPlanetTex(THREE, obj.id, obj.planet_type || '', isPlanet);
-      const mat = new THREE.MeshPhongMaterial({map: tex, shininess: isPlanet ? 15 : 5});
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(obj.x, obj.y, obj.z);
-      mesh.userData = {radius: radiusPU, type: obj.type, planet_type: obj.planet_type || '', radius_km: obj.radius_km || 0};
-      targetGroup.add(mesh);
-      newPlanets[obj.id] = mesh;
-      // Rings
-      if(obj.planet_type && obj.radius_km){
-        // Check stats for rings (passed via lsgData)
-        const statsStr = lsgData._stats && lsgData._stats[obj.id];
-        const hasRings = obj.planet_type === 'gas_giant' || obj.planet_type === 'ice_giant'; // simplified: check later with real stats
-        // Actually parse from server - we stored ring info. For now use planet_type heuristic + hash
-        const ringHash = Math.abs(hash(obj.id + '_ring'));
-        const shouldHaveRing = (obj.planet_type === 'gas_giant' && ringHash % 10 < 6) ||
-                               (obj.planet_type === 'ice_giant' && ringHash % 10 < 4) ||
-                               (obj.planet_type === 'ice' && ringHash % 10 < 2);
-        if(shouldHaveRing){
-          const innerR = radiusPU * 1.3;
-          const outerR = radiusPU * 2.2;
-          const ringGeo = new THREE.RingGeometry(innerR, outerR, 64);
-          // Fix UVs to map radially (V = 0 at inner, V = 1 at outer)
-          const uvAttr = ringGeo.attributes.uv;
-          const posAttr = ringGeo.attributes.position;
-          for(let i = 0; i < uvAttr.count; i++){
-            const x = posAttr.getX(i), y = posAttr.getY(i);
-            const dist = Math.sqrt(x*x + y*y);
-            const v = (dist - innerR) / (outerR - innerR); // 0 at inner, 1 at outer
-            uvAttr.setXY(i, v, v);
-          }
-          // Procedural ring texture (1D strip mapped radially via corrected UVs)
-          const ringCanvas = document.createElement('canvas');
-          ringCanvas.width = 256; ringCanvas.height = 1;
-          const rctx = ringCanvas.getContext('2d');
-          const ringColorSets = {'gas_giant': [194,160,96], 'ice_giant': [138,184,208], 'ice': [208,216,224]};
-          const baseRGB = ringColorSets[obj.planet_type] || [176,160,128];
-          let rSeed = Math.abs(hash(obj.id + '_ring'));
-          const rrand = ()=>{ rSeed=(rSeed*1664525+1013904223)&0xFFFFFFFF; return(rSeed>>>0)/4294967296; };
-          for(let rx=0; rx<256; rx++){
-            const band = Math.sin(rx*0.2)*0.3 + Math.sin(rx*0.5)*0.2 + Math.sin(rx*1.3)*0.15;
-            const gap = rrand() < 0.04 ? 0 : 1; // occasional gaps (Cassini division style)
-            const brightness = (0.5 + band * 0.5) * gap;
-            const alpha = (0.2 + rrand()*0.15 + Math.abs(Math.sin(rx*0.04))*0.15) * gap;
-            rctx.fillStyle = `rgba(${Math.round(baseRGB[0]*brightness)},${Math.round(baseRGB[1]*brightness)},${Math.round(baseRGB[2]*brightness)},${alpha})`;
-            rctx.fillRect(rx, 0, 1, 1);
-          }
-          const ringTex = new THREE.CanvasTexture(ringCanvas);
-          ringTex.wrapS = THREE.ClampToEdgeWrapping;
-          const ringMat = new THREE.MeshBasicMaterial({map: ringTex, side: THREE.DoubleSide, transparent: true, opacity: 0.4, depthWrite: false});
-          const ringMesh = new THREE.Mesh(ringGeo, ringMat);
-          ringMesh.rotation.x = Math.PI / 2 + (ringHash % 30 - 15) * 0.01; // slight tilt
-          ringMesh.position.copy(mesh.position);
-          targetGroup.add(ringMesh);
-        }
-      }
-    }
-
+    // ── Planets & Moons: handled by SSG system, not in lsgGroup ──
     return {stations: newStations, gates: newGates, asteroids: newAsteroids, planets: newPlanets, lsgData};
   }catch(e){
     console.error('[WARP] buildWarpDestination failed:', e);
@@ -2354,72 +2293,9 @@ function generatePlanetTexture(id, baseColor, isPlanet, planetType){
 }
 
 function loadPlanetsAndMoons(){
-  if(warpLock) return;
-  if(!localState || !localState.objects) return;
-  const bodies = localState.objects.filter(o => (o.type === 'planet' || o.type === 'moon') && (o.x !== 0 || o.z !== 0 || o.is_anchor));
-  for(const obj of bodies){
-    if(planetModels[obj.id]) continue;
-    const isPlanet = obj.type === 'planet';
-    // Use real radius from server (km -> PU: km * 10), fallback to hash-based
-    const radiusPU = obj.radius_km ? obj.radius_km * 10 : (isPlanet ? 5000 + Math.abs(hash(obj.id)) % 25000 : 1000 + Math.abs(hash(obj.id)) % 4000);
-    const colors = PLANET_COLORS[obj.type] || PLANET_COLORS['planet'];
-    const color = colors[Math.abs(hash(obj.id)) % colors.length];
-    const geo = new THREE.SphereGeometry(radiusPU, isPlanet ? 64 : 32, isPlanet ? 48 : 24);
-    const tex = genPlanetTex(THREE, obj.id, obj.planet_type || '', isPlanet);
-    const mat = new THREE.MeshPhongMaterial({map: tex, shininess: isPlanet ? 15 : 5});
-    const mesh = new THREE.Mesh(geo, mat);
-    // Place at LSG position (like stations/gates)
-    mesh.position.set(obj.x, obj.y, obj.z);
-    mesh.userData = {radius: radiusPU, type: obj.type, planet_type: obj.planet_type || '', radius_km: obj.radius_km || 0};
-    (lsgGroup||scene).add(mesh);
-    planetModels[obj.id] = mesh;
-    // Rings (same logic as buildWarpDestination)
-    if(obj.planet_type && obj.radius_km){
-      const ringHash = Math.abs(hash(obj.id + '_ring'));
-      const shouldHaveRing = (obj.planet_type === 'gas_giant' && ringHash % 10 < 6) ||
-                             (obj.planet_type === 'ice_giant' && ringHash % 10 < 4) ||
-                             (obj.planet_type === 'ice' && ringHash % 10 < 2);
-      if(shouldHaveRing){
-        const innerR = radiusPU * 1.3;
-        const outerR = radiusPU * 2.2;
-        const ringGeo = new THREE.RingGeometry(innerR, outerR, 64);
-        // Fix UVs to map radially
-        const uvAttr = ringGeo.attributes.uv;
-        const posAttr = ringGeo.attributes.position;
-        for(let i = 0; i < uvAttr.count; i++){
-          const x = posAttr.getX(i), y = posAttr.getY(i);
-          const dist = Math.sqrt(x*x + y*y);
-          const v = (dist - innerR) / (outerR - innerR);
-          uvAttr.setXY(i, v, v);
-        }
-        const ringCanvas = document.createElement('canvas');
-        ringCanvas.width = 256; ringCanvas.height = 1;
-        const rctx = ringCanvas.getContext('2d');
-        const ringColorSets2 = {'gas_giant': [194,160,96], 'ice_giant': [138,184,208], 'ice': [208,216,224]};
-        const baseRGB2 = ringColorSets2[obj.planet_type] || [176,160,128];
-        let rSeed2 = Math.abs(hash(obj.id + '_ring'));
-        const rrand2 = ()=>{ rSeed2=(rSeed2*1664525+1013904223)&0xFFFFFFFF; return(rSeed2>>>0)/4294967296; };
-        for(let rx=0; rx<256; rx++){
-          const band = Math.sin(rx*0.2)*0.3 + Math.sin(rx*0.5)*0.2 + Math.sin(rx*1.3)*0.15;
-          const gap = rrand2() < 0.04 ? 0 : 1;
-          const brightness = (0.5 + band * 0.5) * gap;
-          const alpha = (0.2 + rrand2()*0.15 + Math.abs(Math.sin(rx*0.04))*0.15) * gap;
-          rctx.fillStyle = `rgba(${Math.round(baseRGB2[0]*brightness)},${Math.round(baseRGB2[1]*brightness)},${Math.round(baseRGB2[2]*brightness)},${alpha})`;
-          rctx.fillRect(rx, 0, 1, 1);
-        }
-        const ringTex = new THREE.CanvasTexture(ringCanvas);
-        ringTex.wrapS = THREE.ClampToEdgeWrapping;
-        const ringMat = new THREE.MeshBasicMaterial({map: ringTex, side: THREE.DoubleSide, transparent: true, opacity: 0.4, depthWrite: false});
-        const ringMesh = new THREE.Mesh(ringGeo, ringMat);
-        ringMesh.rotation.x = Math.PI / 2 + (ringHash % 30 - 15) * 0.01;
-        ringMesh.position.copy(mesh.position);
-        (lsgGroup||scene).add(ringMesh);
-      }
-    }
-  }
+  // Planets/moons now handled by SSG system (updateSSGPlanets), not lsgGroup
 }
 
-// Simple string hash for deterministic planet sizing/coloring
 function hash(str){
   let h = 0;
   for(let i = 0; i < str.length; i++){
@@ -2427,6 +2303,112 @@ function hash(str){
     h |= 0;
   }
   return h;
+}
+
+// ── SSG Planet Rendering (planets positioned by SS coords, separate from LSG) ──
+let ssgPlanetMeshes = {}; // id -> {mesh, ringMesh, ss_x, ss_z, radius_km, planet_type}
+let ssgPlanetGroup = null;
+const SSG_VISIBILITY_THRESHOLD = 0.0008; // radians (~0.05 degrees) - below this, planet is just a label
+const AU_TO_PU = 1500000000; // 1 AU = 1.5 billion PU (150M km * 10 PU/m / 1000 m/km... wait)
+// Actually: 1 AU = 150,000,000 km. 1 km = 10,000 PU (1km = 1000m, 1m = 10 PU? No. 1PU = 100m. So 1km = 10 PU.)
+// 1 AU = 150,000,000 km * 10 PU/km = 1,500,000,000 PU
+const AU_PU = 1500000000;
+
+function initSSGPlanets(){
+  if(ssgPlanetGroup){ scene.remove(ssgPlanetGroup); }
+  ssgPlanetGroup = new THREE.Group();
+  scene.add(ssgPlanetGroup);
+  ssgPlanetMeshes = {};
+}
+
+function buildSSGPlanetMeshes(){
+  // Create meshes for all planets/moons in localState
+  if(!localState || !localState.objects) return;
+  const bodies = localState.objects.filter(o => (o.type === 'planet' || o.type === 'moon'));
+  for(const obj of bodies){
+    if(ssgPlanetMeshes[obj.id]) continue;
+    const isPlanet = obj.type === 'planet';
+    const radiusKm = obj.radius_km || (isPlanet ? 5000 : 1000);
+    const radiusPU = radiusKm * 10;
+    // Create sphere with unit radius 1, we'll scale it based on distance
+    const geo = new THREE.SphereGeometry(1, isPlanet ? 48 : 24, isPlanet ? 36 : 18);
+    const tex = genPlanetTex(THREE, obj.id, obj.planet_type || '', isPlanet);
+    const mat = new THREE.MeshPhongMaterial({map: tex, shininess: isPlanet ? 15 : 5});
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.visible = false;
+    ssgPlanetGroup.add(mesh);
+    ssgPlanetMeshes[obj.id] = {
+      mesh, ss_x: obj.ss_x, ss_z: obj.ss_z,
+      radius_km: radiusKm, radius_pu: radiusPU,
+      planet_type: obj.planet_type || '', type: obj.type
+    };
+  }
+}
+
+function updateSSGPlanets(){
+  if(!ssgPlanetGroup || !localState || !localState.objects) return;
+  
+  // Build meshes if not yet done
+  if(Object.keys(ssgPlanetMeshes).length === 0) buildSSGPlanetMeshes();
+  
+  // Get player's current SS position (interpolated during warp)
+  let curSSx = 0, curSSz = 0;
+  if((warpState === 'warping' || warpState === 'aligning') && window._warpFromSS){
+    const progress = (warpState === 'warping') ? Math.min(1.0, warpTravelTimer / warpTravelDuration) : 0;
+    curSSx = window._warpFromSS.x + (window._warpToSS.x - window._warpFromSS.x) * progress;
+    curSSz = window._warpFromSS.z + (window._warpToSS.z - window._warpFromSS.z) * progress;
+  } else {
+    const anchorSS = localState.objects.find(o => o.is_anchor);
+    curSSx = anchorSS ? anchorSS.ss_x : 0;
+    curSSz = anchorSS ? anchorSS.ss_z : 0;
+  }
+  
+  // Position each planet based on SS offset from player
+  for(const [id, pd] of Object.entries(ssgPlanetMeshes)){
+    const dxAU = pd.ss_x - curSSx;
+    const dzAU = pd.ss_z - curSSz;
+    const distAU = Math.sqrt(dxAU*dxAU + dzAU*dzAU);
+    const distKm = distAU * 150000000; // AU to km
+    
+    // Angular size in radians
+    const angularSize = (distKm > 0.001) ? pd.radius_km / distKm : 999;
+    
+    if(angularSize > SSG_VISIBILITY_THRESHOLD && distAU > 0.0001){
+      // Visible: place at real PU offset, real scale
+      const distPU = distAU * AU_PU;
+      // Cap render distance to 500M PU for float32 safety, scale down if further
+      const maxRenderDist = 500000000;
+      let renderDist, renderScale;
+      if(distPU <= maxRenderDist){
+        renderDist = distPU;
+        renderScale = pd.radius_pu;
+      } else {
+        // Place at max distance, scale to preserve angular size
+        renderDist = maxRenderDist;
+        renderScale = pd.radius_pu * (maxRenderDist / distPU);
+      }
+      
+      const dirX = dxAU / distAU;
+      const dirZ = dzAU / distAU;
+      pd.mesh.position.set(dirX * renderDist, 0, dirZ * renderDist);
+      pd.mesh.scale.setScalar(renderScale);
+      pd.mesh.visible = true;
+    } else if(distAU < 0.0001){
+      // We're AT this planet — show it large and close (orbit view)
+      pd.mesh.position.set(0, 0, pd.radius_pu * 2.5); // place ahead
+      pd.mesh.scale.setScalar(pd.radius_pu);
+      pd.mesh.visible = true;
+    } else {
+      pd.mesh.visible = false;
+    }
+  }
+}
+
+function clearSSGPlanets(){
+  if(ssgPlanetGroup){
+    ssgPlanetGroup.clear();
+  }
+  ssgPlanetMeshes = {};
 }
 
 // ── Directional Labels for Distant Solar Bodies ──
