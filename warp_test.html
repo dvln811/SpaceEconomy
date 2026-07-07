@@ -20,6 +20,7 @@ button:disabled:hover{background:#0d1a2f;color:#2a3a5a}
     <button id="btn-station">Warp to Station</button>
     <button id="btn-planet-a">Warp to Planet A</button>
     <button id="btn-planet-b">Warp to Planet B</button>
+    <button id="btn-orbit-station">Warp to Orbit Station</button>
     <button id="btn-reset-gate">Reset at Gate</button>
     <button id="btn-reset-station">Reset at Station</button>
   </div>
@@ -192,7 +193,8 @@ const SSG = {
   station: {x: -3, z: 4},
   planetA: {x: 8, z: 6},
   planetB: {x: -6, z: -5},
-  moon: {x: -5.8, z: -4.85}
+  moon: {x: -5.8, z: -4.85},
+  stationOrbit: {x: 8.00008, z: 6.0} // at planet A orbit point
 };
 
 // ── SSG PLANET MESHES ──
@@ -281,7 +283,7 @@ function orientShip(direction){
 }
 
 // ── PROJECTED LABELS ──
-const labelDefs = ['planetA','planetB','moon','gate','station'];
+const labelDefs = ['planetA','planetB','moon','gate','station','stationOrbit'];
 const labelEls = {};
 labelDefs.forEach(name => {
   const el = document.createElement('div');
@@ -319,6 +321,8 @@ function updateButtons(){
   btnStation.disabled = (currentAnchor === 'station') || (warpState !== 'none');
   btnPlanetA.disabled = (currentAnchor === 'planetA') || (warpState !== 'none');
   btnPlanetB.disabled = (currentAnchor === 'planetB') || (warpState !== 'none');
+  const btnOrbit = document.getElementById('btn-orbit-station');
+  if(btnOrbit) btnOrbit.disabled = (currentAnchor === 'stationOrbit') || (warpState !== 'none');
 }
 updateButtons();
 
@@ -338,13 +342,12 @@ function warpTo(target){
   // For planets: compute orbit offset perpendicular to approach
   if(isPlanetTarget(target)){
     const body = ssgBodies[target];
-    const orbitOffsetAU = (body.radius_km * 2) / AU_KM;
+    const orbitOffsetAU = (body.radius_km * 1.5) / AU_KM;
     const dx = to.x - from.x, dz = to.z - from.z;
     const len = Math.sqrt(dx*dx + dz*dz);
-    // Perpendicular direction
-    const perpX = -dz/len, perpZ = dx/len;
-    destX = to.x + perpX * orbitOffsetAU;
-    destZ = to.z + perpZ * orbitOffsetAU;
+    // Always stop BEFORE the planet (along approach direction)
+    destX = to.x - (dx/len) * orbitOffsetAU;
+    destZ = to.z - (dz/len) * orbitOffsetAU;
   }
   
   const dx = destX - from.x, dz = destZ - from.z;
@@ -357,36 +360,30 @@ function warpTo(target){
   departureHidden = false;
   approachStarted = false;
   
-  if(isPlanetTarget(target)){
-    // Compute warp phases
-    const TOP_SPEED = 2.0; // AU/s
-    const ACCEL_TIME = 6;
-    const DECEL_TIME = 15;
-    const accelDist = 0.5 * TOP_SPEED * ACCEL_TIME;
-    const decelDist = TOP_SPEED * DECEL_TIME / 5;
-    let peakSpeed, accelTime, cruiseTime, decelTime, totalTime;
-    if(accelDist + decelDist > totalDist){
-      // Short trip
-      peakSpeed = totalDist / (0.5 * ACCEL_TIME + DECEL_TIME / 5);
-      accelTime = ACCEL_TIME;
-      cruiseTime = 0;
-      decelTime = DECEL_TIME;
-      totalTime = accelTime + decelTime;
-    } else {
-      peakSpeed = TOP_SPEED;
-      accelTime = ACCEL_TIME;
-      decelTime = DECEL_TIME;
-      cruiseTime = (totalDist - accelDist - decelDist) / TOP_SPEED;
-      totalTime = accelTime + cruiseTime + decelTime;
-    }
-    window._warpPhases = {peakSpeed, accelTime, cruiseTime, decelTime, totalTime};
-    window._playerSS = {x: from.x, z: from.z};
-    warpState = 'warping';
+  // Compute warp phases for ALL targets
+  const TOP_SPEED = 2.0; // AU/s
+  const ACCEL_TIME = 6;
+  const DECEL_TIME = 15;
+  const accelDist = 0.5 * TOP_SPEED * ACCEL_TIME;
+  const decelDist = TOP_SPEED * DECEL_TIME / 5;
+  let peakSpeed, accelTime, cruiseTime, decelTime, totalTime;
+  if(accelDist + decelDist > totalDist){
+    peakSpeed = totalDist / (0.5 * ACCEL_TIME + DECEL_TIME / 5);
+    accelTime = ACCEL_TIME;
+    cruiseTime = 0;
+    decelTime = DECEL_TIME;
+    totalTime = accelTime + decelTime;
   } else {
-    // Gate/Station LSG warp (original behavior)
-    window._warpPhases = null;
-    warpState = 'warping';
+    peakSpeed = TOP_SPEED;
+    accelTime = ACCEL_TIME;
+    decelTime = DECEL_TIME;
+    cruiseTime = (totalDist - accelDist - decelDist) / TOP_SPEED;
+    totalTime = accelTime + cruiseTime + decelTime;
   }
+  window._warpPhases = {peakSpeed, accelTime, cruiseTime, decelTime, totalTime};
+  window._playerSS = {x: from.x, z: from.z};
+  window._warpToSS = {x: destX, z: destZ};
+  warpState = 'warping';
   
   console.log(`[WARP] Started warping to ${target}! heading=(${warpHeading.x.toFixed(2)}, ${warpHeading.z.toFixed(2)})`);
   updateButtons();
@@ -415,6 +412,7 @@ document.getElementById('btn-gate').addEventListener('click', ()=> warpTo('gate'
 document.getElementById('btn-station').addEventListener('click', ()=> warpTo('station'));
 document.getElementById('btn-planet-a').addEventListener('click', ()=> warpTo('planetA'));
 document.getElementById('btn-planet-b').addEventListener('click', ()=> warpTo('planetB'));
+document.getElementById('btn-orbit-station').addEventListener('click', ()=> warpTo('stationOrbit'));
 document.getElementById('btn-reset-gate').addEventListener('click', ()=> resetToGate());
 document.getElementById('btn-reset-station').addEventListener('click', ()=> resetToStation());
 
@@ -429,8 +427,8 @@ function animate(now){
   if(warpState === 'warping'){
     warpTimer += dt;
     
-    if(isPlanetTarget(warpTarget) && window._warpPhases){
-      // ── PLANET WARP (SSG-based) ──
+    if(window._warpPhases){
+      // ── SPEED-BASED WARP (all targets) ──
       const wp = window._warpPhases;
       const t = warpTimer;
       let speed = 0;
@@ -471,68 +469,22 @@ function animate(now){
         stationModel.visible = false;
       }
       
-      // At 70%: for planet targets, hide gate and station (no LSG approach model)
+      // At 70%: show approach model
       if(progress >= 0.7 && !approachStarted){
         approachStarted = true;
-        gateModel.visible = false;
-        stationModel.visible = false;
+        if(isPlanetTarget(warpTarget)){
+          gateModel.visible = false;
+          stationModel.visible = false;
+        } else {
+          // Show gate/station ahead
+          lsgGroup.position.set(warpHeading.x * approachSpawnDist, 0, warpHeading.z * approachSpawnDist);
+          if(warpTarget === 'gate'){ gateModel.visible = true; stationModel.visible = false; }
+          else { stationModel.visible = true; gateModel.visible = false; }
+        }
       }
       
-      // End warp
-      if(t >= wp.totalTime){
-        currentAnchor = warpTarget;
-        warpState = 'none';
-        warpTarget = null;
-        gateModel.visible = false;
-        stationModel.visible = false;
-        lsgGroup.position.set(0,0,0);
-        console.log(`[WARP] Planet warp complete! Now at: ${currentAnchor}`);
-        updateButtons();
-      }
-      
-      // HUD
-      const speedKmS = speed * AU_KM;
-      document.getElementById('info').textContent = `Speed: ${speed > 0.01 ? (speed).toFixed(3)+' AU/s' : Math.round(speedKmS)+' km/s'} | State: warping ${Math.round(progress*100)}% | Target: ${warpTarget}`;
-      
-    } else {
-      // ── GATE/STATION LSG WARP (original behavior) ──
-      const progress = Math.min(1.0, warpTimer / warpDuration);
-      
-      let speedFactor;
-      if(progress < 0.5) speedFactor = progress / 0.5;
-      else if(progress < 0.85) speedFactor = 1.0;
-      else speedFactor = (1.0 - progress) / 0.15;
-      const warpSpeed = speedFactor * 4500;
-      
-      orientShip(warpHeading);
-      
-      // DEPARTURE (0-10%)
-      if(progress < 0.1){
-        lsgGroup.position.x -= warpHeading.x * warpSpeed * dt;
-        lsgGroup.position.z -= warpHeading.z * warpSpeed * dt;
-      }
-      
-      // Hide departure models at 10%
-      if(progress >= 0.1 && !departureHidden){
-        departureHidden = true;
-        gateModel.visible = false;
-        stationModel.visible = false;
-      }
-      
-      // APPROACH at 70%
-      if(progress >= 0.7 && !approachStarted){
-        approachStarted = true;
-        lsgGroup.position.set(
-          warpHeading.x * approachSpawnDist,
-          0,
-          warpHeading.z * approachSpawnDist
-        );
-        if(warpTarget === 'gate'){ gateModel.visible = true; stationModel.visible = false; }
-        else { stationModel.visible = true; gateModel.visible = false; }
-      }
-      
-      // SLIDE IN (70-100%)
-      if(approachStarted){
+      // Slide LSG in for non-planet targets
+      if(approachStarted && !isPlanetTarget(warpTarget)){
         const approachT = Math.min(1.0, (progress - 0.7) / 0.3);
         const arrDist = 100;
         const sx = warpHeading.x * approachSpawnDist;
@@ -544,22 +496,28 @@ function animate(now){
         lsgGroup.position.z = sz + (ez - sz) * eased;
       }
       
-      // DONE at 100%
-      if(progress >= 1.0){
-        const arrDist = 100;
-        lsgGroup.position.set(warpHeading.x * arrDist, 0, warpHeading.z * arrDist);
+      // End warp
+      if(t >= wp.totalTime){
         currentAnchor = warpTarget;
         warpState = 'none';
         warpTarget = null;
-        gateModel.visible = (currentAnchor === 'gate');
-        stationModel.visible = (currentAnchor === 'station');
-        // Update playerSS to new position
-        window._playerSS = {x: SSG[currentAnchor].x, z: SSG[currentAnchor].z};
-        console.log(`[WARP] Complete! Now at: ${currentAnchor}`);
+        if(currentAnchor === 'gate'){ gateModel.visible = true; stationModel.visible = false; }
+        else if(currentAnchor === 'station' || currentAnchor === 'stationOrbit'){ stationModel.visible = true; gateModel.visible = false; }
+        else { gateModel.visible = false; stationModel.visible = false; }
+        lsgGroup.position.set(warpHeading.x * 100, 0, warpHeading.z * 100);
+        const destX = window._warpToSS ? window._warpToSS.x : 0;
+        const destZ = window._warpToSS ? window._warpToSS.z : 0;
+        const actualX = window._playerSS.x;
+        const actualZ = window._playerSS.z;
+        const errorAU = Math.sqrt((actualX-destX)**2 + (actualZ-destZ)**2);
+        console.log(`[WARP] Complete! Target SS: (${destX.toFixed(6)}, ${destZ.toFixed(6)}) Actual: (${actualX.toFixed(6)}, ${actualZ.toFixed(6)}) Error: ${errorAU.toFixed(6)} AU = ${Math.round(errorAU*150000000)} km`);
         updateButtons();
       }
       
-      document.getElementById('info').textContent = `Speed: ${Math.round(warpSpeed*100)} m/s | State: warping ${Math.round(progress*100)}% | Group: (${Math.round(lsgGroup.position.x)}, ${Math.round(lsgGroup.position.z)})`;
+      // HUD
+      const speedKmS = speed * AU_KM;
+      document.getElementById('info').textContent = `Speed: ${speed > 0.01 ? (speed).toFixed(3)+' AU/s' : Math.round(speedKmS)+' km/s'} | State: warping ${Math.round(progress*100)}% | Target: ${warpTarget}`;
+      
     }
   } else {
     document.getElementById('info').textContent = `Speed: 0 m/s | State: idle | Anchor: ${currentAnchor} | Group: (${Math.round(lsgGroup.position.x)}, ${Math.round(lsgGroup.position.z)})`;
