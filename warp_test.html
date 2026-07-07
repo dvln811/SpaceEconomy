@@ -11,12 +11,15 @@ button:hover{background:#4fc3f7;color:#000}
 button:disabled{opacity:0.3;cursor:not-allowed;border-color:#2a3a5a;color:#2a3a5a}
 button:disabled:hover{background:#0d1a2f;color:#2a3a5a}
 #info{position:absolute;bottom:10px;left:10px;z-index:10;background:rgba(10,14,24,0.9);padding:8px 12px;border:1px solid #1a2844;border-radius:4px;max-width:90vw}
+.label{position:absolute;font-family:monospace;font-size:11px;color:#8aa0b8;pointer-events:none;white-space:nowrap;text-shadow:0 0 4px rgba(0,0,0,0.9);z-index:20}
 </style>
 </head><body>
 <div id="viewport">
   <div id="hud">
     <button id="btn-gate">Warp to Gate</button>
     <button id="btn-station">Warp to Station</button>
+    <button id="btn-planet-a">Warp to Planet A</button>
+    <button id="btn-planet-b">Warp to Planet B</button>
     <button id="btn-reset-gate">Reset at Gate</button>
     <button id="btn-reset-station">Reset at Station</button>
   </div>
@@ -25,6 +28,8 @@ button:disabled:hover{background:#0d1a2f;color:#2a3a5a}
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 <script type="module">
 import * as THREE from 'three';
+
+const AU_KM = 150000000;
 
 // ── SCENE SETUP ──
 const container = document.getElementById('viewport');
@@ -39,7 +44,7 @@ const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
 dirLight.position.set(50, 30, 20);
 scene.add(dirLight);
 
-// ── STARFIELD (inline, no external load) ──
+// ── STARFIELD ──
 const starGeo = new THREE.BufferGeometry();
 const starVerts = new Float32Array(2000*3);
 for(let i=0;i<2000*3;i+=3){
@@ -53,14 +58,13 @@ starGeo.setAttribute('position',new THREE.BufferAttribute(starVerts,3));
 const starField = new THREE.Points(starGeo, new THREE.PointsMaterial({color:0xffffff,size:1.5,sizeAttenuation:false}));
 scene.add(starField);
 
-// ── SHIP MODEL (inline) ──
-// Simple cone pointing along +X by default
+// ── SHIP MODEL ──
 const shipGeo = new THREE.ConeGeometry(0.08, 0.35, 4);
-shipGeo.rotateX(Math.PI/2); // tip points along +Z after this
+shipGeo.rotateX(Math.PI/2);
 const shipMesh = new THREE.Mesh(shipGeo, new THREE.MeshPhongMaterial({color:0x4fc3f7, emissive:0x0a1428}));
 scene.add(shipMesh);
 
-// ── GATE MODEL (inline - torus + greebles) ──
+// ── GATE MODEL ──
 function makeGate(){
   const g = new THREE.Group();
   const torusGeo = new THREE.TorusGeometry(8, 0.6, 8, 24);
@@ -77,7 +81,7 @@ function makeGate(){
   return g;
 }
 
-// ── STATION MODEL (inline - box + arm) ──
+// ── STATION MODEL ──
 function makeStation(){
   const g = new THREE.Group();
   const bodyGeo = new THREE.BoxGeometry(60, 30, 30);
@@ -92,6 +96,85 @@ function makeStation(){
   return g;
 }
 
+// ── PROCEDURAL TEXTURES ──
+function makeTerrestrialTexture(){
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#1a4a8a';
+  ctx.fillRect(0,0,256,128);
+  for(let i=0;i<40;i++){
+    ctx.fillStyle = `hsl(${100+Math.random()*40}, ${50+Math.random()*30}%, ${25+Math.random()*20}%)`;
+    const x = Math.random()*256, y = Math.random()*128;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 10+Math.random()*30, 5+Math.random()*15, Math.random()*Math.PI, 0, Math.PI*2);
+    ctx.fill();
+  }
+  for(let i=0;i<20;i++){
+    ctx.fillStyle = `rgba(255,255,255,${0.3+Math.random()*0.3})`;
+    ctx.beginPath();
+    ctx.ellipse(Math.random()*256, Math.random()*128, 15+Math.random()*25, 3+Math.random()*5, Math.random()*Math.PI, 0, Math.PI*2);
+    ctx.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+function makeGasGiantTexture(){
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 128;
+  const ctx = c.getContext('2d');
+  for(let y=0;y<128;y++){
+    const hue = 20 + Math.sin(y*0.1)*15 + Math.random()*5;
+    const light = 35 + Math.sin(y*0.3)*10 + Math.random()*5;
+    ctx.fillStyle = `hsl(${hue}, 60%, ${light}%)`;
+    ctx.fillRect(0, y, 256, 1);
+  }
+  for(let i=0;i<8;i++){
+    const y = 20+Math.random()*88;
+    ctx.fillStyle = `rgba(180,100,60,${0.2+Math.random()*0.3})`;
+    ctx.beginPath();
+    ctx.ellipse(128, y, 80+Math.random()*40, 2+Math.random()*4, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+  // Great spot
+  ctx.fillStyle = 'rgba(200,80,50,0.7)';
+  ctx.beginPath();
+  ctx.ellipse(180, 70, 20, 12, 0, 0, Math.PI*2);
+  ctx.fill();
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+function makeRockyTexture(){
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#4a4a4a';
+  ctx.fillRect(0,0,256,128);
+  for(let i=0;i<200;i++){
+    const gray = 30+Math.random()*60;
+    ctx.fillStyle = `rgb(${gray},${gray},${gray-5})`;
+    ctx.beginPath();
+    ctx.arc(Math.random()*256, Math.random()*128, 1+Math.random()*8, 0, Math.PI*2);
+    ctx.fill();
+  }
+  for(let i=0;i<15;i++){
+    ctx.fillStyle = `rgba(20,20,20,${0.3+Math.random()*0.4})`;
+    ctx.beginPath();
+    ctx.arc(Math.random()*256, Math.random()*128, 5+Math.random()*15, 0, Math.PI*2);
+    ctx.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
 // ── LSG GROUP ──
 let lsgGroup = new THREE.Group();
 scene.add(lsgGroup);
@@ -103,7 +186,44 @@ stationModel.position.set(0, 0, 0);
 lsgGroup.add(gateModel);
 lsgGroup.add(stationModel);
 
-// ── START AT STATION (so "Warp to Gate" works immediately) ──
+// ── SSG POSITIONS ──
+const SSG = {
+  gate: {x: 5, z: 0},
+  station: {x: -3, z: 4},
+  planetA: {x: 8, z: 6},
+  planetB: {x: -6, z: -5},
+  moon: {x: -5.8, z: -4.85}
+};
+
+// ── SSG PLANET MESHES ──
+const ssgPlanetGroup = new THREE.Group();
+scene.add(ssgPlanetGroup);
+
+const ssgBodies = {
+  planetA: { radius_km: 6000, mesh: null },
+  planetB: { radius_km: 45000, mesh: null },
+  moon: { radius_km: 1500, mesh: null }
+};
+
+const planetAGeo = new THREE.SphereGeometry(1, 32, 24);
+const planetAMesh = new THREE.Mesh(planetAGeo, new THREE.MeshPhongMaterial({map: makeTerrestrialTexture()}));
+planetAMesh.visible = false;
+ssgPlanetGroup.add(planetAMesh);
+ssgBodies.planetA.mesh = planetAMesh;
+
+const planetBGeo = new THREE.SphereGeometry(1, 32, 24);
+const planetBMesh = new THREE.Mesh(planetBGeo, new THREE.MeshPhongMaterial({map: makeGasGiantTexture()}));
+planetBMesh.visible = false;
+ssgPlanetGroup.add(planetBMesh);
+ssgBodies.planetB.mesh = planetBMesh;
+
+const moonGeo = new THREE.SphereGeometry(1, 24, 16);
+const moonMesh = new THREE.Mesh(moonGeo, new THREE.MeshPhongMaterial({map: makeRockyTexture()}));
+moonMesh.visible = false;
+ssgPlanetGroup.add(moonMesh);
+ssgBodies.moon.mesh = moonMesh;
+
+// ── START AT STATION ──
 let currentAnchor = 'station';
 stationModel.visible = true;
 gateModel.visible = false;
@@ -138,112 +258,166 @@ renderer.domElement.addEventListener('wheel', e=>{
   updateCamera();
 }, {passive:false});
 
+
 // ── WARP STATE ──
 let warpState = 'none'; // none, aligning, warping
 let warpTarget = null;
 let warpHeading = new THREE.Vector3(1, 0, 0);
 let shipHeading = new THREE.Vector3(1, 0, 0);
 let warpTimer = 0;
-const warpDuration = 5; // seconds
+const warpDuration = 5; // seconds (for gate/station LSG warps)
 let departureHidden = false;
 let approachStarted = false;
 const approachSpawnDist = 5000;
 
-// SSG positions (arbitrary test coordinates)
-const SSG = {
-  gate: {x: 5, z: 0},
-  station: {x: -3, z: 4}
-};
+// Planet warp phases
+window._warpPhases = null;
+window._playerSS = null;
 
 // ── SHIP ORIENTATION HELPER ──
-// Points the ship mesh along a direction vector (XZ plane)
 function orientShip(direction){
-  // Ship cone tip points along +Z after the rotateX in geometry
-  // So we use lookAt to point the mesh in the travel direction
   const target = direction.clone().add(shipMesh.position);
   shipMesh.lookAt(target);
+}
+
+// ── PROJECTED LABELS ──
+const labelDefs = ['planetA','planetB','moon','gate','station'];
+const labelEls = {};
+labelDefs.forEach(name => {
+  const el = document.createElement('div');
+  el.className = 'label';
+  el.style.display = 'none';
+  container.appendChild(el);
+  labelEls[name] = el;
+});
+
+function formatDistance(km){
+  if(km < 1) return `${Math.round(km*1000)} m`;
+  if(km < 1000) return `${Math.round(km)} km`;
+  if(km < 1000000) return `${(km/1000).toFixed(1)}k km`;
+  if(km < AU_KM * 0.1) return `${(km/1000000).toFixed(1)}M km`;
+  return `${(km/AU_KM).toFixed(2)} AU`;
+}
+
+function projectToScreen(pos3d){
+  const v = pos3d.clone().project(camera);
+  if(v.z > 1) return null; // behind camera
+  const x = (v.x * 0.5 + 0.5) * container.clientWidth;
+  const y = (-v.y * 0.5 + 0.5) * container.clientHeight;
+  if(x < -100 || x > container.clientWidth+100 || y < -50 || y > container.clientHeight+50) return null;
+  return {x, y};
 }
 
 // ── BUTTON STATE ──
 const btnGate = document.getElementById('btn-gate');
 const btnStation = document.getElementById('btn-station');
+const btnPlanetA = document.getElementById('btn-planet-a');
+const btnPlanetB = document.getElementById('btn-planet-b');
 
 function updateButtons(){
-  // Disable the button for wherever you already are
-  btnGate.disabled = (currentAnchor === 'gate');
-  btnStation.disabled = (currentAnchor === 'station');
-  btnGate.style.opacity = (currentAnchor === 'gate') ? '0.3' : '1';
-  btnStation.style.opacity = (currentAnchor === 'station') ? '0.3' : '1';
+  btnGate.disabled = (currentAnchor === 'gate') || (warpState !== 'none');
+  btnStation.disabled = (currentAnchor === 'station') || (warpState !== 'none');
+  btnPlanetA.disabled = (currentAnchor === 'planetA') || (warpState !== 'none');
+  btnPlanetB.disabled = (currentAnchor === 'planetB') || (warpState !== 'none');
 }
 updateButtons();
 
 // ── WARP FUNCTIONS ──
+function isPlanetTarget(t){ return t === 'planetA' || t === 'planetB' || t === 'moon'; }
+
 function warpTo(target){
   console.log(`[WARP] warpTo('${target}') called | currentAnchor='${currentAnchor}' | warpState='${warpState}'`);
-  if(warpState !== 'none'){
-    console.log('[WARP] Blocked: warpState is not none');
-    return;
-  }
-  if(target === currentAnchor){
-    console.log(`[WARP] Blocked: already at ${target}`);
-    return;
-  }
+  if(warpState !== 'none') return;
+  if(target === currentAnchor) return;
   warpTarget = target;
-  // Compute heading from current SSG position to target
+  
   const from = SSG[currentAnchor];
   const to = SSG[target];
-  const dx = to.x - from.x, dz = to.z - from.z;
-  const len = Math.sqrt(dx*dx + dz*dz);
+  let destX = to.x, destZ = to.z;
+  
+  // For planets: compute orbit offset perpendicular to approach
+  if(isPlanetTarget(target)){
+    const body = ssgBodies[target];
+    const orbitOffsetAU = (body.radius_km * 2) / AU_KM;
+    const dx = to.x - from.x, dz = to.z - from.z;
+    const len = Math.sqrt(dx*dx + dz*dz);
+    // Perpendicular direction
+    const perpX = -dz/len, perpZ = dx/len;
+    destX = to.x + perpX * orbitOffsetAU;
+    destZ = to.z + perpZ * orbitOffsetAU;
+  }
+  
+  const dx = destX - from.x, dz = destZ - from.z;
+  const totalDist = Math.sqrt(dx*dx + dz*dz);
+  const len = totalDist;
   warpHeading.set(dx/len, 0, dz/len);
   shipHeading.copy(warpHeading);
   orientShip(shipHeading);
   warpTimer = 0;
-  warpState = 'warping';
   departureHidden = false;
   approachStarted = false;
-  console.log(`[WARP] Started warping! heading=(${warpHeading.x.toFixed(2)}, ${warpHeading.z.toFixed(2)})`);
+  
+  if(isPlanetTarget(target)){
+    // Compute warp phases
+    const TOP_SPEED = 2.0; // AU/s
+    const ACCEL_TIME = 6;
+    const DECEL_TIME = 15;
+    const accelDist = 0.5 * TOP_SPEED * ACCEL_TIME;
+    const decelDist = TOP_SPEED * DECEL_TIME / 5;
+    let peakSpeed, accelTime, cruiseTime, decelTime, totalTime;
+    if(accelDist + decelDist > totalDist){
+      // Short trip
+      peakSpeed = totalDist / (0.5 * ACCEL_TIME + DECEL_TIME / 5);
+      accelTime = ACCEL_TIME;
+      cruiseTime = 0;
+      decelTime = DECEL_TIME;
+      totalTime = accelTime + decelTime;
+    } else {
+      peakSpeed = TOP_SPEED;
+      accelTime = ACCEL_TIME;
+      decelTime = DECEL_TIME;
+      cruiseTime = (totalDist - accelDist - decelDist) / TOP_SPEED;
+      totalTime = accelTime + cruiseTime + decelTime;
+    }
+    window._warpPhases = {peakSpeed, accelTime, cruiseTime, decelTime, totalTime};
+    window._playerSS = {x: from.x, z: from.z};
+    warpState = 'warping';
+  } else {
+    // Gate/Station LSG warp (original behavior)
+    window._warpPhases = null;
+    warpState = 'warping';
+  }
+  
+  console.log(`[WARP] Started warping to ${target}! heading=(${warpHeading.x.toFixed(2)}, ${warpHeading.z.toFixed(2)})`);
   updateButtons();
 }
 
 function resetToGate(){
-  console.log('[RESET] Reset to gate');
-  warpState = 'none';
-  warpTarget = null;
-  currentAnchor = 'gate';
+  warpState = 'none'; warpTarget = null; currentAnchor = 'gate';
   lsgGroup.position.set(0,0,0);
-  gateModel.visible = true;
-  stationModel.visible = false;
+  gateModel.visible = true; stationModel.visible = false;
+  window._warpPhases = null;
+  window._playerSS = null;
   updateButtons();
 }
 
 function resetToStation(){
-  console.log('[RESET] Reset to station');
-  warpState = 'none';
-  warpTarget = null;
-  currentAnchor = 'station';
+  warpState = 'none'; warpTarget = null; currentAnchor = 'station';
   lsgGroup.position.set(0,0,0);
-  stationModel.visible = true;
-  gateModel.visible = false;
+  stationModel.visible = true; gateModel.visible = false;
+  window._warpPhases = null;
+  window._playerSS = null;
   updateButtons();
 }
 
 // ── BUTTON WIRING ──
-document.getElementById('btn-gate').addEventListener('click', ()=> {
-  console.log('[CLICK] Warp to Gate button clicked');
-  warpTo('gate');
-});
-document.getElementById('btn-station').addEventListener('click', ()=> {
-  console.log('[CLICK] Warp to Station button clicked');
-  warpTo('station');
-});
-document.getElementById('btn-reset-gate').addEventListener('click', ()=> {
-  console.log('[CLICK] Reset at Gate clicked');
-  resetToGate();
-});
-document.getElementById('btn-reset-station').addEventListener('click', ()=> {
-  console.log('[CLICK] Reset at Station clicked');
-  resetToStation();
-});
+document.getElementById('btn-gate').addEventListener('click', ()=> warpTo('gate'));
+document.getElementById('btn-station').addEventListener('click', ()=> warpTo('station'));
+document.getElementById('btn-planet-a').addEventListener('click', ()=> warpTo('planetA'));
+document.getElementById('btn-planet-b').addEventListener('click', ()=> warpTo('planetB'));
+document.getElementById('btn-reset-gate').addEventListener('click', ()=> resetToGate());
+document.getElementById('btn-reset-station').addEventListener('click', ()=> resetToStation());
+
 
 // ── ANIMATION LOOP ──
 let lastTime = 0;
@@ -254,78 +428,230 @@ function animate(now){
 
   if(warpState === 'warping'){
     warpTimer += dt;
-    const progress = Math.min(1.0, warpTimer / warpDuration);
     
-    // Speed curve: ramp up first 50%, hold, decel last 15%
-    let speedFactor;
-    if(progress < 0.5) speedFactor = progress / 0.5;
-    else if(progress < 0.85) speedFactor = 1.0;
-    else speedFactor = (1.0 - progress) / 0.15;
-    const warpSpeed = speedFactor * 4500;
-    
-    // Keep ship oriented along warp heading during warp
-    orientShip(warpHeading);
-    
-    // DEPARTURE (0-10%): move group backward along -heading
-    if(progress < 0.1){
-      lsgGroup.position.x -= warpHeading.x * warpSpeed * dt;
-      lsgGroup.position.z -= warpHeading.z * warpSpeed * dt;
+    if(isPlanetTarget(warpTarget) && window._warpPhases){
+      // ── PLANET WARP (SSG-based) ──
+      const wp = window._warpPhases;
+      const t = warpTimer;
+      let speed = 0;
+      
+      if(t < wp.accelTime){
+        // Acceleration phase: linear ramp
+        speed = wp.peakSpeed * (t / wp.accelTime);
+      } else if(t < wp.accelTime + wp.cruiseTime){
+        // Cruise phase
+        speed = wp.peakSpeed;
+      } else if(t < wp.totalTime){
+        // Deceleration phase: steep drop, long tail
+        const decelElapsed = t - wp.accelTime - wp.cruiseTime;
+        const dt_norm = decelElapsed / wp.decelTime;
+        speed = wp.peakSpeed * Math.pow(1 - dt_norm, 4);
+      } else {
+        speed = 0;
+      }
+      
+      // Move player SS position
+      if(window._playerSS && speed > 0){
+        window._playerSS.x += warpHeading.x * speed * dt;
+        window._playerSS.z += warpHeading.z * speed * dt;
+      }
+      
+      orientShip(warpHeading);
+      
+      // LSG departure visual (0-10% of totalTime)
+      const progress = Math.min(1.0, t / wp.totalTime);
+      
+      if(progress < 0.1){
+        lsgGroup.position.x -= warpHeading.x * speed * 500 * dt;
+        lsgGroup.position.z -= warpHeading.z * speed * 500 * dt;
+      }
+      if(progress >= 0.1 && !departureHidden){
+        departureHidden = true;
+        gateModel.visible = false;
+        stationModel.visible = false;
+      }
+      
+      // At 70%: for planet targets, hide gate and station (no LSG approach model)
+      if(progress >= 0.7 && !approachStarted){
+        approachStarted = true;
+        gateModel.visible = false;
+        stationModel.visible = false;
+      }
+      
+      // End warp
+      if(t >= wp.totalTime){
+        currentAnchor = warpTarget;
+        warpState = 'none';
+        warpTarget = null;
+        gateModel.visible = false;
+        stationModel.visible = false;
+        lsgGroup.position.set(0,0,0);
+        console.log(`[WARP] Planet warp complete! Now at: ${currentAnchor}`);
+        updateButtons();
+      }
+      
+      // HUD
+      const speedKmS = speed * AU_KM;
+      document.getElementById('info').textContent = `Speed: ${speed > 0.01 ? (speed).toFixed(3)+' AU/s' : Math.round(speedKmS)+' km/s'} | State: warping ${Math.round(progress*100)}% | Target: ${warpTarget}`;
+      
+    } else {
+      // ── GATE/STATION LSG WARP (original behavior) ──
+      const progress = Math.min(1.0, warpTimer / warpDuration);
+      
+      let speedFactor;
+      if(progress < 0.5) speedFactor = progress / 0.5;
+      else if(progress < 0.85) speedFactor = 1.0;
+      else speedFactor = (1.0 - progress) / 0.15;
+      const warpSpeed = speedFactor * 4500;
+      
+      orientShip(warpHeading);
+      
+      // DEPARTURE (0-10%)
+      if(progress < 0.1){
+        lsgGroup.position.x -= warpHeading.x * warpSpeed * dt;
+        lsgGroup.position.z -= warpHeading.z * warpSpeed * dt;
+      }
+      
+      // Hide departure models at 10%
+      if(progress >= 0.1 && !departureHidden){
+        departureHidden = true;
+        gateModel.visible = false;
+        stationModel.visible = false;
+      }
+      
+      // APPROACH at 70%
+      if(progress >= 0.7 && !approachStarted){
+        approachStarted = true;
+        lsgGroup.position.set(
+          warpHeading.x * approachSpawnDist,
+          0,
+          warpHeading.z * approachSpawnDist
+        );
+        if(warpTarget === 'gate'){ gateModel.visible = true; stationModel.visible = false; }
+        else { stationModel.visible = true; gateModel.visible = false; }
+      }
+      
+      // SLIDE IN (70-100%)
+      if(approachStarted){
+        const approachT = Math.min(1.0, (progress - 0.7) / 0.3);
+        const arrDist = 100;
+        const sx = warpHeading.x * approachSpawnDist;
+        const sz = warpHeading.z * approachSpawnDist;
+        const ex = warpHeading.x * arrDist;
+        const ez = warpHeading.z * arrDist;
+        const eased = 1 - Math.pow(1 - approachT, 2);
+        lsgGroup.position.x = sx + (ex - sx) * eased;
+        lsgGroup.position.z = sz + (ez - sz) * eased;
+      }
+      
+      // DONE at 100%
+      if(progress >= 1.0){
+        const arrDist = 100;
+        lsgGroup.position.set(warpHeading.x * arrDist, 0, warpHeading.z * arrDist);
+        currentAnchor = warpTarget;
+        warpState = 'none';
+        warpTarget = null;
+        gateModel.visible = (currentAnchor === 'gate');
+        stationModel.visible = (currentAnchor === 'station');
+        // Update playerSS to new position
+        window._playerSS = {x: SSG[currentAnchor].x, z: SSG[currentAnchor].z};
+        console.log(`[WARP] Complete! Now at: ${currentAnchor}`);
+        updateButtons();
+      }
+      
+      document.getElementById('info').textContent = `Speed: ${Math.round(warpSpeed*100)} m/s | State: warping ${Math.round(progress*100)}% | Group: (${Math.round(lsgGroup.position.x)}, ${Math.round(lsgGroup.position.z)})`;
     }
-    
-    // Hide departure models (once at 10%)
-    if(progress >= 0.1 && !departureHidden){
-      departureHidden = true;
-      gateModel.visible = false;
-      stationModel.visible = false;
-    }
-    
-    // APPROACH (at 70%): show target ahead, start sliding in
-    if(progress >= 0.7 && !approachStarted){
-      approachStarted = true;
-      lsgGroup.position.set(
-        warpHeading.x * approachSpawnDist,
-        0,
-        warpHeading.z * approachSpawnDist
-      );
-      // Show target model
-      if(warpTarget === 'gate'){ gateModel.visible = true; stationModel.visible = false; }
-      else { stationModel.visible = true; gateModel.visible = false; }
-    }
-    
-    // SLIDE IN (70-100%): interpolate group from spawn distance to arrival distance
-    if(approachStarted){
-      const approachT = Math.min(1.0, (progress - 0.7) / 0.3);
-      const arrDist = 100; // 100 units = 10km from anchor
-      const sx = warpHeading.x * approachSpawnDist;
-      const sz = warpHeading.z * approachSpawnDist;
-      const ex = warpHeading.x * arrDist;
-      const ez = warpHeading.z * arrDist;
-      // Smooth ease-out for nice deceleration feel
-      const eased = 1 - Math.pow(1 - approachT, 2);
-      lsgGroup.position.x = sx + (ex - sx) * eased;
-      lsgGroup.position.z = sz + (ez - sz) * eased;
-    }
-    
-    // DONE at 100%
-    if(progress >= 1.0){
-      const arrDist = 100;
-      lsgGroup.position.set(warpHeading.x * arrDist, 0, warpHeading.z * arrDist);
-      currentAnchor = warpTarget;
-      warpState = 'none';
-      warpTarget = null;
-      gateModel.visible = (currentAnchor === 'gate');
-      stationModel.visible = (currentAnchor === 'station');
-      console.log(`[WARP] Complete! Now at: ${currentAnchor}`);
-      updateButtons();
-    }
-    
-    // HUD
-    document.getElementById('info').textContent = `Speed: ${Math.round(warpSpeed*100)} m/s | State: warping ${Math.round(progress*100)}% | Group: (${Math.round(lsgGroup.position.x)}, ${Math.round(lsgGroup.position.z)})`;
   } else {
     document.getElementById('info').textContent = `Speed: 0 m/s | State: idle | Anchor: ${currentAnchor} | Group: (${Math.round(lsgGroup.position.x)}, ${Math.round(lsgGroup.position.z)})`;
   }
+
+  // ── SSG PLANET UPDATE ──
+  // Determine player position in SS
+  let playerX, playerZ;
+  if(window._playerSS){
+    playerX = window._playerSS.x;
+    playerZ = window._playerSS.z;
+  } else {
+    playerX = SSG[currentAnchor].x;
+    playerZ = SSG[currentAnchor].z;
+  }
   
-  // Starfield follows camera so it appears infinitely far
+  for(const [name, body] of Object.entries(ssgBodies)){
+    const planet = SSG[name];
+    const dxAU = planet.x - playerX;
+    const dzAU = planet.z - playerZ;
+    const distAU = Math.sqrt(dxAU*dxAU + dzAU*dzAU);
+    const distKm = distAU * AU_KM;
+    const visibleDistKm = body.radius_km * 100;
+    
+    if(distKm > visibleDistKm){
+      body.mesh.visible = false;
+    } else {
+      body.mesh.visible = true;
+      const dirLen = Math.sqrt(dxAU*dxAU + dzAU*dzAU);
+      const dirX = dirLen > 0 ? dxAU / dirLen : 0;
+      const dirZ = dirLen > 0 ? dzAU / dirLen : 0;
+      const closeness = 1 - Math.min(1, distKm / visibleDistKm);
+      const renderDist = 200 + (1 - closeness) * 300;
+      body.mesh.position.set(dirX * renderDist, 0, dirZ * renderDist);
+      const scale = 5 + 95 * closeness;
+      body.mesh.scale.setScalar(scale);
+    }
+  }
+
+  // ── PROJECTED LABELS ──
+  for(const name of labelDefs){
+    const el = labelEls[name];
+    let pos3d = null;
+    let distKm = 0;
+    
+    if(ssgBodies[name] && ssgBodies[name].mesh.visible){
+      // Planet with visible mesh: project from mesh position
+      pos3d = ssgBodies[name].mesh.position.clone();
+      const dxAU = SSG[name].x - playerX;
+      const dzAU = SSG[name].z - playerZ;
+      distKm = Math.sqrt(dxAU*dxAU + dzAU*dzAU) * AU_KM;
+    } else if(!ssgBodies[name]){
+      // Gate/Station: project from direction * 500
+      const dxAU = SSG[name].x - playerX;
+      const dzAU = SSG[name].z - playerZ;
+      const distAU = Math.sqrt(dxAU*dxAU + dzAU*dzAU);
+      distKm = distAU * AU_KM;
+      if(distAU > 0.001){
+        const dirX = dxAU / distAU;
+        const dirZ = dzAU / distAU;
+        pos3d = new THREE.Vector3(dirX * 500, 0, dirZ * 500);
+      }
+    } else {
+      // Planet but not visible: project from direction * 500
+      const dxAU = SSG[name].x - playerX;
+      const dzAU = SSG[name].z - playerZ;
+      const distAU = Math.sqrt(dxAU*dxAU + dzAU*dzAU);
+      distKm = distAU * AU_KM;
+      if(distAU > 0.001){
+        const dirX = dxAU / distAU;
+        const dirZ = dzAU / distAU;
+        pos3d = new THREE.Vector3(dirX * 500, 0, dirZ * 500);
+      }
+    }
+    
+    if(pos3d){
+      const screen = projectToScreen(pos3d);
+      if(screen){
+        el.style.display = 'block';
+        el.style.left = screen.x + 'px';
+        el.style.top = screen.y + 'px';
+        const displayName = name === 'planetA' ? 'Planet A' : name === 'planetB' ? 'Planet B' : name === 'moon' ? 'Moon' : name === 'gate' ? 'Gate' : 'Station';
+        el.textContent = `${displayName} [${formatDistance(distKm)}]`;
+      } else {
+        el.style.display = 'none';
+      }
+    } else {
+      el.style.display = 'none';
+    }
+  }
+
+  // Starfield follows camera
   starField.position.copy(camera.position);
   
   renderer.render(scene, camera);
