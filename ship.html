@@ -2371,24 +2371,26 @@ function updateSSGPlanets(){
     curSSx = anchorSS ? anchorSS.ss_x : 0;
     curSSz = anchorSS ? anchorSS.ss_z : 0;
   }
-  // Place each planet at a fixed render distance in the correct direction, always visible
-  const RENDER_DIST = 100000; // same distance as labels
+  // Place each planet in correct direction, scale linearly by proximity
+  const RENDER_DIST = 100000;
+  const MAX_SCALE = 50000;
+  
   for(const [id, pd] of Object.entries(ssgPlanetMeshes)){
     const dxAU = pd.ss_x - curSSx;
     const dzAU = pd.ss_z - curSSz;
     const distAU = Math.sqrt(dxAU*dxAU + dzAU*dzAU);
-    if(distAU < 0.00001){
-      // We are at this planet
-      pd.mesh.position.set(0, 0, pd.radius_pu * 2.5);
-      pd.mesh.scale.setScalar(pd.radius_pu);
-    } else {
-      // Place in direction of planet at fixed distance, with a visible size
-      const dirX = dxAU / distAU;
-      const dirZ = dzAU / distAU;
-      pd.mesh.position.set(dirX * RENDER_DIST, 0, dirZ * RENDER_DIST);
-      // Scale to a fixed visible size (unrealistic, just for debugging)
-      pd.mesh.scale.setScalar(5000); // visible marker size at 100k distance
-    }
+    
+    // Direction
+    const dirX = (distAU > 0.00001) ? dxAU / distAU : 0;
+    const dirZ = (distAU > 0.00001) ? dzAU / distAU : 1;
+    pd.mesh.position.set(dirX * RENDER_DIST, 0, dirZ * RENDER_DIST);
+    
+    // Linear scale: 0% at 15AU, 100% at 0AU
+    const maxViewDist = 15.0; // AU - beyond this, planet is minimum size
+    const proximity = 1.0 - Math.min(1.0, distAU / maxViewDist); // 0 when far, 1 when at planet
+    const scale = 200 + (MAX_SCALE - 200) * proximity;
+    
+    pd.mesh.scale.setScalar(scale);
     pd.mesh.visible = true;
   }
 }
