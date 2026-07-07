@@ -2371,35 +2371,25 @@ function updateSSGPlanets(){
     curSSx = anchorSS ? anchorSS.ss_x : 0;
     curSSz = anchorSS ? anchorSS.ss_z : 0;
   }
-  // Position each planet based on SS distance - always, including during warp
+  // Place each planet at a fixed render distance in the correct direction, always visible
+  const RENDER_DIST = 100000; // same distance as labels
   for(const [id, pd] of Object.entries(ssgPlanetMeshes)){
     const dxAU = pd.ss_x - curSSx;
     const dzAU = pd.ss_z - curSSz;
     const distAU = Math.sqrt(dxAU*dxAU + dzAU*dzAU);
-    const distKm = distAU * 150000000;
-    // Angular size in radians
-    const angularSize = (distKm > 1) ? pd.radius_km / distKm : 999;
-    // Visible if angular size > ~10px worth (0.01 rad at 50deg FOV ~1000px)
-    if(distKm < 1){
-      // At this planet - render at orbit distance
-      pd.mesh.position.set(pd.radius_pu * 2.5, 0, 0);
+    if(distAU < 0.00001){
+      // We are at this planet
+      pd.mesh.position.set(0, 0, pd.radius_pu * 2.5);
       pd.mesh.scale.setScalar(pd.radius_pu);
-      pd.mesh.visible = true;
-    } else if(angularSize > 0.0001){
-      const distPU = distKm * 10;
-      // Cap at 400M PU, scale down to preserve angular size if beyond
-      const maxDist = 400000000;
-      let renderDist, renderScale;
-      if(distPU <= maxDist){ renderDist = distPU; renderScale = pd.radius_pu; }
-      else { renderDist = maxDist; renderScale = pd.radius_pu * (maxDist / distPU); }
-      const dirX = dxAU / (distAU || 1);
-      const dirZ = dzAU / (distAU || 1);
-      pd.mesh.position.set(dirX * renderDist, 0, dirZ * renderDist);
-      pd.mesh.scale.setScalar(renderScale);
-      pd.mesh.visible = true;
     } else {
-      pd.mesh.visible = false;
+      // Place in direction of planet at fixed distance, with a visible size
+      const dirX = dxAU / distAU;
+      const dirZ = dzAU / distAU;
+      pd.mesh.position.set(dirX * RENDER_DIST, 0, dirZ * RENDER_DIST);
+      // Scale to a fixed visible size (unrealistic, just for debugging)
+      pd.mesh.scale.setScalar(5000); // visible marker size at 100k distance
     }
+    pd.mesh.visible = true;
   }
 }
 
@@ -2511,11 +2501,9 @@ function updateDirectionalLabels(){
     } else if(ssDirLen > 0.001){
       // Place label point very far away in the SS direction (effectively at infinity)
       // Add Y offset from hash for orbital inclination (matches map/LSG placement)
-      let nameHash = 0;
-      for(let ci=0; ci<obj.name.length; ci++) nameHash = ((nameHash*31)+obj.name.charCodeAt(ci))|0;
-      const yFactor = ((Math.abs(nameHash) % 100) / 100 - 0.5) * 0.05;
       labelX = (ssDirX / ssDirLen) * 100000;
-      labelY = yFactor * 100000;
+      labelY = 0;
+      labelZ = (ssDirZ / ssDirLen) * 100000;
       labelZ = (ssDirZ / ssDirLen) * 100000;
     } else {
       label.el.style.display = 'none'; continue;
