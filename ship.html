@@ -2389,20 +2389,21 @@ function updateSSGPlanets(){
     const dirZ = (distAU > 0.00001) ? dzAU / distAU : 1;
     pd.mesh.position.set(dirX * RENDER_DIST, 0, dirZ * RENDER_DIST);
     
-    // Scale: place on clipping plane, increase radius as it approaches
-    // Distant planets = tiny dot. Close planet = fills view.
-    // Use ratio: planet_radius / distance (angular size), scaled to render distance
     const distKm = distAU * 150000000;
+    // Scale using log(distance) to avoid hockey stick
     let scale;
     if(distKm < 1){
-      // At the planet
       scale = MAX_SCALE;
     } else {
-      // Angular size mapped to render scale
-      // angular_size = radius_km / distance_km
-      // rendered_size = angular_size * RENDER_DIST
-      scale = (pd.radius_km / distKm) * RENDER_DIST;
-      scale = Math.max(500, Math.min(MAX_SCALE, scale)); // min 500 PU (visible dot), max fills view
+      // log scale: maps huge distance range to gentle visual range
+      // At 500M km (3.3 AU): log10(500000000) = 8.7 → scale tiny
+      // At 50k km (close): log10(50000) = 4.7 → scale large  
+      // Invert: closer = bigger
+      const logDist = Math.log10(distKm);
+      const logMax = 9; // ~3 AU
+      const logMin = 4; // ~10,000 km (close)
+      const t = 1 - Math.max(0, Math.min(1, (logDist - logMin) / (logMax - logMin)));
+      scale = 500 + (MAX_SCALE - 500) * t;
     }
     
     pd.mesh.scale.setScalar(scale);
