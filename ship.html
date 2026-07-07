@@ -2370,13 +2370,16 @@ function updateSSGPlanets(){
   let curSSx = 0, curSSz = 0;
   if((warpState === 'warping' || warpState === 'aligning') && window._warpFromSS){
     const progress = (warpState === 'warping') ? Math.min(0.99, warpTravelTimer / warpTravelDuration) : 0;
-    curSSx = window._warpFromSS.x + (window._warpToSS.x - window._warpFromSS.x) * progress;
-    curSSz = window._warpFromSS.z + (window._warpToSS.z - window._warpFromSS.z) * progress;
+    const eased = progress * progress * (3 - 2 * progress); // smoothstep: slow start + slow end
+    curSSx = window._warpFromSS.x + (window._warpToSS.x - window._warpFromSS.x) * eased;
+    curSSz = window._warpFromSS.z + (window._warpToSS.z - window._warpFromSS.z) * eased;
   } else {
     // Idle: keep using last warp position (don't snap)
     if(window._warpFromSS && window._warpToSS){
-      curSSx = window._warpFromSS.x + (window._warpToSS.x - window._warpFromSS.x) * 0.99;
-      curSSz = window._warpFromSS.z + (window._warpToSS.z - window._warpFromSS.z) * 0.99;
+      const p = 0.99;
+      const eased = p * p * (3 - 2 * p);
+      curSSx = window._warpFromSS.x + (window._warpToSS.x - window._warpFromSS.x) * eased;
+      curSSz = window._warpFromSS.z + (window._warpToSS.z - window._warpFromSS.z) * eased;
     } else {
       const anchorSS = localState.objects.find(o => o.is_anchor);
       curSSx = (anchorSS ? anchorSS.ss_x : 0) + 0.0001;
@@ -2392,7 +2395,12 @@ function updateSSGPlanets(){
       // If planet already reached full size, freeze it (don't update position/scale)
       if(pd._frozen){
         pd.mesh.visible = true;
-        continue;
+        // Unfreeze if we moved far away (new warp to different target)
+        const checkDxAU = pd.ss_x - curSSx;
+        const checkDzAU = pd.ss_z - curSSz;
+        const checkDist = Math.sqrt(checkDxAU*checkDxAU + checkDzAU*checkDzAU) * 150000000;
+        if(checkDist > 10000000) pd._frozen = false;
+        else continue;
       }
       // DYNAMIC: compute from SS distance
       const dxAU = pd.ss_x - curSSx;
@@ -2413,6 +2421,11 @@ function updateSSGPlanets(){
         const logMin = 4; // ~10,000km
         const t = 1 - Math.max(0, Math.min(1, (logDist - logMin) / (logMax - logMin)));
         scale = 500 + (MAX_SCALE - 500) * t;
+        // Hide if too far to be visible (just show label instead)
+        if(distKm > 10000000){ // 10M km
+          pd.mesh.visible = false;
+          continue;
+        }
       }
       
       // Position: shift to side as it gets larger
