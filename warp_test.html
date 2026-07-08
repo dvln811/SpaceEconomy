@@ -193,18 +193,20 @@ const SSG = {
   station: {x: -3, z: 4},
   planetA: {x: 8, z: 6},
   planetB: {x: -6, z: -5},
-  moon: {x: -5.8, z: -4.85},
   stationOrbit: {x: 8.00008, z: 6.0} // at planet A orbit point
 };
+// Moon: placed at orbital_distance_km from planetB in AU
+// 200,000 km = 200000/150000000 = 0.001333 AU
+SSG.moon = {x: SSG.planetB.x + 0.001333, z: SSG.planetB.z};
 
 // ── SSG PLANET MESHES ──
 const ssgPlanetGroup = new THREE.Group();
 scene.add(ssgPlanetGroup);
 
 const ssgBodies = {
-  planetA: { radius_km: 6000, mesh: null },
-  planetB: { radius_km: 45000, mesh: null },
-  moon: { radius_km: 1500, mesh: null }
+  planetA: { radius_km: 6000, mesh: null, type: 'planet' },
+  planetB: { radius_km: 45000, mesh: null, type: 'planet' },
+  moon: { radius_km: 3000, mesh: null, type: 'moon', parent: 'planetB', orbital_distance_km: 200000 }
 };
 
 const planetAGeo = new THREE.SphereGeometry(1, 32, 24);
@@ -540,6 +542,42 @@ function animate(now){
     const dzAU = planet.z - playerZ;
     const distAU = Math.sqrt(dxAU*dxAU + dzAU*dzAU);
     const distKm = distAU * AU_KM;
+    
+    // Moons: visible when at parent planet's orbit
+    if(body.type === 'moon' && body.parent){
+      const parentPlanet = SSG[body.parent];
+      const pDxAU = parentPlanet.x - playerX;
+      const pDzAU = parentPlanet.z - playerZ;
+      const pDistKm = Math.sqrt(pDxAU*pDxAU + pDzAU*pDzAU) * AU_KM;
+      const parentBody = ssgBodies[body.parent];
+      const parentVisibleDist = parentBody.radius_km * 100;
+      
+      // Show moon when we're within the parent planet's visible range
+      if(pDistKm < parentVisibleDist){
+        body.mesh.visible = true;
+        // Position moon at its orbital distance from the planet mesh
+        // Direction from planet to moon in SS coords
+        const mDx = planet.x - parentPlanet.x;
+        const mDz = planet.z - parentPlanet.z;
+        const mLen = Math.sqrt(mDx*mDx + mDz*mDz) || 0.001;
+        const mDirX = mDx / mLen;
+        const mDirZ = mDz / mLen;
+        // Render distance scaled to the scene (moon orbital dist relative to parent render dist)
+        const parentMesh = parentBody.mesh;
+        const parentScale = parentMesh.scale.x || 50;
+        const moonOrbitRender = parentScale * (body.orbital_distance_km / parentBody.radius_km);
+        const moonPosX = parentMesh.position.x + mDirX * moonOrbitRender;
+        const moonPosZ = parentMesh.position.z + mDirZ * moonOrbitRender;
+        body.mesh.position.set(moonPosX, 0, moonPosZ);
+        // Moon scale relative to parent
+        const moonScale = parentScale * (body.radius_km / parentBody.radius_km);
+        body.mesh.scale.setScalar(moonScale);
+      } else {
+        body.mesh.visible = false;
+      }
+      continue;
+    }
+    
     const visibleDistKm = body.radius_km * 100;
     
     if(distKm > visibleDistKm){
@@ -564,11 +602,15 @@ function animate(now){
     let distKm = 0;
     
     if(ssgBodies[name] && ssgBodies[name].mesh.visible){
-      // Planet with visible mesh: project from mesh position
+      // Planet/moon with visible mesh: project from mesh position
       pos3d = ssgBodies[name].mesh.position.clone();
       const dxAU = SSG[name].x - playerX;
       const dzAU = SSG[name].z - playerZ;
       distKm = Math.sqrt(dxAU*dxAU + dzAU*dzAU) * AU_KM;
+      // For moons at parent orbit, show orbital distance instead
+      if(ssgBodies[name].type === 'moon' && ssgBodies[name].orbital_distance_km){
+        distKm = ssgBodies[name].orbital_distance_km;
+      }
     } else if(!ssgBodies[name]){
       // Gate/Station: project from direction * 500
       const dxAU = SSG[name].x - playerX;
