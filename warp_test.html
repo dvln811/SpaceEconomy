@@ -20,6 +20,7 @@ button:disabled:hover{background:#0d1a2f;color:#2a3a5a}
     <button id="btn-station">Warp to Station</button>
     <button id="btn-planet-a">Warp to Planet A</button>
     <button id="btn-planet-b">Warp to Planet B</button>
+    <button id="btn-moon">Warp to Moon</button>
     <button id="btn-orbit-station">Warp to Orbit Station</button>
     <button id="btn-reset-gate">Reset at Gate</button>
     <button id="btn-reset-station">Reset at Station</button>
@@ -233,7 +234,7 @@ stationModel.visible = true;
 gateModel.visible = false;
 
 // ── CAMERA (orbit) ──
-let camTheta = Math.PI, camPhi = 0.3, camDist = 200;
+let camTheta = Math.PI, camPhi = 0.3, camDist = 10;
 
 function updateCamera(){
   const x = camDist * Math.cos(camPhi) * Math.sin(camTheta);
@@ -325,6 +326,8 @@ function updateButtons(){
   btnPlanetB.disabled = (currentAnchor === 'planetB') || (warpState !== 'none');
   const btnOrbit = document.getElementById('btn-orbit-station');
   if(btnOrbit) btnOrbit.disabled = (currentAnchor === 'stationOrbit') || (warpState !== 'none');
+  const btnMoon = document.getElementById('btn-moon');
+  if(btnMoon) btnMoon.disabled = (currentAnchor === 'moon') || (warpState !== 'none');
 }
 updateButtons();
 
@@ -337,17 +340,16 @@ function warpTo(target){
   if(target === currentAnchor) return;
   warpTarget = target;
   
-  const from = SSG[currentAnchor];
+  const from = window._playerSS ? {x: window._playerSS.x, z: window._playerSS.z} : SSG[currentAnchor];
   const to = SSG[target];
   let destX = to.x, destZ = to.z;
   
-  // For planets: compute orbit offset perpendicular to approach
+  // For planets/moons: compute orbit offset (stop before the body)
   if(isPlanetTarget(target)){
     const body = ssgBodies[target];
     const orbitOffsetAU = (body.radius_km * 1.5) / AU_KM;
     const dx = to.x - from.x, dz = to.z - from.z;
     const len = Math.sqrt(dx*dx + dz*dz);
-    // Always stop BEFORE the planet (along approach direction)
     destX = to.x - (dx/len) * orbitOffsetAU;
     destZ = to.z - (dz/len) * orbitOffsetAU;
   }
@@ -361,6 +363,7 @@ function warpTo(target){
   warpTimer = 0;
   departureHidden = false;
   approachStarted = false;
+  lsgGroup.position.set(0, 0, 0);
   
   // Compute warp phases for ALL targets
   const TOP_SPEED = 2.0; // AU/s
@@ -384,6 +387,7 @@ function warpTo(target){
   }
   window._warpPhases = {peakSpeed, accelTime, cruiseTime, decelTime, totalTime};
   window._playerSS = {x: from.x, z: from.z};
+  window._warpFromSS = {x: from.x, z: from.z};
   window._warpToSS = {x: destX, z: destZ};
   warpState = 'warping';
   
@@ -414,6 +418,7 @@ document.getElementById('btn-gate').addEventListener('click', ()=> warpTo('gate'
 document.getElementById('btn-station').addEventListener('click', ()=> warpTo('station'));
 document.getElementById('btn-planet-a').addEventListener('click', ()=> warpTo('planetA'));
 document.getElementById('btn-planet-b').addEventListener('click', ()=> warpTo('planetB'));
+document.getElementById('btn-moon').addEventListener('click', ()=> warpTo('moon'));
 document.getElementById('btn-orbit-station').addEventListener('click', ()=> warpTo('stationOrbit'));
 document.getElementById('btn-reset-gate').addEventListener('click', ()=> resetToGate());
 document.getElementById('btn-reset-station').addEventListener('click', ()=> resetToStation());
@@ -436,14 +441,11 @@ function animate(now){
       let speed = 0;
       
       if(t < wp.accelTime){
-        // Acceleration phase: gradual then hockey stick (t^4)
-        const at = t / wp.accelTime; // 0→1
+        const at = t / wp.accelTime;
         speed = wp.peakSpeed * Math.pow(at, 4);
       } else if(t < wp.accelTime + wp.cruiseTime){
-        // Cruise phase
         speed = wp.peakSpeed;
       } else if(t < wp.totalTime){
-        // Deceleration phase: steep drop, long tail
         const decelElapsed = t - wp.accelTime - wp.cruiseTime;
         const dt_norm = decelElapsed / wp.decelTime;
         speed = wp.peakSpeed * Math.pow(1 - dt_norm, 4);
@@ -451,17 +453,42 @@ function animate(now){
         speed = 0;
       }
       
-      // Move player SS position
-      if(window._playerSS && speed > 0){
-        window._playerSS.x += warpHeading.x * speed * dt;
-        window._playerSS.z += warpHeading.z * speed * dt;
+      // Analytical distance: integral of speed curve from 0 to t
+      // Accel integral: peakSpeed * accelTime * (at^5)/5
+      // Cruise integral: peakSpeed * cruiseElapsed
+      // Decel integral: peakSpeed * decelTime * [dt_norm - ... ] = peakSpeed*decelTime*(1/5 - (1-dt_norm)^5/5)... 
+      // Simpler: decel integral from 0 to dt_norm of (1-u)^4 du = [u - ... ] = 1/5*(1-(1-dt_norm)^5)... 
+      let dist = 0;
+      if(t <= wp.accelTime){
+        const at = t / wp.accelTime;
+        // integral of peakSpeed * (u/accelTime)^4 du from 0 to t = peakSpeed * t^5 / (5 * accelTime^4)
+        dist = wp.peakSpeed * Math.pow(t, 5) / (5 * Math.pow(wp.accelTime, 4));
+      } else if(t <= wp.accelTime + wp.cruiseTime){
+        // Full accel distance + cruise so far
+        const accelFullDist = wp.peakSpeed * wp.accelTime / 5;
+        const cruiseElapsed = t - wp.accelTime;
+        dist = accelFullDist + wp.peakSpeed * cruiseElapsed;
+      } else {
+        // Full accel + full cruise + decel so far
+        const accelFullDist = wp.peakSpeed * wp.accelTime / 5;
+        const cruiseFullDist = wp.peakSpeed * wp.cruiseTime;
+        const decelElapsed = Math.min(t - wp.accelTime - wp.cruiseTime, wp.decelTime);
+        const dt_norm = decelElapsed / wp.decelTime;
+        // Integral of peakSpeed*(1-u)^4 from 0 to dt_norm = peakSpeed*decelTime * [1/5 * (1 - (1-dt_norm)^5)]
+        const decelDist = wp.peakSpeed * wp.decelTime * (1 - Math.pow(1 - dt_norm, 5)) / 5;
+        dist = accelFullDist + cruiseFullDist + decelDist;
       }
+      
+      // Position = start + heading * distance
+      window._playerSS.x = window._warpFromSS.x + warpHeading.x * dist;
+      window._playerSS.z = window._warpFromSS.z + warpHeading.z * dist;
       
       orientShip(warpHeading);
       
-      // LSG departure visual: own t^4 ramp over 3 seconds
+      // LSG departure visual: only if departing from a gate/station
       const LSG_DEPART_TIME = 3;
-      if(t < LSG_DEPART_TIME){
+      const hasLSGModel = gateModel.visible || stationModel.visible;
+      if(t < LSG_DEPART_TIME && hasLSGModel){
         const lsgT = t / LSG_DEPART_TIME; // 0→1
         const lsgSpeed = Math.pow(lsgT, 4) * 5000; // hockey stick up to 5000 units/s
         lsgGroup.position.x -= warpHeading.x * lsgSpeed * dt;
@@ -476,22 +503,21 @@ function animate(now){
       // Progress through total warp
       const progress = Math.min(1.0, t / wp.totalTime);
       
-      // At 70%: show approach model
+      // At 70%: show approach model if target has one
       if(progress >= 0.7 && !approachStarted){
         approachStarted = true;
-        if(isPlanetTarget(warpTarget)){
-          gateModel.visible = false;
-          stationModel.visible = false;
-        } else {
-          // Show gate/station ahead
+        if(warpTarget === 'gate'){
           lsgGroup.position.set(warpHeading.x * approachSpawnDist, 0, warpHeading.z * approachSpawnDist);
-          if(warpTarget === 'gate'){ gateModel.visible = true; stationModel.visible = false; }
-          else { stationModel.visible = true; gateModel.visible = false; }
+          gateModel.visible = true; stationModel.visible = false;
+        } else if(warpTarget === 'station' || warpTarget === 'stationOrbit'){
+          lsgGroup.position.set(warpHeading.x * approachSpawnDist, 0, warpHeading.z * approachSpawnDist);
+          stationModel.visible = true; gateModel.visible = false;
         }
+        // Planet/moon targets: no LSG model to show, SSG rendering handles it
       }
       
-      // Slide LSG in for non-planet targets
-      if(approachStarted && !isPlanetTarget(warpTarget)){
+      // Slide LSG model in if it's visible
+      if(approachStarted && (gateModel.visible || stationModel.visible)){
         const approachT = Math.min(1.0, (progress - 0.7) / 0.3);
         const arrDist = 100;
         const sx = warpHeading.x * approachSpawnDist;
@@ -508,16 +534,17 @@ function animate(now){
         currentAnchor = warpTarget;
         warpState = 'none';
         warpTarget = null;
-        if(currentAnchor === 'gate'){ gateModel.visible = true; stationModel.visible = false; }
-        else if(currentAnchor === 'station' || currentAnchor === 'stationOrbit'){ stationModel.visible = true; gateModel.visible = false; }
-        else { gateModel.visible = false; stationModel.visible = false; }
-        lsgGroup.position.set(warpHeading.x * 100, 0, warpHeading.z * 100);
-        const destX = window._warpToSS ? window._warpToSS.x : 0;
-        const destZ = window._warpToSS ? window._warpToSS.z : 0;
-        const actualX = window._playerSS.x;
-        const actualZ = window._playerSS.z;
-        const errorAU = Math.sqrt((actualX-destX)**2 + (actualZ-destZ)**2);
-        console.log(`[WARP] Complete! Target SS: (${destX.toFixed(6)}, ${destZ.toFixed(6)}) Actual: (${actualX.toFixed(6)}, ${actualZ.toFixed(6)}) Error: ${errorAU.toFixed(6)} AU = ${Math.round(errorAU*150000000)} km`);
+        if(currentAnchor === 'gate'){ 
+          gateModel.visible = true; stationModel.visible = false;
+          lsgGroup.position.set(warpHeading.x * 100, 0, warpHeading.z * 100);
+        } else if(currentAnchor === 'station' || currentAnchor === 'stationOrbit'){ 
+          stationModel.visible = true; gateModel.visible = false;
+          lsgGroup.position.set(warpHeading.x * 100, 0, warpHeading.z * 100);
+        } else { 
+          gateModel.visible = false; stationModel.visible = false;
+          lsgGroup.position.set(0, 0, 0);
+        }
+        console.log(`[WARP] Complete! PlayerSS: (${window._playerSS.x.toFixed(6)}, ${window._playerSS.z.toFixed(6)}) Dest: (${window._warpToSS.x.toFixed(6)}, ${window._warpToSS.z.toFixed(6)})`);
         updateButtons();
       }
       
@@ -541,47 +568,13 @@ function animate(now){
     playerZ = SSG[currentAnchor].z;
   }
   
+  // Pass 1: Render ALL bodies (planets and moons) directly based on player distance
   for(const [name, body] of Object.entries(ssgBodies)){
     const planet = SSG[name];
     const dxAU = planet.x - playerX;
     const dzAU = planet.z - playerZ;
     const distAU = Math.sqrt(dxAU*dxAU + dzAU*dzAU);
     const distKm = distAU * AU_KM;
-    
-    // Moons: visible when at parent planet's orbit
-    if(body.type === 'moon' && body.parent){
-      const parentPlanet = SSG[body.parent];
-      const pDxAU = parentPlanet.x - playerX;
-      const pDzAU = parentPlanet.z - playerZ;
-      const pDistKm = Math.sqrt(pDxAU*pDxAU + pDzAU*pDzAU) * AU_KM;
-      const parentBody = ssgBodies[body.parent];
-      const parentVisibleDist = parentBody.radius_km * 100;
-      
-      // Show moon when we're within the parent planet's visible range
-      if(pDistKm < parentVisibleDist){
-        body.mesh.visible = true;
-        // Position moon at its orbital distance from the planet mesh
-        // Direction from planet to moon in SS coords
-        const mDx = planet.x - parentPlanet.x;
-        const mDz = planet.z - parentPlanet.z;
-        const mLen = Math.sqrt(mDx*mDx + mDz*mDz) || 0.001;
-        const mDirX = mDx / mLen;
-        const mDirZ = mDz / mLen;
-        // Render distance scaled to the scene (moon orbital dist relative to parent render dist)
-        const parentMesh = parentBody.mesh;
-        const parentScale = parentMesh.scale.x || 50;
-        const moonOrbitRender = parentScale * (body.orbital_distance_km / parentBody.radius_km);
-        const moonPosX = parentMesh.position.x + mDirX * moonOrbitRender;
-        const moonPosZ = parentMesh.position.z + mDirZ * moonOrbitRender;
-        body.mesh.position.set(moonPosX, 0, moonPosZ);
-        // Moon scale relative to parent
-        const moonScale = parentScale * (body.radius_km / parentBody.radius_km);
-        body.mesh.scale.setScalar(moonScale);
-      } else {
-        body.mesh.visible = false;
-      }
-      continue;
-    }
     
     const visibleDistKm = body.radius_km * 100;
     
@@ -592,11 +585,11 @@ function animate(now){
       const dirLen = Math.sqrt(dxAU*dxAU + dzAU*dzAU);
       const dirX = dirLen > 0 ? dxAU / dirLen : 0;
       const dirZ = dirLen > 0 ? dzAU / dirLen : 0;
-      const closeness = 1 - Math.min(1, distKm / visibleDistKm);
-      const renderDist = 200 + (1 - closeness) * 300;
+      // Same scale factor for size and distance
+      const SCALE_FACTOR = 100;
+      const renderDist = distKm / SCALE_FACTOR;
       body.mesh.position.set(dirX * renderDist, 0, dirZ * renderDist);
-      const scale = 5 + 95 * closeness;
-      body.mesh.scale.setScalar(scale);
+      body.mesh.scale.setScalar(body.radius_km / SCALE_FACTOR);
     }
   }
 
@@ -612,10 +605,6 @@ function animate(now){
       const dxAU = SSG[name].x - playerX;
       const dzAU = SSG[name].z - playerZ;
       distKm = Math.sqrt(dxAU*dxAU + dzAU*dzAU) * AU_KM;
-      // For moons at parent orbit, show orbital distance instead
-      if(ssgBodies[name].type === 'moon' && ssgBodies[name].orbital_distance_km){
-        distKm = ssgBodies[name].orbital_distance_km;
-      }
     } else if(!ssgBodies[name]){
       // Gate/Station: project from direction * 500
       const dxAU = SSG[name].x - playerX;
@@ -655,6 +644,31 @@ function animate(now){
       el.style.display = 'none';
     }
   }
+
+  // ── LABEL DE-OVERLAP ──
+  // Stack labels that are too close together
+  (function deOverlapLabels(){
+    const visible = [];
+    for(const name of labelDefs){
+      const el = labelEls[name];
+      if(el.style.display === 'none') continue;
+      const x = parseFloat(el.style.left);
+      const y = parseFloat(el.style.top);
+      visible.push({el, x, y});
+    }
+    const MIN_GAP = 14; // pixels
+    for(let i = 0; i < visible.length; i++){
+      for(let j = i+1; j < visible.length; j++){
+        const dx = Math.abs(visible[i].x - visible[j].x);
+        const dy = Math.abs(visible[i].y - visible[j].y);
+        if(dx < 80 && dy < MIN_GAP){
+          // Push the second one down
+          visible[j].y = visible[i].y + MIN_GAP;
+          visible[j].el.style.top = visible[j].y + 'px';
+        }
+      }
+    }
+  })();
 
   // Starfield follows camera
   starField.position.copy(camera.position);
