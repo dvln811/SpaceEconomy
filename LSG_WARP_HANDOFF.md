@@ -109,3 +109,7 @@ The problem is exclusively something in the game's additional systems interferin
 - **NEVER start coding just because the visionary asks a question**
 - Discuss first, confirm approach, THEN code
 - Ask before coding when user asks a question vs requests a change
+
+
+## IMPORTANT RULES
+- NEVER ask the user if they want to keep going or stop. Just keep working.

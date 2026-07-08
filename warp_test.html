@@ -364,13 +364,13 @@ function warpTo(target){
   
   // Compute warp phases for ALL targets
   const TOP_SPEED = 2.0; // AU/s
-  const ACCEL_TIME = 6;
+  const ACCEL_TIME = 8;
   const DECEL_TIME = 15;
-  const accelDist = 0.5 * TOP_SPEED * ACCEL_TIME;
-  const decelDist = TOP_SPEED * DECEL_TIME / 5;
+  const accelDist = TOP_SPEED * ACCEL_TIME / 5; // area under t^4 curve = 1/5
+  const decelDist = TOP_SPEED * DECEL_TIME / 5; // area under (1-t)^4 curve
   let peakSpeed, accelTime, cruiseTime, decelTime, totalTime;
   if(accelDist + decelDist > totalDist){
-    peakSpeed = totalDist / (0.5 * ACCEL_TIME + DECEL_TIME / 5);
+    peakSpeed = totalDist / (ACCEL_TIME / 5 + DECEL_TIME / 5);
     accelTime = ACCEL_TIME;
     cruiseTime = 0;
     decelTime = DECEL_TIME;
@@ -436,8 +436,9 @@ function animate(now){
       let speed = 0;
       
       if(t < wp.accelTime){
-        // Acceleration phase: linear ramp
-        speed = wp.peakSpeed * (t / wp.accelTime);
+        // Acceleration phase: gradual then hockey stick (t^4)
+        const at = t / wp.accelTime; // 0→1
+        speed = wp.peakSpeed * Math.pow(at, 4);
       } else if(t < wp.accelTime + wp.cruiseTime){
         // Cruise phase
         speed = wp.peakSpeed;
@@ -458,18 +459,22 @@ function animate(now){
       
       orientShip(warpHeading);
       
-      // LSG departure visual (0-10% of totalTime)
-      const progress = Math.min(1.0, t / wp.totalTime);
-      
-      if(progress < 0.1){
-        lsgGroup.position.x -= warpHeading.x * speed * 500 * dt;
-        lsgGroup.position.z -= warpHeading.z * speed * 500 * dt;
+      // LSG departure visual: own t^4 ramp over 3 seconds
+      const LSG_DEPART_TIME = 3;
+      if(t < LSG_DEPART_TIME){
+        const lsgT = t / LSG_DEPART_TIME; // 0→1
+        const lsgSpeed = Math.pow(lsgT, 4) * 5000; // hockey stick up to 5000 units/s
+        lsgGroup.position.x -= warpHeading.x * lsgSpeed * dt;
+        lsgGroup.position.z -= warpHeading.z * lsgSpeed * dt;
       }
-      if(progress >= 0.1 && !departureHidden){
+      if(t >= LSG_DEPART_TIME && !departureHidden){
         departureHidden = true;
         gateModel.visible = false;
         stationModel.visible = false;
       }
+      
+      // Progress through total warp
+      const progress = Math.min(1.0, t / wp.totalTime);
       
       // At 70%: show approach model
       if(progress >= 0.7 && !approachStarted){
