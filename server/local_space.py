@@ -326,17 +326,17 @@ class LocalSpaceWorker:
                     continue  # handle in second pass
                 ss_x = obj.distance * math.cos(obj.angle)
                 ss_z = obj.distance * math.sin(obj.angle)
-                # Orbital inclination: Y offset based on distance and a per-object tilt
-                inclination = (hash(obj.id) % 200 - 100) / 1000.0  # ±0.1 radians tilt
-                ss_y = obj.distance * math.sin(inclination)
+                incl = getattr(obj, 'inclination', 0) or 0
+                ss_y = obj.distance * math.sin(incl)
                 obj_ss[obj.id] = (ss_x, ss_y, ss_z)
             # Second pass: moons relative to parent
             for obj in system_objects:
                 if obj.obj_type == 'moon' and obj.parent:
                     parent_ss = obj_ss.get(obj.parent, (0, 0, 0))
                     ss_x = parent_ss[0] + obj.distance * math.cos(obj.angle)
-                    ss_y = parent_ss[1] + obj.distance * math.sin((hash(obj.id) % 200 - 100) / 500.0)
                     ss_z = parent_ss[2] + obj.distance * math.sin(obj.angle)
+                    incl = getattr(obj, 'inclination', 0) or 0
+                    ss_y = parent_ss[1] + obj.distance * math.sin(incl)
                     obj_ss[obj.id] = (ss_x, ss_y, ss_z)
             # Build object list
             for obj in system_objects:

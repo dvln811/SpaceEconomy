@@ -130,6 +130,7 @@ def load_universe(conn=None) -> dict:
         objects = [SystemObject(
             id=o["id"], name=o["name"], obj_type=o["obj_type"],
             distance=o["distance"], angle=o["angle"],
+            inclination=o["inclination"] if "inclination" in o.keys() else 0.0,
             parent=o["parent"], connects_to=o["connects_to"],
             station_id=o["station_id"] if "station_id" in o.keys() else "",
             planet_type=o["planet_type"] if "planet_type" in o.keys() else "",

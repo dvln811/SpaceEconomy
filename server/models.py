@@ -30,6 +30,7 @@ class SystemObject:
     obj_type: str
     distance: float = 0.0
     angle: float = 0.0
+    inclination: float = 0.0
     parent: str = ""
     connects_to: str = ""
     station_id: str = ""

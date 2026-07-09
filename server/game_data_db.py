@@ -132,6 +132,7 @@ def init_data_schema(conn: sqlite3.Connection):
         obj_type TEXT NOT NULL,
         distance REAL DEFAULT 0,
         angle REAL DEFAULT 0,
+        inclination REAL DEFAULT 0,
         parent TEXT DEFAULT '',
         connects_to TEXT DEFAULT '',
         planet_type TEXT DEFAULT '',

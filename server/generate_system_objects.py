@@ -246,9 +246,10 @@ def generate():
             type_def = PLANET_TYPES[ptype]
             stats = generate_stats(ptype, type_def)
 
+            incl = random.uniform(-0.15, 0.15)  # ±8.5 degrees
             conn.execute(
-                "INSERT INTO system_objects (id, name, system_id, obj_type, distance, angle, parent, connects_to, planet_type, radius_km, stats) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                (pid, pname, sid, 'planet', round(dist, 2), round(angle, 4), '', '', ptype, stats['radius_km'], json.dumps(stats))
+                "INSERT INTO system_objects (id, name, system_id, obj_type, distance, angle, inclination, parent, connects_to, planet_type, radius_km, stats) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                (pid, pname, sid, 'planet', round(dist, 2), round(angle, 4), round(incl, 4), '', '', ptype, stats['radius_km'], json.dumps(stats))
             )
             planet_data.append((pid, dist, angle, ptype))
 
@@ -272,9 +273,10 @@ def generate():
                 mtype_def = MOON_TYPES[mtype]
                 mstats = generate_stats(mtype, mtype_def)
 
+                moon_incl = random.uniform(-0.3, 0.3)  # moons can have more tilt
                 conn.execute(
-                    "INSERT INTO system_objects (id, name, system_id, obj_type, distance, angle, parent, connects_to, planet_type, radius_km, stats) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                    (mid, mname, sid, 'moon', round(mdist, 4), round(mangle, 4), pid, '', mtype, mstats['radius_km'], json.dumps(mstats))
+                    "INSERT INTO system_objects (id, name, system_id, obj_type, distance, angle, inclination, parent, connects_to, planet_type, radius_km, stats) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                    (mid, mname, sid, 'moon', round(mdist, 4), round(mangle, 4), round(moon_incl, 4), pid, '', mtype, mstats['radius_km'], json.dumps(mstats))
                 )
 
         # Stations (placed at mid-range distances)
@@ -284,8 +286,8 @@ def generate():
             dist = 3.0 + si * 2.0 + random.uniform(0, 1.0)
             angle = random.uniform(0, 2 * math.pi)
             conn.execute(
-                "INSERT INTO system_objects (id, name, system_id, obj_type, distance, angle, parent, connects_to, station_id) VALUES (?,?,?,?,?,?,?,?,?)",
-                (f"obj_{obj_count:06d}", st['name'], sid, 'station', round(dist, 2), round(angle, 4), '', '', st['id'])
+                "INSERT INTO system_objects (id, name, system_id, obj_type, distance, angle, inclination, parent, connects_to, station_id) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (f"obj_{obj_count:06d}", st['name'], sid, 'station', round(dist, 2), round(angle, 4), round(random.uniform(-0.08, 0.08), 4), '', '', st['id'])
             )
 
         # Asteroid belts
@@ -308,8 +310,8 @@ def generate():
             target_name = conn.execute("SELECT name FROM systems WHERE id=?", (target_id,)).fetchone()
             gate_name = f"Gate to {target_name['name']}" if target_name else f"Gate to {target_id}"
             conn.execute(
-                "INSERT INTO system_objects (id, name, system_id, obj_type, distance, angle, parent, connects_to) VALUES (?,?,?,?,?,?,?,?)",
-                (f"obj_{obj_count:06d}", gate_name, sid, 'gate', round(dist, 2), round(angle, 4), '', target_id)
+                "INSERT INTO system_objects (id, name, system_id, obj_type, distance, angle, inclination, parent, connects_to) VALUES (?,?,?,?,?,?,?,?,?)",
+                (f"obj_{obj_count:06d}", gate_name, sid, 'gate', round(dist, 2), round(angle, 4), round(random.uniform(-0.05, 0.05), 4), '', target_id)
             )
 
     conn.commit()
