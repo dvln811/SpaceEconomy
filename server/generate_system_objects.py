@@ -259,8 +259,13 @@ def generate():
                 obj_count += 1
                 mid = f"obj_{obj_count:06d}"
                 mname = f"{pname}-{'abcde'[mi]}"
-                # Moon distance relative to parent
-                mdist = 0.003 + mi * 0.002 + random.uniform(0, 0.001)
+                # Moon distance relative to parent (scales with parent size)
+                # Gas giants: moons at 5-15x radius. Others: 10-60x radius
+                parent_radius_au = stats['radius_km'] / 150000000
+                if ptype in ('gas_giant', 'ice_giant'):
+                    mdist = parent_radius_au * (5 + mi * 4 + random.uniform(0, 3))
+                else:
+                    mdist = parent_radius_au * (15 + mi * 20 + random.uniform(0, 10))
                 mangle = random.uniform(0, 2 * math.pi)
 
                 mtype = pick_moon_type(ptype)
