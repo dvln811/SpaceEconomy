@@ -690,14 +690,14 @@ let warpTravelDuration = 0; // total warp time in seconds
 let warpSpeed = 0; // current speed in PU/s (for group movement & display)
 let warpBuildReady = false; // true when destination models are built
 let warpGroup = null; // isolated THREE.Group for destination models during build
-// Warp phase timing (fixed departure/arrival, variable cruise)
-const WARP_DEPART_TIME = 4.0;  // seconds for departure acceleration phase
-const WARP_ARRIVE_TIME = 6.0;  // seconds for arrival phase
-let warpCruiseTime = 0;        // variable: auDist / shipWarpSpeed
-let warpShipAUSpeed = 2.0;    // ship's warp speed in AU/s (from ship stats later)
-// Speed constants (PU/s)
-const WARP_LSG_SPEED = 10000;     // max speed during LSG phase (stations fly away)
-const WARP_AU_SPEED = 500000;     // max speed during AU phase (planets fly away)
+// Warp phase timing (analytical)
+const WARP_TOP_SPEED = 2.0;   // AU/s max warp speed
+const WARP_ACCEL_TIME = 8;    // seconds for accel (t^4 curve)
+const WARP_DECEL_TIME = 15;   // seconds for decel ((1-t)^4 curve)
+const WARP_LSG_DEPART_TIME = 3; // seconds for LSG to fly away
+const WARP_SCALE_FACTOR = 4;  // km to scene units divisor
+const WARP_APPROACH_SPAWN_DIST = 2500; // scene units (10,000km at SCALE_FACTOR 4)
+const AU_KM = 150000000;
 
 // Engine trail
 let trailLine = null;
@@ -834,77 +834,61 @@ function animate(now){
         // Don't reset lsgGroup position - departure moves it from wherever it is
       }
     } else if(warpState === 'warping'){
-      // ── 5-PHASE WARP: LSG depart → AU depart → cruise → AU arrive → LSG arrive ──
+      // ── ANALYTICAL WARP: accel (t^4) → cruise → decel ((1-t)^4) ──
       warpTravelTimer += dt;
-      const elapsed = warpTravelTimer;
-      const departEnd = WARP_DEPART_TIME;
-      const cruiseEnd = WARP_DEPART_TIME + warpCruiseTime;
-      let arriveStart = cruiseEnd;
-      const arriveEnd = cruiseEnd + WARP_ARRIVE_TIME;
-
-      // Pause arrival if destination isn't built yet
-      if(elapsed >= arriveStart && !warpBuildReady){
-        warpTravelTimer = arriveStart;
+      const t = warpTravelTimer;
+      const wp = window._warpPhases;
+      if(!wp){ warpState = 'none'; }
+      else {
+      
+      // Current speed (for HUD display and streaks)
+      let speed = 0;
+      if(t < wp.accelTime){
+        speed = wp.peakSpeed * Math.pow(t / wp.accelTime, 4);
+      } else if(t < wp.accelTime + wp.cruiseTime){
+        speed = wp.peakSpeed;
+      } else if(t < wp.totalTime){
+        const decelElapsed = t - wp.accelTime - wp.cruiseTime;
+        speed = wp.peakSpeed * Math.pow(1 - decelElapsed / wp.decelTime, 4);
       }
+      warpSpeed = speed;
 
-      // Determine which phase we're in and compute speed
-      if(elapsed < departEnd){
-        // ── DEPARTURE (0 to departEnd): two sub-phases ──
-        const t = elapsed / departEnd; // 0→1 over departure
-        if(t < 0.4){
-          // LSG phase: 0→LSG_SPEED (stations fly away)
-          const st = t / 0.4;
-          warpSpeed = WARP_LSG_SPEED * st * st; // quadratic ramp
-        } else {
-          // AU phase: LSG_SPEED→AU_SPEED (planets fly away)
-          const st = (t - 0.4) / 0.6;
-          warpSpeed = WARP_LSG_SPEED + (WARP_AU_SPEED - WARP_LSG_SPEED) * st * st;
-        }
-      } else if(elapsed < cruiseEnd){
-        // ── CRUISE: hold at AU speed ──
-        warpSpeed = WARP_AU_SPEED;
+      // Analytical distance traveled
+      let dist = 0;
+      if(t <= wp.accelTime){
+        dist = wp.peakSpeed * Math.pow(t, 5) / (5 * Math.pow(wp.accelTime, 4));
+      } else if(t <= wp.accelTime + wp.cruiseTime){
+        const accelFullDist = wp.peakSpeed * wp.accelTime / 5;
+        dist = accelFullDist + wp.peakSpeed * (t - wp.accelTime);
       } else {
-        // ── ARRIVAL (cruiseEnd to arriveEnd): two sub-phases (mirror of departure) ──
-        const arriveElapsed = elapsed - arriveStart;
-        const t = Math.min(1.0, arriveElapsed / WARP_ARRIVE_TIME); // 0→1 over arrival
-        if(t < 0.6){
-          // AU phase: AU_SPEED→LSG_SPEED (planets approach)
-          const st = t / 0.6;
-          warpSpeed = WARP_AU_SPEED - (WARP_AU_SPEED - WARP_LSG_SPEED) * st * st;
-        } else {
-          // LSG phase: LSG_SPEED→0 (stations slide in)
-          const st = (t - 0.6) / 0.4;
-          warpSpeed = WARP_LSG_SPEED * Math.pow(1.0 - st, 2);
+        const accelFullDist = wp.peakSpeed * wp.accelTime / 5;
+        const cruiseFullDist = wp.peakSpeed * wp.cruiseTime;
+        const decelElapsed = Math.min(t - wp.accelTime - wp.cruiseTime, wp.decelTime);
+        const dt_norm = decelElapsed / wp.decelTime;
+        const decelDist = wp.peakSpeed * wp.decelTime * (1 - Math.pow(1 - dt_norm, 5)) / 5;
+        dist = accelFullDist + cruiseFullDist + decelDist;
+      }
+
+      // Position player on SS grid
+      if(window._playerSS && window._warpFromSS){
+        window._playerSS.x = window._warpFromSS.x + warpHeading.x * dist;
+        window._playerSS.z = window._warpFromSS.z + warpHeading.z * dist;
+      }
+
+      // ── LSG DEPARTURE: slide current objects away ──
+      if(t < WARP_LSG_DEPART_TIME && lsgGroup){
+        const lsgT = t / WARP_LSG_DEPART_TIME;
+        const lsgDist = Math.pow(lsgT, 4) * 500000;
+        if(!window._lsgStartPos){
+          window._lsgStartPos = {x: lsgGroup.position.x, z: lsgGroup.position.z};
         }
+        lsgGroup.position.x = window._lsgStartPos.x - warpHeading.x * lsgDist;
+        lsgGroup.position.z = window._lsgStartPos.z - warpHeading.z * lsgDist;
       }
-
-      // ── DEPARTURE MOVEMENT: move old group backward until despawned ──
-      if(!window._departDespawned && !window._approachStarted && lsgGroup){
-        lsgGroup.position.x -= warpHeading.x * warpSpeed * dt;
-        lsgGroup.position.z -= warpHeading.z * warpSpeed * dt;
-      }
-
-      // ── DISCONNECT SSE + START FETCH early in departure ──
-      if(elapsed >= 1.0 && !warpLock){
-        warpLock = true;
-        if(evtSource){ evtSource.close(); evtSource = null; }
-        // Start building destination
-        warpGroup = new THREE.Group();
-        buildWarpDestination(warpTargetId, warpGroup).then(result => {
-          if(!result){
-            console.error('[WARP] Build failed');
-            warpBuildReady = false;
-            return;
-          }
-          window._warpBuildResult = result;
-          warpBuildReady = true;
-          console.log('[WARP] Destination built:', warpGroup.children.length, 'objects');
-        });
-      }
-
-      // ── DESPAWN old group at end of departure ──
-      if(elapsed >= arriveStart && !window._departDespawned){
+      if(t >= WARP_LSG_DEPART_TIME && !window._departDespawned){
         window._departDespawned = true;
+        window._lsgStartPos = null;
+        // Despawn old LSG group
         if(lsgGroup){
           scene.remove(lsgGroup);
           lsgGroup.traverse(c => {
@@ -922,29 +906,37 @@ function animate(now){
         lsgGroup = null;
       }
 
-      // ── ARRIVAL: spawn new group and decelerate toward player ──
-      if(elapsed >= arriveStart && warpBuildReady){
-        if(!window._approachStarted){
-          window._approachStarted = true;
-          // Compute spawn distance from farthest object in new group
-          let maxChildDist = 0;
-          warpGroup.children.forEach(c => {
-            const d = Math.sqrt(c.position.x*c.position.x + c.position.z*c.position.z);
-            if(d > maxChildDist) maxChildDist = d;
-          });
-          // arrDist preview (need it to ensure spawnDist > arrDist)
-          const arrDistPreview = (window._warpBuildResult && window._warpBuildResult.lsgData && window._warpBuildResult.lsgData.arrival_dist) || 100;
-          const spawnDist = Math.max(arrDistPreview * 20, maxChildDist * 5, 500000);
-          window._approachSpawnDist = spawnDist;
+      // ── DISCONNECT SSE + START FETCH (1 second in) ──
+      if(t >= 1.0 && !warpLock){
+        warpLock = true;
+        if(evtSource){ evtSource.close(); evtSource = null; }
+        warpGroup = new THREE.Group();
+        buildWarpDestination(warpTargetId, warpGroup).then(result => {
+          if(!result){
+            console.error('[WARP] Build failed');
+            warpBuildReady = false;
+            return;
+          }
+          window._warpBuildResult = result;
+          warpBuildReady = true;
+        });
+      }
 
+      // ── LSG APPROACH: distance-based ──
+      if(warpBuildReady && !window._approachStarted && window._warpToSS){
+        const toDestX = window._warpToSS.x - window._playerSS.x;
+        const toDestZ = window._warpToSS.z - window._playerSS.z;
+        const distToDest = Math.sqrt(toDestX*toDestX + toDestZ*toDestZ) * AU_KM;
+        
+        if(distToDest < 10000){ // within 10,000 km
+          window._approachStarted = true;
           // Swap in new group
           lsgGroup = warpGroup;
           warpGroup = null;
           scene.add(lsgGroup);
-          lsgGroup.position.set(warpHeading.x * spawnDist, 0, warpHeading.z * spawnDist);
-          lsgGroup.visible = true;
-
-          // Adopt build result into module-level dicts
+          lsgGroup.position.set(warpHeading.x * WARP_APPROACH_SPAWN_DIST, 0, warpHeading.z * WARP_APPROACH_SPAWN_DIST);
+          
+          // Adopt build result
           const result = window._warpBuildResult;
           if(result){
             stationModels = result.stations;
@@ -954,36 +946,31 @@ function animate(now){
             window._warpLsgData = result.lsgData;
           }
         }
+      }
 
-        // Position group based on deceleration curve (interpolation, not accumulation)
-        // t goes from 0→1 over the arrival phase
-        const arriveElapsed = elapsed - arriveStart;
-        const t = Math.min(1.0, arriveElapsed / WARP_ARRIVE_TIME);
-        const arrDist = (window._warpLsgData && window._warpLsgData.arrival_dist) || 100;
-        const spawnDist = window._approachSpawnDist;
-        // Ease curve: fast at start (planets), slow at end (stations)
-        // Use cubic ease-out: starts fast, decelerates smoothly
-        const eased = 1 - Math.pow(1 - t, 3);
-        const currentDist = spawnDist + (arrDist - spawnDist) * eased;
-        lsgGroup.position.set(warpHeading.x * currentDist, 0, warpHeading.z * currentDist);
+      // Slide LSG group in
+      if(window._approachStarted && lsgGroup && window._warpToSS){
+        const toDestX = window._warpToSS.x - window._playerSS.x;
+        const toDestZ = window._warpToSS.z - window._playerSS.z;
+        const distToDest = Math.sqrt(toDestX*toDestX + toDestZ*toDestZ) * AU_KM;
+        const slideT = 1 - Math.min(1, distToDest / 10000);
+        const pos = WARP_APPROACH_SPAWN_DIST + (5 - WARP_APPROACH_SPAWN_DIST) * slideT;
+        lsgGroup.position.set(warpHeading.x * pos, 0, warpHeading.z * pos);
       }
 
       // ── FINALIZE ──
-      if(elapsed >= arriveEnd){
-        // Ensure group is exactly at arrDist (interpolation may not have hit t=1.0 exactly)
-        const arrDist = (window._warpLsgData && window._warpLsgData.arrival_dist) || 100;
+      if(t >= wp.totalTime){
+        const arrDist = (window._warpLsgData && window._warpLsgData.arrival_dist) || 5;
         if(lsgGroup) lsgGroup.position.set(warpHeading.x * arrDist, 0, warpHeading.z * arrDist);
         playerPos.set(0, 0, 0);
         playerHeading.copy(warpHeading);
         playerSpeed = 0;
 
-        // Update localState
         const lsgData = window._warpLsgData;
         if(lsgData){
           localState = {system_id: lsgData.system_id, objects: lsgData.objects, ships: lsgData.ships, player: localState?.player};
         }
 
-        // Clean up
         warpState = 'none';
         warpTargetId = null;
         warpTargetPos = null;
@@ -993,6 +980,7 @@ function animate(now){
         window._departDespawned = false;
         window._warpBuildResult = null;
         window._warpLsgData = null;
+        window._lsgStartPos = null;
 
         document.getElementById('warpTarget').textContent = '';
         if(warpStreaks) warpStreaks.visible = false;
@@ -1004,27 +992,26 @@ function animate(now){
       }
 
       // ── HUD ──
-      displaySpeed = warpSpeed;
-      const displayMs = warpSpeed * 100; // PU/s → m/s
-      document.getElementById('speedBar').style.width = Math.min(100, (elapsed / arriveEnd) * 100) + '%';
-      document.getElementById('shipSpeed').textContent = displayMs > 1000000 ? (displayMs/1000000).toFixed(1) + ' Mm/s' : displayMs > 1000 ? (displayMs/1000).toFixed(1) + ' km/s' : Math.round(displayMs) + ' m/s';
-      document.getElementById('warpTarget').textContent = elapsed < departEnd ? 'Departing' : elapsed < cruiseEnd ? 'Warping' : 'Arriving';
-      // Warp streaks: visible during transit, intensity based on speed
-      const streakIntensity = Math.min(1.0, warpSpeed / WARP_AU_SPEED);
+      const speedAU = speed;
+      const speedKmS = speed * AU_KM;
+      const pct = Math.round((t / wp.totalTime) * 100);
+      if(speedAU > 0.01){
+        document.getElementById('shipSpeed').textContent = speedAU.toFixed(2) + ' AU/s';
+      } else if(speedKmS > 1000){
+        document.getElementById('shipSpeed').textContent = Math.round(speedKmS) + ' km/s';
+      } else {
+        document.getElementById('shipSpeed').textContent = Math.round(speedKmS * 1000) + ' m/s';
+      }
+      document.getElementById('warpTarget').textContent = `Warping ${pct}%`;
+
+      // Warp streaks
       if(warpStreaks){
+        const streakIntensity = Math.min(1, speed / wp.peakSpeed);
         warpStreaks.visible = streakIntensity > 0.05;
-        if(warpStreaks.visible){
-          // Keep streaks centered on camera, oriented along warp heading (not camera look)
-          warpStreaks.position.copy(camera.position);
-          // Build quaternion from warp heading direction
-          const lookMat = new THREE.Matrix4().lookAt(new THREE.Vector3(0,0,0), warpHeading, new THREE.Vector3(0,1,0));
-          warpStreaks.quaternion.setFromRotationMatrix(lookMat);
-          updateWarpStreaks(dt, streakIntensity);
-        }
         warpStreaks.material.opacity = 0.3 + streakIntensity * 0.5;
       }
+      } // end if(wp)
     }
-
     // ── Player Ship Physics (CLIENT-AUTHORITATIVE, ship moves in world space) ──
     if(warpState === 'none'){
       checkApproachArrival();
@@ -1346,20 +1333,59 @@ window.warpTo = function(objId){
   const ssLen = Math.sqrt(ssDx*ssDx + ssDz*ssDz) || 0.01;
   // Set warp heading from SS direction
   warpHeading.set(ssDx/ssLen, 0, ssDz/ssLen).normalize();
-  // Set warp target position far away in that direction (for departure animation)
   warpTargetId = objId;
   warpTargetPos = new THREE.Vector3(warpHeading.x * 100000, 0, warpHeading.z * 100000);
   warpTargetType = obj.type;
-  // Compute warp duration from AU distance between objects
-  const auDist = ssLen;
-  warpCruiseTime = auDist / warpShipAUSpeed; // time at warp speed to cover the distance
-  warpTravelDuration = WARP_DEPART_TIME + warpCruiseTime + WARP_ARRIVE_TIME;
+  
+  // Compute destination with orbit offset for planets/moons
+  let destSSx = obj.ss_x, destSSz = obj.ss_z;
+  if(obj.type === 'planet' || obj.type === 'moon'){
+    const orbitOffsetAU = ((obj.radius_km || 6000) * 1.5) / AU_KM;
+    destSSx = obj.ss_x - (ssDx/ssLen) * orbitOffsetAU;
+    destSSz = obj.ss_z - (ssDz/ssLen) * orbitOffsetAU;
+  }
+  
+  // Use current player SS position as start (not anchor center)
+  const fromX = window._playerSS ? window._playerSS.x : anchorObj.ss_x;
+  const fromZ = window._playerSS ? window._playerSS.z : anchorObj.ss_z;
+  const dx = destSSx - fromX, dz = destSSz - fromZ;
+  const totalDist = Math.sqrt(dx*dx + dz*dz);
+  
+  // Recompute heading from actual start to destination
+  const hlen = totalDist || 0.001;
+  warpHeading.set(dx/hlen, 0, dz/hlen).normalize();
+  
+  // Compute analytical warp phases
+  const accelDist = WARP_TOP_SPEED * WARP_ACCEL_TIME / 5;
+  const decelDist = WARP_TOP_SPEED * WARP_DECEL_TIME / 5;
+  let peakSpeed, accelTime, cruiseTime, decelTime, totalTime;
+  if(accelDist + decelDist > totalDist){
+    peakSpeed = totalDist / (WARP_ACCEL_TIME / 5 + WARP_DECEL_TIME / 5);
+    accelTime = WARP_ACCEL_TIME;
+    cruiseTime = 0;
+    decelTime = WARP_DECEL_TIME;
+    totalTime = accelTime + decelTime;
+  } else {
+    peakSpeed = WARP_TOP_SPEED;
+    accelTime = WARP_ACCEL_TIME;
+    decelTime = WARP_DECEL_TIME;
+    cruiseTime = (totalDist - accelDist - decelDist) / WARP_TOP_SPEED;
+    totalTime = accelTime + cruiseTime + decelTime;
+  }
+  window._warpPhases = {peakSpeed, accelTime, cruiseTime, decelTime, totalTime};
+  window._playerSS = {x: fromX, z: fromZ};
+  window._warpFromSS = {x: fromX, z: fromZ};
+  window._warpToSS = {x: destSSx, z: destSSz};
+  window._lsgStartPos = null;
+  window._approachStarted = false;
+  window._departDespawned = false;
+  
   warpTravelTimer = 0;
+  warpTravelDuration = totalTime;
   warpState = 'aligning';
   warpAlignTimer = 0;
-  // Save departure SS coords for label interpolation throughout warp
-  window._warpFromSS = {x: anchorObj.ss_x, z: anchorObj.ss_z};
-  window._warpToSS = {x: obj.ss_x, z: obj.ss_z};
+  warpLock = false;
+  warpBuildReady = false;
   document.getElementById('warpTarget').textContent = 'Aligning...';
 };
 
