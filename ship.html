@@ -800,7 +800,7 @@ function animate(now){
       const toTarget = warpTargetPos.clone().sub(playerPos).normalize();
       warpHeading.copy(toTarget);
       // Lerp rate: reach alignment within align_time seconds
-      const alignLerp = (dt / playerAlignTime) * 8.0;
+      const alignLerp = (dt / playerAlignTime);
       playerHeading.lerp(toTarget, alignLerp).normalize();
       const alignment = playerHeading.dot(toTarget);
       // Accelerate toward warp trigger speed during alignment
@@ -1029,6 +1029,11 @@ function animate(now){
         updateWarpStreaks(dt, Math.max(0.1, streakIntensity));
       }
       } // end if(wp)
+    }
+    // Update UI labels during warp (SSE disconnected, throttle to 4fps)
+    if(warpState === 'warping' && localState && (!window._lastWarpUI || now - window._lastWarpUI > 250)){
+      window._lastWarpUI = now;
+      updateUI(localState);
     }
     // ── Player Ship Physics (CLIENT-AUTHORITATIVE, ship moves in world space) ──
     if(warpState === 'none'){
