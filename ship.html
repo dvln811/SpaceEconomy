@@ -1342,13 +1342,14 @@ window.warpTo = function(objId){
   const anchorObj = localState.objects.find(o => o.is_anchor);
   if(!anchorObj) return;
   const ssDx = obj.ss_x - anchorObj.ss_x;
+  const ssDy = (obj.ss_y || 0) - (anchorObj.ss_y || 0);
   const ssDz = obj.ss_z - anchorObj.ss_z;
-  const ssLen = Math.sqrt(ssDx*ssDx + ssDz*ssDz) || 0.01;
-  // Set warp heading from SS direction
-  warpHeading.set(ssDx/ssLen, 0, ssDz/ssLen).normalize();
+  const ssLen = Math.sqrt(ssDx*ssDx + ssDy*ssDy + ssDz*ssDz) || 0.01;
+  // Set warp heading from SS direction (full 3D)
+  warpHeading.set(ssDx/ssLen, ssDy/ssLen, ssDz/ssLen).normalize();
   // Set warp target position far away in that direction (for departure animation)
   warpTargetId = objId;
-  warpTargetPos = new THREE.Vector3(warpHeading.x * 100000, 0, warpHeading.z * 100000);
+  warpTargetPos = new THREE.Vector3(warpHeading.x * 100000, warpHeading.y * 100000, warpHeading.z * 100000);
   warpTargetType = obj.type;
   // Compute warp duration from AU distance between objects
   const auDist = ssLen;
@@ -1358,8 +1359,8 @@ window.warpTo = function(objId){
   warpState = 'aligning';
   warpAlignTimer = 0;
   // Save departure SS coords for label interpolation throughout warp
-  window._warpFromSS = {x: anchorObj.ss_x, z: anchorObj.ss_z};
-  window._warpToSS = {x: obj.ss_x, z: obj.ss_z};
+  window._warpFromSS = {x: anchorObj.ss_x, y: anchorObj.ss_y || 0, z: anchorObj.ss_z};
+  window._warpToSS = {x: obj.ss_x, y: obj.ss_y || 0, z: obj.ss_z};
   document.getElementById('warpTarget').textContent = 'Aligning...';
 };
 
