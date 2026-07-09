@@ -2553,10 +2553,8 @@ function updateDirectionalLabels(){
       }
     } else if(ssDirLen > 0.001){
       // Place label point very far away in the SS direction (effectively at infinity)
-      // Add Y offset from hash for orbital inclination (matches map/LSG placement)
       labelX = (ssDirX / ssDirLen) * 100000;
-      labelY = 0;
-      labelZ = (ssDirZ / ssDirLen) * 100000;
+      labelY = (obj.ss_y || 0) * 100000 / (ssDirLen || 1);
       labelZ = (ssDirZ / ssDirLen) * 100000;
     } else {
       label.el.style.display = 'none'; continue;

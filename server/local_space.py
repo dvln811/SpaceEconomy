@@ -67,9 +67,9 @@ class LocalShip:
 
 class SystemObject:
     """A fixed object in the system (station, gate, planet) with 3D position."""
-    __slots__ = ('id', 'name', 'obj_type', 'x', 'y', 'z', 'station_id', 'au_distance', 'connects_to', 'parent', 'ss_x', 'ss_z', 'radius_km', 'planet_type')
+    __slots__ = ('id', 'name', 'obj_type', 'x', 'y', 'z', 'station_id', 'au_distance', 'connects_to', 'parent', 'ss_x', 'ss_y', 'ss_z', 'radius_km', 'planet_type')
 
-    def __init__(self, id, name, obj_type, x, y, z, station_id='', au_distance=0.0, connects_to='', parent='', ss_x=0.0, ss_z=0.0, radius_km=0.0, planet_type=''):
+    def __init__(self, id, name, obj_type, x, y, z, station_id='', au_distance=0.0, connects_to='', parent='', ss_x=0.0, ss_y=0.0, ss_z=0.0, radius_km=0.0, planet_type=''):
         self.id = id
         self.name = name
         self.obj_type = obj_type
@@ -81,6 +81,7 @@ class SystemObject:
         self.connects_to = connects_to
         self.parent = parent
         self.ss_x = ss_x
+        self.ss_y = ss_y
         self.ss_z = ss_z
         self.radius_km = radius_km
         self.planet_type = planet_type
@@ -319,23 +320,27 @@ class LocalSpaceWorker:
 
             self.objects = []
             # First pass: compute all SS positions (need parent positions for moons)
-            obj_ss = {}  # id -> (ss_x, ss_z)
+            obj_ss = {}  # id -> (ss_x, ss_y, ss_z)
             for obj in system_objects:
                 if obj.obj_type == 'moon' and obj.parent:
                     continue  # handle in second pass
                 ss_x = obj.distance * math.cos(obj.angle)
                 ss_z = obj.distance * math.sin(obj.angle)
-                obj_ss[obj.id] = (ss_x, ss_z)
+                # Orbital inclination: Y offset based on distance and a per-object tilt
+                inclination = (hash(obj.id) % 200 - 100) / 1000.0  # ±0.1 radians tilt
+                ss_y = obj.distance * math.sin(inclination)
+                obj_ss[obj.id] = (ss_x, ss_y, ss_z)
             # Second pass: moons relative to parent
             for obj in system_objects:
                 if obj.obj_type == 'moon' and obj.parent:
-                    parent_ss = obj_ss.get(obj.parent, (0, 0))
+                    parent_ss = obj_ss.get(obj.parent, (0, 0, 0))
                     ss_x = parent_ss[0] + obj.distance * math.cos(obj.angle)
-                    ss_z = parent_ss[1] + obj.distance * math.sin(obj.angle)
-                    obj_ss[obj.id] = (ss_x, ss_z)
+                    ss_y = parent_ss[1] + obj.distance * math.sin((hash(obj.id) % 200 - 100) / 500.0)
+                    ss_z = parent_ss[2] + obj.distance * math.sin(obj.angle)
+                    obj_ss[obj.id] = (ss_x, ss_y, ss_z)
             # Build object list
             for obj in system_objects:
-                ss_x, ss_z = obj_ss.get(obj.id, (0, 0))
+                ss_x, ss_y, ss_z = obj_ss.get(obj.id, (0, 0, 0))
                 # LSG position: not placed in grid by default (0,0,0 means "not in local space")
                 # Only the anchor target and nearby objects get real LSG positions
                 self.objects.append(SystemObject(obj.id, obj.name, obj.obj_type, 0, 0, 0,
@@ -343,7 +348,7 @@ class LocalSpaceWorker:
                                                 au_distance=obj.distance,
                                                 connects_to=getattr(obj, 'connects_to', ''),
                                                 parent=getattr(obj, 'parent', ''),
-                                                ss_x=ss_x, ss_z=ss_z,
+                                                ss_x=ss_x, ss_y=ss_y, ss_z=ss_z,
                                                 radius_km=getattr(obj, 'radius_km', 0) or 0,
                                                 planet_type=getattr(obj, 'planet_type', '') or ''))
 
@@ -584,7 +589,7 @@ class LocalSpaceWorker:
                              'au_distance': round(o.au_distance, 4),
                              'connects_to': o.connects_to,
                              'parent': o.parent,
-                             'ss_x': round(o.ss_x, 4), 'ss_z': round(o.ss_z, 4),
+                             'ss_x': round(o.ss_x, 4), 'ss_y': round(o.ss_y, 4), 'ss_z': round(o.ss_z, 4),
                              'is_anchor': (o.id == self._anchor_id),
                              'radius_km': o.radius_km,
                              'planet_type': o.planet_type} for o in self.objects],
