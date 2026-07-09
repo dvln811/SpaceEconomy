@@ -2524,18 +2524,20 @@ function updateDirectionalLabels(){
     // Direction from current SS position to this object's SS position
     // During warp, interpolate our SS position toward the warp target
     // Current SS position: interpolate from departure to destination during warp
-    let curSSx = 0, curSSz = 0;
+    let curSSx = 0, curSSy = 0, curSSz = 0;
     if((warpState === 'warping' || warpState === 'aligning') && window._warpFromSS){
       const progress = (warpState === 'warping') ? Math.min(1.0, warpTravelTimer / warpTravelDuration) : 0;
       curSSx = window._warpFromSS.x + (window._warpToSS.x - window._warpFromSS.x) * progress;
+      curSSy = (window._warpFromSS.y || 0) + ((window._warpToSS.y || 0) - (window._warpFromSS.y || 0)) * progress;
       curSSz = window._warpFromSS.z + (window._warpToSS.z - window._warpFromSS.z) * progress;
     } else {
       const anchorSS = localState.objects.find(o => o.is_anchor);
       curSSx = anchorSS ? anchorSS.ss_x : 0;
+      curSSy = anchorSS ? (anchorSS.ss_y || 0) : 0;
       curSSz = anchorSS ? anchorSS.ss_z : 0;
     }
-    const ssDirX = obj.ss_x - curSSx, ssDirZ = obj.ss_z - curSSz;
-    const ssDirLen = Math.sqrt(ssDirX*ssDirX + ssDirZ*ssDirZ);
+    const ssDirX = obj.ss_x - curSSx, ssDirY = (obj.ss_y || 0) - curSSy, ssDirZ = obj.ss_z - curSSz;
+    const ssDirLen = Math.sqrt(ssDirX*ssDirX + ssDirY*ssDirY + ssDirZ*ssDirZ);
     
     // For anchor object (when NOT warping), use its actual model position + group offset. Otherwise project from SS direction.
     let labelX, labelY, labelZ;
@@ -2555,7 +2557,7 @@ function updateDirectionalLabels(){
     } else if(ssDirLen > 0.001){
       // Place label point very far away in the SS direction (effectively at infinity)
       labelX = (ssDirX / ssDirLen) * 100000;
-      labelY = (obj.ss_y || 0) * 100000 / (ssDirLen || 1);
+      labelY = (ssDirY / ssDirLen) * 100000;
       labelZ = (ssDirZ / ssDirLen) * 100000;
     } else {
       label.el.style.display = 'none'; continue;
