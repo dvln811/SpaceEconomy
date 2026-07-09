@@ -912,7 +912,6 @@ function animate(now){
         warpGroup = new THREE.Group();
         buildWarpDestination(warpTargetId, warpGroup).then(result => {
           if(!result){
-            console.error('[WARP] Build failed');
             warpBuildReady = false;
             return;
           }
@@ -968,6 +967,11 @@ function animate(now){
         const lsgData = window._warpLsgData;
         if(lsgData){
           localState = {system_id: lsgData.system_id, objects: lsgData.objects, ships: lsgData.ships, player: localState?.player};
+          // Set player SS position to new anchor
+          const newAnchor = lsgData.objects.find(o => o.is_anchor);
+          if(newAnchor){
+            window._playerSS = {x: newAnchor.ss_x, z: newAnchor.ss_z};
+          }
         }
 
         warpState = 'none';
@@ -1673,12 +1677,11 @@ function renderNavList(objects, playerShip){
         distStr = Math.round(distM) + ' m';
       }
     } else {
-      // SS AU distance
+      // SS AU distance - use _playerSS for current position
       let curX = 0, curZ = 0;
-      if(isWarping && window._warpFromSS){
-        const progress = Math.min(1.0, warpTravelTimer / warpTravelDuration);
-        curX = window._warpFromSS.x + (window._warpToSS.x - window._warpFromSS.x) * progress;
-        curZ = window._warpFromSS.z + (window._warpToSS.z - window._warpFromSS.z) * progress;
+      if(window._playerSS){
+        curX = window._playerSS.x;
+        curZ = window._playerSS.z;
       } else {
         const anchorObj = objects.find(a => a.is_anchor);
         curX = anchorObj ? anchorObj.ss_x : 0;
@@ -1686,8 +1689,12 @@ function renderNavList(objects, playerShip){
       }
       const adx = o.ss_x - curX, adz = o.ss_z - curZ;
       const auDist = Math.sqrt(adx*adx + adz*adz);
-      distVal = auDist * 150000000000;
-      distStr = auDist.toFixed(2) + ' AU';
+      const distKm = auDist * 150000000;
+      distVal = distKm * 1000; // meters for sorting
+      if(auDist > 0.1) distStr = auDist.toFixed(2) + ' AU';
+      else if(distKm > 1000000) distStr = (distKm/1000000).toFixed(1) + 'M km';
+      else if(distKm > 1000) distStr = Math.round(distKm/1000) + 'k km';
+      else distStr = Math.round(distKm) + ' km';
     }
     return {...o, distVal, distStr};
   });
