@@ -1617,11 +1617,10 @@ document.getElementById('svZoomOut').addEventListener('click',()=>{svCam.positio
 const svEl=svRenderer.domElement;
 svEl.addEventListener('mousemove',e=>{svHandleHover(e);});
 
-function svPolar(d,a,name){
+function svPolar(d,a,name,incl){
   const x=d*40*Math.cos(a), z=d*40*Math.sin(a);
-  // Y variance based on name hash for 3D depth (orbital inclination)
-  let h=0;if(name){for(let i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))|0;}
-  const y=((h%100)/100-0.5)*d*12; // ±6x distance as max Y offset (noticeable inclination)
+  // Y from orbital inclination (stored in DB)
+  const y = d * 40 * Math.sin(incl || 0);
   return{x,y,z};
 }
 
@@ -1729,8 +1728,8 @@ function svUpdateTargets(){
     if(ship.state==='intra_traveling'&&ship.intra_from&&ship.intra_to){
       const fromObj=svData.objects.find(o=>Math.abs(o.distance-ship.intra_from.d)<0.01&&Math.abs(o.angle-ship.intra_from.a)<0.01);
       const toObj=svData.objects.find(o=>Math.abs(o.distance-ship.intra_to.d)<0.01&&Math.abs(o.angle-ship.intra_to.a)<0.01);
-      const f=svPolar(ship.intra_from.d,ship.intra_from.a,fromObj?fromObj.name:'');
-      const t=svPolar(ship.intra_to.d,ship.intra_to.a,toObj?toObj.name:'');
+      const f=svPolar(ship.intra_from.d,ship.intra_from.a,fromObj?fromObj.name:'',fromObj?fromObj.inclination||0:0);
+      const t=svPolar(ship.intra_to.d,ship.intra_to.a,toObj?toObj.name:'',toObj?toObj.inclination||0:0);
       const serverP=Math.max(0, Math.min(1, ship.intra_progress));
       // Warp speed: same formula as server. AU/s = ship.speed * 0.0015
       // travel_ticks = dist_AU / warp_au_s, step = 1/travel_ticks per second
@@ -1747,7 +1746,7 @@ function svUpdateTargets(){
       }
     }else if(ship.state==='mining'&&ship.intra_position){
       const at=svData.objects.find(o=>o.id===ship.intra_position);
-      if(at){const pos=svPolar(at.distance,at.angle,at.name);svShipPos[id]={fx:pos.x+5,fy:pos.y,fz:pos.z-5,tx:pos.x+5,ty:pos.y,tz:pos.z-5,p:0,rate:0,role:ship.role,vis:true};}
+      if(at){const pos=svPolar(at.distance,at.angle,at.name,at.inclination||0);svShipPos[id]={fx:pos.x+5,fy:pos.y,fz:pos.z-5,tx:pos.x+5,ty:pos.y,tz:pos.z-5,p:0,rate:0,role:ship.role,vis:true};}
     }else{
       if(svShipPos[id]){svShipPos[id].vis=false; if(svSelectedShip===id)svSelectedShip=null;}
     }
@@ -1826,7 +1825,7 @@ function svBuildScene(){
   for(const obj of svData.objects){
     if(obj.type==='planet'){
       const r=obj.distance*40;
-      const pPos=svPolar(obj.distance,obj.angle,obj.name);
+      const pPos=svPolar(obj.distance,obj.angle,obj.name,obj.inclination||0);
       // Tilted orbit: Y varies sinusoidally so planet's side is at pPos.y, opposite side at -pPos.y
       const pts=[];for(let i=0;i<=64;i++){const a=Math.PI*2*i/64;pts.push(new THREE.Vector3(Math.cos(a)*r, pPos.y*Math.cos(a-obj.angle), Math.sin(a)*r));}
       const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0xccddee,transparent:true,opacity:0.2}));
@@ -1849,10 +1848,10 @@ function svBuildScene(){
         const mr = obj.distance * 40;
         wp = {x: pc.x + Math.cos(obj.angle)*mr, y: pc.y, z: pc.z + Math.sin(obj.angle)*mr};
       } else {
-        wp = svPolar(obj.distance, obj.angle, obj.name);
+        wp = svPolar(obj.distance, obj.angle, obj.name, obj.inclination||0);
       }
     } else {
-      wp = svPolar(obj.distance, obj.angle, obj.name);
+      wp = svPolar(obj.distance, obj.angle, obj.name, obj.inclination||0);
     }
     const col=SV_HEX[obj.type]||'#8aa0b8';
     const colInt=SV_COLORS[obj.type]||0x5a7a9a;
@@ -1955,9 +1954,9 @@ function svBuildBodiesList(){
       if(obj.type==='moon' && obj.parent){
         const par = svData.objects.find(p=>p.id===obj.parent);
         if(par){ pos = svPolar(par.distance, par.angle, par.name); }
-        else { pos = svPolar(obj.distance, obj.angle, obj.name); }
+        else { pos = svPolar(obj.distance, obj.angle, obj.name, obj.inclination||0); }
       } else {
-        pos = svPolar(obj.distance, obj.angle, obj.name);
+        pos = svPolar(obj.distance, obj.angle, obj.name, obj.inclination||0);
       }
       svControls.target.set(pos.x,pos.y,pos.z);svCam.position.set(pos.x+30,pos.y+20,pos.z+30);svControls.update();
     });
@@ -2128,7 +2127,7 @@ window._svZoomToShip=function(name){
     if(ship&&ship.intra_position&&svData.objects){
       const obj=svData.objects.find(o=>o.id===ship.intra_position);
       if(obj){
-        const wp=svPolar(obj.distance,obj.angle,obj.name);
+        const wp=svPolar(obj.distance,obj.angle,obj.name,obj.inclination||0);
         svControls.target.set(wp.x,wp.y,wp.z);svCam.position.set(wp.x+20,wp.y+15,wp.z+20);svControls.update();
       }
     }
