@@ -194,7 +194,7 @@ const SSG = {
   station: {x: -3, z: 4},
   planetA: {x: 8, z: 6},
   planetB: {x: -6, z: -5},
-  stationOrbit: {x: 8.00008, z: 6.0} // at planet A orbit point
+  stationOrbit: {x: 8 + 6000*1.5/150000000, z: 6.0} // orbit of planet A, 1.5x radius out
 };
 // Moon: placed at orbital_distance_km from planetB in AU
 // 200,000 km = 200000/150000000 = 0.001333 AU
@@ -345,6 +345,8 @@ function warpTo(target){
   let destX = to.x, destZ = to.z;
   
   // For planets/moons: compute orbit offset (stop before the body)
+  // For orbital stations: compute offset based on parent planet
+  const orbitParents = {stationOrbit: 'planetA'}; // map orbital objects to parent planets
   if(isPlanetTarget(target)){
     const body = ssgBodies[target];
     const orbitOffsetAU = (body.radius_km * 1.5) / AU_KM;
@@ -352,6 +354,15 @@ function warpTo(target){
     const len = Math.sqrt(dx*dx + dz*dz);
     destX = to.x - (dx/len) * orbitOffsetAU;
     destZ = to.z - (dz/len) * orbitOffsetAU;
+  } else if(orbitParents[target]){
+    // Orbital stations: SSG destination is the orbit point (before parent planet)
+    const parentBody = ssgBodies[orbitParents[target]];
+    const parentCoords = SSG[orbitParents[target]];
+    const orbitOffsetAU = (parentBody.radius_km * 1.5) / AU_KM;
+    const dx = parentCoords.x - from.x, dz = parentCoords.z - from.z;
+    const len = Math.sqrt(dx*dx + dz*dz);
+    destX = parentCoords.x - (dx/len) * orbitOffsetAU;
+    destZ = parentCoords.z - (dz/len) * orbitOffsetAU;
   }
   
   const dx = destX - from.x, dz = destZ - from.z;
@@ -364,6 +375,7 @@ function warpTo(target){
   departureHidden = false;
   approachStarted = false;
   lsgGroup.position.set(0, 0, 0);
+  lsgGroup.scale.setScalar(1);
   
   // Compute warp phases for ALL targets
   const TOP_SPEED = 2.0; // AU/s
@@ -503,30 +515,32 @@ function animate(now){
       // Progress through total warp
       const progress = Math.min(1.0, t / wp.totalTime);
       
-      // At 70%: show approach model if target has one
-      if(progress >= 0.7 && !approachStarted){
-        approachStarted = true;
-        if(warpTarget === 'gate'){
+      // LSG approach: show station/gate when close, slide in
+      if(!approachStarted && window._warpToSS){
+        const toDestX = window._warpToSS.x - window._playerSS.x;
+        const toDestZ = window._warpToSS.z - window._playerSS.z;
+        const distToDest = Math.sqrt(toDestX*toDestX + toDestZ*toDestZ) * AU_KM;
+        
+        if(distToDest < 10000){
+          approachStarted = true;
           lsgGroup.position.set(warpHeading.x * approachSpawnDist, 0, warpHeading.z * approachSpawnDist);
-          gateModel.visible = true; stationModel.visible = false;
-        } else if(warpTarget === 'station' || warpTarget === 'stationOrbit'){
-          lsgGroup.position.set(warpHeading.x * approachSpawnDist, 0, warpHeading.z * approachSpawnDist);
-          stationModel.visible = true; gateModel.visible = false;
+          if(warpTarget === 'gate'){
+            gateModel.visible = true; stationModel.visible = false;
+          } else if(warpTarget === 'station' || warpTarget === 'stationOrbit'){
+            stationModel.visible = true; gateModel.visible = false;
+          }
         }
-        // Planet/moon targets: no LSG model to show, SSG rendering handles it
       }
       
-      // Slide LSG model in if it's visible
+      // Slide LSG in
       if(approachStarted && (gateModel.visible || stationModel.visible)){
-        const approachT = Math.min(1.0, (progress - 0.7) / 0.3);
-        const arrDist = 100;
-        const sx = warpHeading.x * approachSpawnDist;
-        const sz = warpHeading.z * approachSpawnDist;
-        const ex = warpHeading.x * arrDist;
-        const ez = warpHeading.z * arrDist;
-        const eased = 1 - Math.pow(1 - approachT, 2);
-        lsgGroup.position.x = sx + (ex - sx) * eased;
-        lsgGroup.position.z = sz + (ez - sz) * eased;
+        const toDestX = window._warpToSS.x - window._playerSS.x;
+        const toDestZ = window._warpToSS.z - window._playerSS.z;
+        const distToDest = Math.sqrt(toDestX*toDestX + toDestZ*toDestZ) * AU_KM;
+        // Map remaining distance to scene position: 10000km → approachSpawnDist, 0km → 100
+        const t = 1 - Math.min(1, distToDest / 10000);
+        const pos = approachSpawnDist + (100 - approachSpawnDist) * t;
+        lsgGroup.position.set(warpHeading.x * pos, 0, warpHeading.z * pos);
       }
       
       // End warp
@@ -536,15 +550,11 @@ function animate(now){
         warpTarget = null;
         if(currentAnchor === 'gate'){ 
           gateModel.visible = true; stationModel.visible = false;
-          lsgGroup.position.set(warpHeading.x * 100, 0, warpHeading.z * 100);
         } else if(currentAnchor === 'station' || currentAnchor === 'stationOrbit'){ 
           stationModel.visible = true; gateModel.visible = false;
-          lsgGroup.position.set(warpHeading.x * 100, 0, warpHeading.z * 100);
         } else { 
           gateModel.visible = false; stationModel.visible = false;
-          lsgGroup.position.set(0, 0, 0);
         }
-        console.log(`[WARP] Complete! PlayerSS: (${window._playerSS.x.toFixed(6)}, ${window._playerSS.z.toFixed(6)}) Dest: (${window._warpToSS.x.toFixed(6)}, ${window._warpToSS.z.toFixed(6)})`);
         updateButtons();
       }
       
@@ -585,8 +595,8 @@ function animate(now){
       const dirLen = Math.sqrt(dxAU*dxAU + dzAU*dzAU);
       const dirX = dirLen > 0 ? dxAU / dirLen : 0;
       const dirZ = dirLen > 0 ? dzAU / dirLen : 0;
-      // Same scale factor for size and distance
-      const SCALE_FACTOR = 100;
+      // Same scale factor for size and distance — planets further back than LSG
+      const SCALE_FACTOR = 5;
       const renderDist = distKm / SCALE_FACTOR;
       body.mesh.position.set(dirX * renderDist, 0, dirZ * renderDist);
       body.mesh.scale.setScalar(body.radius_km / SCALE_FACTOR);
