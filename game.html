@@ -401,6 +401,7 @@ const routes = [];
 async function initSystems(){
   const r=await fetch('/api/positions');
   const data=await r.json();
+  if(!data || !data.systems){ console.warn('Server not ready, retrying...'); setTimeout(initSystems, 2000); return; }
   for(const [sid,sys] of Object.entries(data.systems)){
     const idx=systems.length;
     systems.push({id:sid, name:sys.name, x:sys.x, y:sys.y, z:sys.z, size:TYPE_SIZES[sys.type]||5, color:TYPE_COLORS[sys.type]||0x5a7a9a, type:sys.type, cluster:sys.cluster, security:sys.security, sec_level:sys.sec_level||0, faction:sys.faction, region:sys.region||'', connections:sys.connections, station_count:sys.station_count, has_asteroids:sys.has_asteroids});
