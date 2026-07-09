@@ -1009,6 +1009,7 @@ function animate(now){
         const streakIntensity = Math.min(1, speed / wp.peakSpeed);
         warpStreaks.visible = streakIntensity > 0.05;
         warpStreaks.material.opacity = 0.3 + streakIntensity * 0.5;
+        if(streakIntensity > 0.05) updateWarpStreaks(dt, streakIntensity);
       }
       } // end if(wp)
     }
