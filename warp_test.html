@@ -232,6 +232,7 @@ ssgBodies.moon.mesh = moonMesh;
 let currentAnchor = 'station';
 stationModel.visible = true;
 gateModel.visible = false;
+lsgGroup.position.set(0, 0, 100); // station ahead of player
 
 // ── CAMERA (orbit) ──
 let camTheta = Math.PI, camPhi = 0.3, camDist = 10;
@@ -374,7 +375,6 @@ function warpTo(target){
   warpTimer = 0;
   departureHidden = false;
   approachStarted = false;
-  lsgGroup.position.set(0, 0, 0);
   lsgGroup.scale.setScalar(1);
   
   // Compute warp phases for ALL targets
