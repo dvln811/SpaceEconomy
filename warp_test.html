@@ -376,6 +376,7 @@ function warpTo(target){
   departureHidden = false;
   approachStarted = false;
   lsgGroup.scale.setScalar(1);
+  window._lsgStartPos = null;
   
   // Compute warp phases for ALL targets
   const TOP_SPEED = 2.0; // AU/s
@@ -497,19 +498,26 @@ function animate(now){
       
       orientShip(warpHeading);
       
-      // LSG departure visual: only if departing from a gate/station
+      // LSG departure visual: analytical, same t^4 curve as SSG accel
+      // Station slides away using same time base, just in scene units
       const LSG_DEPART_TIME = 3;
       const hasLSGModel = gateModel.visible || stationModel.visible;
       if(t < LSG_DEPART_TIME && hasLSGModel){
         const lsgT = t / LSG_DEPART_TIME; // 0→1
-        const lsgSpeed = Math.pow(lsgT, 4) * 5000; // hockey stick up to 5000 units/s
-        lsgGroup.position.x -= warpHeading.x * lsgSpeed * dt;
-        lsgGroup.position.z -= warpHeading.z * lsgSpeed * dt;
+        // Analytical: integral of t^4 = t^5/5, scaled to scene units
+        const lsgDist = Math.pow(lsgT, 4) * 500000; // distance traveled in scene units
+        // Move lsgGroup from its starting position backward along heading
+        if(!window._lsgStartPos){
+          window._lsgStartPos = {x: lsgGroup.position.x, z: lsgGroup.position.z};
+        }
+        lsgGroup.position.x = window._lsgStartPos.x - warpHeading.x * lsgDist;
+        lsgGroup.position.z = window._lsgStartPos.z - warpHeading.z * lsgDist;
       }
       if(t >= LSG_DEPART_TIME && !departureHidden){
         departureHidden = true;
         gateModel.visible = false;
         stationModel.visible = false;
+        window._lsgStartPos = null;
       }
       
       // Progress through total warp
@@ -596,7 +604,7 @@ function animate(now){
       const dirX = dirLen > 0 ? dxAU / dirLen : 0;
       const dirZ = dirLen > 0 ? dzAU / dirLen : 0;
       // Same scale factor for size and distance — planets further back than LSG
-      const SCALE_FACTOR = 5;
+      const SCALE_FACTOR = 4;
       const renderDist = distKm / SCALE_FACTOR;
       body.mesh.position.set(dirX * renderDist, 0, dirZ * renderDist);
       body.mesh.scale.setScalar(body.radius_km / SCALE_FACTOR);
