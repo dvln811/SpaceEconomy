@@ -576,7 +576,7 @@ function buildNpcShipMesh(shipClass, role) {
   const box = new THREE.Box3().setFromObject(grp);
   const size = box.getSize(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z) || 1;
-  grp.scale.setScalar(0.5 / maxDim);
+  grp.scale.setScalar((0.15 / WARP_SCALE_FACTOR) / maxDim); // NPC ship = 150m
   npcShipCache[cacheKey] = grp;
   return grp.clone();
 }
@@ -1792,7 +1792,7 @@ async function loadShipModel(){
   const box = new THREE.Box3().setFromObject(shipGroup);
   const size = box.getSize(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z);
-  shipGroup.scale.setScalar(0.2/maxDim);
+  shipGroup.scale.setScalar((0.1 / WARP_SCALE_FACTOR) / maxDim); // ship = 100m
   scene.add(shipGroup);
 
   // Update docked UI with player info
@@ -1852,8 +1852,9 @@ async function buildWarpDestination(targetId, targetGroup){
         const box = new THREE.Box3().setFromObject(model);
         const sz = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
-        const typeScale = {'trade_hub':100, 'military_base':80, 'shipyard':120, 'factory':60, 'refinery':50, 'component_works':40, 'mining_colony':30};
-        const targetSize = typeScale[data.station_type] || 5;
+        const stationSizeKm = {'trade_hub':15, 'military_base':12, 'shipyard':18, 'factory':8, 'refinery':7, 'component_works':5, 'mining_colony':4};
+        const sizeKm = stationSizeKm[data.station_type] || 10;
+        const targetSize = sizeKm / WARP_SCALE_FACTOR;
         model.scale.setScalar(targetSize / maxDim);
         model.userData._origScale = targetSize / maxDim;
         model.position.set(obj.x, obj.y, obj.z);
@@ -1875,8 +1876,8 @@ async function buildWarpDestination(targetId, targetGroup){
         const box = new THREE.Box3().setFromObject(model);
         const sz = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
-        model.scale.setScalar(10 / maxDim);
-        model.userData._origScale = 10 / maxDim;
+        model.scale.setScalar((2 / WARP_SCALE_FACTOR) / maxDim); // gate = 2km
+        model.userData._origScale = (2 / WARP_SCALE_FACTOR) / maxDim;
         model.position.set(obj.x, obj.y, obj.z);
         model.traverse(c => {
           if(c.isLineSegments && c.material){
@@ -1949,8 +1950,10 @@ async function loadAllStations(){
       const box = new THREE.Box3().setFromObject(model);
       const sz = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
-      const typeScale = {'trade_hub':100, 'military_base':80, 'shipyard':120, 'factory':60, 'refinery':50, 'component_works':40, 'mining_colony':30};
-      const targetSize = typeScale[data.station_type] || 5;
+      // Station sizes in km, divided by SCALE_FACTOR for scene units
+      const stationSizeKm = {'trade_hub':15, 'military_base':12, 'shipyard':18, 'factory':8, 'refinery':7, 'component_works':5, 'mining_colony':4};
+      const sizeKm = stationSizeKm[data.station_type] || 10;
+      const targetSize = sizeKm / WARP_SCALE_FACTOR;
       model.scale.setScalar(targetSize / maxDim);
       model.userData._origScale = targetSize / maxDim;
       // Position at object world coords
@@ -2021,8 +2024,8 @@ async function loadAllGates(){
       const box = new THREE.Box3().setFromObject(model);
       const sz = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
-      model.scale.setScalar(10 / maxDim);
-      model.userData._origScale = 10 / maxDim;
+      model.scale.setScalar((2 / WARP_SCALE_FACTOR) / maxDim); // gate = 2km
+      model.userData._origScale = (2 / WARP_SCALE_FACTOR) / maxDim;
       model.position.set(obj.x, obj.y, obj.z);
       // Give gates a bright purple/magenta edge color
       model.traverse(c => {
