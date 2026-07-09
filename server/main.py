@@ -1946,4 +1946,4 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", "8000"))
     if not os.getenv("FLY_APP_NAME") and not os.getenv("WERKZEUG_RUN_MAIN"):
         webbrowser.open(f"http://127.0.0.1:{port}")
-    app.run(debug=True, host="0.0.0.0", port=port, threaded=True)
+    app.run(debug=False, host="0.0.0.0", port=port, threaded=True)
