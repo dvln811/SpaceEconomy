@@ -1087,11 +1087,16 @@ function animate(now){
       trailDrawCount = 0;
     }
 
-    // Speed UI
-    displaySpeed += (playerSpeed - displaySpeed) * 0.1;
-    document.getElementById('speedBar').style.width = (displaySpeed / playerMaxSpeed * 100) + '%';
-    document.getElementById('shipSpeed').textContent = Math.round(displaySpeed * 100) + ' m/s';
-    document.getElementById('shipState').textContent = warpState === 'warping' ? 'Warping' : warpState === 'aligning' ? 'Aligning' : flyDirection ? (displaySpeed > playerMaxSpeed*0.9 ? 'Full Speed' : 'Aligning') : (playerSpeed > 0.01 ? 'Decelerating' : 'Idle');
+    // Speed UI (only when not warping - warp has its own HUD)
+    if(warpState !== 'warping'){
+      displaySpeed += (playerSpeed - displaySpeed) * 0.1;
+      const speedMs = Math.round(displaySpeed * 100);
+      document.getElementById('speedBar').style.width = (displaySpeed / playerMaxSpeed * 100) + '%';
+      if(speedMs > 1000000) document.getElementById('shipSpeed').textContent = (speedMs/1000000).toFixed(1) + ' Mm/s';
+      else if(speedMs > 1000) document.getElementById('shipSpeed').textContent = (speedMs/1000).toFixed(1) + ' km/s';
+      else document.getElementById('shipSpeed').textContent = speedMs + ' m/s';
+      document.getElementById('shipState').textContent = warpState === 'aligning' ? 'Aligning' : flyDirection ? (displaySpeed > playerMaxSpeed*0.9 ? 'Full Speed' : 'Accelerating') : (playerSpeed > 0.01 ? 'Decelerating' : 'Idle');
+    }
 
     // ── Starfield: follow camera (skybox behavior, no parallax) ──
     if(starField){
