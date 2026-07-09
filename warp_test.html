@@ -64,6 +64,7 @@ scene.add(starField);
 const shipGeo = new THREE.ConeGeometry(0.08, 0.35, 4);
 shipGeo.rotateX(Math.PI/2);
 const shipMesh = new THREE.Mesh(shipGeo, new THREE.MeshPhongMaterial({color:0x4fc3f7, emissive:0x0a1428}));
+shipMesh.scale.setScalar(0.025 / 0.35); // 100m ship
 scene.add(shipMesh);
 
 // ── GATE MODEL ──
@@ -183,6 +184,9 @@ scene.add(lsgGroup);
 
 const gateModel = makeGate();
 const stationModel = makeStation();
+// Scale to real km sizes with SCALE_FACTOR=4: gate=2km, station=15km
+gateModel.scale.setScalar(2 / 4 / 8); // 2km gate, torus radius is 8 units
+stationModel.scale.setScalar(15 / 4 / 60); // 15km station, box is 60 units wide
 gateModel.position.set(0, 0, 0);
 stationModel.position.set(0, 0, 0);
 lsgGroup.add(gateModel);
@@ -232,10 +236,10 @@ ssgBodies.moon.mesh = moonMesh;
 let currentAnchor = 'station';
 stationModel.visible = true;
 gateModel.visible = false;
-lsgGroup.position.set(0, 0, 100); // station ahead of player
+lsgGroup.position.set(0, 0, 5); // station 20km ahead of player
 
 // ── CAMERA (orbit) ──
-let camTheta = Math.PI, camPhi = 0.3, camDist = 10;
+let camTheta = Math.PI, camPhi = 0.3, camDist = 0.25;
 
 function updateCamera(){
   const x = camDist * Math.cos(camPhi) * Math.sin(camTheta);
@@ -260,7 +264,7 @@ window.addEventListener('mousemove', e=>{
 renderer.domElement.addEventListener('wheel', e=>{
   e.preventDefault();
   camDist *= 1 + e.deltaY*0.001;
-  camDist = Math.max(1, Math.min(10000, camDist));
+  camDist = Math.max(0.25, Math.min(10000, camDist));
   updateCamera();
 }, {passive:false});
 
@@ -274,7 +278,7 @@ let warpTimer = 0;
 const warpDuration = 5; // seconds (for gate/station LSG warps)
 let departureHidden = false;
 let approachStarted = false;
-const approachSpawnDist = 5000;
+const approachSpawnDist = 2500; // 10,000km at SCALE_FACTOR 4
 
 // Planet warp phases
 window._warpPhases = null;
@@ -545,9 +549,9 @@ function animate(now){
         const toDestX = window._warpToSS.x - window._playerSS.x;
         const toDestZ = window._warpToSS.z - window._playerSS.z;
         const distToDest = Math.sqrt(toDestX*toDestX + toDestZ*toDestZ) * AU_KM;
-        // Map remaining distance to scene position: 10000km → approachSpawnDist, 0km → 100
+        // Map remaining distance to scene position: 10000km → approachSpawnDist, 0km → 5 (20km)
         const t = 1 - Math.min(1, distToDest / 10000);
-        const pos = approachSpawnDist + (100 - approachSpawnDist) * t;
+        const pos = approachSpawnDist + (5 - approachSpawnDist) * t;
         lsgGroup.position.set(warpHeading.x * pos, 0, warpHeading.z * pos);
       }
       
