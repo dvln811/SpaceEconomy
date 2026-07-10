@@ -1,0 +1,6 @@
+content = open('static/ship_renderer.js', 'r', encoding='utf-8').read()
+content = content.replace("import * as THREE from 'three';", '// THREE already available')
+content = content.replace('export const MATERIALS', 'const SHIP_MATERIALS')
+content = content.replace('export function buildShipFromData', 'function buildShipFromData')
+open('_ship_renderer_inline.js', 'w', encoding='utf-8').write(content)
+print(f'Wrote {len(content)} chars')

@@ -1,0 +1,2936 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Warp Game Work - Rigel System</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;font-size:12px;height:100vh;overflow:hidden}
+.layout{display:grid;height:100vh;gap:0}
+.layout.docked{grid-template-columns:1fr 4px 300px}
+.layout.flight{grid-template-columns:1fr 4px 240px}
+.viewport{position:relative;overflow:hidden;background:#080c14}
+.viewport canvas{display:block}
+.panel{background:#0a0e18;border-left:none;padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.panel-handle{width:4px;background:#0a0f1a;cursor:ew-resize;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.panel-handle:hover{background:#1a2844}
+.panel-handle::after{content:'';width:2px;height:30px;background:#8aa0b8;border-radius:1px}
+h2{color:#4fc3f7;font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.stat-row{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #0f1520}
+.stat-row .label{color:#5a7a9a}.stat-row .val{color:#e0e8f0}
+.btn{padding:6px 12px;border:1px solid #4fc3f7;background:#0d1a2f;color:#4fc3f7;border-radius:3px;cursor:pointer;font:inherit;font-size:11px;text-transform:uppercase;letter-spacing:1px}
+.btn:hover{background:#4fc3f7;color:#05080f}
+.btn-red{border-color:#ef5350;color:#ef5350}.btn-red:hover{background:#ef5350;color:#fff}
+.location-bar{position:absolute;top:8px;left:8px;background:rgba(10,14,24,0.9);border:1px solid #1a2844;border-radius:4px;padding:6px 12px;font-size:11px;z-index:5;cursor:pointer;transition:border-color 0.2s}
+.location-bar:hover{border-color:#4fc3f7}
+.location-bar .sys{color:#4fc3f7;font-weight:600}
+.location-bar .sec{margin-left:8px}
+.status-bar{position:absolute;bottom:8px;left:8px;background:rgba(10,14,24,0.9);border:1px solid #1a2844;border-radius:4px;padding:6px 12px;font-size:10px;z-index:5;display:flex;gap:8px;align-items:center;max-width:300px}
+.cargo-grid{display:flex;flex-direction:column;gap:2px;max-height:200px;overflow-y:auto}
+.cargo-item{display:flex;justify-content:space-between;padding:2px 4px;background:#0a1020;border-radius:2px;font-size:10px}
+.ctx-menu{display:none;position:fixed;background:#0a0e18;border:1px solid #1a2844;border-radius:4px;padding:4px 0;min-width:140px;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,0.6)}
+.ctx-menu.open{display:block}
+.ctx-item{padding:5px 12px;cursor:pointer;font-size:11px;color:#c8d4e0}
+.ctx-item:hover{background:#0d1a2f;color:#4fc3f7}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#0a0e18}
+::-webkit-scrollbar-thumb{background:#1a3050;border-radius:3px}
+*{scrollbar-width:thin;scrollbar-color:#1a3050 #0a0e18}
+</style></head><body>
+<div class="layout flight" id="layout">
+  <div class="viewport" id="viewport" oncontextmenu="event.preventDefault()">
+    <div class="location-bar" id="locationBar">
+      <span class="sys" id="sysName">Loading...</span>
+      <span class="sec" id="secLevel"></span>
+      <span id="stationName" style="margin-left:8px;color:#8aa0b8"></span>
+    </div>
+    <div class="status-bar" id="statusBar" style="display:none">
+      <span id="shipState">Idle</span>
+      <div style="display:flex;flex-direction:column;gap:2px;min-width:80px">
+        <span id="shipSpeed" style="color:#66bb6a;font-size:10px">0 m/s</span>
+        <div style="height:4px;background:#0a1020;border-radius:2px;border:1px solid #1a2844;overflow:hidden;width:80px"><div id="speedBar" style="height:100%;width:0%;background:#4fc3f7;transition:width 0.3s"></div></div>
+      </div>
+      <span id="warpTarget" style="color:#ffd54f"></span>
+    </div>
+    <div class="ctx-menu" id="ctxMenu"></div>
+    <div id="fadeOverlay" style="position:absolute;inset:0;background:#020308;z-index:50;pointer-events:none;transition:opacity 2s;opacity:0"></div>
+  </div>
+  <div class="panel-handle" id="panelHandle"></div>
+  <div class="panel" id="panel">
+    <div id="dockedPanel">
+      <h2>Ship</h2>
+      <div id="shipInfo"></div>
+      <button class="btn" id="undockBtn" style="margin-top:8px">Undock</button>
+      <h2 style="margin-top:12px">Fitting</h2>
+      <div id="fittingInfo" style="color:#5a7a9a">No modules fitted</div>
+      <h2 style="margin-top:12px">Cargo</h2>
+      <div class="cargo-grid" id="cargoGrid"></div>
+      <h2 style="margin-top:12px">Station Services</h2>
+      <div style="color:#5a7a9a;font-size:10px">Market, Repair, Fitting</div>
+    </div>
+    <div id="flightPanel" style="display:none">
+      <h2>Ship</h2>
+      <div id="flightShipInfo"></div>
+      <h2 style="margin-top:12px">Navigation</h2>
+      <div id="navObjects" style="max-height:300px;overflow-y:auto"></div>
+      <button class="btn btn-red" id="dockBtn" style="margin-top:8px;display:none">Dock</button>
+    </div>
+  </div>
+</div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+// ──── INLINED MODULES (swap back to imports when integrating with server) ────
+
+// Ship renderer (full inline from /static/ship_renderer.js)
+/**
+ * Ship Renderer - builds Three.js geometry from ship component data.
+ * Usage: import { buildShipFromData, MATERIALS } from '/static/ship_renderer.js';
+ * Requires Three.js to be available via importmap.
+ */
+// THREE already available
+
+const MATERIALS = {
+  hull: () => new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1428, shininess:0, transparent:true, opacity:0.7}),
+  engine: () => new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1020, shininess:0, transparent:true, opacity:0.7}),
+  cargo: () => new THREE.MeshPhongMaterial({color:0x1a1808, emissive:0x0a0a05, shininess:0, transparent:true, opacity:0.7}),
+  mining: () => new THREE.MeshPhongMaterial({color:0x1a1028, emissive:0x0a0818, shininess:0, transparent:true, opacity:0.7}),
+  weapon: () => new THREE.MeshPhongMaterial({color:0x1a1018, emissive:0x100508, shininess:0, transparent:true, opacity:0.7}),
+  shield: () => new THREE.MeshPhongMaterial({color:0x0a1a0a, emissive:0x050a05, shininess:0, transparent:true, opacity:0.7}),
+  accent: () => new THREE.MeshPhongMaterial({color:0x1a2040, emissive:0x0a0a1a, shininess:0, transparent:true, opacity:0.7}),
+};
+
+const EDGE_COLOR = {hull:0x4fc3f7, engine:0x5a7a9a, cargo:0xffd54f, mining:0xab47bc, weapon:0xef5350, shield:0x66bb6a, accent:0xef5350};
+const HP_COLORS = {defense:0x66bb6a, utility:0x4fc3f7, industrial:0xffd54f, mining:0xab47bc, weapon:0xef5350, shield:0x66bb6a};
+
+function addEdges(mesh, material) {
+  if (!mesh.geometry) return;
+  const col = EDGE_COLOR[material] || 0x4fc3f7;
+  const edges = new THREE.EdgesGeometry(mesh.geometry, 15);
+  const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color:col, transparent:true, opacity:0.5}));
+  mesh.add(line);
+}
+
+function buildShipFromData(scene, data, options = {}) {
+  const showHardpoints = options.showHardpoints !== false;
+  const group = new THREE.Group();
+
+  for (const comp of data.components) {
+    const mat = (MATERIALS[comp.material] || MATERIALS.hull)();
+    const [px, py, pz] = comp.pos;
+    const [rx, ry, rz] = comp.rot || [0,0,0];
+    let mesh = null;
+
+    switch(comp.type) {
+      case 'pod': {
+        const {length, height, width} = comp.params;
+        const b=0.04, hw=width/2, hh=height/2;
+        const s = new THREE.Shape();
+        s.moveTo(-hh+b,-hw); s.lineTo(hh-b,-hw); s.lineTo(hh,-hw+b);
+        s.lineTo(hh,hw-b); s.lineTo(hh-b,hw); s.lineTo(-hh+b,hw);
+        s.lineTo(-hh,hw-b); s.lineTo(-hh,-hw+b); s.closePath();
+        const g = new THREE.ExtrudeGeometry(s, {depth:length, bevelEnabled:true, bevelThickness:0.01, bevelSize:0.01});
+        g.center();
+        mesh = new THREE.Mesh(g, mat);
+        if (rx === 0 && ry === 0 && rz === 0) mesh.rotation.y = Math.PI/2;
+        break;
+      }
+      case 'cylinder': {
+        const {r_top, r_bot, length} = comp.params;
+        const g = new THREE.CylinderGeometry(r_top, r_bot, length, 8);
+        mesh = new THREE.Mesh(g, mat);
+        if (rx === 0 && ry === 0 && rz === 0 && !comp.params.vertical) mesh.rotation.z = Math.PI/2;
+        break;
+      }
+      case 'cone': {
+        const {radius, length} = comp.params;
+        const g = new THREE.ConeGeometry(radius, length, 8);
+        mesh = new THREE.Mesh(g, mat);
+        if (rx === 0 && ry === 0 && rz === 0 && !comp.params.vertical) mesh.rotation.z = Math.PI/2;
+        break;
+      }
+      case 'spine': {
+        const {length, radius, flange_r} = comp.params;
+        const grp = new THREE.Group();
+        const s = new THREE.Shape();
+        for(let i=0;i<=6;i++){const a=Math.PI*2*i/6; if(i===0)s.moveTo(Math.cos(a)*radius,Math.sin(a)*radius); else s.lineTo(Math.cos(a)*radius,Math.sin(a)*radius);}
+        const bg = new THREE.ExtrudeGeometry(s,{depth:length,bevelEnabled:false}); bg.center();
+        const body = new THREE.Mesh(bg, mat); body.rotation.y=Math.PI/2; grp.add(body);
+        const fg = new THREE.CylinderGeometry(flange_r,flange_r,0.04,8);
+        const fA = new THREE.Mesh(fg, mat); fA.rotation.z=Math.PI/2; fA.position.x=-length/2-0.02; grp.add(fA);
+        const fB = new THREE.Mesh(fg.clone(), mat); fB.rotation.z=Math.PI/2; fB.position.x=length/2+0.02; grp.add(fB);
+        grp.position.set(px, py, pz);
+        group.add(grp);
+        grp.traverse(child => { if(child.isMesh) addEdges(child, comp.material); });
+        continue;
+      }
+      case 'box': {
+        const {x, y, z} = comp.params;
+        mesh = new THREE.Mesh(new THREE.BoxGeometry(x, y, z), mat);
+        break;
+      }
+      case 'sphere': {
+        const {radius, half} = comp.params;
+        const g = half ? new THREE.SphereGeometry(radius, 8, 6, 0, Math.PI*2, 0, Math.PI/2) : new THREE.SphereGeometry(radius, 8, 6);
+        mesh = new THREE.Mesh(g, mat);
+        break;
+      }
+      case 'torus': {
+        const {radius, tube} = comp.params;
+        mesh = new THREE.Mesh(new THREE.TorusGeometry(radius, tube, 6, 12), mat);
+        if (rx === 0 && ry === 0 && rz === 0) mesh.rotation.y = Math.PI/2;
+        break;
+      }
+      case 'wedge': {
+        const {profile, depth} = comp.params;
+        const s = new THREE.Shape();
+        profile.forEach((p,i) => i===0 ? s.moveTo(p[0],p[1]) : s.lineTo(p[0],p[1]));
+        s.closePath();
+        const g = new THREE.ExtrudeGeometry(s, {depth, bevelEnabled:true, bevelThickness:0.01, bevelSize:0.01});
+        g.center();
+        mesh = new THREE.Mesh(g, mat);
+        break;
+      }
+      case 'hardpoint': {
+        if (!showHardpoints) continue;
+        const {slot_type} = comp.params;
+        const col = HP_COLORS[slot_type] || 0xffffff;
+        const g = new THREE.OctahedronGeometry(0.05);
+        mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({color:col, wireframe:true, transparent:true, opacity:0.8}));
+        break;
+      }
+      default: continue;
+    }
+    if (mesh) {
+      mesh.position.set(px, py, pz);
+      mesh.rotation.x += rx; mesh.rotation.y += ry; mesh.rotation.z += rz;
+      group.add(mesh);
+      if (comp.type !== 'hardpoint') addEdges(mesh, comp.material);
+    }
+  }
+  scene.add(group);
+  return group;
+}
+
+
+// Planet texture generator (simple inline version - no worker needed)
+function genPlanetTex(THREE, planetId, planetType, isPlanet){
+  const colors = {terrestrial:'#1a5c3a', ocean:'#0a2050', desert:'#c4956a', rocky:'#6a5a4a', ice:'#8aa8c0', volcanic:'#401008', gas_giant:'#c49060', ice_giant:'#4a6888', super_earth:'#2a5a3a', rocky_moon:'#5a5a5a', ice_moon:'#8aa8c0', volcanic_moon:'#5a3020'};
+  const base = colors[planetType] || '#404040';
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = base; ctx.fillRect(0,0,256,128);
+  // Add noise
+  const seed = planetId.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
+  for(let i=0;i<100;i++){
+    const x=((seed*17+i*31)%256), y=((seed*13+i*23)%128);
+    const r=3+((seed+i*7)%8);
+    ctx.fillStyle=`rgba(${(seed+i)%60},${(seed+i*3)%60},${(seed+i*5)%40},0.3)`;
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+  }
+  if(planetType==='gas_giant'||planetType==='ice_giant'){
+    for(let y=0;y<128;y+=8){ ctx.fillStyle=`rgba(0,0,0,${0.05+Math.sin(y*0.2)*0.08})`; ctx.fillRect(0,y,256,4); }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.ClampToEdgeWrapping;
+  return tex;
+}
+function pregenPlanetTextures(THREE, objects, priorityId, onDone){ if(onDone) onDone(); }
+function clearPlanetTextureCache(){}
+
+// ──── END INLINED MODULES ────
+
+// Stub fetch for standalone mode (no server)
+const _realFetch = window.fetch;
+const STANDALONE_MODE = true; // set false when integrating back to ship.html
+
+// -- INLINE MODEL DATA (extracted from server, swap back to fetch when integrating) --
+const INLINE_MODELS = {"pinto_runner":{"bounds":{"height":68.0,"length":420.4,"width":79.2},"components":[{"material":"hull","params":{"length":0.7200000000000001,"r_bot":0.18000000000000002,"r_top":0.14400000000000002},"pos":[0,0,0],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"radius":0.18000000000000002,"tube":0.014400000000000001},"pos":[0.18000000000000002,0,0],"rot":[0,0,0],"type":"torus"},{"material":"hull","params":{"radius":0.18000000000000002,"tube":0.014400000000000001},"pos":[-0.18000000000000002,0,0],"rot":[0,0,0],"type":"torus"},{"material":"hull","params":{"height":0.17144120689818088,"length":0.3673740147818161,"width":0.2449160098545441},"pos":[-0.05415766604042329,0,0.143764807021976],"rot":[0,0,0],"type":"pod"},{"material":"hull","params":{"height":0.11021220443454482,"length":0.18368700739090804,"width":0.15919540640545365},"pos":[0.15402094233593916,0,0.143764807021976],"rot":[0,0,0],"type":"pod"},{"material":"hull","params":{"flange_r":0.06300000000000001,"length":0.108,"radius":0.036000000000000004},"pos":[0.36000000000000004,0,0],"type":"spine"},{"material":"hull","params":{"x":0.014400000000000001,"y":0.09000000000000001,"z":0.014400000000000001},"pos":[0.10799999999999998,0.234,0],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"x":0.054,"y":0.0108,"z":0.0108},"pos":[0.10799999999999998,0.27,0],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"height":0.25200000000000006,"length":0.54,"width":0.36000000000000004},"pos":[0.378,0,0],"rot":[0,0,0],"type":"pod"},{"material":"hull","params":{"height":0.162,"length":0.27,"width":0.234},"pos":[0.684,0,0],"rot":[0,0,0],"type":"pod"},{"material":"hull","params":{"height":0.13461764989070069,"length":0.28846639262293,"width":0.19231092841528669},"pos":[0.43653161327173795,0.14001692263378632,0],"rot":[0,0,0],"type":"pod"},{"material":"hull","params":{"height":0.086539917786879,"length":0.144233196311465,"width":0.12500210346993634},"pos":[0.5999959024247317,0.14001692263378632,0],"rot":[0,0,0],"type":"pod"},{"material":"hull","params":{"flange_r":0.06300000000000001,"length":0.108,"radius":0.036000000000000004},"pos":[0.8280000000000001,0,0],"type":"spine"},{"material":"hull","params":{"x":0.014400000000000001,"y":0.09000000000000001,"z":0.014400000000000001},"pos":[0.5760000000000001,0.198,0],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"x":0.054,"y":0.0108,"z":0.0108},"pos":[0.5760000000000001,0.23400000000000004,0],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"height":0.108,"length":0.81,"width":0.5040000000000001},"pos":[0.936,0,0],"rot":[0,0,0],"type":"pod"},{"material":"hull","params":{"height":0.07200000000000001,"length":0.36000000000000004,"width":0.324},"pos":[1.08,0,0],"rot":[0,0,0],"type":"pod"},{"material":"hull","params":{"length":0.40845039551571505,"r_bot":0.10211259887892876,"r_top":0.081690079103143},"pos":[0.9057279479585368,-0.05392556720721239,0],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"radius":0.10211259887892876,"tube":0.0081690079103143},"pos":[1.0078405468374656,-0.05392556720721239,0],"rot":[0,0,0],"type":"torus"},{"material":"hull","params":{"radius":0.10211259887892876,"tube":0.0081690079103143},"pos":[0.8036153490796081,-0.05392556720721239,0],"rot":[0,0,0],"type":"torus"},{"material":"hull","params":{"x":0.014400000000000001,"y":0.09000000000000001,"z":0.014400000000000001},"pos":[0.936,0.126,0],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"x":0.054,"y":0.0108,"z":0.0108},"pos":[0.936,0.16200000000000003,0],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"height":0.108,"length":0.18000000000000002,"width":0.18000000000000002},"pos":[1.368,0,0],"rot":[0,0,0],"type":"pod"},{"material":"hull","params":{"height":0.108,"length":0.12600000000000003,"width":0.12600000000000003},"pos":[1.368,0.09000000000000001,0],"rot":[0,0,0],"type":"pod"},{"material":"hull","params":{"x":0.007200000000000001,"y":0.027,"z":0.108},"pos":[1.431,0.117,0],"rot":[0,0,0],"type":"box"},{"material":"engine","params":{"length":0.216,"r_bot":0.0504,"r_top":0.027},"pos":[-0.396,0,0.06300000000000001],"rot":[0,0,0],"type":"cylinder"},{"material":"engine","params":{"length":0.216,"r_bot":0.0504,"r_top":0.027},"pos":[-0.396,0.05455960043841964,-0.03149999999999999],"rot":[0,0,0],"type":"cylinder"},{"material":"engine","params":{"length":0.216,"r_bot":0.0504,"r_top":0.027},"pos":[-0.396,-0.05455960043841963,-0.03150000000000003],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.07200000000000001,"r_bot":0.07200000000000001,"r_top":0.07200000000000001},"pos":[-0.306,0,0],"rot":[0,0,0],"type":"cylinder"}],"faction":"","hull_class":"Industrial","name":"Pinto Runner","role":"industrial","tier":2},"station":{"components":[{"material":"hull","params":{"half":false,"radius":0.36},"pos":[0,0,0],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"length":0.048,"r_bot":0.18,"r_top":0.18},"pos":[0,-0.384,0],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.048,"r_bot":0.18,"r_top":0.18},"pos":[0,0.384,0],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.5399736611777707,"r_bot":0.0384,"r_top":0.0384},"pos":[0.6,0,0.0],"rot":[0,0.0,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.06720000000000001,"r_top":0.06720000000000001},"pos":[0.32999999999999996,0,0.0],"rot":[0,0.0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.06720000000000001,"r_top":0.06720000000000001},"pos":[0.87,0,0.0],"rot":[0,0.0,0],"type":"cylinder"},{"material":"hull","params":{"half":false,"radius":0.216},"pos":[0.8699868305888854,0,0.0],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"length":0.0288,"r_bot":0.108,"r_top":0.108},"pos":[0.8699868305888854,-0.2304,0.0],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.108,"r_top":0.108},"pos":[0.8699868305888854,0.2304,0.0],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.5562019739981964,"r_bot":0.0384,"r_top":0.0384},"pos":[4.4087284769304716e-17,0,0.72],"rot":[0,1.5707963267948966,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.06720000000000001,"r_top":0.06720000000000001},"pos":[4.4087284769304716e-17,0,0.44189999999999996],"rot":[0,1.5707963267948966,0],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.06720000000000001,"r_top":0.06720000000000001},"pos":[4.4087284769304716e-17,0,0.9981],"rot":[0,1.5707963267948966,0],"type":"cylinder"},{"material":"hull","params":{"length":0.324,"r_bot":0.2016,"r_top":0.2016},"pos":[6.111605894771299e-17,0,0.9981009869990982],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.108,"radius":0.2016},"pos":[6.111605894771299e-17,0.2016,0.9981009869990982],"rot":[0,0,0],"type":"cone"},{"material":"hull","params":{"length":0.108,"radius":0.2016},"pos":[6.111605894771299e-17,-0.2016,0.9981009869990982],"rot":[3.141592653589793,0,0],"type":"cone"},{"material":"hull","params":{"length":0.5684419408903142,"r_bot":0.0384,"r_top":0.0384},"pos":[-0.84,0,1.0287033112837766e-16],"rot":[0,3.141592653589793,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.06720000000000001,"r_top":0.06720000000000001},"pos":[-0.5558,0,1.0287033112837766e-16],"rot":[0,3.141592653589793,0],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.06720000000000001,"r_top":0.06720000000000001},"pos":[-1.1242,0,1.0287033112837766e-16],"rot":[0,3.141592653589793,0],"type":"cylinder"},{"material":"hull","params":{"length":0.504,"r_bot":0.15839999999999999,"r_top":0.15839999999999999},"pos":[-1.1242209704451571,0,1.376773612989993e-16],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.2016,"r_top":0.2016},"pos":[-1.1242209704451571,-0.26639999999999997,1.376773612989993e-16],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.2016,"r_top":0.2016},"pos":[-1.1242209704451571,0.26639999999999997,1.376773612989993e-16],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"radius":0.15839999999999999,"tube":0.0144},"pos":[-1.1242209704451571,0,1.376773612989993e-16],"rot":[1.5707963267948966,0,0],"type":"torus"},{"material":"hull","params":{"length":0.6505247682918119,"r_bot":0.0384,"r_top":0.0384},"pos":[-1.7634913907721884e-16,0,-0.96],"rot":[0,4.71238898038469,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.06720000000000001,"r_top":0.06720000000000001},"pos":[-1.7634913907721884e-16,0,-0.6347],"rot":[0,4.71238898038469,0],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.06720000000000001,"r_top":0.06720000000000001},"pos":[-1.7634913907721884e-16,0,-1.2852999999999999],"rot":[0,4.71238898038469,0],"type":"cylinder"},{"material":"hull","params":{"length":0.504,"r_bot":0.15839999999999999,"r_top":0.15839999999999999},"pos":[-2.3609886972131693e-16,0,-1.2852623841459059],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.2016,"r_top":0.2016},"pos":[-2.3609886972131693e-16,-0.26639999999999997,-1.2852623841459059],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.2016,"r_top":0.2016},"pos":[-2.3609886972131693e-16,0.26639999999999997,-1.2852623841459059],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"radius":0.15839999999999999,"tube":0.0144},"pos":[-2.3609886972131693e-16,0,-1.2852623841459059],"rot":[1.5707963267948966,0,0],"type":"torus"},{"material":"hull","params":{"radius":0.792,"tube":0.1008},"pos":[0,-0.09,0],"rot":[1.5707963267948966,0,0],"type":"torus"},{"material":"hull","params":{"x":0.72,"y":0.021599999999999998,"z":0.021599999999999998},"pos":[0.38880000000000003,-0.09,0.0],"rot":[0,0.0,1.5707963267948966],"type":"box"},{"material":"hull","params":{"x":0.72,"y":0.021599999999999998,"z":0.021599999999999998},"pos":[0.19440000000000004,-0.09,0.33671067699138973],"rot":[0,1.0471975511965976,1.5707963267948966],"type":"box"},{"material":"hull","params":{"x":0.72,"y":0.021599999999999998,"z":0.021599999999999998},"pos":[-0.19439999999999993,-0.09,0.3367106769913898],"rot":[0,2.0943951023931953,1.5707963267948966],"type":"box"},{"material":"hull","params":{"x":0.72,"y":0.021599999999999998,"z":0.021599999999999998},"pos":[-0.38880000000000003,-0.09,4.7614267550849093e-17],"rot":[0,3.141592653589793,1.5707963267948966],"type":"box"},{"material":"hull","params":{"x":0.72,"y":0.021599999999999998,"z":0.021599999999999998},"pos":[-0.19440000000000016,-0.09,-0.3367106769913897],"rot":[0,4.1887902047863905,1.5707963267948966],"type":"box"},{"material":"hull","params":{"x":0.72,"y":0.021599999999999998,"z":0.021599999999999998},"pos":[0.19440000000000004,-0.09,-0.33671067699138973],"rot":[0,5.235987755982989,1.5707963267948966],"type":"box"},{"material":"hull","params":{"height":0.1512,"length":0.378,"width":0.23520000000000002},"pos":[1.3499868305888854,0,0.0],"rot":[0,0.0,0],"type":"pod"},{"material":"hull","params":{"x":0.025199999999999997,"y":0.10079999999999999,"z":0.0168},"pos":[1.5431868305888854,0,-0.1344],"rot":[0,0.0,0],"type":"box"},{"material":"hull","params":{"x":0.025199999999999997,"y":0.10079999999999999,"z":0.0168},"pos":[1.5431868305888854,0,0.1344],"rot":[0,0.0,0],"type":"box"},{"material":"hull","params":{"x":0.336,"y":0.0084,"z":0.0084},"pos":[1.3499868305888854,-0.05039999999999999,0.126],"rot":[0,0.0,0],"type":"box"},{"material":"hull","params":{"x":0.336,"y":0.0084,"z":0.0084},"pos":[1.3499868305888854,0.05039999999999999,0.126],"rot":[0,0.0,0],"type":"box"},{"material":"hull","params":{"height":0.1512,"length":0.378,"width":0.23520000000000002},"pos":[9.050758212724947e-17,0,1.4781009869990982],"rot":[0,1.5707963267948966,0],"type":"pod"},{"material":"hull","params":{"x":0.025199999999999997,"y":0.10079999999999999,"z":0.0168},"pos":[0.13440000000000007,0,1.6713009869990982],"rot":[0,1.5707963267948966,0],"type":"box"},{"material":"hull","params":{"x":0.025199999999999997,"y":0.10079999999999999,"z":0.0168},"pos":[-0.1343999999999999,0,1.6713009869990982],"rot":[0,1.5707963267948966,0],"type":"box"},{"material":"hull","params":{"x":0.336,"y":0.0084,"z":0.0084},"pos":[-0.12599999999999992,-0.05039999999999999,1.4781009869990982],"rot":[0,1.5707963267948966,0],"type":"box"},{"material":"hull","params":{"x":0.336,"y":0.0084,"z":0.0084},"pos":[-0.12599999999999992,0.05039999999999999,1.4781009869990982],"rot":[0,1.5707963267948966,0],"type":"box"},{"material":"hull","params":{"height":0.1512,"length":0.378,"width":0.23520000000000002},"pos":[-1.604220970445157,0,1.9646040765807226e-16],"rot":[0,3.141592653589793,0],"type":"pod"},{"material":"hull","params":{"x":0.025199999999999997,"y":0.10079999999999999,"z":0.0168},"pos":[-1.7974209704451571,0,0.13440000000000019],"rot":[0,3.141592653589793,0],"type":"box"},{"material":"hull","params":{"x":0.025199999999999997,"y":0.10079999999999999,"z":0.0168},"pos":[-1.7974209704451571,0,-0.1343999999999998],"rot":[0,3.141592653589793,0],"type":"box"},{"material":"hull","params":{"x":0.336,"y":0.0084,"z":0.0084},"pos":[-1.604220970445157,-0.05039999999999999,-0.1259999999999998],"rot":[0,3.141592653589793,0],"type":"box"},{"material":"hull","params":{"x":0.336,"y":0.0084,"z":0.0084},"pos":[-1.604220970445157,0.05039999999999999,-0.1259999999999998],"rot":[0,3.141592653589793,0],"type":"box"},{"material":"hull","params":{"radius":0.1512,"tube":0.029400000000000003},"pos":[-3.2427343925992636e-16,0,-1.7652623841459059],"rot":[0,4.71238898038469,0],"type":"torus"},{"material":"hull","params":{"length":0.0672,"r_bot":0.11760000000000001,"r_top":0.11760000000000001},"pos":[-3.2427343925992636e-16,0,-1.7652623841459059],"rot":[0,4.71238898038469,0],"type":"cylinder"},{"material":"hull","params":{"x":0.05039999999999999,"y":0.025199999999999997,"z":0.012599999999999998},"pos":[-3.2427343925992636e-16,0,-1.9332623841459058],"rot":[0,4.71238898038469,0],"type":"box"},{"material":"hull","params":{"x":0.05039999999999999,"y":0.025199999999999997,"z":0.012599999999999998},"pos":[0.14549999999999966,0,-1.6812623841459058],"rot":[0,6.8067840827778845,0],"type":"box"},{"material":"hull","params":{"x":0.05039999999999999,"y":0.025199999999999997,"z":0.012599999999999998},"pos":[-0.14550000000000032,0,-1.6812623841459058],"rot":[0,8.901179185171081,0],"type":"box"},{"material":"hull","params":{"length":0.2849434321198607,"r_bot":0.0672,"r_top":0.0672},"pos":[0.9590822850183903,-0.36,0.08909545442950498],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"half":true,"radius":0.0672},"pos":[0.9590822850183903,-0.21752828394006965,0.08909545442950498],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"length":0.3242579445349813,"r_bot":0.0672,"r_top":0.0672},"pos":[0.7808913761593804,-0.36,0.08909545442950498],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"half":true,"radius":0.0672},"pos":[0.7808913761593804,-0.19787102773250934,0.08909545442950498],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"length":0.2356833789564258,"r_bot":0.0672,"r_top":0.0672},"pos":[0.7808913761593803,-0.36,-0.08909545442950498],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"half":true,"radius":0.0672},"pos":[0.7808913761593803,-0.2421583105217871,-0.08909545442950498],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"length":0.2955830744665577,"r_bot":0.0672,"r_top":0.0672},"pos":[0.9590822850183903,-0.36,-0.089095454429505],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"half":true,"radius":0.0672},"pos":[0.9590822850183903,-0.21220846276672115,-0.089095454429505],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.336,"y":0.025199999999999997,"z":0.336},"pos":[0.8699868305888854,-0.486,0.0],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[-0.48,0.6,-0.1152],"rot":[-0.5,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[-0.48,0.6,-0.0576],"rot":[-0.25,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[-0.48,0.6,0.0],"rot":[0.0,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[-0.48,0.6,0.0576],"rot":[0.25,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[-0.48,0.6,0.1152],"rot":[0.5,0,0],"type":"box"},{"material":"hull","params":{"length":0.288,"r_bot":0.010799999999999999,"r_top":0.010799999999999999},"pos":[-0.48,0.6,0],"rot":[1.5707963267948966,0,0],"type":"cylinder"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.0,0.6,-0.1152],"rot":[-0.5,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.0,0.6,-0.0576],"rot":[-0.25,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.0,0.6,0.0],"rot":[0.0,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.0,0.6,0.0576],"rot":[0.25,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.0,0.6,0.1152],"rot":[0.5,0,0],"type":"box"},{"material":"hull","params":{"length":0.288,"r_bot":0.010799999999999999,"r_top":0.010799999999999999},"pos":[0.0,0.6,0],"rot":[1.5707963267948966,0,0],"type":"cylinder"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.48,0.6,-0.1152],"rot":[-0.5,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.48,0.6,-0.0576],"rot":[-0.25,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.48,0.6,0.0],"rot":[0.0,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.48,0.6,0.0576],"rot":[0.25,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.48,0.6,0.1152],"rot":[0.5,0,0],"type":"box"},{"material":"hull","params":{"length":0.288,"r_bot":0.010799999999999999,"r_top":0.010799999999999999},"pos":[0.48,0.6,0],"rot":[1.5707963267948966,0,0],"type":"cylinder"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[-0.48,-0.6,-0.1152],"rot":[-0.5,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[-0.48,-0.6,-0.0576],"rot":[-0.25,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[-0.48,-0.6,0.0],"rot":[0.0,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[-0.48,-0.6,0.0576],"rot":[0.25,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[-0.48,-0.6,0.1152],"rot":[0.5,0,0],"type":"box"},{"material":"hull","params":{"length":0.288,"r_bot":0.010799999999999999,"r_top":0.010799999999999999},"pos":[-0.48,-0.6,0],"rot":[1.5707963267948966,0,0],"type":"cylinder"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.0,-0.6,-0.1152],"rot":[-0.5,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.0,-0.6,-0.0576],"rot":[-0.25,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.0,-0.6,0.0],"rot":[0.0,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.0,-0.6,0.0576],"rot":[0.25,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.0,-0.6,0.1152],"rot":[0.5,0,0],"type":"box"},{"material":"hull","params":{"length":0.288,"r_bot":0.010799999999999999,"r_top":0.010799999999999999},"pos":[0.0,-0.6,0],"rot":[1.5707963267948966,0,0],"type":"cylinder"},{"material":"hull","params":{"x":0.108,"y":0.072,"z":0.072},"pos":[0.6132021506806232,0.39427995832679996,0.1386888113135731],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"length":0.048,"r_bot":0.009,"r_top":0.009},"pos":[0.6732021506806232,0.37627995832679995,0.1206888113135731],"rot":[0,0,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"length":0.048,"r_bot":0.009,"r_top":0.009},"pos":[0.6732021506806232,0.37627995832679995,0.1566888113135731],"rot":[0,0,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"length":0.048,"r_bot":0.009,"r_top":0.009},"pos":[0.6732021506806232,0.4122799583268,0.1206888113135731],"rot":[0,0,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"length":0.048,"r_bot":0.009,"r_top":0.009},"pos":[0.6732021506806232,0.4122799583268,0.1566888113135731],"rot":[0,0,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"length":0.036,"r_bot":0.054,"r_top":0.036},"pos":[-0.672185065880267,0.36568203796565163,-0.022470724850298787],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"half":true,"radius":0.033},"pos":[-0.672185065880267,0.38968203796565165,-0.022470724850298787],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"length":0.072,"r_bot":0.0072,"r_top":0.006},"pos":[-0.624185065880267,0.38968203796565165,-0.034470724850298784],"rot":[0,0,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"length":0.072,"r_bot":0.0072,"r_top":0.006},"pos":[-0.624185065880267,0.38968203796565165,-0.010470724850298787],"rot":[0,0,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"length":0.36,"r_bot":0.012,"r_top":0.006},"pos":[0,0.93,0],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"half":false,"radius":0.03},"pos":[0,1.11,0],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.072,"y":0.0048,"z":0.0048},"pos":[0,0.9,0],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"x":0.072,"y":0.0048,"z":0.0048},"pos":[0,0.99,0],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"x":0.072,"y":0.0048,"z":0.0048},"pos":[0,1.068,0],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"height":0.08639999999999999,"length":0.2016,"width":0.08639999999999999},"pos":[0.9779868305888854,0.3,0.0],"rot":[0,0.0,0],"type":"pod"},{"material":"hull","params":{"height":0.08639999999999999,"length":0.2016,"width":0.08639999999999999},"pos":[0.9033606659813797,0.3,0.10271410375987657],"rot":[0,1.2566370614359172,0],"type":"pod"},{"material":"hull","params":{"height":0.08639999999999999,"length":0.2016,"width":0.08639999999999999},"pos":[0.782612995196391,0.3,0.0634808072475871],"rot":[0,2.5132741228718345,0],"type":"pod"},{"material":"hull","params":{"height":0.08639999999999999,"length":0.2016,"width":0.08639999999999999},"pos":[0.782612995196391,0.3,-0.06348080724758709],"rot":[0,3.7699111843077517,0],"type":"pod"},{"material":"hull","params":{"height":0.08639999999999999,"length":0.2016,"width":0.08639999999999999},"pos":[0.9033606659813797,0.3,-0.10271410375987658],"rot":[0,5.026548245743669,0],"type":"pod"},{"material":"hull","params":{"length":0.108,"r_bot":0.0576,"r_top":0.0576},"pos":[0.8699868305888854,0.3,0.0],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.396,"r_bot":0.1152,"r_top":0.1152},"pos":[6.111605894771299e-17,0.3,0.9981009869990982],"rot":[0,0,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"half":true,"radius":0.1152},"pos":[-0.20159999999999995,0.3,0.9981009869990982],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":true,"radius":0.1152},"pos":[0.20160000000000006,0.3,0.9981009869990982],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"radius":0.1152,"tube":0.0057599999999999995},"pos":[-0.08639999999999994,0.3,0.9981009869990982],"rot":[0,0,1.5707963267948966],"type":"torus"},{"material":"hull","params":{"radius":0.1152,"tube":0.0057599999999999995},"pos":[6.111605894771299e-17,0.3,0.9981009869990982],"rot":[0,0,1.5707963267948966],"type":"torus"},{"material":"hull","params":{"radius":0.1152,"tube":0.0057599999999999995},"pos":[0.08640000000000005,0.3,0.9981009869990982],"rot":[0,0,1.5707963267948966],"type":"torus"}],"faction":"terran","meta":{"component_count":121,"faction":"terran","seed":null,"station_type":"trade_hub"},"name":"terran/trade_hub/None","seed":null,"station_type":"trade_hub"},"gate":{"components":[{"material":"hull","params":{"radius":0.8459,"tube":0.0293},"pos":[-0.4143,0,0],"rot":[0,1.5707963267948966,0],"type":"torus"},{"material":"hull","params":{"radius":0.8719,"tube":0.0307},"pos":[-0.2071,0,0],"rot":[0,1.5707963267948966,0],"type":"torus"},{"material":"hull","params":{"radius":0.8762,"tube":0.0485},"pos":[0.0,0,0],"rot":[0,1.5707963267948966,0],"type":"torus"},{"material":"hull","params":{"radius":0.8433,"tube":0.0283},"pos":[0.2071,0,0],"rot":[0,1.5707963267948966,0],"type":"torus"},{"material":"hull","params":{"radius":0.833,"tube":0.0283},"pos":[0.4143,0,0],"rot":[0,1.5707963267948966,0],"type":"torus"},{"material":"hull","params":{"half":false,"radius":0.027},"pos":[0.4143,0.9245,-0.0165],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0319},"pos":[0.4143,0.9981,-0.0179],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0213},"pos":[0.4143,1.0716,-0.0192],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0269},"pos":[0.4143,1.1452,-0.0205],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.04823578637734396,"y":0.028941471826406374,"z":0.028941471826406374},"pos":[0.4143,1.1452,-0.0205],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0215},"pos":[-0.2071,0.8353,0.3966],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0142},"pos":[-0.2071,1.0031,0.4763],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.06301707077747158,"y":0.03781024246648295,"z":0.03781024246648295},"pos":[-0.2071,1.0031,0.4763],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0351},"pos":[-0.4143,0.5844,0.7166],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0224},"pos":[-0.4143,0.687,0.8425],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0211},"pos":[-0.4143,0.7897,0.9683],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.03917515891882455,"y":0.02350509535129473,"z":0.02350509535129473},"pos":[-0.4143,0.7897,0.9683],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0308},"pos":[0.0,0.2673,0.8852],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0305},"pos":[0.0,0.2836,0.9393],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0157},"pos":[0.0,0.3,0.9935],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0188},"pos":[0.0,0.3163,1.0476],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.04790836139511405,"y":0.028745016837068427,"z":0.028745016837068427},"pos":[0.0,0.3163,1.0476],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0327},"pos":[-0.4143,-0.0601,0.9227],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0184},"pos":[-0.4143,-0.0641,0.9832],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0176},"pos":[-0.4143,-0.068,1.0437],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0185},"pos":[-0.4143,-0.072,1.1043],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.04198305874224094,"y":0.02518983524534456,"z":0.02518983524534456},"pos":[-0.4143,-0.072,1.1043],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0288},"pos":[0.2071,-0.5011,0.7771],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0192},"pos":[0.2071,-0.5363,0.8316],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0251},"pos":[0.2071,-0.5714,0.8861],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0214},"pos":[0.2071,-0.6066,0.9406],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.05632742729526326,"y":0.03379645637715795,"z":0.03379645637715795},"pos":[0.2071,-0.6066,0.9406],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0369},"pos":[-0.4143,-0.7735,0.5066],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0189},"pos":[-0.4143,-0.8256,0.5407],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0286},"pos":[-0.4143,-0.8777,0.5748],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0202},"pos":[-0.4143,-0.9298,0.6089],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.06765588922753805,"y":0.040593533536522834,"z":0.040593533536522834},"pos":[-0.4143,-0.9298,0.6089],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0322},"pos":[0.4143,-0.9116,0.1549],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0311},"pos":[0.4143,-1.0451,0.1776],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0211},"pos":[0.4143,-1.1786,0.2003],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.04527215599811288,"y":0.027163293598867728,"z":0.027163293598867728},"pos":[0.4143,-1.1786,0.2003],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0235},"pos":[-0.2071,-0.9006,-0.2094],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0265},"pos":[-0.2071,-0.9942,-0.2312],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.03},"pos":[-0.2071,-1.0878,-0.2529],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.017},"pos":[-0.2071,-1.1814,-0.2747],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.06096204412479555,"y":0.03657722647487733,"z":0.03657722647487733},"pos":[-0.2071,-1.1814,-0.2747],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.037},"pos":[-0.2071,-0.7728,-0.5078],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0143},"pos":[-0.2071,-0.9997,-0.6569],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.05464941672381372,"y":0.03278965003428823,"z":0.03278965003428823},"pos":[-0.2071,-0.9997,-0.6569],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0199},"pos":[-0.4143,-0.4745,-0.7936],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0299},"pos":[-0.4143,-0.4977,-0.8325],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0232},"pos":[-0.4143,-0.5209,-0.8714],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0258},"pos":[-0.4143,-0.5442,-0.9103],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.044195510980429654,"y":0.02651730658825779,"z":0.02651730658825779},"pos":[-0.4143,-0.5442,-0.9103],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0299},"pos":[0.2071,-0.0576,-0.9228],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0239},"pos":[0.2071,-0.0671,-1.0749],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0225},"pos":[0.2071,-0.0766,-1.227],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.0487184545798624,"y":0.02923107274791744,"z":0.02923107274791744},"pos":[0.2071,-0.0766,-1.227],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0233},"pos":[-0.4143,0.2909,-0.8777],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0227},"pos":[-0.4143,0.3454,-1.042],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.05391117380647203,"y":0.03234670428388321,"z":0.03234670428388321},"pos":[-0.4143,0.3454,-1.042],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0382},"pos":[-0.2071,0.6249,-0.6815],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0279},"pos":[-0.2071,0.6705,-0.7312],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0199},"pos":[-0.2071,0.7161,-0.7809],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.018},"pos":[-0.2071,0.7617,-0.8306],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.05045362746553747,"y":0.030272176479322482,"z":0.030272176479322482},"pos":[-0.2071,0.7617,-0.8306],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0345},"pos":[0.4143,0.8523,-0.3585],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0196},"pos":[0.4143,0.908,-0.3819],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0176},"pos":[0.4143,0.9636,-0.4053],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0254},"pos":[0.4143,1.0193,-0.4287],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.0686140725410226,"y":0.04116844352461356,"z":0.04116844352461356},"pos":[0.4143,1.0193,-0.4287],"rot":[0,0,0],"type":"box"}],"connects_to":"","faction":"terran","meta":{"component_count":71,"faction":"terran","ring_count":5,"ring_radius":0.8761811258176812},"name":"terran/gate","obj_type":"gate"}};
+
+window.fetch = function(url, opts){
+  if(STANDALONE_MODE && typeof url === 'string' && url.startsWith('/api')){
+    return Promise.resolve({ok:false, status:404, json:()=>Promise.resolve({}), text:()=>Promise.resolve('')});
+  }
+  return _realFetch(url, opts);
+};
+
+// ── State ──
+let player = null;
+let localState = null;  // from SSE stream
+// Hardcoded Rigel system for standalone testing
+localState = {
+  system_id: 'rigel',
+  objects: [
+    {id:'star', name:'Rigel Star', type:'star', x:0, y:0, z:0, ss_x:0, ss_y:0, ss_z:0, is_anchor:false, radius_km:0, planet_type:'', station_id:'', au_distance:0, connects_to:'', parent:''},
+    {id:'p1', name:'Rigel I', type:'planet', x:0, y:0, z:0, ss_x:-1.4822, ss_y:0.1438, ss_z:1.0212, is_anchor:false, radius_km:2800, planet_type:'rocky', station_id:'', au_distance:1.8, connects_to:'', parent:''},
+    {id:'p2', name:'Rigel II', type:'planet', x:0, y:0, z:0, ss_x:0.4329, ss_y:-0.419, ss_z:3.4731, is_anchor:false, radius_km:5200, planet_type:'desert', station_id:'', au_distance:3.5, connects_to:'', parent:''},
+    {id:'p3', name:'Rigel III', type:'planet', x:0, y:0, z:0, ss_x:5.741, ss_y:0.31, ss_z:-2.341, is_anchor:false, radius_km:6400, planet_type:'terrestrial', station_id:'', au_distance:6.2, connects_to:'', parent:''},
+    {id:'p4', name:'Rigel IV', type:'planet', x:0, y:0, z:0, ss_x:6.7684, ss_y:-0.315, ss_z:-8.0274, is_anchor:false, radius_km:52000, planet_type:'gas_giant', station_id:'', au_distance:10.5, connects_to:'', parent:''},
+    {id:'p5', name:'Rigel V', type:'planet', x:0, y:0, z:0, ss_x:-14.2651, ss_y:1.6, ss_z:7.2461, is_anchor:false, radius_km:28000, planet_type:'ice_giant', station_id:'', au_distance:16.0, connects_to:'', parent:''},
+    {id:'p6', name:'Rigel VI', type:'planet', x:0, y:0, z:0, ss_x:-0.3451, ss_y:-3.08, ss_z:-21.9973, is_anchor:false, radius_km:3800, planet_type:'ice', station_id:'', au_distance:22.0, connects_to:'', parent:''},
+    {id:'m4a', name:'Rigel IV-a', type:'moon', x:0, y:0, z:0, ss_x:6.77, ss_y:-0.31, ss_z:-8.03, is_anchor:false, radius_km:639, planet_type:'ice_moon', station_id:'', au_distance:0.002, connects_to:'', parent:'p4'},
+    {id:'m4b', name:'Rigel IV-b', type:'moon', x:0, y:0, z:0, ss_x:6.764, ss_y:-0.32, ss_z:-8.023, is_anchor:false, radius_km:2221, planet_type:'rocky_moon', station_id:'', au_distance:0.004, connects_to:'', parent:'p4'},
+    {id:'m5a', name:'Rigel V-a', type:'moon', x:0, y:0, z:0, ss_x:-14.266, ss_y:1.61, ss_z:7.247, is_anchor:false, radius_km:2195, planet_type:'rocky_moon', station_id:'', au_distance:0.001, connects_to:'', parent:'p5'},
+    {id:'st1', name:'Nexus Trade Hub', type:'station', x:0, y:0, z:100, ss_x:3.5807, ss_y:0.1, ss_z:1.0084, is_anchor:true, radius_km:0, planet_type:'', station_id:'st_00028', au_distance:3.72, connects_to:'', parent:''},
+    {id:'st2', name:'Stellar Fabrication', type:'station', x:0, y:0, z:0, ss_x:-1.018, ss_y:-0.2, ss_z:-5.2624, is_anchor:false, radius_km:0, planet_type:'', station_id:'st_00029', au_distance:5.36, connects_to:'', parent:''},
+    {id:'st_orb', name:'Orbital Station III', type:'station', x:0, y:0, z:0, ss_x:5.742, ss_y:0.31, ss_z:-2.34, is_anchor:false, radius_km:0, planet_type:'', station_id:'st_00030', au_distance:0.0001, connects_to:'', parent:'p3'},
+    {id:'g1', name:'Gate to Struve', type:'gate', x:0, y:0, z:0, ss_x:13.3772, ss_y:0.3, ss_z:23.8092, is_anchor:false, radius_km:0, planet_type:'', station_id:'', au_distance:27.31, connects_to:'struve', parent:''},
+    {id:'g2', name:'Gate to Regulus', type:'gate', x:0, y:0, z:0, ss_x:-23.888, ss_y:0.1, ss_z:17.0175, is_anchor:false, radius_km:0, planet_type:'', station_id:'', au_distance:29.33, connects_to:'regulus', parent:''},
+  ],
+  ships: [],
+  player: {x:0, y:0, z:0, vx:0, vy:0, vz:0, speed:0, max_speed:100, align_time:5, heading:[0,0,1], state:'idle', is_player:true, name:'Player', ship_class:'Frigate', role:'pilot', faction:'terran_fed', ship_name:'Pinto Runner', credits:50000, ship_stats:{hull_class:'Frigate'}, cargo:{}, docked:false}
+};
+window._playerSS = {x: 3.5807, y: 0.1, z: 1.0084}; // at the anchor station
+let shipGroup = null;
+let hangarPedestal = null;
+let stationModel = null;
+let stationWorldPos = null;
+let lsgGroup = null; // THREE.Group container for all LSG objects (moves during warp)
+let npcMeshes = {};  // id -> THREE.Group (merged ship models)
+let npcShipCache = {};  // ship_class -> {mesh: THREE.BufferGeometry, edges: THREE.EdgesGeometry}
+let allShipGeos = null;  // loaded from /api/ship_model/all
+let objectSprites = {};  // id -> THREE.Sprite/label
+let isDocked = false; // standalone starts in flight
+let lastTickTime = 0;
+let displaySpeed = 0;
+
+// Interpolated positions: {id: {x,y,z,vx,vy,vz}}
+let interpShips = {};
+
+// ── Three.js Setup ──
+const container = document.getElementById('viewport');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x020305);
+const camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight, 0.01, 50000000);
+camera.position.set(0.3, 0.2, 0.3);
+const renderer = new THREE.WebGLRenderer({antialias:true, logarithmicDepthBuffer:true});
+renderer.setSize(container.clientWidth, container.clientHeight);
+container.appendChild(renderer.domElement);
+
+// ── Custom Camera Controller (replaces OrbitControls) ──
+let camTheta = Math.PI / 4;  // current horizontal orbit angle
+let camPhi = Math.PI / 6;    // current vertical orbit angle
+let camRadius = 0.8;           // current orbit distance
+let camTargetTheta = Math.PI / 4;  // target (smoothed toward)
+let camTargetPhi = Math.PI / 6;
+let camTargetRadius = 0.8;
+let camMinRadius = 0.1;
+let camMaxRadius = 20;
+let isOrbiting = false;
+let orbitStart = {x:0, y:0};
+
+function updateCameraOrbit() {
+  // Smooth toward target values
+  camTheta += (camTargetTheta - camTheta) * 0.12;
+  camPhi += (camTargetPhi - camPhi) * 0.12;
+  camRadius += (camTargetRadius - camRadius) * 0.12;
+  // Spherical to cartesian offset from target
+  const x = camRadius * Math.cos(camPhi) * Math.sin(camTheta);
+  const y = camRadius * Math.sin(camPhi);
+  const z = camRadius * Math.cos(camPhi) * Math.cos(camTheta);
+  const target = isDocked ? new THREE.Vector3(0,0,0) : playerPos.clone();
+  camera.position.set(target.x + x, target.y + y, target.z + z);
+  if (!isFreelooking && freelookLerp >= 1.0) {
+    camera.lookAt(target);
+  }
+}
+
+// Left-click drag: orbit
+let orbitDragged = false;
+renderer.domElement.addEventListener('mousedown', e => {
+  if (e.button === 0) {
+    if(document.getElementById('ctxMenu').classList.contains('open')) return;
+    isOrbiting = true;
+    orbitDragged = false;
+    orbitStart = {x: e.clientX, y: e.clientY};
+  }
+});
+window.addEventListener('mouseup', e => {
+  if (e.button === 0) isOrbiting = false;
+});
+window.addEventListener('mousemove', e => {
+  if (isOrbiting) {
+    const dx = e.clientX - orbitStart.x;
+    const dy = e.clientY - orbitStart.y;
+    orbitStart = {x: e.clientX, y: e.clientY};
+    if (Math.abs(dx) > 0 || Math.abs(dy) > 0) orbitDragged = true;
+    camTargetTheta -= dx * 0.005;
+    camTargetPhi += dy * 0.005;
+    camTargetPhi = Math.max(-Math.PI/2 + 0.05, Math.min(Math.PI/2 - 0.05, camTargetPhi));
+  }
+});
+
+// Scroll: zoom
+renderer.domElement.addEventListener('wheel', e => {
+  e.preventDefault();
+  camTargetRadius *= 1 + e.deltaY * 0.001;
+  camTargetRadius = Math.max(camMinRadius, Math.min(camMaxRadius, camTargetRadius));
+}, {passive: false});
+
+scene.add(new THREE.AmbientLight(0x8aa8cc, 0.4));
+const dirLight = new THREE.DirectionalLight(0xfff5e0, 1.5);
+dirLight.position.set(0.5, 0.3, 0.2);
+scene.add(dirLight);
+
+// Sun/star visual (always visible in flight, emits light + lens flare)
+let sunMesh = null;
+let sunLight = null;
+let sunInitialized = false;
+let sunDirection = new THREE.Vector3(1, 0.3, 0).normalize();
+
+function makeFlareTexture(size, r, g, b, falloff){
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const gradient = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  gradient.addColorStop(0, `rgba(${r},${g},${b},1)`);
+  gradient.addColorStop(falloff, `rgba(${r},${g},${b},0.3)`);
+  gradient.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  return new THREE.CanvasTexture(canvas);
+}
+
+function initSun(){
+  if(sunInitialized || !localState || !localState.objects) return;
+  const starObj = localState.objects.find(o => o.type === 'star');
+  if(!starObj) return;
+  sunInitialized = true;
+
+  const starPos = new THREE.Vector3(starObj.x, starObj.y, starObj.z);
+  sunDirection = starPos.clone().normalize();
+  if(sunDirection.length() < 0.1) sunDirection.set(1, 0.2, 0);
+
+  const sunDist = 20000;
+  const sunPos = sunDirection.clone().multiplyScalar(sunDist);
+
+  // Sun: flares only (no sphere)
+  sunMesh = new THREE.Group(); // placeholder for cleanup tracking
+  sunMesh.position.copy(sunPos);
+  scene.add(sunMesh);
+
+  // Bright lens flare sprites
+  const flare1 = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: makeFlareTexture(256, 255, 255, 230, 0.15),
+    transparent: true, opacity: 1.0, depthWrite: false, blending: THREE.AdditiveBlending
+  }));
+  flare1.scale.set(800, 800, 1);
+  flare1.position.copy(sunPos);
+  scene.add(flare1);
+
+  const flare2 = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: makeFlareTexture(256, 255, 220, 120, 0.3),
+    transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending
+  }));
+  flare2.scale.set(2000, 2000, 1);
+  flare2.position.copy(sunPos);
+  scene.add(flare2);
+
+  const flare3 = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: makeFlareTexture(128, 255, 180, 80, 0.5),
+    transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending
+  }));
+  flare3.scale.set(4500, 4500, 1);
+  flare3.position.copy(sunPos);
+  scene.add(flare3);
+
+  sunMesh.userData.flares = [flare1, flare2, flare3];
+
+  // Strong directional light from sun
+  dirLight.position.copy(sunDirection.clone().multiplyScalar(1));
+  dirLight.intensity = 2.0;
+
+  // Point light at sun
+  sunLight = new THREE.PointLight(0xfff0d0, 1.5, sunDist * 3);
+  sunLight.position.copy(sunPos);
+  scene.add(sunLight);
+}
+
+// Update sun/flare position during warp (star is at SS 0,0 - project direction from current SS pos)
+let _sunOccludeCheck = 0;
+function updateSunPosition(){
+  if(!sunMesh || !sunMesh.userData.flares) return;
+  if(!localState || !localState.objects) return;
+  
+  // Compute direction to star from current SS position
+  let curSSx = 0, curSSz = 0;
+  if((warpState === 'warping' || warpState === 'aligning') && window._warpFromSS){
+    const progress = (warpState === 'warping') ? Math.min(1.0, warpTravelTimer / warpTravelDuration) : 0;
+    curSSx = window._warpFromSS.x + (window._warpToSS.x - window._warpFromSS.x) * progress;
+    curSSz = window._warpFromSS.z + (window._warpToSS.z - window._warpFromSS.z) * progress;
+  } else {
+    const anchorSS = localState.objects.find(o => o.is_anchor);
+    curSSx = anchorSS ? anchorSS.ss_x : 0;
+    curSSz = anchorSS ? anchorSS.ss_z : 0;
+  }
+  
+  // Star is at SS (0,0). Direction from player to star:
+  const toStarX = -curSSx, toStarZ = -curSSz;
+  const starDist = Math.sqrt(toStarX*toStarX + toStarZ*toStarZ);
+  if(starDist < 0.001) return; // at the star? skip
+  
+  const dirX = toStarX / starDist;
+  const dirZ = toStarZ / starDist;
+  // Small Y component for variety
+  sunDirection.set(dirX, 0.05, dirZ).normalize();
+  
+  const sunDist = 20000;
+  const sunPos = sunDirection.clone().multiplyScalar(sunDist);
+  sunMesh.position.copy(sunPos);
+  sunMesh.userData.flares.forEach(f => f.position.copy(sunPos));
+  if(sunLight) sunLight.position.copy(sunPos);
+  if(dirLight) dirLight.position.copy(sunDirection);
+  
+  // ── Occlusion check (every 10 frames) ──
+  _sunOccludeCheck++;
+  if(_sunOccludeCheck % 10 !== 0) return;
+  
+  let occluded = false;
+  if(lsgGroup && planetModels){
+    for(const [id, mesh] of Object.entries(planetModels)){
+      // Get planet world position
+      const planetWorld = new THREE.Vector3();
+      mesh.getWorldPosition(planetWorld);
+      const toPlanet = planetWorld.clone().sub(camera.position);
+      const toSun = sunPos.clone().sub(camera.position);
+      
+      // Check if planet is between camera and sun
+      const toPlanetNorm = toPlanet.clone().normalize();
+      const toSunNorm = toSun.clone().normalize();
+      const dotDir = toPlanetNorm.dot(toSunNorm);
+      if(dotDir > 0.95){ // within ~18 degrees
+        const planetDist = toPlanet.length();
+        const sunDistCam = toSun.length();
+        if(planetDist < sunDistCam){
+          // Angular size of planet from camera
+          const planetRadius = mesh.userData.radius || 5000;
+          const angularSize = Math.atan2(planetRadius, planetDist);
+          // Angular offset between planet center and sun direction
+          const angularOffset = Math.acos(Math.min(1.0, dotDir));
+          if(angularOffset < angularSize){
+            occluded = true;
+            break;
+          }
+        }
+      }
+    }
+  }
+  
+  // Show/hide flares based on occlusion
+  const targetOpacity = occluded ? 0 : 1;
+  sunMesh.userData.flares.forEach(f => {
+    f.material.opacity += (targetOpacity * (f===sunMesh.userData.flares[0]?1.0:f===sunMesh.userData.flares[1]?0.7:0.35) - f.material.opacity) * 0.15;
+  });
+}
+
+// ── Hangar (docked view) ──
+function buildHangar(){
+  const floorGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.005, 32);
+  const floorMat = new THREE.MeshPhongMaterial({color:0x0a0e18, emissive:0x050810, shininess:0});
+  hangarPedestal = new THREE.Mesh(floorGeo, floorMat);
+  hangarPedestal.position.y = -0.08;
+  const ringGeo = new THREE.TorusGeometry(0.25, 0.002, 8, 64);
+  const ringMat = new THREE.MeshBasicMaterial({color:0x1a3050, transparent:true, opacity:0.6});
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = Math.PI/2;
+  ring.position.y = 0.003;
+  hangarPedestal.add(ring);
+  scene.add(hangarPedestal);
+}
+
+// ── Starfield (skybox-style: follows camera, no parallax) ──
+let starField = null;
+let starFieldBasePositions = null; // store base positions for warp jitter
+function buildStarfield(){
+  const geo = new THREE.BufferGeometry();
+  const count = 4000;
+  const verts = new Float32Array(count*3);
+  for(let i=0;i<count*3;i+=3){
+    const th=Math.random()*Math.PI*2;
+    const ph=Math.acos(2*Math.random()-1);
+    // All stars on a unit sphere, scaled by a large fixed radius
+    verts[i]=Math.sin(ph)*Math.cos(th);
+    verts[i+1]=Math.sin(ph)*Math.sin(th);
+    verts[i+2]=Math.cos(ph);
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(verts,3));
+  starFieldBasePositions = new Float32Array(verts);
+  // Use non-attenuating size so stars are always the same screen size
+  starField = new THREE.Points(geo,new THREE.PointsMaterial({color:0xffffff,size:1.5,sizeAttenuation:false,depthWrite:false,depthTest:false}));
+  starField.renderOrder = -1000; // render first, behind everything
+  starField.frustumCulled = false;
+  starField.renderOrder = -1; // render behind everything
+  starField.scale.setScalar(45000000); // stays inside far plane
+}
+buildStarfield();
+scene.add(starField); // add immediately for standalone
+
+// ── Scene Switching ──
+function setDockedScene(){
+  scene.background = new THREE.Color(0x020305);
+  if(starField) starField.removeFromParent();
+  if(!hangarPedestal) buildHangar();
+  else scene.add(hangarPedestal);
+  if(stationModel){ stationModel.removeFromParent(); stationModel=null; }
+  // Remove all station models
+  Object.values(stationModels).forEach(m => m.removeFromParent());
+  stationModels = {};
+  stationWorldPos = null;
+  // Remove gate models
+  Object.values(gateModels).forEach(m => m.removeFromParent());
+  gateModels = {};
+  // Remove asteroid models
+  Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => r.removeFromParent()));
+  asteroidModels = {};
+  // Remove planet/moon models
+  Object.values(planetModels).forEach(m => m.removeFromParent());
+  planetModels = {};
+  // Remove sun
+  if(sunMesh){
+    if(sunMesh.userData.flares) sunMesh.userData.flares.forEach(f => f.removeFromParent());
+    sunMesh.removeFromParent(); sunMesh = null;
+  }
+  if(sunLight){ sunLight.removeFromParent(); sunLight = null; }
+  sunInitialized = false;
+  // Remove NPC meshes and object sprites
+  Object.values(npcMeshes).forEach(s=>s.removeFromParent());
+  npcMeshes = {};
+  Object.values(objectSprites).forEach(s=>s.removeFromParent());
+  objectSprites = {};
+  // Remove directional labels
+  clearDirectionalLabels();
+  // Reset warp state
+  warpState = 'none';
+  warpTargetId = null;
+  warpTargetPos = null;
+  warpSpeed = 0;
+  camRadius = 0.8; camTargetRadius = 0.8;
+  camTheta = Math.PI / 4; camTargetTheta = Math.PI / 4;
+  camPhi = Math.PI / 6; camTargetPhi = Math.PI / 6;
+  camMaxRadius = 1;
+  if(shipGroup){
+    shipGroup.position.set(0,0,0);
+    shipGroup.quaternion.identity(); // reset rotation for hangar display
+  }
+  updateCameraOrbit();
+  isDocked = true;
+  // Fade in (overlay starts at opacity 1 on page load)
+  const overlay = document.getElementById('fadeOverlay');
+  overlay.style.transition = 'opacity 2s';
+  setTimeout(()=>{ overlay.style.opacity = '0'; }, 100);
+}
+
+function setFlightScene(){
+  scene.background = new THREE.Color(0x020308);
+  if(hangarPedestal) hangarPedestal.removeFromParent();
+  scene.add(starField);
+  camMaxRadius = 20;
+  camTargetRadius = Math.min(camTargetRadius, 2);
+  camRadius = Math.min(camRadius, 2);
+  updateCameraOrbit();
+  isDocked = false;
+  // Reset lsgGroup to origin for clean state after docking
+  if(lsgGroup){
+    scene.remove(lsgGroup);
+    lsgGroup.traverse(c => {
+      if(c.geometry) c.geometry.dispose();
+      if(c.material){
+        if(c.material.map) c.material.map.dispose();
+        c.material.dispose();
+      }
+    });
+  }
+  lsgGroup = new THREE.Group();
+  lsgGroup.position.set(0, 0, 0);
+  scene.add(lsgGroup);
+  // Reset player to origin (server will provide correct position via SSE)
+  playerPos.set(0, 0, 0);
+  playerPosInitialized = false;
+  // Clear old model dicts
+  stationModels = {};
+  gateModels = {};
+  asteroidModels = {};
+  planetModels = {};
+  
+  // ── STANDALONE: create station model at anchor from INLINE_MODELS ──
+  if(STANDALONE_MODE && localState){
+    const anchor = localState.objects.find(o => o.is_anchor);
+    if(anchor && anchor.station_id){
+      const stGroup = new THREE.Group();
+      buildShipFromData(stGroup, INLINE_MODELS.station, {showHardpoints:false});
+      const box = new THREE.Box3().setFromObject(stGroup);
+      const sz = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
+      stGroup.scale.setScalar(150 / maxDim); // trade_hub = 15km = 150 units
+      stGroup.position.set(anchor.x || 0, anchor.y || 0, anchor.z || 100);
+      lsgGroup.add(stGroup);
+      stationModels[anchor.station_id] = stGroup;
+    }
+  }
+  // Load fresh models into the clean group
+  loadAllStations();
+  loadAllGates();
+  loadAsteroidFields();
+  loadPlanetsAndMoons();
+  initSSGPlanets();
+  initSun();
+  // Standalone: no pregeneration needed, just ensure overlay is hidden
+  const overlay = document.getElementById('fadeOverlay');
+  overlay.style.opacity = '0';
+}
+
+// ── SSE Stream Connection ──
+let evtSource = null;
+function connectStream(){ return; } // disabled for standalone testing
+
+// ── NPC Ship Model Management (merged geometry approach) ──
+const NPC_COLORS = {trader:0x66bb6a, miner:0xffd54f, corsair:0xef5350, military:0x4fc3f7, patrol:0x4fc3f7};
+const NPC_EDGE_COLORS = {trader:0x66bb6a, miner:0xffd54f, corsair:0xef5350, military:0x4fc3f7, patrol:0x4fc3f7};
+
+function buildNpcShipMesh(shipClass, role) {
+  // Check cache first
+  const cacheKey = shipClass + '_' + (role || 'default');
+  if (npcShipCache[cacheKey]) return npcShipCache[cacheKey].clone();
+  if (!allShipGeos || !allShipGeos[shipClass]) {
+    // Fallback: simple ship-like shape (cone + body)
+    const edgeColor = NPC_EDGE_COLORS[role] || 0x8aa0b8;
+    const body = new THREE.ConeGeometry(0.08, 0.35, 4);
+    body.rotateZ(-Math.PI/2);  // nose forward along +X
+    const mesh = new THREE.Mesh(body, new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1428, shininess:0, transparent:true, opacity:0.7}));
+    mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(body, 15), new THREE.LineBasicMaterial({color:edgeColor, transparent:true, opacity:0.7})));
+    const grp = new THREE.Group();
+    grp.add(mesh);
+    npcShipCache[cacheKey] = grp;
+    return grp.clone();
+  }
+  // Build from data using buildShipFromData into a temp scene, then merge
+  const tempScene = new THREE.Scene();
+  const inner = buildShipFromData(tempScene, allShipGeos[shipClass], {showHardpoints: false});
+  tempScene.remove(inner);
+  // Merge all geometries into one
+  inner.updateMatrixWorld(true);
+  const geos = [];
+  inner.traverse(c => {
+    if (c.isMesh && c.geometry) {
+      const g = c.geometry.clone();
+      g.applyMatrix4(c.matrixWorld);
+      geos.push(g);
+    }
+  });
+  const grp = new THREE.Group();
+  if (geos.length) {
+    const allG = geos.map(g => g.index ? g.toNonIndexed() : g);
+    let totalVerts = 0;
+    allG.forEach(g => totalVerts += g.attributes.position.count);
+    const positions = new Float32Array(totalVerts * 3);
+    let offset = 0;
+    for (const g of allG) {
+      positions.set(g.attributes.position.array, offset * 3);
+      offset += g.attributes.position.count;
+    }
+    const merged = new THREE.BufferGeometry();
+    merged.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    merged.computeVertexNormals();
+    const edgeColor = NPC_EDGE_COLORS[role] || 0x4fc3f7;
+    const mesh = new THREE.Mesh(merged, new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1428, shininess:0, transparent:true, opacity:0.7}));
+    mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(merged, 15), new THREE.LineBasicMaterial({color:edgeColor, transparent:true, opacity:0.5})));
+    grp.add(mesh);
+    allG.forEach(g => g.dispose());
+    geos.forEach(g => g.dispose());
+  }
+  // Scale to ~50m (visible at reasonable distance)
+  const box = new THREE.Box3().setFromObject(grp);
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z) || 1;
+  // Ship length in meters by hull class (midpoint of range)
+  const SHIP_LENGTHS_M = {Fighter:40, Frigate:80, Destroyer:160, Cruiser:400, Battlecruiser:575, Battleship:975, Carrier:1600, Dreadnought:3000, Industrial:325, 'Mining Barge':225};
+  const lengthM = SHIP_LENGTHS_M[shipClass] || 80;
+  grp.scale.setScalar((lengthM / 100) / maxDim); // 1 unit = 100m
+  npcShipCache[cacheKey] = grp;
+  return grp.clone();
+}
+
+function getOrCreateNpcMesh(ship) {
+  if (npcMeshes[ship.id]) return npcMeshes[ship.id];
+  const grp = buildNpcShipMesh(ship.ship_class, ship.role);
+  scene.add(grp);
+  npcMeshes[ship.id] = grp;
+  return grp;
+}
+
+// ── System Object Sprites ──
+const OBJ_COLORS = {station:'#4fc3f7', gate:'#ab47bc', planet:'#8aa0b8', moon:'#5a7a9a', asteroid_field:'#ffd54f', star:'#ffab40'};
+function getOrCreateObjSprite(obj){
+  if(objectSprites[obj.id]) return objectSprites[obj.id];
+  const canvas = document.createElement('canvas');
+  canvas.width = 128; canvas.height = 32;
+  const ctx = canvas.getContext('2d');
+  const color = OBJ_COLORS[obj.type] || '#8aa0b8';
+  // Icon
+  ctx.fillStyle = color;
+  if(obj.type==='station'){ ctx.fillRect(2,10,12,12); }
+  else if(obj.type==='gate'){ ctx.beginPath();ctx.moveTo(8,6);ctx.lineTo(14,16);ctx.lineTo(2,16);ctx.fill(); }
+  else { ctx.beginPath();ctx.arc(8,16,5,0,Math.PI*2);ctx.fill(); }
+  // Label
+  ctx.font = '10px monospace'; ctx.fillStyle = color;
+  ctx.fillText(obj.name.substring(0,14), 18, 18);
+  const tex = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({map:tex, transparent:true, opacity:0.9});
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(0.2, 0.05, 1);
+  scene.add(sprite);
+  objectSprites[obj.id] = sprite;
+  return sprite;
+}
+
+// ── Update from SSE State ──
+function updateFromState(state){
+  if(!state) return;
+  const p = state.player;
+  if(!p) return;
+
+  // Update player ship stats from server
+  if(p.max_speed) playerMaxSpeed = p.max_speed;
+  if(p.align_time) playerAlignTime = p.align_time;
+
+  // Set initial player position from server if not yet set
+  // Restore player position from server on first connect (page switch recovery)
+
+  // Set initial player position from server if not yet set
+  if(!playerPosInitialized && p.x !== undefined){
+    playerPos.set(p.x, p.y, p.z);
+    playerPosInitialized = true;
+    if(p.speed > 0 && p.state === 'flying'){
+      playerSpeed = p.speed;
+      const [hx,hy,hz] = p.heading || [1,0,0];
+      playerHeading.set(hx, hy, hz);
+      flyDirection = playerHeading.clone();
+    }
+    // Apply undock speed (25% max, heading away from station)
+    if(window._undockSpeedPending){
+      window._undockSpeedPending = false;
+      const [hx,hy,hz] = p.heading || [1,0,0];
+      playerHeading.set(hx, hy, hz);
+      playerSpeed = playerMaxSpeed * 0.25;
+      flyDirection = playerHeading.clone();
+    }
+  }
+
+  // Detect dock/undock transition
+  const wasDockedBefore = isDocked;
+  const isDockedNow = (p.state === 'docked');
+
+  if(isDockedNow && !wasDockedBefore){
+    setDockedScene();
+  } else if(!isDockedNow && wasDockedBefore){
+    setFlightScene();
+  }
+
+  // Update UI
+  updateUI(state);
+
+  // Position system objects (only in flight)
+  if(!isDockedNow && state.objects){
+    // Old sprite system disabled - directional labels handle all display
+  }
+}
+
+// ── Player Ship Local Physics ──
+let flyDirection = null;  // THREE.Vector3 or null
+let playerSpeed = 0;
+let playerMaxSpeed = 0.95;  // from ship stats, updated on load
+let playerAlignTime = 5;
+let playerPos = new THREE.Vector3(0, 0, 0);
+let playerPosInitialized = false;  // world position
+let playerHeading = new THREE.Vector3(1, 0, 0);
+let targetHeading = new THREE.Vector3(1, 0, 0);
+let posReportTimer = 0;
+
+// Warp state
+let warpState = 'none'; // 'none', 'aligning', 'warping'
+let warpLock = false; // blocks normal loaders during warp
+let warpTargetId = null;
+let warpTargetPos = null;  // THREE.Vector3 (real position for final placement)
+let warpTargetType = null; // 'station', 'gate', 'planet', 'moon', etc.
+let warpHeading = new THREE.Vector3(1, 0, 0);
+let warpAlignTimer = 0;
+let warpTravelTimer = 0;  // elapsed seconds in warping state
+let warpTravelDuration = 0; // total warp time in seconds
+let warpSpeed = 0; // current speed in PU/s (for group movement & display)
+let warpBuildReady = false; // true when destination models are built
+let warpGroup = null; // isolated THREE.Group for destination models during build
+// Warp phase timing (analytical warp system)
+const WARP_TOP_SPEED = 2.0;
+const WARP_ACCEL_TIME = 8;
+const WARP_DECEL_TIME = 15;
+const WARP_LSG_DEPART_TIME = 3;
+const WARP_SCALE_FACTOR = 4;
+const WARP_APPROACH_SPAWN_DIST = 2500;
+const AU_KM = 150000000;
+
+// Engine trail
+let trailLine = null;
+let trailDrawCount = 0;
+function createTrail(){
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(150*3), 3));
+  geo.setDrawRange(0, 0);
+  trailLine = new THREE.Line(geo, new THREE.LineBasicMaterial({color:0x2288ff, transparent:true, opacity:0.5}));
+  trailLine.frustumCulled = false;
+  trailLine.visible = false;
+  scene.add(trailLine);
+}
+createTrail();
+
+// ── Warp Streaks (E:D style speed particles) ──
+const WARP_STREAK_COUNT = 200;
+let warpStreaks = null;
+let warpStreakVelocities = null;
+function createWarpStreaks(){
+  const geo = new THREE.BufferGeometry();
+  const positions = new Float32Array(WARP_STREAK_COUNT * 6); // 2 verts per streak (line)
+  const colors = new Float32Array(WARP_STREAK_COUNT * 6);    // r,g,b per vert
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  const mat = new THREE.LineBasicMaterial({vertexColors: true, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending});
+  warpStreaks = new THREE.LineSegments(geo, mat);
+  warpStreaks.frustumCulled = false;
+  warpStreaks.visible = false;
+  scene.add(warpStreaks);
+  // Initialize velocities (random lateral offsets)
+  warpStreakVelocities = new Float32Array(WARP_STREAK_COUNT * 3);
+  for(let i = 0; i < WARP_STREAK_COUNT; i++){
+    resetStreak(i);
+  }
+}
+function resetStreak(i){
+  const pos = warpStreaks.geometry.attributes.position.array;
+  const col = warpStreaks.geometry.attributes.color.array;
+  // Random position in a cylinder around the camera forward axis
+  const lateral = 0.5 + Math.random() * 4;  // distance from center
+  const angle = Math.random() * Math.PI * 2;
+  const x = Math.cos(angle) * lateral;
+  const y = Math.sin(angle) * lateral;
+  const z = -(Math.random() * 10 + 2); // ahead of camera
+  // Head position
+  pos[i*6+0] = x; pos[i*6+1] = y; pos[i*6+2] = z;
+  // Tail position (slightly behind head)
+  pos[i*6+3] = x; pos[i*6+4] = y; pos[i*6+5] = z + 0.1;
+  // Color: blue-white, brighter near center
+  const brightness = Math.max(0.3, 1.0 - lateral / 5);
+  col[i*6+0] = 0.6*brightness; col[i*6+1] = 0.8*brightness; col[i*6+2] = brightness;
+  col[i*6+3] = 0.3*brightness; col[i*6+4] = 0.5*brightness; col[i*6+5] = 0.8*brightness;
+  // Velocity (z speed)
+  warpStreakVelocities[i*3+0] = 0;
+  warpStreakVelocities[i*3+1] = 0;
+  warpStreakVelocities[i*3+2] = 20 + Math.random() * 40; // speed along z
+}
+function updateWarpStreaks(dt, speedFactor){
+  if(!warpStreaks) return;
+  const pos = warpStreaks.geometry.attributes.position.array;
+  const col = warpStreaks.geometry.attributes.color.array;
+  const streakLength = 0.05 + speedFactor * 2.0; // streaks elongate with speed
+  for(let i = 0; i < WARP_STREAK_COUNT; i++){
+    const speed = warpStreakVelocities[i*3+2] * speedFactor;
+    // Move head forward (toward camera = +z)
+    pos[i*6+2] += speed * dt;
+    // Tail trails behind
+    pos[i*6+5] = pos[i*6+2] - streakLength;
+    // Fade color based on speed (dimmer during decel)
+    const fade = Math.min(1.0, speedFactor * 1.5);
+    col[i*6+0] *= 0.99; col[i*6+1] *= 0.99; col[i*6+2] *= 0.99;
+    col[i*6+3] *= 0.99; col[i*6+4] *= 0.99; col[i*6+5] *= 0.99;
+    // Reset if past camera, but only spawn new ones proportional to speed
+    if(pos[i*6+2] > 3){
+      if(Math.random() < speedFactor){
+        resetStreak(i);
+      } else {
+        // Hide this streak (move off-screen)
+        pos[i*6+2] = -100; pos[i*6+5] = -100;
+      }
+    }
+  }
+  warpStreaks.geometry.attributes.position.needsUpdate = true;
+  warpStreaks.geometry.attributes.color.needsUpdate = true;
+}
+createWarpStreaks();
+
+// ── Animation Loop ──
+let lastFrameTime = 0;
+function animate(now){
+  requestAnimationFrame(animate);
+  resizeRenderer();
+  const dt = Math.min(0.1, (now - (lastFrameTime||now)) / 1000);
+  lastFrameTime = now;
+
+  if(!isDocked && shipGroup){
+    if(!window._animDbg){window._animDbg=true; console.log('[ANIM] running, shipGroup exists, scene children:', scene.children.length);}
+    // ── Warp Logic (overrides normal flight when active) ──
+    if(warpState === 'aligning'){
+      // Turn ship toward warp target using ship's align_time spec
+      const toTarget = warpTargetPos.clone().sub(playerPos).normalize();
+      warpHeading.copy(toTarget);
+      // Lerp rate: reach alignment within align_time seconds
+      const alignLerp = (dt / playerAlignTime) * 8.0;
+      playerHeading.lerp(toTarget, alignLerp).normalize();
+      const alignment = playerHeading.dot(toTarget);
+      // Accelerate toward warp trigger speed during alignment
+      const warpTriggerSpeed = playerMaxSpeed * 0.75;
+      if(playerSpeed < warpTriggerSpeed){
+        playerSpeed += (warpTriggerSpeed - playerSpeed) * 0.04;
+      }
+      // Move along heading while aligning
+      if(playerSpeed > 0.001){
+        playerPos.addScaledVector(playerHeading, playerSpeed * dt);
+      }
+      flyDirection = null;
+      warpAlignTimer += dt;
+      // Enter warp ONLY when fully aligned AND at speed (no timeout shortcut)
+      const atSpeed = playerSpeed >= warpTriggerSpeed * 0.95;
+      if(alignment > 0.9995 && atSpeed){
+        // Snap heading to exact target direction
+        playerHeading.copy(warpHeading).normalize();
+        warpState = 'warping';
+        warpSpeed = 0;
+        playerSpeed = 0;
+        warpTravelTimer = 0;
+        warpBuildReady = false;
+        // (no freeze logic needed - SSG renders from live data)
+        warpLock = false;
+        window._approachStarted = false;
+        window._departDespawned = false;
+        window._objDepartTimer = 0;
+        // Don't reset lsgGroup position - departure moves it from wherever it is
+      }
+    } else if(warpState === 'warping'){
+      // ── ANALYTICAL WARP SYSTEM ──
+      warpTravelTimer += dt;
+      const t = warpTravelTimer;
+      const wp = window._warpPhases;
+      if(!wp){ warpState = 'none'; return; }
+      
+      // Compute speed analytically
+      let speed = 0;
+      if(t < wp.accelTime){
+        const at = t / wp.accelTime;
+        speed = wp.peakSpeed * Math.pow(at, 4);
+      } else if(t < wp.accelTime + wp.cruiseTime){
+        speed = wp.peakSpeed;
+      } else if(t < wp.totalTime){
+        const decelElapsed = t - wp.accelTime - wp.cruiseTime;
+        const dt_norm = decelElapsed / wp.decelTime;
+        speed = wp.peakSpeed * Math.pow(1 - dt_norm, 4);
+      } else {
+        speed = 0;
+      }
+      
+      // Analytical distance: integral of speed curve from 0 to t
+      let dist = 0;
+      if(t <= wp.accelTime){
+        const at = t / wp.accelTime;
+        dist = wp.peakSpeed * Math.pow(t, 5) / (5 * Math.pow(wp.accelTime, 4));
+      } else if(t <= wp.accelTime + wp.cruiseTime){
+        const accelFullDist = wp.peakSpeed * wp.accelTime / 5;
+        const cruiseElapsed = t - wp.accelTime;
+        dist = accelFullDist + wp.peakSpeed * cruiseElapsed;
+      } else {
+        const accelFullDist = wp.peakSpeed * wp.accelTime / 5;
+        const cruiseFullDist = wp.peakSpeed * wp.cruiseTime;
+        const decelElapsed = Math.min(t - wp.accelTime - wp.cruiseTime, wp.decelTime);
+        const dt_norm = decelElapsed / wp.decelTime;
+        const decelDist = wp.peakSpeed * wp.decelTime * (1 - Math.pow(1 - dt_norm, 5)) / 5;
+        dist = accelFullDist + cruiseFullDist + decelDist;
+      }
+      
+      // Update player SS position analytically
+      window._playerSS.x = window._warpFromSS.x + warpHeading.x * dist;
+      window._playerSS.y = (window._warpFromSS.y || 0) + warpHeading.y * dist;
+      window._playerSS.z = window._warpFromSS.z + warpHeading.z * dist;
+      
+      // LSG departure: t^4 * 500000 from current lsgGroup position
+      const hasLSGModel = lsgGroup && lsgGroup.children.length > 0;
+      if(t < WARP_LSG_DEPART_TIME && hasLSGModel){
+        const lsgT = t / WARP_LSG_DEPART_TIME;
+        const lsgDist = Math.pow(lsgT, 4) * 500000;
+        if(!window._lsgStartPos){
+          window._lsgStartPos = {x: lsgGroup.position.x, y: lsgGroup.position.y, z: lsgGroup.position.z};
+        }
+        lsgGroup.position.x = window._lsgStartPos.x - warpHeading.x * lsgDist;
+        lsgGroup.position.y = window._lsgStartPos.y - warpHeading.y * lsgDist;
+        lsgGroup.position.z = window._lsgStartPos.z - warpHeading.z * lsgDist;
+      }
+      if(t >= WARP_LSG_DEPART_TIME && !window._departDespawned){
+        window._departDespawned = true;
+        window._lsgStartPos = null;
+        // Hide departure objects
+        Object.values(stationModels).forEach(m => m.visible = false);
+        Object.values(gateModels).forEach(m => m.visible = false);
+        Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => r.visible = false));
+      }
+      
+      // LSG approach: distance-based (within 10000km, slide from approachSpawnDist to 5)
+      if(!window._approachStarted && window._warpToSS){
+        const toDestX = window._warpToSS.x - window._playerSS.x;
+        const toDestY = (window._warpToSS.y || 0) - (window._playerSS.y || 0);
+        const toDestZ = window._warpToSS.z - window._playerSS.z;
+        const distToDest = Math.sqrt(toDestX*toDestX + toDestY*toDestY + toDestZ*toDestZ) * AU_KM;
+        
+        if(distToDest < 10000){
+          window._approachStarted = true;
+          if(lsgGroup){
+            lsgGroup.position.set(warpHeading.x * WARP_APPROACH_SPAWN_DIST, warpHeading.y * WARP_APPROACH_SPAWN_DIST, warpHeading.z * WARP_APPROACH_SPAWN_DIST);
+          }
+          // Show destination objects
+          Object.values(stationModels).forEach(m => m.visible = true);
+          Object.values(gateModels).forEach(m => m.visible = true);
+        }
+      }
+      
+      // Slide LSG in during approach
+      if(window._approachStarted && lsgGroup){
+        const toDestX = window._warpToSS.x - window._playerSS.x;
+        const toDestY = (window._warpToSS.y || 0) - (window._playerSS.y || 0);
+        const toDestZ = window._warpToSS.z - window._playerSS.z;
+        const distToDest = Math.sqrt(toDestX*toDestX + toDestY*toDestY + toDestZ*toDestZ) * AU_KM;
+        const approachT = 1 - Math.min(1, distToDest / 10000);
+        const pos = WARP_APPROACH_SPAWN_DIST + (5 - WARP_APPROACH_SPAWN_DIST) * approachT;
+        lsgGroup.position.set(warpHeading.x * pos, warpHeading.y * pos, warpHeading.z * pos);
+      }
+      
+      // Warp completion
+      if(t >= wp.totalTime){
+        // _playerSS already at correct position from analytical computation - no snap
+        console.log('[SSG] Warp complete, playerSS:', window._playerSS);
+        
+        // Update localState anchor
+        if(localState && localState.objects){
+          localState.objects.forEach(o => o.is_anchor = false);
+          const destObj = localState.objects.find(o => o.id === warpTargetId);
+          if(destObj) destObj.is_anchor = true;
+        }
+        
+        // lsgGroup stays where approach left it (no snap)
+        
+        playerPos.set(0, 0, 0);
+        playerHeading.copy(warpHeading);
+        playerSpeed = 0;
+        warpState = 'none';
+        warpTargetId = null;
+        warpTargetPos = null;
+        warpBuildReady = false;
+        warpLock = false;
+        window._approachStarted = false;
+        window._departDespawned = false;
+        window._lsgStartPos = null;
+        window._warpPhases = null;
+        
+        document.getElementById('warpTarget').textContent = '';
+        if(warpStreaks) warpStreaks.visible = false;
+      }
+      
+      // Progress and HUD
+      const progress = Math.min(1.0, t / wp.totalTime);
+      warpSpeed = speed;
+      const speedKmS = speed * AU_KM;
+      document.getElementById('speedBar').style.width = (progress * 100) + '%';
+      if(speed > 0.01){
+        document.getElementById('shipSpeed').textContent = speed.toFixed(2) + ' AU/s';
+      } else if(speedKmS > 1000){
+        document.getElementById('shipSpeed').textContent = Math.round(speedKmS) + ' km/s';
+      } else {
+        document.getElementById('shipSpeed').textContent = Math.round(speedKmS * 1000) + ' m/s';
+      }
+      // Warp target HUD: just show phase
+      const warpHudEl = document.getElementById('warpTarget');
+      warpHudEl.textContent = t < WARP_LSG_DEPART_TIME ? 'Departing' : t >= wp.accelTime + wp.cruiseTime ? 'Arriving' : 'Warping';
+      
+      // Warp streaks: progress-based visibility
+      const streakIntensity = Math.min(1.0, speed / wp.peakSpeed);
+      if(warpStreaks){
+        warpStreaks.visible = streakIntensity > 0.05;
+        if(warpStreaks.visible){
+          warpStreaks.position.copy(camera.position);
+          const lookMat = new THREE.Matrix4().lookAt(new THREE.Vector3(0,0,0), warpHeading, new THREE.Vector3(0,1,0));
+          warpStreaks.quaternion.setFromRotationMatrix(lookMat);
+          updateWarpStreaks(dt, streakIntensity);
+        }
+        warpStreaks.material.opacity = 0.3 + streakIntensity * 0.5;
+      }
+    }
+
+    // ── Player Ship Physics (CLIENT-AUTHORITATIVE, ship moves in world space) ──
+    if(warpState === 'none'){
+      checkApproachArrival();
+      if(flyDirection){
+        const lerpRate = 1.0 / (playerAlignTime * 60) * 3;
+        playerHeading.lerp(flyDirection, lerpRate).normalize();
+        const alignment = Math.max(0, playerHeading.dot(flyDirection));
+        playerSpeed += (playerMaxSpeed * alignment - playerSpeed) * 0.03;
+      } else {
+        playerSpeed *= 0.95;
+        if(playerSpeed < 0.005) playerSpeed = 0;
+      }
+    }
+
+    // Move ship in world space (always, regardless of state)
+    if(playerSpeed > 0.001){
+      const moveM = playerSpeed * dt;
+      playerPos.addScaledVector(playerHeading, moveM);
+    }
+
+    // Position ship model at world pos
+    shipGroup.position.copy(playerPos);
+    // Rotate ship to face heading
+    const lookTarget = playerPos.clone().add(playerHeading);
+    const lookMat = new THREE.Matrix4().lookAt(shipGroup.position, lookTarget, new THREE.Vector3(0,1,0));
+    const targetQuat = new THREE.Quaternion().setFromRotationMatrix(lookMat);
+    const offsetQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI/2);
+    targetQuat.multiply(offsetQuat);
+    shipGroup.quaternion.slerp(targetQuat, 0.15);
+
+    // Camera follows ship (maintain relative offset) - skip during freelook
+    if(!isFreelooking){
+      // Lerp freelook back to ship smoothly
+      if(freelookLerp < 1.0){
+        freelookLerp += dt * 0.5; // ~2 seconds to return
+        if(freelookLerp >= 1.0) freelookLerp = 1.0;
+      }
+      freelookYaw *= 0.92;
+      freelookPitch *= 0.92;
+      if(Math.abs(freelookYaw) < 0.005 && Math.abs(freelookPitch) < 0.005){
+        freelookYaw = 0; freelookPitch = 0;
+      }
+    }
+    updateCameraOrbit();
+    // Apply freelook rotation (look away from ship)
+    if(Math.abs(freelookYaw) > 0.001 || Math.abs(freelookPitch) > 0.001){
+      const baseDir = playerPos.clone().sub(camera.position).normalize();
+      const right = new THREE.Vector3().crossVectors(baseDir, new THREE.Vector3(0,1,0)).normalize();
+      const up = new THREE.Vector3(0,1,0);
+      const lookAt = playerPos.clone();
+      lookAt.addScaledVector(right, freelookYaw * 0.5);
+      lookAt.addScaledVector(up, -freelookPitch * 0.5);
+      camera.lookAt(lookAt);
+    }
+
+    // Trail
+    if(playerSpeed > 0.01){
+      trailLine.visible = true;
+      const arr = trailLine.geometry.attributes.position.array;
+      if(trailDrawCount < 150){
+        arr[trailDrawCount*3] = playerPos.x;
+        arr[trailDrawCount*3+1] = playerPos.y;
+        arr[trailDrawCount*3+2] = playerPos.z;
+        trailDrawCount++;
+      } else {
+        for(let i=0;i<149*3;i++) arr[i] = arr[i+3];
+        arr[149*3]=playerPos.x; arr[149*3+1]=playerPos.y; arr[149*3+2]=playerPos.z;
+      }
+      trailLine.geometry.setDrawRange(0, trailDrawCount);
+      trailLine.geometry.attributes.position.needsUpdate = true;
+    } else {
+      trailLine.visible = false;
+      trailDrawCount = 0;
+    }
+
+    // Speed UI (skip during warp - warp has its own display)
+    if(warpState !== 'warping'){
+    displaySpeed += (playerSpeed - displaySpeed) * 0.1;
+    document.getElementById('speedBar').style.width = (displaySpeed / playerMaxSpeed * 100) + '%';
+    const speedMs = Math.round(displaySpeed * 100);
+    if(speedMs > 1000000) document.getElementById('shipSpeed').textContent = (speedMs/1000000).toFixed(1) + ' Mm/s';
+    else if(speedMs > 1000) document.getElementById('shipSpeed').textContent = (speedMs/1000).toFixed(1) + ' km/s';
+    else document.getElementById('shipSpeed').textContent = speedMs + ' m/s';
+    document.getElementById('shipState').textContent = warpState === 'warping' ? 'Warping' : warpState === 'aligning' ? 'Aligning' : flyDirection ? (displaySpeed > playerMaxSpeed*0.9 ? 'Full Speed' : 'Aligning') : (playerSpeed > 0.01 ? 'Decelerating' : 'Idle');
+    } // end warpState !== 'warping' guard
+
+    // ── Starfield: follow camera (skybox behavior, no parallax) ──
+    if(starField){
+      starField.position.copy(camera.position);
+      starField.position.copy(camera.position);
+    }
+
+    // ── NPC Ships (SERVER-AUTHORITATIVE, interpolated, world space) ──
+    const timeSinceTick = (now - lastTickTime) / 1000;
+    for(const [id, ship] of Object.entries(interpShips)){
+      if(ship.is_player) continue;
+      // Hide docked ships
+      if(ship.state === 'docked' || ship.state === 'idle' && ship.speed < 0.005){
+        if(npcMeshes[id]) npcMeshes[id].visible = false;
+        continue;
+      }
+      const sx = ship.x + ship.vx * timeSinceTick;
+      const sy = ship.y + ship.vy * timeSinceTick;
+      const sz = ship.z + ship.vz * timeSinceTick;
+      const mesh = getOrCreateNpcMesh(ship);
+      mesh.visible = true;
+      mesh.position.set(sx, sy, sz);
+      // Rotate ship to face heading
+      if(ship.heading && (ship.heading[0]!==0 || ship.heading[1]!==0 || ship.heading[2]!==0)){
+        const hx = ship.heading[0], hy = ship.heading[1], hz = ship.heading[2];
+        const lookTarget = new THREE.Vector3(sx + hx, sy + hy, sz + hz);
+        const lookMat = new THREE.Matrix4().lookAt(mesh.position, lookTarget, new THREE.Vector3(0,1,0));
+        const targetQuat = new THREE.Quaternion().setFromRotationMatrix(lookMat);
+        const offsetQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI/2);
+        targetQuat.multiply(offsetQuat);
+        mesh.quaternion.slerp(targetQuat, 0.1);
+      }
+    }
+
+    // ── Old sprite system disabled (directional labels handle all display now) ──
+    // Station models positioned on load (no per-frame update needed)
+
+    // ── Distance-based visibility for large objects ──
+    if(window._postWarpGrace > 0) window._postWarpGrace -= dt;
+    if(localState && localState.objects && !(window._postWarpGrace > 0)){
+      // During warp tunnel: handled by the warp block (hides everything)
+      // During deceleration: only show objects near the WARP TARGET
+      // Normal flight: show objects near PLAYER
+      if(warpState !== 'warping'){
+        const visCenter = (warpState === 'decelerating' && warpTargetPos) ? warpTargetPos : playerPos;
+        const visDist = 500000; // 500k units = 50,000km - enough to see nearby planets
+        // Group offset (group may not be at origin after warp arrival)
+        const gx = lsgGroup ? lsgGroup.position.x : 0;
+        const gy = lsgGroup ? lsgGroup.position.y : 0;
+        const gz = lsgGroup ? lsgGroup.position.z : 0;
+        // Reset scales from any previous warp departure (restore original scale)
+        for(const [id, mesh] of Object.entries(stationModels)){
+          if(mesh.userData._origScale) mesh.scale.setScalar(mesh.userData._origScale);
+        }
+        for(const [id, mesh] of Object.entries(gateModels)){
+          if(mesh.userData._origScale) mesh.scale.setScalar(mesh.userData._origScale);
+        }
+        for(const [id, rocks] of Object.entries(asteroidModels)) rocks.forEach(r => {
+          if(r.userData._origScale) r.scale.setScalar(r.userData._origScale);
+        });
+        for(const [id, mesh] of Object.entries(stationModels)){
+          const obj = localState.objects.find(o => o.station_id === id);
+          if(!obj){ mesh.visible = false; continue; }
+          const dist = Math.sqrt((obj.x+gx-visCenter.x)**2 + (obj.y+gy-visCenter.y)**2 + (obj.z+gz-visCenter.z)**2);
+          mesh.visible = dist < visDist;
+        }
+        for(const [id, mesh] of Object.entries(gateModels)){
+          const obj = localState.objects.find(o => o.id === id);
+          if(!obj){ mesh.visible = false; continue; }
+          const dist = Math.sqrt((obj.x+gx-visCenter.x)**2 + (obj.y+gy-visCenter.y)**2 + (obj.z+gz-visCenter.z)**2);
+          mesh.visible = dist < visDist;
+        }
+        for(const [id, rocks] of Object.entries(asteroidModels)){
+          const obj = localState.objects.find(o => o.id === id);
+          if(!obj){ rocks.forEach(r => r.visible = false); continue; }
+          const dist = Math.sqrt((obj.x+gx-visCenter.x)**2 + (obj.y+gy-visCenter.y)**2 + (obj.z+gz-visCenter.z)**2);
+          rocks.forEach(r => r.visible = dist < 250);
+        }
+      } else {
+        // During warping DEPARTURE ONLY: shrink all visible stations/gates/asteroids
+        // Skip this during approach (when _approachStarted is true)
+        if(!window._approachStarted){
+          if(!window._objDepartTimer) window._objDepartTimer = 0;
+          window._objDepartTimer += dt;
+          const ot = Math.min(1.0, window._objDepartTimer / 1.5);
+          const objScale = Math.max(0.02, 1.0 - ot * 0.98);
+          for(const [id, mesh] of Object.entries(stationModels)){
+            const os = mesh.userData._origScale || 1;
+            mesh.scale.setScalar(os * objScale);
+            if(ot >= 1.0) mesh.visible = false;
+          }
+          for(const [id, mesh] of Object.entries(gateModels)){
+            const os = mesh.userData._origScale || 1;
+            mesh.scale.setScalar(os * objScale);
+            if(ot >= 1.0) mesh.visible = false;
+          }
+          for(const [id, rocks] of Object.entries(asteroidModels)){
+            rocks.forEach(r => { const os = r.userData._origScale || 1; r.scale.setScalar(os * objScale); if(ot >= 1.0) r.visible = false; });
+          }
+        }
+      }
+      // Reset departure timer when not warping
+      if(warpState !== 'warping') window._objDepartTimer = 0;
+      // ── Planets are now placed like stations - no per-frame positioning needed ──
+    }
+
+    // ── Directional labels for distant objects ──
+    updateDirectionalLabels();
+    updateSSGPlanets();
+    updateSunPosition();
+
+    // ── Update nav card distances every 2s during flight ──
+    if(!window._navRefreshTimer) window._navRefreshTimer = 0;
+    window._navRefreshTimer += dt;
+    if(window._navRefreshTimer > 0.5 && localState && localState.objects && !isDocked){
+      window._navRefreshTimer = 0;
+      // During warp, interpolate position toward target for distance display
+      let navPos = {x: playerPos.x, y: playerPos.y, z: playerPos.z};
+      if(warpState === 'warping' && warpTargetPos){
+        const progress = Math.min(1.0, warpTravelTimer / warpTravelDuration);
+        navPos = {
+          x: playerPos.x + (warpTargetPos.x - playerPos.x) * progress,
+          y: playerPos.y + (warpTargetPos.y - playerPos.y) * progress,
+          z: playerPos.z + (warpTargetPos.z - playerPos.z) * progress
+        };
+      }
+      renderNavList(localState.objects, navPos);
+    }
+
+    // ── Report position to server every 3 seconds ──
+    posReportTimer += dt;
+    if(posReportTimer > 3){
+      posReportTimer = 0;
+      fetch('/api/player/position', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({x:playerPos.x, y:playerPos.y, z:playerPos.z, speed:playerSpeed,
+          hx:playerHeading.x, hy:playerHeading.y, hz:playerHeading.z,
+          state: flyDirection?'flying':'idle'})
+      }).catch(()=>{});
+      // Poll for commands from system map
+      fetch('/api/player/command').then(r=>r.json()).then(cmd=>{
+        if(!cmd || !cmd.action) return;
+        if(cmd.action==='warp' && cmd.target_id) window.warpTo(cmd.target_id);
+        else if(cmd.action==='approach' && cmd.target_id) window.approachObj(cmd.target_id);
+        else if(cmd.action==='dock' && cmd.target_id) window.approachAndDock(cmd.target_id);
+        else if(cmd.action==='jump' && cmd.target_id) window.approachAndJump(cmd.target_id);
+      }).catch(()=>{});
+    }
+  }
+
+  if(isDocked) updateCameraOrbit();
+  renderer.render(scene, camera);
+}
+
+// ── Input: Double-click to fly ──
+container.addEventListener('dblclick', e=>{
+  if(isDocked) return;
+  if(warpState !== 'none') return; // can't redirect during warp
+  const rect = renderer.domElement.getBoundingClientRect();
+  const mouse = new THREE.Vector2(
+    ((e.clientX - rect.left) / rect.width) * 2 - 1,
+    -((e.clientY - rect.top) / rect.height) * 2 + 1
+  );
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, camera);
+  flyDirection = raycaster.ray.direction.clone().normalize();
+  targetHeading.copy(flyDirection);
+  approachTarget = null; // cancel any active approach
+  // Report to server
+  fetch('/api/player/fly', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({dx:flyDirection.x, dy:flyDirection.y, dz:flyDirection.z})
+  }).catch(()=>{});
+});
+
+// ── Input: S key to stop ──
+document.addEventListener('keydown', e=>{
+  if(e.key === 's' || e.key === 'S'){
+    if(isDocked) return;
+    if(warpState !== 'none'){
+      // Cancel warp
+      warpState = 'none';
+      warpSpeed = 0;
+      warpTargetId = null;
+      warpTargetPos = null;
+      playerSpeed = 0;
+      document.getElementById('warpTarget').textContent = '';
+      fetch('/api/player/stop', {method:'POST'}).catch(()=>{});
+      return;
+    }
+    flyDirection = null;
+    approachTarget = null;
+    fetch('/api/player/stop', {method:'POST'}).catch(()=>{});
+  }
+});
+
+// ── Input: Right-click freelook ──
+let isFreelooking = false;
+let freelookStart = {x:0, y:0};
+let freelookYaw = 0;
+let freelookPitch = 0;
+let freelookLerp = 1.0; // 1.0 = looking at ship, 0.0 = just released
+renderer.domElement.addEventListener('mousedown', e=>{
+  if(e.button === 2){
+    isFreelooking = true;
+    freelookStart = {x:e.clientX, y:e.clientY};
+    freelookLerp = 0;
+  }
+});
+window.addEventListener('mouseup', e=>{
+  if(e.button === 2){
+    isFreelooking = false;
+    freelookLerp = 0; // will lerp back over ~2 seconds
+  }
+});
+window.addEventListener('mousemove', e=>{
+  if(!isFreelooking) return;
+  const dx = e.clientX - freelookStart.x;
+  const dy = e.clientY - freelookStart.y;
+  freelookStart = {x:e.clientX, y:e.clientY};
+  freelookYaw += dx * 0.003;
+  freelookPitch += dy * 0.003;
+  freelookPitch = Math.max(-1.5, Math.min(1.5, freelookPitch));
+});
+
+// ── Warp command (called from nav list) ──
+window.warpTo = function(objId){
+  closeCtx();
+  if(warpState !== 'none') return;
+  if(!localState || !localState.objects) return;
+  const obj = localState.objects.find(o => o.id === objId);
+  if(!obj) return;
+  // Don't warp if this is the anchor (we're already here)
+  if(obj.is_anchor) return;
+  
+  // Use _playerSS as start position
+  const from = window._playerSS || {x:0, y:0, z:0};
+  let destX = obj.ss_x, destY = obj.ss_y || 0, destZ = obj.ss_z;
+  
+  // Compute destination with orbit offset for planets/moons
+  if(obj.type === 'planet' || obj.type === 'moon'){
+    const orbitOffsetAU = (obj.radius_km * 1.5) / AU_KM;
+    const dx = obj.ss_x - from.x, dy = (obj.ss_y||0) - (from.y||0), dz = obj.ss_z - from.z;
+    const len = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    if(len > 0.00001){
+      destX = obj.ss_x - (dx/len) * orbitOffsetAU;
+      destY = (obj.ss_y||0) - (dy/len) * orbitOffsetAU;
+      destZ = obj.ss_z - (dz/len) * orbitOffsetAU;
+    }
+  }
+  
+  // Compute heading from start to destination
+  const dx = destX - from.x, dy = destY - (from.y||0), dz = destZ - from.z;
+  const totalDist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+  if(totalDist < 0.00001) return;
+  warpHeading.set(dx/totalDist, dy/totalDist, dz/totalDist).normalize();
+  
+  // Calculate accelDist, decelDist, short trip handling
+  const accelDist = WARP_TOP_SPEED * WARP_ACCEL_TIME / 5;
+  const decelDist = WARP_TOP_SPEED * WARP_DECEL_TIME / 5;
+  let peakSpeed, accelTime, cruiseTime, decelTime, totalTime;
+  if(accelDist + decelDist > totalDist){
+    peakSpeed = totalDist / (WARP_ACCEL_TIME / 5 + WARP_DECEL_TIME / 5);
+    accelTime = WARP_ACCEL_TIME;
+    cruiseTime = 0;
+    decelTime = WARP_DECEL_TIME;
+    totalTime = accelTime + decelTime;
+  } else {
+    peakSpeed = WARP_TOP_SPEED;
+    accelTime = WARP_ACCEL_TIME;
+    decelTime = WARP_DECEL_TIME;
+    cruiseTime = (totalDist - accelDist - decelDist) / WARP_TOP_SPEED;
+    totalTime = accelTime + cruiseTime + decelTime;
+  }
+  
+  // Store warp phases
+  window._warpPhases = {peakSpeed, accelTime, cruiseTime, decelTime, totalTime};
+  window._warpFromSS = {x: from.x, y: from.y || 0, z: from.z};
+  window._warpToSS = {x: destX, y: destY, z: destZ};
+  
+  // Set warp target info
+  warpTargetId = objId;
+  warpTargetPos = new THREE.Vector3(warpHeading.x * 100000, warpHeading.y * 100000, warpHeading.z * 100000);
+  warpTargetType = obj.type;
+  warpTravelTimer = 0;
+  warpTravelDuration = totalTime;
+  warpState = 'aligning';
+  warpAlignTimer = 0;
+  window._approachStarted = false;
+  window._departDespawned = false;
+  window._lsgStartPos = null;
+  document.getElementById('warpTarget').textContent = 'Aligning...';
+};
+
+// ── Jump Gate (system transition) ──
+window.jumpGate = async function(gateId){
+  closeCtx();
+  // Show jump transition overlay
+  const overlay = document.getElementById('fadeOverlay');
+  overlay.style.transition = 'opacity 1s';
+  overlay.style.opacity = '1';
+  document.getElementById('shipState').textContent = 'Jumping...';
+
+  try{
+    const r = await fetch('/api/player/jump', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({gate_id: gateId})
+    });
+    const data = await r.json();
+    if(data.status === 'jumped'){
+      // Clear current scene objects
+      Object.values(stationModels).forEach(m => m.removeFromParent());
+      stationModels = {};
+      Object.values(gateModels).forEach(m => m.removeFromParent());
+      gateModels = {};
+      Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => r.removeFromParent()));
+      asteroidModels = {};
+      Object.values(planetModels).forEach(m => m.removeFromParent());
+      planetModels = {};
+      Object.values(npcMeshes).forEach(m => m.removeFromParent());
+      npcMeshes = {};
+      interpShips = {};
+      Object.values(objectSprites).forEach(s => s.removeFromParent());
+      objectSprites = {};
+      clearDirectionalLabels();
+      // Reset player position (server will provide new position via SSE)
+      playerPosInitialized = false;
+      playerSpeed = 0;
+      flyDirection = null;
+      warpState = 'none';
+      // Update location bar
+      document.getElementById('sysName').textContent = data.system_name || data.system_id;
+      // Wait for SSE to deliver new state, then load objects
+      setTimeout(()=>{
+        clearPlanetTextureCache();
+        clearSSGPlanets();
+        initSSGPlanets();
+        loadAllStations();
+        loadAllGates();
+        loadAsteroidFields();
+        loadPlanetsAndMoons();
+        // Pre-gen textures then fade in
+        const jumpObjs = (localState && localState.objects) || [];
+        pregenPlanetTextures(THREE, jumpObjs, '', ()=>{
+          overlay.style.transition = 'opacity 2s';
+          overlay.style.opacity = '0';
+        });
+      }, 1500);
+    } else {
+      // Failed
+      overlay.style.transition = 'opacity 0.5s';
+      overlay.style.opacity = '0';
+      document.getElementById('shipState').textContent = data.error || 'Jump failed';
+    }
+  }catch(e){
+    overlay.style.transition = 'opacity 0.5s';
+    overlay.style.opacity = '0';
+  }
+};
+
+// ── Context Menu ──
+window.showCtx = function(e, objId, name, type){
+  e.preventDefault();
+  // Reset freelook state to prevent camera weirdness
+  isFreelooking = false;
+  freelookLerp = 1.0;
+  freelookYaw = 0;
+  freelookPitch = 0;
+  const menu = document.getElementById('ctxMenu');
+  let items = '';
+  
+  // Find the object in localState
+  const obj = localState && localState.objects && localState.objects.find(o => o.id === objId);
+  const isAnchor = obj && obj.is_anchor;
+  
+  // isLocal = physically present at this object (anchor, or station/gate/belt with model in LSG)
+  // Planets/moons are NOT local unless they are the anchor - they're always warp targets
+  const isLocal = isAnchor || (obj && (obj.type === 'station' || obj.type === 'gate' || obj.type === 'belt') && (stationModels[obj.station_id] || gateModels[obj.id] || asteroidModels[obj.id]));
+  
+  // Compute distance to object (for range checks)
+  let distToObj = Infinity;
+  if(isLocal && lsgGroup){
+    const gOff = lsgGroup.position;
+    // Use model position if available, else obj.x/y/z
+    let ox = obj.x, oy = obj.y, oz = obj.z;
+    if(obj.station_id && stationModels[obj.station_id]){
+      const mp = stationModels[obj.station_id].position;
+      ox = mp.x; oy = mp.y; oz = mp.z;
+    } else if(gateModels[obj.id]){
+      const mp = gateModels[obj.id].position;
+      ox = mp.x; oy = mp.y; oz = mp.z;
+    }
+    const dx = (ox + gOff.x) - playerPos.x;
+    const dy = (oy + gOff.y) - playerPos.y;
+    const dz = (oz + gOff.z) - playerPos.z;
+    distToObj = Math.sqrt(dx*dx + dy*dy + dz*dz);
+  }
+  
+  // Warp To (for objects NOT in local space)
+  if(!isLocal){
+    items += `<div class="ctx-item" onclick="warpTo('${objId}')">Warp to ${name}</div>`;
+  }
+  
+  // Approach (for objects in local space)
+  if(isLocal){
+    items += `<div class="ctx-item" onclick="approachObj('${objId}')">Approach ${name}</div>`;
+  }
+  
+  // Dock (stations in local space)
+  if(type === 'station' && isLocal){
+    const inRange = distToObj < 30;
+    if(inRange){
+      items += `<div class="ctx-item" onclick="approachAndDock('${objId}')">Dock</div>`;
+    } else {
+      items += `<div class="ctx-item" onclick="approachAndDock('${objId}')">Approach &amp; Dock</div>`;
+    }
+  }
+  
+  // Jump (gates with connection, in local space)
+  if(type === 'gate' && obj && obj.connects_to && isLocal){
+    const inRange = distToObj < 20;
+    if(inRange){
+      items += `<div class="ctx-item" style="color:#ab47bc" onclick="jumpGate('${objId}')">Jump to ${obj.connects_to}</div>`;
+    } else {
+      items += `<div class="ctx-item" style="color:#ab47bc" onclick="approachAndJump('${objId}')">Approach &amp; Jump</div>`;
+    }
+  }
+  
+  items += `<div class="ctx-item" style="color:#5a7a9a" onclick="closeCtx()">Cancel</div>`;
+  menu.innerHTML = items;
+  menu.style.left = e.clientX+'px';
+  menu.style.top = e.clientY+'px';
+  menu.classList.add('open');
+};
+window.closeCtx = function(){ document.getElementById('ctxMenu').classList.remove('open'); };
+document.addEventListener('click',()=>closeCtx());
+
+// ── Approach System ──
+let approachTarget = null;   // {objId, action: 'stop'|'dock'|'jump'}
+window.approachObj = function(objId){
+  closeCtx();
+  approachTarget = {objId, action: 'stop'};
+  setApproachDirection(objId);
+};
+window.approachAndDock = function(objId){
+  closeCtx();
+  approachTarget = {objId, action: 'dock'};
+  setApproachDirection(objId);
+};
+window.approachAndJump = function(objId){
+  closeCtx();
+  approachTarget = {objId, action: 'jump'};
+  setApproachDirection(objId);
+};
+function setApproachDirection(objId){
+  if(!localState || !localState.objects || !lsgGroup) return;
+  const obj = localState.objects.find(o => o.id === objId);
+  if(!obj) return;
+  const gOff = lsgGroup.position;
+  const targetWorld = new THREE.Vector3(obj.x + gOff.x, obj.y + gOff.y, obj.z + gOff.z);
+  const dir = targetWorld.clone().sub(playerPos).normalize();
+  flyDirection = dir;
+}
+function checkApproachArrival(){
+  if(!approachTarget || !localState || !localState.objects || !lsgGroup) return;
+  const obj = localState.objects.find(o => o.id === approachTarget.objId);
+  if(!obj) return;
+  const gOff = lsgGroup.position;
+  const dx = (obj.x + gOff.x) - playerPos.x;
+  const dy = (obj.y + gOff.y) - playerPos.y;
+  const dz = (obj.z + gOff.z) - playerPos.z;
+  const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+  
+  // Update fly direction continuously toward target
+  const targetWorld = new THREE.Vector3(obj.x + gOff.x, obj.y + gOff.y, obj.z + gOff.z);
+  flyDirection = targetWorld.clone().sub(playerPos).normalize();
+  
+  // Check arrival thresholds
+  const stopDist = 0.5; // 50m in PU
+  const dockDist = 30;  // dock range
+  const jumpDist = 20;  // jump range
+  
+  if(approachTarget.action === 'stop' && dist < stopDist){
+    flyDirection = null;
+    approachTarget = null;
+  } else if(approachTarget.action === 'dock' && dist < dockDist){
+    flyDirection = null;
+    const targetId = approachTarget.objId;
+    approachTarget = null;
+    document.getElementById('dockBtn').click();
+  } else if(approachTarget.action === 'jump' && dist < jumpDist){
+    flyDirection = null;
+    const targetId = approachTarget.objId;
+    approachTarget = null;
+    window.jumpGate(targetId);
+  }
+}
+
+// Nav list right-click and double-click
+document.getElementById('navObjects').addEventListener('contextmenu', e=>{
+  const el = e.target.closest('.nav-obj');
+  if(!el) return;
+  e.preventDefault();
+  window.showCtx(e, el.dataset.id, el.dataset.name, el.dataset.type);
+});
+document.getElementById('navObjects').addEventListener('dblclick', e=>{
+  const el = e.target.closest('.nav-obj');
+  if(el) window.warpTo(el.dataset.id);
+});
+
+// ── UI Updates ──
+function updateUI(state){
+  if(!state || !state.player) return;
+  const p = state.player;
+  const layout = document.getElementById('layout');
+  const isDockedNow = (p.state === 'docked');
+
+  layout.className = 'layout ' + (isDockedNow ? 'docked' : 'flight');
+  document.getElementById('dockedPanel').style.display = isDockedNow ? '' : 'none';
+  document.getElementById('flightPanel').style.display = isDockedNow ? 'none' : '';
+  document.getElementById('statusBar').style.display = isDockedNow ? 'none' : '';
+
+  document.getElementById('sysName').textContent = state.system_id || '';
+  document.getElementById('stationName').textContent = isDockedNow ? 'Docked' : '';
+
+  // Nav list (flight only)
+  if(!isDockedNow && state.objects){
+    renderNavList(state.objects, {x: playerPos.x, y: playerPos.y, z: playerPos.z});
+  }
+}
+
+function renderNavList(objects, playerShip){
+  const px = playerShip.x, py = playerShip.y, pz = playerShip.z;
+  const nav = document.getElementById('navObjects');
+  
+  // Compute distances for each object
+  const objsWithDist = objects.filter(o=>o.type!=='star').map(o=>{
+    let distVal, distStr;
+    const isWarping = (warpState === 'warping' || warpState === 'aligning');
+    const isApproaching = isWarping && window._approachStarted && lsgGroup;
+    const useLocal = ((o.is_anchor && !isWarping && lsgGroup) || isApproaching) && o.type !== 'planet' && o.type !== 'moon';
+    
+    if(useLocal){
+      // Use local/group-based distance
+      const gx3 = lsgGroup ? lsgGroup.position.x : 0;
+      const gy3 = lsgGroup ? lsgGroup.position.y : 0;
+      const gz3 = lsgGroup ? lsgGroup.position.z : 0;
+      const dx = (o.x+gx3) - px, dy = (o.y+gy3) - py, dz = (o.z+gz3) - pz;
+      const distUnits = Math.sqrt(dx*dx + dy*dy + dz*dz);
+      const distM = distUnits * 100; // PU to meters
+      distVal = distM;
+      if(distM > 150000000){
+        distStr = (distM / 150000000000).toFixed(2) + ' AU';
+      } else if(distM > 1000){
+        distStr = (distM / 1000).toFixed(1) + ' km';
+      } else {
+        distStr = Math.round(distM) + ' m';
+      }
+    } else {
+      // SS distance - use _playerSS (same source as SSG rendering)
+      let curX = 0, curY = 0, curZ = 0;
+      if(window._playerSS){
+        curX = window._playerSS.x;
+        curY = window._playerSS.y || 0;
+        curZ = window._playerSS.z;
+      } else {
+        const anchorObj = objects.find(a => a.is_anchor);
+        curX = anchorObj ? anchorObj.ss_x : 0;
+        curY = anchorObj ? (anchorObj.ss_y || 0) : 0;
+        curZ = anchorObj ? anchorObj.ss_z : 0;
+      }
+      const adx = o.ss_x - curX, ady = (o.ss_y||0) - curY, adz = o.ss_z - curZ;
+      const auDist = Math.sqrt(adx*adx + ady*ady + adz*adz);
+      const distKm = auDist * 150000000;
+      distVal = distKm * 1000; // meters for sorting
+      if(auDist > 0.1) distStr = auDist.toFixed(2) + ' AU';
+      else if(distKm > 1000000) distStr = (distKm/1000000).toFixed(1) + 'M km';
+      else if(distKm > 1000) distStr = Math.round(distKm/1000) + 'k km';
+      else distStr = Math.round(distKm) + ' km';
+    }
+    return {...o, distVal, distStr};
+  });
+  
+  // Sort: default by distance, can be overridden
+  const sortMode = window._navSortMode || 'distance';
+  if(sortMode === 'distance') objsWithDist.sort((a,b) => a.distVal - b.distVal);
+  else if(sortMode === 'name') objsWithDist.sort((a,b) => a.name.localeCompare(b.name));
+  else if(sortMode === 'type') objsWithDist.sort((a,b) => a.type.localeCompare(b.type) || a.distVal - b.distVal);
+
+  // Sort header
+  const sortHtml = `<div style="display:flex;gap:6px;margin-bottom:4px;font-size:9px;color:#5a7a9a">
+    <span style="cursor:pointer;${sortMode==='distance'?'color:#4fc3f7':''}" onclick="window._navSortMode='distance'">Dist</span>
+    <span style="cursor:pointer;${sortMode==='name'?'color:#4fc3f7':''}" onclick="window._navSortMode='name'">Name</span>
+    <span style="cursor:pointer;${sortMode==='type'?'color:#4fc3f7':''}" onclick="window._navSortMode='type'">Type</span>
+  </div>`;
+
+  nav.innerHTML = sortHtml + objsWithDist.map(o=>{
+    const icon = o.type==='gate'?'&#9674;':o.type==='station'?'&#9632;':o.type==='planet'?'&#9679;':'&#8226;';
+    const color = o.type==='gate'?'#ab47bc':o.type==='station'?'#4fc3f7':'#8aa0b8';
+    const atLocation = o.is_anchor && warpState === 'none';
+    const destLabel = (o.type==='gate' && o.connects_to) ? ` &rarr; ${o.connects_to}` : '';
+    const atStyle = atLocation ? 'opacity:0.5' : '';
+    return `<div class="nav-obj" style="padding:3px 4px;cursor:pointer;border-bottom:1px solid #0f1520;display:flex;justify-content:space-between;${atStyle}" data-id="${o.id}" data-name="${o.name}" data-type="${o.type}">
+      <span><span style="color:${color}">${icon}</span> ${o.name}<span style="color:#5a7a9a;font-size:9px">${destLabel}</span></span>
+      <span style="color:#c8d4e0;font-size:10px">${o.distStr}</span>
+    </div>`;
+  }).join('');
+  // Show dock button if near a station (within ~3km of any station)
+  // Account for lsgGroup offset and hide during warp
+  const gx2 = lsgGroup ? lsgGroup.position.x : 0;
+  const gy2 = lsgGroup ? lsgGroup.position.y : 0;
+  const gz2 = lsgGroup ? lsgGroup.position.z : 0;
+  const nearStation = (warpState === 'none') && objects.find(o=>{
+    if(o.type!=='station' || !o.is_anchor) return false;
+    const dx=(o.x+gx2)-px, dy=(o.y+gy2)-py, dz=(o.z+gz2)-pz;
+    return Math.sqrt(dx*dx+dy*dy+dz*dz) < 30;
+  });
+  document.getElementById('dockBtn').style.display = nearStation ? '' : 'none';
+  // Show jump button if near a gate with connection (within 10km)
+  const nearGate = (warpState === 'none') && objects.find(o=>{
+    if(o.type!=='gate' || !o.connects_to) return false;
+    const dx=(o.x+gx2)-px, dy=(o.y+gy2)-py, dz=(o.z+gz2)-pz;
+    return Math.sqrt(dx*dx+dy*dy+dz*dz) < 20;
+  });
+  let jumpBtn = document.getElementById('jumpBtn');
+  if(!jumpBtn){
+    jumpBtn = document.createElement('button');
+    jumpBtn.id = 'jumpBtn';
+    jumpBtn.className = 'btn';
+    jumpBtn.style.cssText = 'margin-top:8px;border-color:#ab47bc;color:#ab47bc;display:none';
+    jumpBtn.textContent = 'Jump';
+    document.getElementById('dockBtn').parentNode.insertBefore(jumpBtn, document.getElementById('dockBtn').nextSibling);
+  }
+  if(nearGate){
+    jumpBtn.style.display = '';
+    jumpBtn.textContent = `Jump to ${nearGate.connects_to}`;
+    jumpBtn.onclick = ()=> window.jumpGate(nearGate.id);
+  } else {
+    jumpBtn.style.display = 'none';
+  }
+}
+
+// ── Actions ──
+document.getElementById('locationBar').addEventListener('click', ()=>{
+  const sysId = localState && localState.system_id ? localState.system_id : '';
+  if(!sysId) return;
+  // Ship page runs in iframe inside game.html - call parent's openSystemView
+  if(window.parent && window.parent.openSystemView){
+    window.parent.openSystemView(sysId);
+  }
+});
+
+document.getElementById('undockBtn').addEventListener('click', async()=>{
+  const r = await fetch('/api/player/undock',{method:'POST'});
+  if(r.ok){
+    // Force client to pick up new position/heading from server on next SSE
+    playerPosInitialized = false;
+    // Set 25% speed on next position init
+    window._undockSpeedPending = true;
+  }
+});
+
+document.getElementById('dockBtn').addEventListener('click', async()=>{
+  // Find which station we're docking at
+  const gx2d = lsgGroup ? lsgGroup.position.x : 0;
+  const gy2d = lsgGroup ? lsgGroup.position.y : 0;
+  const gz2d = lsgGroup ? lsgGroup.position.z : 0;
+  const dockStation = localState && localState.objects && localState.objects.find(o=>{
+    if(o.type!=='station' || !o.is_anchor) return false;
+    const dx=(o.x+gx2d)-playerPos.x, dy=(o.y+gy2d)-playerPos.y, dz=(o.z+gz2d)-playerPos.z;
+    return Math.sqrt(dx*dx+dy*dy+dz*dz) < 30;
+  });
+  if(!dockStation) return;
+  // Fade out before docking
+  const overlay = document.getElementById('fadeOverlay');
+  overlay.style.transition = 'opacity 1s';
+  overlay.style.opacity = '1';
+  setTimeout(async()=>{
+    const r = await fetch('/api/player/dock',{method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({station_id: dockStation.station_id})});
+    // SSE will trigger setDockedScene which fades back in
+  }, 1000);
+});
+
+// ── Load Ship Model ──
+async function loadShipModel(){
+  console.log('[INIT] loadShipModel called');
+  // Use real Pinto Runner model from INLINE_MODELS
+  allShipGeos = {pinto_runner: INLINE_MODELS.pinto_runner, Frigate: INLINE_MODELS.pinto_runner};
+  player = localState.player;
+  const geo = INLINE_MODELS.pinto_runner;
+  if(shipGroup) scene.remove(shipGroup);
+  shipGroup = new THREE.Group();
+  buildShipFromData(shipGroup, geo, {showHardpoints:false});
+  const box = new THREE.Box3().setFromObject(shipGroup);
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+  shipGroup.scale.setScalar(0.6/maxDim); // Pinto Runner = 60m, 1 unit = 100m
+  scene.add(shipGroup);
+
+  // Determine initial state
+  if(player.docked){
+    setDockedScene();
+  } else {
+    console.log('[INIT] calling setFlightScene');
+    setFlightScene();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    camera.aspect = container.clientWidth / container.clientHeight;
+    camera.updateProjectionMatrix();
+    console.log('[INIT] viewport size:', container.clientWidth, container.clientHeight);
+  }
+  // Populate UI (nav cards, labels) with hardcoded data
+  if(localState) updateUI(localState);
+}
+
+function updatePlayerUI(){
+  if(!player) return;
+  const stats = player.ship_stats || {};
+  const infoHtml = `
+    <div class="stat-row"><span class="label">Ship</span><span class="val">${player.ship_name||player.ship_class}</span></div>
+    <div class="stat-row"><span class="label">Class</span><span class="val">${stats.hull_class||''}</span></div>
+    <div class="stat-row"><span class="label">Credits</span><span class="val">${(player.credits||0).toLocaleString()}</span></div>
+  `;
+  document.getElementById('shipInfo').innerHTML = infoHtml;
+  document.getElementById('flightShipInfo').innerHTML = infoHtml;
+  const cargo = player.cargo || {};
+  const cargoGrid = document.getElementById('cargoGrid');
+  if(Object.keys(cargo).length === 0){
+    cargoGrid.innerHTML = '<div style="color:#5a7a9a">Empty</div>';
+  } else {
+    cargoGrid.innerHTML = Object.entries(cargo).map(([k,v])=>`<div class="cargo-item"><span>${k.replace(/_/g,' ')}</span><span>${v}</span></div>`).join('');
+  }
+}
+
+// ── Build Warp Destination (isolated builder for warp approach) ──
+// Fetches all models for the destination and builds them into the provided targetGroup.
+// Does NOT touch module-level stationModels/gateModels/asteroidModels/planetModels until complete.
+// Returns: {stations, gates, asteroids, planets, lsgData} on success, null on failure.
+async function buildWarpDestination(targetId, targetGroup){
+  try{
+    const r = await fetch('/api/lsg_data/' + targetId);
+    if(!r.ok) return null;
+    const lsgData = await r.json();
+    const objects = lsgData.objects || [];
+    const newStations = {};
+    const newGates = {};
+    const newAsteroids = {};
+    const newPlanets = {};
+
+    // ── Stations ──
+    const stationObjs = objects.filter(o => o.station_id && o.is_anchor);
+    for(const obj of stationObjs){
+      try{
+        const sr = await fetch('/api/station_model/' + obj.station_id);
+        if(!sr.ok) continue;
+        const data = await sr.json();
+        const model = buildStationMesh(data);
+        if(!model) continue;
+        const box = new THREE.Box3().setFromObject(model);
+        const sz = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
+        const typeScale = {'trade_hub':150, 'military_base':120, 'shipyard':180, 'factory':80, 'refinery':70, 'component_works':50, 'mining_colony':40};
+        const targetSize = typeScale[data.station_type] || 50; // units (1 unit = 100m)
+        model.scale.setScalar(targetSize / maxDim);
+        model.userData._origScale = targetSize / maxDim;
+        model.position.set(obj.x, obj.y, obj.z);
+        targetGroup.add(model);
+        newStations[obj.station_id] = model;
+      }catch(e){}
+    }
+
+    // ── Gates ──
+    const gateObjs = objects.filter(o => o.type === 'gate' && o.is_anchor);
+    for(const obj of gateObjs){
+      try{
+        const sysId = lsgData.system_id || '';
+        const gr = await fetch(`/api/gate_model/${sysId}/${obj.id}`);
+        if(!gr.ok) continue;
+        const data = await gr.json();
+        const model = buildStationMesh(data);
+        if(!model) continue;
+        const box = new THREE.Box3().setFromObject(model);
+        const sz = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
+        model.scale.setScalar(20 / maxDim); // gate = 2km = 20 units
+        model.userData._origScale = 20 / maxDim;
+        model.position.set(obj.x, obj.y, obj.z);
+        model.traverse(c => {
+          if(c.isLineSegments && c.material){
+            c.material.color.setHex(0xd066f0);
+            c.material.opacity = 0.7;
+          }
+        });
+        targetGroup.add(model);
+        newGates[obj.id] = model;
+      }catch(e){}
+    }
+
+    // ── Asteroid Fields ──
+    const beltObjs = objects.filter(o => (o.type === 'asteroid_belt' || o.type === 'belt') && o.is_anchor);
+    for(const obj of beltObjs){
+      try{
+        const fieldId = obj.connects_to || obj.id;
+        const ar = await fetch('/api/asteroid_model/' + fieldId);
+        if(!ar.ok) continue;
+        const fieldData = await ar.json();
+        const asteroids = fieldData.asteroids || fieldData;
+        const rocks = [];
+        let fieldSeed = 0;
+        for(let c = 0; c < fieldId.length; c++) fieldSeed = ((fieldSeed << 5) - fieldSeed) + fieldId.charCodeAt(c);
+        const seededRand = (function(s){return function(){s=(s*1664525+1013904223)&0xFFFFFFFF;return(s>>>0)/4294967296;};})(Math.abs(fieldSeed));
+        for(let i = 0; i < asteroids.length; i++){
+          const data = asteroids[i];
+          const mesh = buildAsteroidMesh(data);
+          if(!mesh) continue;
+          if(data.color){
+            mesh.material.color.setHex(data.color);
+            mesh.material.emissive.setHex(data.color).multiplyScalar(0.1);
+          }
+          const angle = seededRand() * Math.PI * 2;
+          const dist = seededRand() * 150;
+          const vert = (seededRand() - 0.5) * 30;
+          mesh.position.set(obj.x + Math.cos(angle) * dist, obj.y + vert, obj.z + Math.sin(angle) * dist);
+          mesh.rotation.set(seededRand()*6.28, seededRand()*6.28, seededRand()*6.28);
+          targetGroup.add(mesh);
+          rocks.push(mesh);
+        }
+        newAsteroids[obj.id] = rocks;
+      }catch(e){}
+    }
+
+    // ── Planets & Moons: handled by SSG system, not in lsgGroup ──
+    return {stations: newStations, gates: newGates, asteroids: newAsteroids, planets: newPlanets, lsgData};
+  }catch(e){
+    console.error('[WARP] buildWarpDestination failed:', e);
+    return null;
+  }
+}
+
+// ── Load ALL Station Models (flight view) ──
+let stationModels = {}; // station_id -> THREE.Group
+
+async function loadAllStations(){
+  if(warpLock) return;
+  if(!localState || !localState.objects) return;
+  const stationObjs = localState.objects.filter(o => o.station_id && o.is_anchor);
+  for(const obj of stationObjs){
+    if(stationModels[obj.station_id]) continue; // already loaded
+    try{
+      const r = await fetch('/api/station_model/'+obj.station_id);
+      if(!r.ok) continue;
+      const data = await r.json();
+      const model = buildStationMesh(data);
+      if(!model) continue;
+      // Scale based on station type
+      const box = new THREE.Box3().setFromObject(model);
+      const sz = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
+      const typeScale = {'trade_hub':150, 'military_base':120, 'shipyard':180, 'factory':80, 'refinery':70, 'component_works':50, 'mining_colony':40};
+      const targetSize = typeScale[data.station_type] || 50; // units (1 unit = 100m)
+      model.scale.setScalar(targetSize / maxDim);
+      model.userData._origScale = targetSize / maxDim;
+      // Position at object world coords
+      model.position.set(obj.x, obj.y, obj.z);
+      (lsgGroup||scene).add(model);
+      stationModels[obj.station_id] = model;
+    }catch(e){}
+  }
+  // Set legacy references for compatibility
+  if(player && player.station_id && stationModels[player.station_id]){
+    stationModel = stationModels[player.station_id];
+    stationWorldPos = stationModel.position;
+  }
+}
+
+function buildStationMesh(data){
+  const tempGroup = new THREE.Group();
+  for(const comp of data.components){
+    const [px,py,pz]=comp.pos;const [rx,ry,rz]=comp.rot||[0,0,0];let mesh=null;
+    const mat=new THREE.MeshPhongMaterial({color:0x0a1428,emissive:0x0a1428,shininess:0,transparent:true,opacity:0.7});
+    switch(comp.type){
+      case'pod':{const{length,height,width}=comp.params;mesh=new THREE.Mesh(new THREE.BoxGeometry(length,height,width),mat);break;}
+      case'cylinder':{const{r_top,r_bot,length}=comp.params;mesh=new THREE.Mesh(new THREE.CylinderGeometry(r_top,r_bot,length,6),mat);if(!rx&&!ry&&!rz)mesh.rotation.z=Math.PI/2;break;}
+      case'cone':{const{radius,length}=comp.params;mesh=new THREE.Mesh(new THREE.ConeGeometry(radius,length,6),mat);if(!rx&&!ry&&!rz)mesh.rotation.z=Math.PI/2;break;}
+      case'box':{const{x,y,z}=comp.params;mesh=new THREE.Mesh(new THREE.BoxGeometry(x,y,z),mat);break;}
+      case'sphere':{const{radius,half}=comp.params;mesh=new THREE.Mesh(half?new THREE.SphereGeometry(radius,5,3,0,Math.PI*2,0,Math.PI/2):new THREE.SphereGeometry(radius,5,3),mat);break;}
+      case'torus':{const{radius,tube}=comp.params;mesh=new THREE.Mesh(new THREE.TorusGeometry(radius,tube,5,10),mat);if(!rx&&!ry&&!rz)mesh.rotation.y=Math.PI/2;break;}
+      case'spine':{const{length,radius}=comp.params;mesh=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,length,4),mat);mesh.rotation.z=Math.PI/2;break;}
+      default:continue;
+    }
+    if(mesh){mesh.position.set(px,py,pz);mesh.rotation.x+=rx;mesh.rotation.y+=ry;mesh.rotation.z+=rz;tempGroup.add(mesh);}
+  }
+  tempGroup.updateMatrixWorld(true);
+  const geos=[];
+  tempGroup.traverse(c=>{if(c.isMesh&&c.geometry){const g=c.geometry.clone();g.applyMatrix4(c.matrixWorld);geos.push(g);}});
+  if(!geos.length) return null;
+  const allG=geos.map(g=>g.index?g.toNonIndexed():g);
+  let tv=0;allG.forEach(g=>tv+=g.attributes.position.count);
+  const pos=new Float32Array(tv*3);let off=0;
+  for(const g of allG){pos.set(g.attributes.position.array,off*3);off+=g.attributes.position.count;}
+  const merged=new THREE.BufferGeometry();
+  merged.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  merged.computeVertexNormals();
+  const m=new THREE.Mesh(merged,new THREE.MeshPhongMaterial({color:0x0a1428,emissive:0x0a1428,shininess:0,transparent:true,opacity:0.7}));
+  m.add(new THREE.LineSegments(new THREE.EdgesGeometry(merged,15),new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:0.4})));
+  const grp = new THREE.Group();
+  grp.add(m);
+  allG.forEach(g=>g.dispose());geos.forEach(g=>g.dispose());
+  return grp;
+}
+
+// ── Gate Models ──
+let gateModels = {}; // obj_id -> THREE.Group
+async function loadAllGates(){
+  if(warpLock) return;
+  if(!localState || !localState.objects) return;
+  const gateObjs = localState.objects.filter(o => o.type === 'gate' && o.is_anchor);
+  for(const obj of gateObjs){
+    if(gateModels[obj.id]) continue;
+    try{
+      const sysId = localState.system_id || '';
+      const r = await fetch(`/api/gate_model/${sysId}/${obj.id}`);
+      if(!r.ok) continue;
+      const data = await r.json();
+      const model = buildStationMesh(data);
+      if(!model) continue;
+      // Scale gate to ~1000m
+      const box = new THREE.Box3().setFromObject(model);
+      const sz = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
+      model.scale.setScalar(20 / maxDim); // gate = 2km = 20 units
+      model.userData._origScale = 20 / maxDim;
+      model.position.set(obj.x, obj.y, obj.z);
+      // Give gates a bright purple/magenta edge color
+      model.traverse(c => {
+        if(c.isLineSegments && c.material){
+          c.material.color.setHex(0xd066f0);
+          c.material.opacity = 0.7;
+        }
+      });
+      (lsgGroup||scene).add(model);
+      gateModels[obj.id] = model;
+    }catch(e){}
+  }
+}
+
+// ── Asteroid Field Models (single-mesh displaced icospheres) ──
+let asteroidModels = {}; // obj_id -> [THREE.Mesh]
+async function loadAsteroidFields(){
+  if(warpLock) return;
+  if(!localState || !localState.objects) return;
+  const beltObjs = localState.objects.filter(o => (o.type === 'asteroid_belt' || o.type === 'belt') && o.is_anchor);
+  for(const obj of beltObjs){
+    if(asteroidModels[obj.id]) continue;
+    try{
+      // Use field_id from connects_to, or fall back to obj.id
+      const fieldId = obj.connects_to || obj.id;
+      const r = await fetch('/api/asteroid_model/' + fieldId);
+      if(!r.ok) continue;
+      const fieldData = await r.json();
+      const asteroids = fieldData.asteroids || fieldData;
+      const rocks = [];
+      // Seeded random for consistent field layout (based on field_id hash)
+      let fieldSeed = 0;
+      for(let c = 0; c < fieldId.length; c++) fieldSeed = ((fieldSeed << 5) - fieldSeed) + fieldId.charCodeAt(c);
+      const seededRand = (function(s){return function(){s=(s*1664525+1013904223)&0xFFFFFFFF;return(s>>>0)/4294967296;};})(Math.abs(fieldSeed));
+      
+      for(let i = 0; i < asteroids.length; i++){
+        const data = asteroids[i];
+        const mesh = buildAsteroidMesh(data);
+        if(!mesh) continue;
+        // Apply ore-specific color if provided
+        if(data.color){
+          mesh.material.color.setHex(data.color);
+          mesh.material.emissive.setHex(data.color).multiplyScalar(0.1);
+        }
+        // Spread asteroids in a 150-unit radius disk, 30-unit vertical
+        const angle = seededRand() * Math.PI * 2;
+        const dist = seededRand() * 150;
+        const vert = (seededRand() - 0.5) * 30;
+        mesh.position.set(
+          obj.x + Math.cos(angle) * dist,
+          obj.y + vert,
+          obj.z + Math.sin(angle) * dist
+        );
+        mesh.rotation.set(seededRand()*6.28, seededRand()*6.28, seededRand()*6.28);
+        (lsgGroup||scene).add(mesh);
+        rocks.push(mesh);
+      }
+      asteroidModels[obj.id] = rocks;
+    }catch(e){}
+  }
+}
+
+function buildAsteroidMesh(data){
+  // data has: vertices (flat [x,y,z,...]), faces (flat [i,j,k,...]), radius
+  if(!data.vertices || !data.faces) return null;
+  const verts = new Float32Array(data.vertices);
+  const indices = new Uint16Array(data.faces);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+  geo.setIndex(new THREE.BufferAttribute(indices, 1));
+  geo.computeVertexNormals();
+  // Scale to actual radius (vertices are unit-scale)
+  const radius = (data.radius || 100) / 100; // scale to cm-units
+  const mat = new THREE.MeshPhongMaterial({color:0x2a2018, emissive:0x0a0805, shininess:2, transparent:true, opacity:0.85});
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.scale.setScalar(radius);
+  mesh.userData._origScale = radius;
+  // Add edge wireframe for the low-poly look
+  const edgeMat = new THREE.LineBasicMaterial({color:0x8d6e4a, transparent:true, opacity:0.4});
+  mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25), edgeMat));
+  return mesh;
+}
+
+// ── Planet/Moon Models (simple spheres with color) ──
+let planetModels = {}; // obj_id -> THREE.Group
+const PLANET_COLORS = {
+  // Realistic planet base colors (earth-like, gas giant, rocky, ice, desert)
+  'planet': [0x1a5c3a, 0x2a4a6b, 0x8b6b3a, 0x6b8baa, 0xc4956a, 0x4a7a4a],
+  'moon': [0x6a6a6a, 0x7a7a7a, 0x5a5a5a, 0x606060],
+};
+
+// Generate procedural planet texture (noise-based canvas)
+// ── Planet Shader Materials (GLSL) ──
+// Shared noise functions (simplex 3D noise)
+const PLANET_NOISE_GLSL = `
+  vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
+  vec4 mod289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
+  vec4 permute(vec4 x){return mod289(((x*34.0)+1.0)*x);}
+  vec4 taylorInvSqrt(vec4 r){return 1.79284291400159-0.85373472095314*r;}
+  float snoise(vec3 v){
+    const vec2 C=vec2(1.0/6.0,1.0/3.0);const vec4 D=vec4(0.0,0.5,1.0,2.0);
+    vec3 i=floor(v+dot(v,C.yyy));vec3 x0=v-i+dot(i,C.xxx);
+    vec3 g=step(x0.yzx,x0.xyz);vec3 l=1.0-g;
+    vec3 i1=min(g.xyz,l.zxy);vec3 i2=max(g.xyz,l.zxy);
+    vec3 x1=x0-i1+C.xxx;vec3 x2=x0-i2+C.yyy;vec3 x3=x0-D.yyy;
+    i=mod289(i);
+    vec4 p=permute(permute(permute(i.z+vec4(0.0,i1.z,i2.z,1.0))+i.y+vec4(0.0,i1.y,i2.y,1.0))+i.x+vec4(0.0,i1.x,i2.x,1.0));
+    float n_=0.142857142857;vec3 ns=n_*D.wyz-D.xzx;
+    vec4 j=p-49.0*floor(p*ns.z*ns.z);
+    vec4 x_=floor(j*ns.z);vec4 y_=floor(j-7.0*x_);
+    vec4 x=x_*ns.x+ns.yyyy;vec4 y=y_*ns.x+ns.yyyy;
+    vec4 h=1.0-abs(x)-abs(y);
+    vec4 b0=vec4(x.xy,y.xy);vec4 b1=vec4(x.zw,y.zw);
+    vec4 s0=floor(b0)*2.0+1.0;vec4 s1=floor(b1)*2.0+1.0;
+    vec4 sh=-step(h,vec4(0.0));
+    vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy;vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+    vec3 p0=vec3(a0.xy,h.x);vec3 p1=vec3(a0.zw,h.y);
+    vec3 p2=vec3(a1.xy,h.z);vec3 p3=vec3(a1.zw,h.w);
+    vec4 norm=taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+    p0*=norm.x;p1*=norm.y;p2*=norm.z;p3*=norm.w;
+    vec4 m=max(0.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.0);
+    m=m*m;return 42.0*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
+  }
+  float fbm(vec3 p, int octaves){
+    float val=0.0;float amp=0.5;float freq=1.0;
+    for(int i=0;i<8;i++){
+      if(i>=octaves)break;
+      val+=amp*snoise(p*freq);
+      freq*=2.0;amp*=0.5;
+    }
+    return val;
+  }
+`;
+
+const PLANET_VERTEX = `
+  varying vec3 vNormal;
+  varying vec3 vPosition;
+  varying vec2 vUv;
+  void main(){
+    vNormal = normalize(normalMatrix * normal);
+    vPosition = position;
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+function makePlanetShaderMaterial(planetType, seed){
+  const seedF = (seed % 1000) / 1000.0;
+  
+  let fragmentBody = '';
+  let baseColor1 = 'vec3(0.3, 0.25, 0.15)';
+  let baseColor2 = 'vec3(0.5, 0.4, 0.25)';
+  
+  switch(planetType){
+    case 'gas_giant':
+      fragmentBody = `
+        // Gas giant: horizontal bands with turbulence
+        float lat = vPosition.y / radius;
+        float bands = sin(lat * 20.0 + fbm(vPosition * 0.003 + seed, 4) * 3.0) * 0.5 + 0.5;
+        float turb = fbm(vPosition * 0.005 + vec3(seed * 10.0), 5) * 0.3;
+        float storm = smoothstep(0.7, 1.0, fbm(vPosition * 0.01 + vec3(seed * 5.0, 0.0, 0.0), 6));
+        vec3 col1 = vec3(0.8, 0.55, 0.25); // warm band
+        vec3 col2 = vec3(0.6, 0.4, 0.2);   // dark band
+        vec3 col3 = vec3(0.9, 0.6, 0.3);   // storm
+        vec3 color = mix(col1, col2, bands) + turb * 0.2 + storm * col3 * 0.4;
+      `;
+      break;
+    case 'ice_giant':
+      fragmentBody = `
+        float lat = vPosition.y / radius;
+        float bands = sin(lat * 12.0 + fbm(vPosition * 0.004 + seed, 3) * 2.0) * 0.5 + 0.5;
+        float turb = fbm(vPosition * 0.006 + vec3(seed * 7.0), 4) * 0.2;
+        vec3 col1 = vec3(0.3, 0.5, 0.7);
+        vec3 col2 = vec3(0.2, 0.4, 0.6);
+        vec3 color = mix(col1, col2, bands) + turb;
+      `;
+      break;
+    case 'terrestrial':
+    case 'ocean':
+      fragmentBody = `
+        float n = fbm(vPosition * 0.008 + seed, 6);
+        float ocean = smoothstep(-0.05, 0.05, n);
+        vec3 waterCol = vec3(0.05, 0.15, 0.4);
+        vec3 landCol = vec3(0.15, 0.35, 0.1) + fbm(vPosition * 0.02 + seed, 3) * vec3(0.1, 0.05, 0.0);
+        vec3 snowCol = vec3(0.85, 0.9, 0.95);
+        float lat = abs(vPosition.y / radius);
+        float snow = smoothstep(0.7, 0.85, lat);
+        vec3 color = mix(waterCol, landCol, ocean);
+        color = mix(color, snowCol, snow * ocean);
+        // Clouds
+        float clouds = smoothstep(0.2, 0.6, fbm(vPosition * 0.012 + seed * 3.0, 4));
+        color = mix(color, vec3(0.9, 0.92, 0.95), clouds * 0.4);
+      `;
+      break;
+    case 'desert':
+      fragmentBody = `
+        float n = fbm(vPosition * 0.006 + seed, 5);
+        float dunes = sin(vPosition.x * 0.02 + n * 5.0) * 0.5 + 0.5;
+        vec3 col1 = vec3(0.7, 0.5, 0.3);
+        vec3 col2 = vec3(0.5, 0.35, 0.2);
+        vec3 darkRegion = vec3(0.3, 0.2, 0.1);
+        float dark = smoothstep(0.3, 0.7, fbm(vPosition * 0.004 + seed * 2.0, 4));
+        vec3 color = mix(col1, col2, dunes);
+        color = mix(color, darkRegion, dark * 0.5);
+        float lat = abs(vPosition.y / radius);
+        color = mix(color, vec3(0.8, 0.82, 0.85), smoothstep(0.85, 0.95, lat) * 0.3);
+      `;
+      break;
+    case 'volcanic':
+      fragmentBody = `
+        float n = fbm(vPosition * 0.007 + seed, 5);
+        float lava = smoothstep(0.5, 0.7, fbm(vPosition * 0.015 + seed * 4.0, 4));
+        vec3 rockCol = vec3(0.2, 0.12, 0.08);
+        vec3 lavaCol = vec3(1.0, 0.4, 0.0);
+        vec3 sulfurCol = vec3(0.7, 0.6, 0.1);
+        float sulfur = smoothstep(0.3, 0.6, fbm(vPosition * 0.01 + seed * 2.0, 3));
+        vec3 color = mix(rockCol, sulfurCol, sulfur * 0.4);
+        color = mix(color, lavaCol, lava * 0.8);
+      `;
+      break;
+    case 'ice':
+      fragmentBody = `
+        float n = fbm(vPosition * 0.005 + seed, 5);
+        float cracks = abs(fbm(vPosition * 0.02 + seed, 3));
+        cracks = smoothstep(0.0, 0.15, cracks);
+        vec3 iceCol = vec3(0.7, 0.8, 0.9);
+        vec3 crackCol = vec3(0.2, 0.3, 0.5);
+        vec3 smoothIce = vec3(0.8, 0.88, 0.95);
+        float smooth2 = smoothstep(0.3, 0.6, fbm(vPosition * 0.008 + seed * 3.0, 3));
+        vec3 color = mix(crackCol, iceCol, cracks);
+        color = mix(color, smoothIce, smooth2 * 0.3);
+      `;
+      break;
+    case 'rocky':
+      fragmentBody = `
+        float n = fbm(vPosition * 0.008 + seed, 6);
+        float craters = 1.0 - smoothstep(0.0, 0.1, abs(fbm(vPosition * 0.03 + seed, 4) - 0.3));
+        vec3 baseCol = vec3(0.4, 0.35, 0.3);
+        vec3 highCol = vec3(0.5, 0.45, 0.4);
+        vec3 craterCol = vec3(0.25, 0.22, 0.18);
+        float height = fbm(vPosition * 0.005 + seed, 5) * 0.5 + 0.5;
+        vec3 color = mix(baseCol, highCol, height);
+        color = mix(color, craterCol, craters * 0.6);
+      `;
+      break;
+    default: // super_earth or unknown
+      fragmentBody = `
+        float n = fbm(vPosition * 0.006 + seed, 5);
+        float bands = sin(vPosition.y / radius * 8.0 + n * 2.0) * 0.5 + 0.5;
+        vec3 col1 = vec3(0.3, 0.4, 0.3);
+        vec3 col2 = vec3(0.2, 0.3, 0.25);
+        vec3 color = mix(col1, col2, bands);
+        float clouds = smoothstep(0.2, 0.5, fbm(vPosition * 0.01 + seed * 2.0, 4));
+        color = mix(color, vec3(0.8), clouds * 0.25);
+      `;
+      break;
+  }
+  
+  const fragmentShader = `
+    ${PLANET_NOISE_GLSL}
+    varying vec3 vNormal;
+    varying vec3 vPosition;
+    varying vec2 vUv;
+    uniform float seed;
+    uniform float radius;
+    uniform vec3 lightDir;
+    void main(){
+      ${fragmentBody}
+      // Lighting
+      float diffuse = max(0.0, dot(vNormal, lightDir)) * 0.7 + 0.3;
+      // Rim/atmosphere glow
+      float rim = 1.0 - max(0.0, dot(vNormal, vec3(0.0, 0.0, 1.0)));
+      rim = pow(rim, 3.0) * 0.3;
+      vec3 final = color * diffuse + vec3(0.4, 0.6, 0.8) * rim;
+      gl_FragColor = vec4(final, 1.0);
+    }
+  `;
+  
+  return new THREE.ShaderMaterial({
+    vertexShader: PLANET_VERTEX,
+    fragmentShader: fragmentShader,
+    uniforms: {
+      seed: {value: seedF * 100.0},
+      radius: {value: 1.0}, // will be set per-planet
+      lightDir: {value: sunDirection.clone().normalize()}
+    }
+  });
+}
+
+function generatePlanetTexture(id, baseColor, isPlanet, planetType){
+  // Legacy fallback - returns a canvas texture for cases where shader isn't used
+  const size = isPlanet ? 256 : 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const r = (baseColor >> 16) & 0xFF, g = (baseColor >> 8) & 0xFF, b = baseColor & 0xFF;
+  ctx.fillStyle = `rgb(${r},${g},${b})`;
+  ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  return tex;
+}
+
+function loadPlanetsAndMoons(){
+  // Planets/moons now handled by SSG system (updateSSGPlanets), not lsgGroup
+}
+
+function hash(str){
+  let h = 0;
+  for(let i = 0; i < str.length; i++){
+    h = ((h << 5) - h) + str.charCodeAt(i);
+    h |= 0;
+  }
+  return h;
+}
+
+// ── SSG Planet Rendering (planets positioned by SS coords, separate from LSG) ──
+let ssgPlanetMeshes = {}; // id -> THREE.Mesh
+let ssgPlanetGroup = null;
+function initSSGPlanets(){
+  if(ssgPlanetGroup){ scene.remove(ssgPlanetGroup); }
+  ssgPlanetGroup = new THREE.Group();
+  scene.add(ssgPlanetGroup);
+  ssgPlanetMeshes = {};
+}
+
+function buildSSGPlanetMeshes(){
+  // Create meshes for all planets/moons in localState
+  if(!localState || !localState.objects) return;
+  const bodies = localState.objects.filter(o => (o.type === 'planet' || o.type === 'moon'));
+  console.log('[SSG] Building planet meshes:', bodies.length, 'bodies');
+  for(const obj of bodies){
+    if(ssgPlanetMeshes[obj.id]) continue;
+    const isPlanet = obj.type === 'planet';
+    // Create sphere with unit radius 1, scaled at render time
+    const geo = new THREE.SphereGeometry(1, isPlanet ? 48 : 24, isPlanet ? 36 : 18);
+    const tex = genPlanetTex(THREE, obj.id, obj.planet_type || '', isPlanet);
+    const mat = new THREE.MeshPhongMaterial({map: tex, shininess: isPlanet ? 15 : 5});
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.visible = false;
+    ssgPlanetGroup.add(mesh);
+    ssgPlanetMeshes[obj.id] = mesh; // just the mesh, data comes from localState
+  }
+}
+
+function updateSSGPlanets(){
+  if(!localState || !localState.objects) return;
+  // Build meshes if needed (init ssgPlanetGroup if null)
+  const planetCount = localState.objects.filter(o => o.type === 'planet' || o.type === 'moon').length;
+  if(!ssgPlanetGroup || Object.keys(ssgPlanetMeshes).length === 0 || window._ssgLastPlanetCount !== planetCount){
+    window._ssgLastPlanetCount = planetCount;
+    clearSSGPlanets(); initSSGPlanets(); buildSSGPlanetMeshes();
+  }
+  
+  // Player SS position
+  let playerSSx, playerSSy = 0, playerSSz;
+  if(window._playerSS){
+    playerSSx = window._playerSS.x;
+    playerSSy = window._playerSS.y || 0;
+    playerSSz = window._playerSS.z;
+  } else {
+    const anchorSS = localState.objects.find(o => o.is_anchor);
+    playerSSx = anchorSS ? anchorSS.ss_x : 0;
+    playerSSy = anchorSS ? (anchorSS.ss_y || 0) : 0;
+    playerSSz = anchorSS ? anchorSS.ss_z : 0;
+  }
+  
+  for(const [id, mesh] of Object.entries(ssgPlanetMeshes)){
+    const obj = localState.objects.find(o => o.id === id);
+    if(!obj){ mesh.visible = false; continue; }
+    // Skip anchor planet (is_anchor && warpState === 'none')
+    // Planet always renders based on distance (even if anchor - we're at orbit offset, not center)
+    
+    const radiusKm = obj.radius_km || 5000;
+    const dxAU = obj.ss_x - playerSSx;
+    const dyAU = (obj.ss_y || 0) - playerSSy;
+    const dzAU = obj.ss_z - playerSSz;
+    const distAU = Math.sqrt(dxAU*dxAU + dyAU*dyAU + dzAU*dzAU);
+    const distKm = distAU * AU_KM;
+    
+    // visibleDistKm = radius_km * 100
+    const visibleDistKm = radiusKm * 100;
+    
+    if(distKm > visibleDistKm){
+      mesh.visible = false;
+    } else {
+      mesh.visible = true;
+      const dirX = (distAU > 0.00001) ? dxAU / distAU : 0;
+      const dirY = (distAU > 0.00001) ? dyAU / distAU : 0;
+      const dirZ = (distAU > 0.00001) ? dzAU / distAU : 1;
+      // renderDist = distKm / SCALE_FACTOR
+      const renderDist = distKm / WARP_SCALE_FACTOR;
+      mesh.position.set(dirX * renderDist, dirY * renderDist, dirZ * renderDist);
+      // scale = radius_km / SCALE_FACTOR
+      mesh.scale.setScalar(radiusKm / WARP_SCALE_FACTOR);
+    }
+  }
+}
+
+function clearSSGPlanets(){
+  if(ssgPlanetGroup){
+    ssgPlanetGroup.clear();
+  }
+  ssgPlanetMeshes = {};
+}
+
+// ── Directional Labels for Distant Solar Bodies ──
+let dirLabelContainer = null;
+let dirLabels = []; // {el, objId, name, type}
+
+function initDirectionalLabels(){
+  dirLabelContainer = document.createElement('div');
+  dirLabelContainer.style.cssText = 'position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:10';
+  container.appendChild(dirLabelContainer);
+}
+initDirectionalLabels();
+
+function clearDirectionalLabels(){
+  if(dirLabelContainer) dirLabelContainer.innerHTML = '';
+  dirLabels = [];
+}
+
+const DIR_LABEL_COLORS = {station:'#4fc3f7', gate:'#d080f0', planet:'#a0c0d8', moon:'#8aaaba', asteroid_field:'#ffd54f', star:'#ffab40'};
+const DIR_LABEL_ICONS = {station:'◼', gate:'◇', planet:'●', moon:'○', asteroid_field:'✦', star:'★'};
+
+function updateDirectionalLabels(){
+  if(isDocked || !localState || !localState.objects) {
+    if(dirLabelContainer) dirLabelContainer.style.display = 'none';
+    return;
+  }
+  dirLabelContainer.style.display = '';
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  const margin = 30;
+
+  // Ensure we have label elements for each object
+  const objs = localState.objects.filter(o => o.type !== 'star');
+  while(dirLabels.length < objs.length){
+    const el = document.createElement('div');
+    el.style.cssText = 'position:absolute;font-family:JetBrains Mono,monospace;font-size:10px;white-space:nowrap;transition:opacity 0.3s;pointer-events:auto;cursor:default';
+    el.addEventListener('contextmenu', function(ev){
+      ev.preventDefault(); ev.stopPropagation();
+      const d = this._labelData;
+      if(d) window.showCtx(ev, d.id, d.name, d.type);
+    });
+    dirLabelContainer.appendChild(el);
+    dirLabels.push({el, objId:'', name:'', type:''});
+  }
+  // Hide excess labels
+  for(let i = objs.length; i < dirLabels.length; i++){
+    dirLabels[i].el.style.display = 'none';
+  }
+
+  // Get camera forward vector for behind-camera detection
+  const camForward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+  // Reference position for distance calc (interpolated during warp)
+  let labelRefPos = camera.position;
+  if(warpState === 'warping' && warpTargetPos){
+    const progress = Math.min(1.0, warpTravelTimer / warpTravelDuration);
+    labelRefPos = new THREE.Vector3(
+      playerPos.x + (warpTargetPos.x - playerPos.x) * progress,
+      playerPos.y + (warpTargetPos.y - playerPos.y) * progress,
+      playerPos.z + (warpTargetPos.z - playerPos.z) * progress
+    );
+  }
+
+  for(let i = 0; i < objs.length; i++){
+    const obj = objs[i];
+    const label = dirLabels[i];
+    label.el.style.display = '';
+    const color = DIR_LABEL_COLORS[obj.type] || '#8aa0b8';
+    const icon = DIR_LABEL_ICONS[obj.type] || '\u2022';
+
+    // Direction from current SS position to this object's SS position
+    // Use _playerSS (analytical position - single source of truth)
+    let curSSx = 0, curSSy = 0, curSSz = 0;
+    if(window._playerSS){
+      curSSx = window._playerSS.x;
+      curSSy = window._playerSS.y || 0;
+      curSSz = window._playerSS.z;
+    } else {
+      const anchorSS = localState.objects.find(o => o.is_anchor);
+      curSSx = anchorSS ? anchorSS.ss_x : 0;
+      curSSy = anchorSS ? (anchorSS.ss_y || 0) : 0;
+      curSSz = anchorSS ? anchorSS.ss_z : 0;
+    }
+    const ssDirX = obj.ss_x - curSSx, ssDirY = (obj.ss_y || 0) - curSSy, ssDirZ = obj.ss_z - curSSz;
+    const ssDirLen = Math.sqrt(ssDirX*ssDirX + ssDirY*ssDirY + ssDirZ*ssDirZ);
+    
+    // For anchor object (when NOT warping), use its actual model position + group offset. Otherwise project from SS direction.
+    let labelX, labelY, labelZ;
+    const useLocal = obj.is_anchor && warpState !== 'warping' && warpState !== 'aligning' && obj.type !== 'planet' && obj.type !== 'moon';
+    if(useLocal){
+      // Find the actual model position from the dicts (more reliable than localState.objects)
+      const gOff = lsgGroup ? lsgGroup.position : new THREE.Vector3(0,0,0);
+      let modelPos = null;
+      if(obj.station_id && stationModels[obj.station_id]) modelPos = stationModels[obj.station_id].position;
+      else if(gateModels[obj.id]) modelPos = gateModels[obj.id].position;
+      else if(planetModels[obj.id]) modelPos = planetModels[obj.id].position;
+      if(modelPos){
+        labelX = modelPos.x + gOff.x; labelY = modelPos.y + gOff.y; labelZ = modelPos.z + gOff.z;
+      } else {
+        labelX = obj.x + gOff.x; labelY = obj.y + gOff.y; labelZ = obj.z + gOff.z;
+      }
+    } else if(ssDirLen > 0){
+      // Place label at planet mesh position if visible, otherwise at far direction
+      const ssgMesh = ssgPlanetMeshes[obj.id];
+      if(ssgMesh && ssgMesh.visible){
+        labelX = ssgMesh.position.x;
+        labelY = ssgMesh.position.y;
+        labelZ = ssgMesh.position.z;
+      } else {
+        labelX = (ssDirX / ssDirLen) * 100000;
+        labelY = (ssDirY / ssDirLen) * 100000;
+        labelZ = (ssDirZ / ssDirLen) * 100000;
+      }
+    } else {
+      label.el.style.display = 'none'; continue;
+    }
+    const toObj = new THREE.Vector3(labelX - camera.position.x, labelY - camera.position.y, labelZ - camera.position.z);
+    // Distance: for local anchors, measure from player position to anchor world position
+    const dist = useLocal ? new THREE.Vector3(labelX - playerPos.x, labelY - playerPos.y, labelZ - playerPos.z).length() : ssDirLen;
+    toObj.normalize();
+
+    // Dot product: positive = in front of camera, negative = behind
+    const dotForward = toObj.dot(camForward);
+
+    // Project to screen
+    const projPoint = new THREE.Vector3(labelX, labelY, labelZ).project(camera);
+
+    let sx = (projPoint.x * 0.5 + 0.5) * w;
+    let sy = (-projPoint.y * 0.5 + 0.5) * h;
+
+    const behind = dotForward < 0;
+
+    if(behind){
+      // Object is behind camera. Compute screen-space direction from center
+      // and project to edge. When directly behind, use camera-relative direction.
+      // Project the direction vector onto the camera's right/up plane
+      const camRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+      const camUp = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+      const screenX = toObj.dot(camRight);
+      const screenY = toObj.dot(camUp);
+      // Normalize to get direction on screen (if both ~0, default to bottom)
+      const mag = Math.sqrt(screenX*screenX + screenY*screenY);
+      let dirX, dirY;
+      if(mag < 0.001){
+        // Directly behind center: push to bottom of screen
+        dirX = 0;
+        dirY = 1;
+      } else {
+        dirX = screenX / mag;
+        dirY = -screenY / mag; // flip Y for screen coords
+      }
+      // Place at edge of viewport along this direction
+      // Find intersection with viewport rectangle from center
+      const cx = w / 2, cy = h / 2;
+      const halfW = cx - margin - 30, halfH = cy - margin - 7;
+      let t = Infinity;
+      if(Math.abs(dirX) > 0.001) t = Math.min(t, halfW / Math.abs(dirX));
+      if(Math.abs(dirY) > 0.001) t = Math.min(t, halfH / Math.abs(dirY));
+      sx = cx + dirX * t;
+      sy = cy + dirY * t;
+    }
+
+    // Determine if truly on-screen (in frustum and within margins)
+    const onScreen = !behind && sx >= margin && sx <= w - margin && sy >= margin && sy <= h - margin;
+
+    if(!onScreen){
+      // Clamp to viewport edges with room for text
+      sx = Math.max(margin, Math.min(w - margin - 120, sx));
+      sy = Math.max(margin, Math.min(h - margin - 14, sy));
+    }
+
+    // Arrow indicator when off-screen
+    let arrow = '';
+    if(!onScreen){
+      if(sx <= margin + 1) arrow = '\u25C0 ';
+      else if(sx >= w - margin - 121) arrow = ' \u25B6';
+      else if(sy <= margin + 1) arrow = '\u25B2 ';
+      else arrow = '\u25BC ';
+    }
+
+    // Full name + distance
+    const displayName = obj.name;
+    // Format distance
+    let distLabel;
+    if(useLocal){
+      // Local distance in meters (dist is in cm-scale units)
+      const distM = dist * 100;
+      distLabel = distM < 1000 ? Math.round(distM) + 'm' : (distM/1000).toFixed(1) + 'km';
+    } else {
+      // dist is AU - format adaptively
+      const dKm = dist * 150000000;
+      if(dist > 0.1) distLabel = dist.toFixed(2) + ' AU';
+      else if(dKm > 1000000) distLabel = (dKm/1000000).toFixed(1) + 'M km';
+      else if(dKm > 1000) distLabel = Math.round(dKm/1000) + 'k km';
+      else distLabel = Math.round(dKm) + ' km';
+    }
+
+    label.el.style.left = sx + 'px';
+    label.el.style.top = sy + 'px';
+    label.el.style.color = color;
+    label.el.style.opacity = onScreen ? '0.85' : '1.0';
+    label.el.style.textShadow = '0 0 4px rgba(0,0,0,0.9)';
+    label.el.innerHTML = `${arrow}${icon} ${displayName} <span style="opacity:0.9">${distLabel}</span>`;
+    label.el._labelData = {id: obj.id, name: obj.name, type: obj.type};
+  }
+
+  // ── LABEL CLUSTERING: detect overlaps and group ──
+  const CLUSTER_DIST = 25; // px threshold for overlap detection
+  const labelPositions = [];
+  for(let i = 0; i < objs.length; i++){
+    const el = dirLabels[i].el;
+    if(el.style.display === 'none') continue;
+    labelPositions.push({idx: i, x: parseFloat(el.style.left), y: parseFloat(el.style.top), el});
+  }
+  // Find clusters using simple distance grouping
+  const clustered = new Set();
+  const clusters = [];
+  for(let i = 0; i < labelPositions.length; i++){
+    if(clustered.has(i)) continue;
+    const cluster = [labelPositions[i]];
+    clustered.add(i);
+    for(let j = i+1; j < labelPositions.length; j++){
+      if(clustered.has(j)) continue;
+      const dx = labelPositions[i].x - labelPositions[j].x;
+      const dy = labelPositions[i].y - labelPositions[j].y;
+      if(Math.sqrt(dx*dx+dy*dy) < CLUSTER_DIST){
+        cluster.push(labelPositions[j]);
+        clustered.add(j);
+      }
+    }
+    if(cluster.length > 1) clusters.push(cluster);
+  }
+  // For each cluster: hide individual labels, show a cluster indicator
+  // Only remove clusters that aren't being hovered
+  dirLabelContainer.querySelectorAll('.label-cluster').forEach(el => {
+    if(!el._hovered && !el._warpExpanded) el.remove();
+  });
+  for(const cluster of clusters){
+    // Hide individual labels in this cluster (but never hide anchor)
+    cluster.forEach(lp => { 
+      const obj = objs[lp.idx];
+      if(obj && obj.is_anchor) return; // never hide anchor label
+      lp.el.style.display = 'none'; 
+    });
+    // Skip creating new cluster element if one is currently hovered at similar position
+    const avgX = cluster.reduce((s,lp)=>s+lp.x, 0) / cluster.length;
+    const avgY = cluster.reduce((s,lp)=>s+lp.y, 0) / cluster.length;
+    const existing = dirLabelContainer.querySelector('.label-cluster._hovered');
+    if(existing){
+      const ex = parseFloat(existing.style.left), ey = parseFloat(existing.style.top);
+      if(Math.abs(ex-avgX)<40 && Math.abs(ey-avgY)<40) continue; // skip, existing hovered one covers this
+    }
+    const clusterEl = document.createElement('div');
+    clusterEl.className = 'label-cluster';
+    clusterEl.style.cssText = `position:absolute;left:${avgX}px;top:${avgY}px;font-family:JetBrains Mono,monospace;font-size:10px;color:#4fc3f7;white-space:nowrap;text-shadow:0 0 4px rgba(0,0,0,0.9);z-index:20;pointer-events:auto;cursor:default;user-select:none`;
+    clusterEl.textContent = `▪ ${cluster.length} objects`;
+    // Build expanded list content
+    const listItems = cluster.map(lp => {
+      const obj = objs[lp.idx];
+      const col = DIR_LABEL_COLORS[obj.type] || '#8aa0b8';
+      const ic = DIR_LABEL_ICONS[obj.type] || '\u2022';
+      return `<div class="cluster-item" data-id="${obj.id}" data-name="${obj.name}" data-type="${obj.type}" style="padding:2px 0;color:${col};cursor:default">${ic} ${obj.name}</div>`;
+    }).join('');
+    // Hover: show expanded vertical list
+    const expandEl = document.createElement('div');
+    expandEl.style.cssText = 'display:none;position:absolute;left:0;top:14px;background:rgba(10,14,24,0.95);border:1px solid #1a2844;border-radius:3px;padding:4px 8px;white-space:nowrap;z-index:25;pointer-events:auto;cursor:default;user-select:none';
+    expandEl.innerHTML = listItems;
+    expandEl.addEventListener('contextmenu', ev=>{
+      const item = ev.target.closest('.cluster-item');
+      if(item){ ev.preventDefault(); ev.stopPropagation(); window.showCtx(ev, item.dataset.id, item.dataset.name, item.dataset.type); }
+    });
+    clusterEl.appendChild(expandEl);
+    clusterEl.addEventListener('mouseenter', ()=>{ expandEl.style.display = ''; clusterEl._hovered = true; clusterEl.classList.add('_hovered'); });
+    clusterEl.addEventListener('mouseleave', ()=>{ expandEl.style.display = 'none'; clusterEl._hovered = false; clusterEl.classList.remove('_hovered'); });
+    // Auto-expand if cluster contains warp target
+    if(warpState === 'warping' && warpTargetId){
+      const containsTarget = cluster.some(lp => objs[lp.idx].id === warpTargetId);
+      if(containsTarget){
+        // Just show individual labels stacked vertically instead of clustered
+        cluster.forEach((lp, ci) => {
+          lp.el.style.display = '';
+          lp.el.style.top = (lp.y + ci * 16) + 'px'; // stack with 16px spacing
+          // Add distance to label text
+          const obj = objs[lp.idx];
+          const dx = obj.ss_x - (window._playerSS?window._playerSS.x:0);
+          const dy = (obj.ss_y||0) - (window._playerSS?window._playerSS.y||0:0);
+          const dz = obj.ss_z - (window._playerSS?window._playerSS.z:0);
+          const distKm = Math.sqrt(dx*dx+dy*dy+dz*dz) * 150000000;
+          let ds;
+          if(distKm>15000000) ds=(distKm/150000000).toFixed(2)+' AU';
+          else if(distKm>1000000) ds=(distKm/1000000).toFixed(1)+'M km';
+          else if(distKm>1000) ds=Math.round(distKm/1000)+'k km';
+          else ds=Math.round(distKm)+' km';
+          const marker = obj.id===warpTargetId?'► ':'  ';
+          lp.el.textContent = marker + obj.name + '  ' + ds;
+        });
+        clusterEl.remove();
+        continue; // skip adding cluster element
+      }
+    }
+    dirLabelContainer.appendChild(clusterEl);
+  }
+}
+
+// ── Panel Resize (left-edge drag handle) ──
+(function(){
+  const layout = document.getElementById('layout');
+  const handle = document.getElementById('panelHandle');
+  let panelW = 260;
+  let dragging = false, startX, startW;
+
+  function updateGrid(){
+    const mode = isDocked ? 'docked' : 'flight';
+    layout.style.gridTemplateColumns = `1fr 4px ${panelW}px`;
+    window.dispatchEvent(new Event('resize'));
+  }
+
+  handle.addEventListener('mousedown', (e)=>{
+    dragging = true;
+    startX = e.clientX;
+    startW = panelW;
+    document.body.style.cursor = 'ew-resize';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e)=>{
+    if(!dragging) return;
+    panelW = Math.max(180, Math.min(500, startW - (e.clientX - startX)));
+    updateGrid();
+  });
+  document.addEventListener('mouseup', ()=>{
+    if(dragging){ dragging = false; document.body.style.cursor = ''; }
+  });
+})();
+
+// ── Resize Handler ──
+window.addEventListener('resize',()=>{
+  resizeRenderer();
+});
+function resizeRenderer(){
+  const w = container.clientWidth, h = container.clientHeight;
+  if(w > 0 && h > 0 && (renderer.domElement.width !== w * (window.devicePixelRatio||1) || renderer.domElement.height !== h * (window.devicePixelRatio||1))){
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+  }
+}
+
+// ── Init ──
+loadShipModel().then(()=>{
+  connectStream();
+});
+requestAnimationFrame(animate);
+
+</script></body></html>

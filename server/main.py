@@ -241,6 +241,10 @@ def chain_page():
 def ship_page():
     return send_from_directory(BASE_DIR, "ship.html")
 
+@app.route("/warp_work")
+def warp_work_page():
+    return send_from_directory(BASE_DIR, "warp_game_work.html")
+
 
 @app.route("/inventory")
 def inventory_page():

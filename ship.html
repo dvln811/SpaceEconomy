@@ -482,6 +482,11 @@ function connectStream(){
     const firstState = !localState;
     localState = state;
     lastTickTime = performance.now();
+    // Keep _playerSS in sync with current anchor
+    const currentAnchor = state.objects.find(o => o.is_anchor);
+    if(currentAnchor && warpState === 'none'){
+      window._playerSS = {x: currentAnchor.ss_x, y: currentAnchor.ss_y || 0, z: currentAnchor.ss_z};
+    }
     // On first state received, load 3D objects (they need localState to work)
     if(firstState && !isDocked){
       // Create LSG group for initial load
@@ -491,6 +496,9 @@ function connectStream(){
       loadAsteroidFields();
       loadPlanetsAndMoons();
       initSun();
+      // Initialize player SS position from anchor
+      const anchor = state.objects.find(o => o.is_anchor);
+      if(anchor) window._playerSS = {x: anchor.ss_x, y: anchor.ss_y || 0, z: anchor.ss_z};
     }
     // Update interpolation targets
     for(const ship of state.ships){
@@ -828,8 +836,7 @@ function animate(now){
         playerSpeed = 0;
         warpTravelTimer = 0;
         warpBuildReady = false;
-        // Unfreeze SSG planets for new warp
-        for(const pd of Object.values(ssgPlanetMeshes)) pd._frozen = false;
+        // (no freeze logic needed - SSG renders from live data)
         warpLock = false;
         window._approachStarted = false;
         window._departDespawned = false;
@@ -844,6 +851,16 @@ function animate(now){
       const cruiseEnd = WARP_DEPART_TIME + warpCruiseTime;
       let arriveStart = cruiseEnd;
       const arriveEnd = cruiseEnd + WARP_ARRIVE_TIME;
+      
+      // Update player SS position during warp (for SSG planet rendering)
+      if(window._warpFromSS && window._warpToSS){
+        const progress = Math.min(1.0, elapsed / arriveEnd);
+        window._playerSS = {
+          x: window._warpFromSS.x + (window._warpToSS.x - window._warpFromSS.x) * progress,
+          y: (window._warpFromSS.y||0) + ((window._warpToSS.y||0) - (window._warpFromSS.y||0)) * progress,
+          z: window._warpFromSS.z + (window._warpToSS.z - window._warpFromSS.z) * progress
+        };
+      }
 
       // Pause arrival if destination isn't built yet
       if(elapsed >= arriveStart && !warpBuildReady){
@@ -996,6 +1013,11 @@ function animate(now){
         window._departDespawned = false;
         window._warpBuildResult = null;
         window._warpLsgData = null;
+        // Set player SS to destination
+        if(window._warpToSS) {
+          window._playerSS = {x: window._warpToSS.x, y: window._warpToSS.y || 0, z: window._warpToSS.z};
+          console.log('[SSG] Warp complete, playerSS set to:', window._playerSS);
+        }
 
         document.getElementById('warpTarget').textContent = '';
         if(warpStreaks) warpStreaks.visible = false;
@@ -2319,7 +2341,7 @@ function hash(str){
 }
 
 // ── SSG Planet Rendering (planets positioned by SS coords, separate from LSG) ──
-let ssgPlanetMeshes = {}; // id -> {mesh, ringMesh, ss_x, ss_z, radius_km, planet_type}
+let ssgPlanetMeshes = {}; // id -> THREE.Mesh
 let ssgPlanetGroup = null;
 const SSG_VISIBILITY_THRESHOLD = 0.0008; // radians (~0.05 degrees) - below this, planet is just a label
 const AU_TO_PU = 1500000000; // 1 AU = 1.5 billion PU (150M km * 10 PU/m / 1000 m/km... wait)
@@ -2338,115 +2360,78 @@ function buildSSGPlanetMeshes(){
   // Create meshes for all planets/moons in localState
   if(!localState || !localState.objects) return;
   const bodies = localState.objects.filter(o => (o.type === 'planet' || o.type === 'moon'));
+  console.log('[SSG] Building planet meshes:', bodies.length, 'bodies');
   for(const obj of bodies){
     if(ssgPlanetMeshes[obj.id]) continue;
     const isPlanet = obj.type === 'planet';
-    const radiusKm = obj.radius_km || (isPlanet ? 5000 : 1000);
-    const radiusPU = radiusKm * 10;
-    // Create sphere with unit radius 1, we'll scale it based on distance
+    // Create sphere with unit radius 1, scaled at render time
     const geo = new THREE.SphereGeometry(1, isPlanet ? 48 : 24, isPlanet ? 36 : 18);
     const tex = genPlanetTex(THREE, obj.id, obj.planet_type || '', isPlanet);
     const mat = new THREE.MeshPhongMaterial({map: tex, shininess: isPlanet ? 15 : 5});
     const mesh = new THREE.Mesh(geo, mat);
     mesh.visible = false;
     ssgPlanetGroup.add(mesh);
-    ssgPlanetMeshes[obj.id] = {
-      mesh, ss_x: obj.ss_x, ss_z: obj.ss_z,
-      radius_km: radiusKm, radius_pu: radiusPU,
-      planet_type: obj.planet_type || '', type: obj.type
-    };
+    ssgPlanetMeshes[obj.id] = mesh; // just the mesh, data comes from localState
   }
 }
 
 function updateSSGPlanets(){
-  if(!ssgPlanetGroup || !localState || !localState.objects) return;
+  if(!localState || !localState.objects) return;
   // Build meshes if needed
   const planetCount = localState.objects.filter(o => o.type === 'planet' || o.type === 'moon').length;
-  if(Object.keys(ssgPlanetMeshes).length === 0 || window._ssgLastPlanetCount !== planetCount){
+  if(!ssgPlanetGroup || Object.keys(ssgPlanetMeshes).length === 0 || window._ssgLastPlanetCount !== planetCount){
     window._ssgLastPlanetCount = planetCount;
     clearSSGPlanets(); initSSGPlanets(); buildSSGPlanetMeshes();
   }
   
-  const RENDER_DIST = 100000;
-  const MAX_SCALE = 150000; // large enough to fill view like orbit
+  const SSG_SCALE_FACTOR = 4; // 1 scene unit = 4 km
+  const AU_KM_SSG = 150000000;
   
-  // Get player SS position (linear during warp, cap at 0.97 to not overshoot)
-  let curSSx = 0, curSSz = 0;
-  if((warpState === 'warping' || warpState === 'aligning') && window._warpFromSS){
-    const progress = (warpState === 'warping') ? Math.min(0.99, warpTravelTimer / warpTravelDuration) : 0;
-    const eased = progress * progress * (3 - 2 * progress); // smoothstep: slow start + slow end
-    curSSx = window._warpFromSS.x + (window._warpToSS.x - window._warpFromSS.x) * eased;
-    curSSz = window._warpFromSS.z + (window._warpToSS.z - window._warpFromSS.z) * eased;
+  // Player SS position
+  let playerSSx, playerSSy = 0, playerSSz;
+  if(window._playerSS){
+    playerSSx = window._playerSS.x;
+    playerSSy = window._playerSS.y || 0;
+    playerSSz = window._playerSS.z;
   } else {
-    // Idle: keep using last warp position (don't snap)
-    if(window._warpFromSS && window._warpToSS){
-      const p = 0.99;
-      const eased = p * p * (3 - 2 * p);
-      curSSx = window._warpFromSS.x + (window._warpToSS.x - window._warpFromSS.x) * eased;
-      curSSz = window._warpFromSS.z + (window._warpToSS.z - window._warpFromSS.z) * eased;
-    } else {
-      const anchorSS = localState.objects.find(o => o.is_anchor);
-      curSSx = (anchorSS ? anchorSS.ss_x : 0) + 0.0001;
-      curSSz = (anchorSS ? anchorSS.ss_z : 0) + 0.0001;
-    }
+    const anchorSS = localState.objects.find(o => o.is_anchor);
+    playerSSx = anchorSS ? anchorSS.ss_x : 0;
+    playerSSy = anchorSS ? (anchorSS.ss_y || 0) : 0;
+    playerSSz = anchorSS ? anchorSS.ss_z : 0;
   }
   
-  for(const [id, pd] of Object.entries(ssgPlanetMeshes)){
-    // Check if this is the planet we are AT (anchor)
+  // Render all bodies: position and scale proportional to real distance
+  if(!window._ssgDebugDone && Object.keys(ssgPlanetMeshes).length > 0){
+    window._ssgDebugDone = true;
+    const obj0 = localState.objects.find(o => o.type === 'planet');
+    if(obj0) console.log('[SSG] First planet:', obj0.name, 'ss=', obj0.ss_x, obj0.ss_y, obj0.ss_z, 'playerSS=', playerSSx, playerSSy, playerSSz);
+  }
+  for(const [id, mesh] of Object.entries(ssgPlanetMeshes)){
     const obj = localState.objects.find(o => o.id === id);
-    const isAnchor = obj && obj.is_anchor;
+    if(!obj){ mesh.visible = false; continue; }
+    // Don't render the planet we're anchored at (distance=0, we're in orbit)
+    if(obj.is_anchor){ mesh.visible = false; continue; }
     
-      // If planet already reached full size, freeze it (don't update position/scale)
-      if(pd._frozen){
-        pd.mesh.visible = true;
-        // Unfreeze if we moved far away (new warp to different target)
-        const checkDxAU = pd.ss_x - curSSx;
-        const checkDzAU = pd.ss_z - curSSz;
-        const checkDist = Math.sqrt(checkDxAU*checkDxAU + checkDzAU*checkDzAU) * 150000000;
-        if(checkDist > 10000000) pd._frozen = false;
-        else continue;
-      }
-      // DYNAMIC: compute from SS distance
-      const dxAU = pd.ss_x - curSSx;
-      const dzAU = pd.ss_z - curSSz;
-      const distAU = Math.sqrt(dxAU*dxAU + dzAU*dzAU);
-      const distKm = distAU * 150000000;
-      
-      // Direction from player to planet
+    const radiusKm = obj.radius_km || 5000;
+    const dxAU = obj.ss_x - playerSSx;
+    const dyAU = (obj.ss_y || 0) - playerSSy;
+    const dzAU = obj.ss_z - playerSSz;
+    const distAU = Math.sqrt(dxAU*dxAU + dyAU*dyAU + dzAU*dzAU);
+    const distKm = distAU * AU_KM_SSG;
+    
+    const visibleDistKm = radiusKm * 100;
+    
+    if(distKm > visibleDistKm){
+      mesh.visible = false;
+    } else {
+      mesh.visible = true;
       const dirX = (distAU > 0.00001) ? dxAU / distAU : 0;
+      const dirY = (distAU > 0.00001) ? dyAU / distAU : 0;
       const dirZ = (distAU > 0.00001) ? dzAU / distAU : 1;
-      
-      // Log scale for size
-      let scale;
-      if(distKm < 1) scale = MAX_SCALE;
-      else {
-        const logDist = Math.log10(distKm);
-        const logMax = 9; // ~3AU
-        const logMin = 4; // ~10,000km
-        const t = 1 - Math.max(0, Math.min(1, (logDist - logMin) / (logMax - logMin)));
-        scale = 500 + (MAX_SCALE - 500) * t;
-        // Hide if too far to be visible (just show label instead)
-        if(distKm > 10000000){ // 10M km
-          pd.mesh.visible = false;
-          continue;
-        }
-      }
-      
-      // Position: shift to side as it gets larger
-      let posX = dirX * RENDER_DIST;
-      let posZ = dirZ * RENDER_DIST;
-      if(scale > 5000){
-        const perpX = -dirZ, perpZ = dirX;
-        const shiftT = (scale - 5000) / (MAX_SCALE - 5000);
-        posX += perpX * RENDER_DIST * 0.4 * shiftT;
-        posZ += perpZ * RENDER_DIST * 0.4 * shiftT;
-      }
-      
-      pd.mesh.position.set(posX, 0, posZ);
-      pd.mesh.scale.setScalar(scale);
-      // Freeze once at max - stop updating
-      if(scale >= MAX_SCALE * 0.9) pd._frozen = true;
-      pd.mesh.visible = true;
+      const renderDist = distKm / SSG_SCALE_FACTOR;
+      mesh.position.set(dirX * renderDist, dirY * renderDist, dirZ * renderDist);
+      mesh.scale.setScalar(radiusKm / SSG_SCALE_FACTOR);
+    }
   }
 }
 
