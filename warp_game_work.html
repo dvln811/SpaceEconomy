@@ -275,7 +275,7 @@ localState = {
     {id:'m5a', name:'Rigel V-a', type:'moon', x:0, y:0, z:0, ss_x:-14.266, ss_y:1.61, ss_z:7.247, is_anchor:false, radius_km:2195, planet_type:'rocky_moon', station_id:'', au_distance:0.001, connects_to:'', parent:'p5'},
     {id:'st1', name:'Nexus Trade Hub', type:'station', x:0, y:0, z:100, ss_x:3.5807, ss_y:0.1, ss_z:1.0084, is_anchor:true, radius_km:0, planet_type:'', station_id:'st_00028', au_distance:3.72, connects_to:'', parent:''},
     {id:'st2', name:'Stellar Fabrication', type:'station', x:0, y:0, z:0, ss_x:-1.018, ss_y:-0.2, ss_z:-5.2624, is_anchor:false, radius_km:0, planet_type:'', station_id:'st_00029', au_distance:5.36, connects_to:'', parent:''},
-    {id:'st_orb', name:'Orbital Station III', type:'station', x:0, y:0, z:0, ss_x:5.742, ss_y:0.31, ss_z:-2.34, is_anchor:false, radius_km:0, planet_type:'', station_id:'st_00030', au_distance:0.0001, connects_to:'', parent:'p3'},
+    {id:'st_orb', name:'Orbital Station III', type:'station', x:0, y:0, z:0, ss_x:5.741064, ss_y:0.31, ss_z:-2.341, is_anchor:false, radius_km:0, planet_type:'', station_id:'st_00030', au_distance:0.000064, connects_to:'', parent:'p3'},
     {id:'g1', name:'Gate to Struve', type:'gate', x:0, y:0, z:0, ss_x:4.5, ss_y:0.1, ss_z:2.5, is_anchor:false, radius_km:0, planet_type:'', station_id:'', au_distance:5.15, connects_to:'struve', parent:''},
     {id:'g2', name:'Gate to Regulus', type:'gate', x:0, y:0, z:0, ss_x:-23.888, ss_y:0.1, ss_z:17.0175, is_anchor:false, radius_km:0, planet_type:'', station_id:'', au_distance:29.33, connects_to:'regulus', parent:''},
     {id:'belt1', name:'Rigel Belt Alpha', type:'belt', x:0, y:0, z:0, ss_x:3.2, ss_y:0.05, ss_z:-3.8, is_anchor:false, radius_km:0, planet_type:'', station_id:'', au_distance:4.97, connects_to:'', parent:''},
@@ -1113,7 +1113,6 @@ function animate(now){
       const remainingKm = remainingAU * 150000000;
       if(!window._approachStarted && window._departDone && remainingKm <= 50000){
         window._approachStarted = true;
-        window._ssgFrozen = true;
         window._approachStart = t;
         if(!lsgGroup){ lsgGroup = new THREE.Group(); scene.add(lsgGroup); }
         // Spawn ALL objects at correct scale
@@ -1513,7 +1512,7 @@ window.warpTo = function(objId){
   if(len < 0.00001) return;
   warpHeading.set(dx/len, dy/len, dz/len).normalize();
   
-  // Total distance, shortened by orbit offset for planets/moons
+  // Total distance, shortened by orbit offset for planets/moons/orbital stations
   let totalDist = len;
   if(obj.type === 'planet' || obj.type === 'moon'){
     // Orbit offset scales with body size: small bodies need more margin
@@ -1524,6 +1523,18 @@ window.warpTo = function(objId){
     else orbitMult = 1.2;                           // gas giants
     const orbitOffsetAU = ((obj.radius_km || 5000) * orbitMult) / AU_KM;
     totalDist = Math.max(0, len - orbitOffsetAU);
+  } else if(obj.parent && localState){
+    // Orbital station/gate: use parent planet's radius for offset
+    const parentObj = localState.objects.find(o => o.id === obj.parent);
+    if(parentObj && parentObj.radius_km){
+      let orbitMult;
+      if(parentObj.radius_km < 1000) orbitMult = 3;
+      else if(parentObj.radius_km < 5000) orbitMult = 2;
+      else if(parentObj.radius_km < 20000) orbitMult = 1.5;
+      else orbitMult = 1.2;
+      const orbitOffsetAU = (parentObj.radius_km * orbitMult) / AU_KM;
+      totalDist = Math.max(0, len - orbitOffsetAU);
+    }
   }
   
   // _warpToSS = the point we stop at (from + heading * totalDist)
