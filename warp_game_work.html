@@ -1028,26 +1028,38 @@ function animate(now){
       
       // Analytical distance: integral of speed curve from 0 to t
       let dist = 0;
-      if(t <= wp.accelTime){
-        const at = t / wp.accelTime;
-        dist = wp.peakSpeed * Math.pow(t, 5) / (5 * Math.pow(wp.accelTime, 4));
-      } else if(t <= wp.accelTime + wp.cruiseTime){
+      const clampedT = Math.min(t, wp.totalTime); // don't exceed total time
+      if(clampedT <= wp.accelTime){
+        const at = clampedT / wp.accelTime;
+        dist = wp.peakSpeed * Math.pow(clampedT, 5) / (5 * Math.pow(wp.accelTime, 4));
+      } else if(clampedT <= wp.accelTime + wp.cruiseTime){
         const accelFullDist = wp.peakSpeed * wp.accelTime / 5;
-        const cruiseElapsed = t - wp.accelTime;
+        const cruiseElapsed = clampedT - wp.accelTime;
         dist = accelFullDist + wp.peakSpeed * cruiseElapsed;
       } else {
         const accelFullDist = wp.peakSpeed * wp.accelTime / 5;
         const cruiseFullDist = wp.peakSpeed * wp.cruiseTime;
-        const decelElapsed = Math.min(t - wp.accelTime - wp.cruiseTime, wp.decelTime);
+        const decelElapsed = Math.min(clampedT - wp.accelTime - wp.cruiseTime, wp.decelTime);
         const dt_norm = decelElapsed / wp.decelTime;
         const decelDist = wp.peakSpeed * wp.decelTime * (1 - Math.pow(1 - dt_norm, 5)) / 5;
         dist = accelFullDist + cruiseFullDist + decelDist;
       }
-      
-      // Update player SS position analytically
-      window._playerSS.x = window._warpFromSS.x + warpHeading.x * dist;
-      window._playerSS.y = (window._warpFromSS.y || 0) + warpHeading.y * dist;
-      window._playerSS.z = window._warpFromSS.z + warpHeading.z * dist;
+      // Position: dead reckoning far, course correction close
+      const clampedDist = Math.min(dist, window._warpTotalDist);
+      const remaining = window._warpTotalDist - clampedDist;
+      if(remaining < 0.01 && remaining > 0){ // within 1.5M km: navigate from destination
+        window._playerSS.x = window._warpToSS.x - warpHeading.x * remaining;
+        window._playerSS.y = (window._warpToSS.y || 0) - warpHeading.y * remaining;
+        window._playerSS.z = window._warpToSS.z - warpHeading.z * remaining;
+      } else if(remaining <= 0){
+        window._playerSS.x = window._warpToSS.x;
+        window._playerSS.y = window._warpToSS.y || 0;
+        window._playerSS.z = window._warpToSS.z;
+      } else { // long range: dead reckoning from start
+        window._playerSS.x = window._warpFromSS.x + warpHeading.x * clampedDist;
+        window._playerSS.y = (window._warpFromSS.y || 0) + warpHeading.y * clampedDist;
+        window._playerSS.z = window._warpFromSS.z + warpHeading.z * clampedDist;
+      }
       
       // LSG departure: t^4 * 500000 from current lsgGroup position
       const hasLSGModel = lsgGroup && lsgGroup.children.length > 0;
@@ -1474,6 +1486,8 @@ window.warpTo = function(objId){
   closeCtx();
   if(warpState !== 'none') return;
   if(!localState || !localState.objects) return;
+  console.log('[WARP-V2] warpTo called, NEW code running');
+  window._flog = false;
   const obj = localState.objects.find(o => o.id === objId);
   if(!obj) return;
   // Don't warp if this is the anchor (we're already here)
@@ -1483,23 +1497,30 @@ window.warpTo = function(objId){
   const from = window._playerSS || {x:0, y:0, z:0};
   let destX = obj.ss_x, destY = obj.ss_y || 0, destZ = obj.ss_z;
   
-  // Compute destination with orbit offset for planets/moons
+  // Compute destination: for planets/moons, we stop 1.5x radius short
+  // Heading from player to target
+  const dx = destX - from.x, dy = destY - (from.y||0), dz = destZ - from.z;
+  const len = Math.sqrt(dx*dx + dy*dy + dz*dz);
+  if(len < 0.00001) return;
+  warpHeading.set(dx/len, dy/len, dz/len).normalize();
+  
+  // Total distance, shortened by orbit offset for planets/moons
+  let totalDist = len;
   if(obj.type === 'planet' || obj.type === 'moon'){
-    const orbitOffsetAU = (obj.radius_km * 1.5) / AU_KM;
-    const dx = obj.ss_x - from.x, dy = (obj.ss_y||0) - (from.y||0), dz = obj.ss_z - from.z;
-    const len = Math.sqrt(dx*dx + dy*dy + dz*dz);
-    if(len > 0.00001){
-      destX = obj.ss_x - (dx/len) * orbitOffsetAU;
-      destY = (obj.ss_y||0) - (dy/len) * orbitOffsetAU;
-      destZ = obj.ss_z - (dz/len) * orbitOffsetAU;
-    }
+    // Orbit offset scales with body size: small bodies need more margin
+    let orbitMult;
+    if(obj.radius_km < 1000) orbitMult = 3;       // tiny moons
+    else if(obj.radius_km < 5000) orbitMult = 2;   // small planets/large moons
+    else if(obj.radius_km < 20000) orbitMult = 1.5; // medium planets
+    else orbitMult = 1.2;                           // gas giants
+    const orbitOffsetAU = ((obj.radius_km || 5000) * orbitMult) / AU_KM;
+    totalDist = Math.max(0, len - orbitOffsetAU);
   }
   
-  // Compute heading from start to destination
-  const dx = destX - from.x, dy = destY - (from.y||0), dz = destZ - from.z;
-  const totalDist = Math.sqrt(dx*dx + dy*dy + dz*dz);
-  if(totalDist < 0.00001) return;
-  warpHeading.set(dx/totalDist, dy/totalDist, dz/totalDist).normalize();
+  // _warpToSS = the point we stop at (from + heading * totalDist)
+  const warpDestX = from.x + warpHeading.x * totalDist;
+  const warpDestY = (from.y||0) + warpHeading.y * totalDist;
+  const warpDestZ = from.z + warpHeading.z * totalDist;
   
   // Calculate accelDist, decelDist, short trip handling
   const accelDist = WARP_TOP_SPEED * WARP_ACCEL_TIME / 5;
@@ -1521,8 +1542,11 @@ window.warpTo = function(objId){
   
   // Store warp phases
   window._warpPhases = {peakSpeed, accelTime, cruiseTime, decelTime, totalTime};
+  window._warpTotalDist = totalDist;
   window._warpFromSS = {x: from.x, y: from.y || 0, z: from.z};
-  window._warpToSS = {x: destX, y: destY, z: destZ};
+  window._warpToSS = {x: warpDestX, y: warpDestY, z: warpDestZ};
+  console.log(`[WARP] len=${len.toFixed(10)} totalDist=${totalDist.toFixed(10)} offset=${((obj.radius_km||5000)*1.5/AU_KM).toFixed(10)}`);
+  console.log(`[WARP] warpDest=(${warpDestX.toFixed(8)},${warpDestY.toFixed(8)},${warpDestZ.toFixed(8)}) moon=(${obj.ss_x},${obj.ss_y},${obj.ss_z})`);
   
   // Set warp target info
   warpTargetId = objId;
