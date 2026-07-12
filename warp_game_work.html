@@ -1068,117 +1068,92 @@ function animate(now){
         const decelDist = wp.peakSpeed * wp.decelTime * (1 - Math.pow(1 - dt_norm, 5)) / 5;
         dist = accelFullDist + cruiseFullDist + decelDist;
       }
-      // Position: dead reckoning with smooth correction blend near destination
-      const clampedDist = Math.min(dist, window._warpTotalDist);
-      // Dead reckoning position (always computed)
-      const drX = window._warpFromSS.x + warpHeading.x * clampedDist;
-      const drY = (window._warpFromSS.y || 0) + warpHeading.y * clampedDist;
-      const drZ = window._warpFromSS.z + warpHeading.z * clampedDist;
-      // Course correction position (from destination backward)
-      const remaining = window._warpTotalDist - clampedDist;
-      const ccX = window._warpToSS.x - warpHeading.x * remaining;
-      const ccY = (window._warpToSS.y||0) - warpHeading.y * remaining;
-      const ccZ = window._warpToSS.z - warpHeading.z * remaining;
-      // Blend: 0 = pure dead reckoning, 1 = pure course correction
-      // Smooth blend over last 0.01 AU (1.5M km)
-      const blendStart = 0.01; // AU
-      const blend = remaining < blendStart ? Math.min(1, 1 - remaining / blendStart) : 0;
-      const smoothBlend = blend * blend * (3 - 2 * blend); // smoothstep
-      window._playerSS.x = drX + (ccX - drX) * smoothBlend;
-      window._playerSS.y = drY + (ccY - drY) * smoothBlend;
-      window._playerSS.z = drZ + (ccZ - drZ) * smoothBlend;
-      
-      // LSG departure: t^4 * 500000 from current lsgGroup position
-      const hasLSGModel = lsgGroup && lsgGroup.children.length > 0;
-      if(t < WARP_LSG_DEPART_TIME && hasLSGModel){
-        const lsgT = t / WARP_LSG_DEPART_TIME;
-        const lsgDist = Math.pow(lsgT, 4) * 500000;
-        if(!window._lsgStartPos){
-          window._lsgStartPos = {x: lsgGroup.position.x, y: lsgGroup.position.y, z: lsgGroup.position.z};
-        }
-        lsgGroup.position.x = window._lsgStartPos.x - warpHeading.x * lsgDist;
-        lsgGroup.position.y = window._lsgStartPos.y - warpHeading.y * lsgDist;
-        lsgGroup.position.z = window._lsgStartPos.z - warpHeading.z * lsgDist;
-      }
-      if(t >= WARP_LSG_DEPART_TIME && !window._departDespawned){
-        window._departDespawned = true;
-        window._lsgStartPos = null;
-        // Hide departure objects
-        Object.values(stationModels).forEach(m => m.visible = false);
-        Object.values(gateModels).forEach(m => m.visible = false);
-        Object.values(asteroidModels).forEach(rocks => rocks.forEach(r => r.visible = false));
+      // Position: dead reckoning (only when SSG not frozen)
+      if(!window._ssgFrozen){
+        const clampedDist2 = Math.min(dist, window._warpTotalDist);
+        window._playerSS.x = window._warpFromSS.x + warpHeading.x * clampedDist2;
+        window._playerSS.y = (window._warpFromSS.y || 0) + warpHeading.y * clampedDist2;
+        window._playerSS.z = window._warpFromSS.z + warpHeading.z * clampedDist2;
       }
       
-      // LSG approach: distance-based (within 10000km, slide from approachSpawnDist to 5)
-      if(!window._approachStarted && window._warpToSS){
-        const toDestX = window._warpToSS.x - window._playerSS.x;
-        const toDestY = (window._warpToSS.y || 0) - (window._playerSS.y || 0);
-        const toDestZ = window._warpToSS.z - window._playerSS.z;
-        const distToDest = Math.sqrt(toDestX*toDestX + toDestY*toDestY + toDestZ*toDestZ) * AU_KM;
-        
-        if(distToDest < 10000){
-          window._approachStarted = true;
-          console.log('[APPROACH] triggered, target:', warpTargetId, 'distToDest:', distToDest);
-          if(!lsgGroup){ lsgGroup = new THREE.Group(); scene.add(lsgGroup); }
-          lsgGroup.position.set(warpHeading.x * WARP_APPROACH_SPAWN_DIST, warpHeading.y * WARP_APPROACH_SPAWN_DIST, warpHeading.z * WARP_APPROACH_SPAWN_DIST);
-          // Add target model to lsgGroup
-          const targetObj = localState.objects.find(o => o.id === warpTargetId);
-          if(targetObj && targetObj.station_id && stationModels[targetObj.station_id]){
-            const m = stationModels[targetObj.station_id];
-            m.position.set(0, 0, 0);
-            m.visible = true;
-            lsgGroup.add(m);
-          } else if(targetObj && targetObj.type === 'gate' && gateModels[targetObj.id]){
-            const m = gateModels[targetObj.id];
-            m.position.set(0, 0, 0);
-            m.visible = true;
-            lsgGroup.add(m);
-          }
+      // ── LSG (departure, approach, completion) ──
+      const LSG_SPAWN_DIST = 500000; // 50,000 km in scene units
+      const LSG_STOP_DIST = 100;     // 10 km in scene units
+
+      // DEPARTURE: slide current LSG away
+      if(!window._departDone){
+        if(!window._lsgDepartStart) window._lsgDepartStart = t;
+        const departT = (t - window._lsgDepartStart) / 3.0;
+        if(departT < 1.0 && lsgGroup && lsgGroup.children.length > 0){
+          window._ssgFrozen = true;
+          const d = Math.pow(departT, 4) * LSG_SPAWN_DIST;
+          if(!window._lsgStartPos) window._lsgStartPos = lsgGroup.position.clone();
+          lsgGroup.position.copy(window._lsgStartPos).addScaledVector(warpHeading, -d);
+        } else {
+          window._departDone = true;
+          window._ssgFrozen = false;
+          window._lsgStartPos = null;
+          if(lsgGroup) while(lsgGroup.children.length) lsgGroup.remove(lsgGroup.children[0]);
         }
       }
-      
-      // Slide LSG in during approach
+
+      // SSG POSITION (only when not frozen)
+      if(!window._ssgFrozen){
+        const cd = Math.min(dist, window._warpTotalDist);
+        window._playerSS.x = window._warpFromSS.x + warpHeading.x * cd;
+        window._playerSS.y = (window._warpFromSS.y||0) + warpHeading.y * cd;
+        window._playerSS.z = window._warpFromSS.z + warpHeading.z * cd;
+      }
+
+      // APPROACH: when SSG done, spawn LSG, slide to ship
+      if(!window._approachStarted && window._departDone && dist >= window._warpTotalDist){
+        window._approachStarted = true;
+        window._ssgFrozen = true;
+        window._approachStart = t;
+        if(!lsgGroup){ lsgGroup = new THREE.Group(); scene.add(lsgGroup); }
+        // Spawn ALL objects at correct scale
+        const targetObj = localState.objects.find(o => o.id === warpTargetId);
+        console.log('[LSG] Approach spawn. target:', warpTargetId, 'targetObj:', targetObj ? targetObj.type : 'NULL', 'gateModels:', Object.keys(gateModels), 'stationModels:', Object.keys(stationModels));
+        if(targetObj && targetObj.station_id && stationModels[targetObj.station_id]){
+          const m = stationModels[targetObj.station_id];
+          m.position.set(0, 0, 0); m.visible = true; lsgGroup.add(m);
+        } else if(targetObj && targetObj.type === 'gate' && gateModels[targetObj.id]){
+          const m = gateModels[targetObj.id];
+          m.position.set(0, 0, 0); m.visible = true; lsgGroup.add(m);
+        }
+        lsgGroup.position.set(warpHeading.x * LSG_SPAWN_DIST, warpHeading.y * LSG_SPAWN_DIST, warpHeading.z * LSG_SPAWN_DIST);
+      }
+
+      // SLIDE LSG to ship
       if(window._approachStarted && lsgGroup){
-        const toDestX = window._warpToSS.x - window._playerSS.x;
-        const toDestY = (window._warpToSS.y || 0) - (window._playerSS.y || 0);
-        const toDestZ = window._warpToSS.z - window._playerSS.z;
-        const distToDest = Math.sqrt(toDestX*toDestX + toDestY*toDestY + toDestZ*toDestZ) * AU_KM;
-        const approachT = 1 - Math.min(1, distToDest / 10000);
-        const pos = WARP_APPROACH_SPAWN_DIST + (5 - WARP_APPROACH_SPAWN_DIST) * approachT; // stop close
+        const at = Math.min(1, (t - window._approachStart) / 4.0);
+        const eased = 1 - Math.pow(1 - at, 3);
+        const pos = LSG_SPAWN_DIST + (LSG_STOP_DIST - LSG_SPAWN_DIST) * eased;
         lsgGroup.position.set(warpHeading.x * pos, warpHeading.y * pos, warpHeading.z * pos);
-      }
-      
-      // Warp completion
-      if(t >= wp.totalTime){
-        // _playerSS already at correct position from analytical computation - no snap
-        console.log('[SSG] Warp complete, playerSS:', window._playerSS);
-        console.log('[SSG] lsgGroup pos:', lsgGroup ? {x:lsgGroup.position.x, y:lsgGroup.position.y, z:lsgGroup.position.z} : 'null');
-        
-        // Update localState anchor
-        if(localState && localState.objects){
-          localState.objects.forEach(o => o.is_anchor = false);
-          const destObj = localState.objects.find(o => o.id === warpTargetId);
-          if(destObj) destObj.is_anchor = true;
+
+        // COMPLETION
+        if(at >= 1.0){
+          if(localState && localState.objects){
+            localState.objects.forEach(o => o.is_anchor = false);
+            const d2 = localState.objects.find(o => o.id === warpTargetId);
+            if(d2) d2.is_anchor = true;
+          }
+          playerHeading.copy(warpHeading);
+          playerSpeed = 0;
+          warpState = 'none';
+          warpTargetId = null;
+          warpTargetPos = null;
+          window._ssgFrozen = false;
+          window._approachStarted = false;
+          window._approachStart = null;
+          window._departDone = false;
+          window._lsgDepartStart = null;
+          window._warpPhases = null;
+          document.getElementById('warpTarget').textContent = '';
+          if(warpStreaks) warpStreaks.visible = false;
         }
-        
-        // lsgGroup stays where approach left it (no snap)
-        
-        // playerPos stays where it is - no reset
-        playerHeading.copy(warpHeading);
-        playerSpeed = 0;
-        warpState = 'none';
-        warpTargetId = null;
-        warpTargetPos = null;
-        warpBuildReady = false;
-        warpLock = false;
-        window._departDespawned = false;
-        window._lsgStartPos = null;
-        window._warpPhases = null;
-        
-        document.getElementById('warpTarget').textContent = '';
-        if(warpStreaks) warpStreaks.visible = false;
       }
-      
+
       // Progress and HUD
       const progress = Math.min(1.0, t / wp.totalTime);
       warpSpeed = speed;
@@ -1525,6 +1500,7 @@ window.warpTo = function(objId){
   if(!localState || !localState.objects) return;
   console.log('[WARP-V2] warpTo called, NEW code running');
   window._flog = false;
+  window._labelDbg = false;
   const obj = localState.objects.find(o => o.id === objId);
   if(!obj) return;
   // Don't warp if this is the anchor (we're already here)
@@ -2734,7 +2710,9 @@ function updateDirectionalLabels(){
     // Use local model position for stations/gates that have a visible model in lsgGroup
     const hasVisibleModel = (obj.station_id && stationModels[obj.station_id] && stationModels[obj.station_id].visible && stationModels[obj.station_id].parent === lsgGroup) ||
                            (obj.type === 'gate' && gateModels[obj.id] && gateModels[obj.id].visible && gateModels[obj.id].parent === lsgGroup);
-    const useLocal = hasVisibleModel && obj.type !== 'planet' && obj.type !== 'moon';
+    const isApproachTarget = window._approachStarted && obj.id === warpTargetId;
+    const useLocal = (hasVisibleModel || isApproachTarget) && obj.type !== 'planet' && obj.type !== 'moon';
+    if(obj.id === warpTargetId && window._approachStarted && !window._labelDbg2){window._labelDbg2=true; console.log('[LABEL-APPROACH] target:', obj.id, 'hasVisibleModel:', hasVisibleModel, 'isApproachTarget:', isApproachTarget, 'useLocal:', useLocal);}
     if(useLocal){
       // Find the actual model position from the dicts (more reliable than localState.objects)
       const gOff = lsgGroup ? lsgGroup.position : new THREE.Vector3(0,0,0);

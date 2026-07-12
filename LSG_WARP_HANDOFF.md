@@ -113,3 +113,59 @@ The problem is exclusively something in the game's additional systems interferin
 
 ## IMPORTANT RULES
 - NEVER ask the user if they want to keep going or stop. Just keep working.
+
+
+
+## SSG/LSG WARP DESIGN (DEFINITIVE)
+
+### Core Concept
+- **SSG travel is virtual**: We update a coordinate (`_playerSS`) to represent where we are in the solar system. Used for projecting labels, calculating distances, and rendering planets. Nothing physically moves in the scene during SSG travel.
+- **LSG is a local box of space**: Self-contained 3D area. Anchor body at (0,0,0). Ships, structures, asteroids positioned relative to anchor. NO relationship to SSG coordinates.
+
+### Warp Sequence
+1. **WARP PHASE**: Ship 'travels' through SSG by updating `_playerSS`. Labels project, distances calculate, planets render/grow. Ship does NOT physically move.
+2. SSG travel continues until `_playerSS` REACHES the target body's SSG coordinate.
+3. Once reached: **SSG COORDINATES STOP UPDATING. They are DONE.** Planets stop moving. Labels stop changing. SSG phase is OVER.
+4. **APPROACH PHASE begins**: LSG spawns at far edge ahead of ship. LSG slides toward the ship following decel curve. ONLY the LSG group moves during approach — nothing else.
+5. LSG STOPS when it reaches target local position (e.g., 80 units from ship).
+6. Once stopped: player is IN the LSG, moves locally with flight controls.
+
+### Key Rules
+- Ship NEVER moves during warp OR approach — LSG moves to the ship during approach
+- SSG and Approach are TWO SEPARATE PHASES — SSG ends BEFORE approach begins
+- Once approach starts, SSG coords DO NOT change — they are frozen
+- NO mapping between SSG coords and LSG coords — they are separate systems
+- LSG spawns far, slides in, stops. That's it.
+- After stop, player flies locally within the LSG
+- Orbit LSGs have no model at (0,0,0) unless it's a structure (station/gate/field)
+- Planet/moon LSGs are just empty space (the planet is rendered by SSG and stops at approach point)
+- `_playerSS` is only for SSG calculations (labels, distances, planet rendering) — FROZEN during approach
+- `playerPos` is for LSG local movement (after approach ends)
+
+### Speed Label Behavior
+- Speed is ONE CONTINUOUS CURVE from departure through warp to approach. No jumps.
+- The display adapts: m/s → km/s → AU/s → km/s → m/s as speed ramps up and back down.
+- What MOVES changes based on speed, but the speed value itself is continuous:
+  - At low speed (start/end): LSG moves (departure/approach)
+  - At high speed (middle): SSG coords update (warp travel)
+- The transition between LSG movement and SSG movement happens naturally at some speed threshold.
+- LSG must be large enough to accommodate the speed at transition points.
+
+### LSG Dimensions
+- LSG is a 100,000 km cube (100k km per axis)
+- In scene units (1 unit = 100m): 1,000,000 units per axis
+- Anchor body at center (0,0,0)
+- Approach entry point: 500,000 units from anchor (50,000 km)
+- Approach stop point: ~100 units from anchor (~10 km)
+- Approach slide distance: ~499,900 units (49,990 km)
+- Departure is the reverse: from 100 units, slide out to 500,000 units
+
+
+### Label Distance Transition
+- Label always projects from the anchor body (0,0,0 of LSG)
+- During SSG warp: distance computed from `_playerSS` to target SS coords (AU → M km → k km)
+- At transition (approach begins): distance switches to LSG-based (player position to 0,0,0)
+- This is smooth because: SSG distance at transition ≈ 50,000 km, LSG entry distance = 50,000 km. Same value, no jump.
+- During approach: distance shrinks as LSG slides in (50,000 km → 10 km)
+- After stop: distance = player's LSG position to (0,0,0) ≈ 10 km
+- Format adapts throughout: AU → M km → k km → km → m
