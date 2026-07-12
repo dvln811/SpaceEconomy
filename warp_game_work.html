@@ -665,6 +665,7 @@ function setFlightScene(){
       const sz = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
       stGroup.scale.setScalar(150 / maxDim); // 15km station
+      stGroup.userData._origScale = 150 / maxDim;
       stGroup.visible = false;
       stationModels[obj.station_id] = stGroup;
     });
@@ -675,7 +676,9 @@ function setFlightScene(){
       const box = new THREE.Box3().setFromObject(gGroup);
       const sz = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
+      console.log('[GATE-BUILD] maxDim:', maxDim, 'size:', sz.x.toFixed(2), sz.y.toFixed(2), sz.z.toFixed(2));
       gGroup.scale.setScalar(40 / maxDim); // gate ~4km for visibility
+      gGroup.userData._origScale = 40 / maxDim;
       gGroup.visible = false;
       gateModels[obj.id] = gGroup;
     });
@@ -1077,8 +1080,8 @@ function animate(now){
       }
       
       // ── LSG (departure, approach, completion) ──
-      const LSG_SPAWN_DIST = 500000; // 50,000 km in scene units
-      const LSG_STOP_DIST = 100;     // 10 km in scene units
+      const LSG_SPAWN_DIST = 500000; // 50,000 km
+      const LSG_STOP_DIST = 100;     // 10 km
 
       // DEPARTURE: slide current LSG away
       if(!window._departDone){
@@ -1105,8 +1108,10 @@ function animate(now){
         window._playerSS.z = window._warpFromSS.z + warpHeading.z * cd;
       }
 
-      // APPROACH: when SSG done, spawn LSG, slide to ship
-      if(!window._approachStarted && window._departDone && dist >= window._warpTotalDist){
+      // APPROACH: spawn LSG when we're within 50,000 km (LSG edge)
+      const remainingAU = window._warpTotalDist - Math.min(dist, window._warpTotalDist);
+      const remainingKm = remainingAU * 150000000;
+      if(!window._approachStarted && window._departDone && remainingKm <= 50000){
         window._approachStarted = true;
         window._ssgFrozen = true;
         window._approachStart = t;
@@ -1117,19 +1122,34 @@ function animate(now){
         if(targetObj && targetObj.station_id && stationModels[targetObj.station_id]){
           const m = stationModels[targetObj.station_id];
           m.position.set(0, 0, 0); m.visible = true; lsgGroup.add(m);
+          console.log('[LSG] Station model added. scale:', m.scale.x, 'children:', m.children.length, 'inScene:', m.parent === lsgGroup);
         } else if(targetObj && targetObj.type === 'gate' && gateModels[targetObj.id]){
           const m = gateModels[targetObj.id];
           m.position.set(0, 0, 0); m.visible = true; lsgGroup.add(m);
+          console.log('[LSG] Gate model added. scale:', m.scale.x, 'children:', m.children.length, 'inScene:', m.parent === lsgGroup);
         }
-        lsgGroup.position.set(warpHeading.x * LSG_SPAWN_DIST, warpHeading.y * LSG_SPAWN_DIST, warpHeading.z * LSG_SPAWN_DIST);
+        // Place LSG along actual direction to target (matches SS label direction)
+        const toTargetX = localState.objects.find(o=>o.id===warpTargetId).ss_x - window._playerSS.x;
+        const toTargetY = (localState.objects.find(o=>o.id===warpTargetId).ss_y||0) - (window._playerSS.y||0);
+        const toTargetZ = localState.objects.find(o=>o.id===warpTargetId).ss_z - window._playerSS.z;
+        const toTargetLen = Math.sqrt(toTargetX*toTargetX + toTargetY*toTargetY + toTargetZ*toTargetZ);
+        const lsgDirX = toTargetLen > 0 ? toTargetX/toTargetLen : warpHeading.x;
+        const lsgDirY = toTargetLen > 0 ? toTargetY/toTargetLen : warpHeading.y;
+        const lsgDirZ = toTargetLen > 0 ? toTargetZ/toTargetLen : warpHeading.z;
+        lsgGroup.position.set(lsgDirX * LSG_SPAWN_DIST, lsgDirY * LSG_SPAWN_DIST, lsgDirZ * LSG_SPAWN_DIST);
+        // Store direction for slide
+        window._lsgApproachDir = {x: lsgDirX, y: lsgDirY, z: lsgDirZ};
+        console.log('[LSG] lsgGroup pos:', lsgGroup.position.x.toFixed(0), lsgGroup.position.y.toFixed(0), lsgGroup.position.z.toFixed(0), 'lsgGroup.parent===scene:', lsgGroup.parent === scene);
       }
 
       // SLIDE LSG to ship
       if(window._approachStarted && lsgGroup){
-        const at = Math.min(1, (t - window._approachStart) / 4.0);
-        const eased = 1 - Math.pow(1 - at, 3);
-        const pos = LSG_SPAWN_DIST + (LSG_STOP_DIST - LSG_SPAWN_DIST) * eased;
-        lsgGroup.position.set(warpHeading.x * pos, warpHeading.y * pos, warpHeading.z * pos);
+        const at = Math.min(1, (t - window._approachStart) / 8.0); // 8 seconds approach
+        const pos = LSG_SPAWN_DIST * Math.pow(1 - at, 4) + LSG_STOP_DIST; // exponential approach - gets close fast, slows near end
+        const dir = window._lsgApproachDir || warpHeading;
+        lsgGroup.position.set(dir.x * pos, dir.y * pos, dir.z * pos);
+        if(!window._slideLog) window._slideLog = 0;
+        if(t - window._slideLog > 0.5){window._slideLog = t; console.log('[SLIDE] pos=', Math.round(pos), 'at=', at.toFixed(2));}
 
         // COMPLETION
         if(at >= 1.0){
@@ -1320,15 +1340,7 @@ function animate(now){
         const gy = lsgGroup ? lsgGroup.position.y : 0;
         const gz = lsgGroup ? lsgGroup.position.z : 0;
         // Reset scales from any previous warp departure (restore original scale)
-        for(const [id, mesh] of Object.entries(stationModels)){
-          if(mesh.userData._origScale) mesh.scale.setScalar(mesh.userData._origScale);
-        }
-        for(const [id, mesh] of Object.entries(gateModels)){
-          if(mesh.userData._origScale) mesh.scale.setScalar(mesh.userData._origScale);
-        }
-        for(const [id, rocks] of Object.entries(asteroidModels)) rocks.forEach(r => {
-          if(r.userData._origScale) r.scale.setScalar(r.userData._origScale);
-        });
+        // (no individual model scaling needed - LSG group movement handles everything)
         for(const [id, mesh] of Object.entries(stationModels)){
           const obj = localState.objects.find(o => o.station_id === id);
           if(!obj){ mesh.visible = false; continue; }
@@ -1351,23 +1363,7 @@ function animate(now){
         // During warping DEPARTURE ONLY: shrink all visible stations/gates/asteroids
         // Skip this during approach (when _approachStarted is true)
         if(!window._approachStarted){
-          if(!window._objDepartTimer) window._objDepartTimer = 0;
-          window._objDepartTimer += dt;
-          const ot = Math.min(1.0, window._objDepartTimer / 1.5);
-          const objScale = Math.max(0.02, 1.0 - ot * 0.98);
-          for(const [id, mesh] of Object.entries(stationModels)){
-            const os = mesh.userData._origScale || 1;
-            mesh.scale.setScalar(os * objScale);
-            if(ot >= 1.0) mesh.visible = false;
-          }
-          for(const [id, mesh] of Object.entries(gateModels)){
-            const os = mesh.userData._origScale || 1;
-            mesh.scale.setScalar(os * objScale);
-            if(ot >= 1.0) mesh.visible = false;
-          }
-          for(const [id, rocks] of Object.entries(asteroidModels)){
-            rocks.forEach(r => { const os = r.userData._origScale || 1; r.scale.setScalar(os * objScale); if(ot >= 1.0) r.visible = false; });
-          }
+          // Models just ride the LSG group - no individual scaling
         }
       }
       // Reset departure timer when not warping
