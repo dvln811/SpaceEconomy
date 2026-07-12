@@ -276,8 +276,9 @@ localState = {
     {id:'st1', name:'Nexus Trade Hub', type:'station', x:0, y:0, z:100, ss_x:3.5807, ss_y:0.1, ss_z:1.0084, is_anchor:true, radius_km:0, planet_type:'', station_id:'st_00028', au_distance:3.72, connects_to:'', parent:''},
     {id:'st2', name:'Stellar Fabrication', type:'station', x:0, y:0, z:0, ss_x:-1.018, ss_y:-0.2, ss_z:-5.2624, is_anchor:false, radius_km:0, planet_type:'', station_id:'st_00029', au_distance:5.36, connects_to:'', parent:''},
     {id:'st_orb', name:'Orbital Station III', type:'station', x:0, y:0, z:0, ss_x:5.742, ss_y:0.31, ss_z:-2.34, is_anchor:false, radius_km:0, planet_type:'', station_id:'st_00030', au_distance:0.0001, connects_to:'', parent:'p3'},
-    {id:'g1', name:'Gate to Struve', type:'gate', x:0, y:0, z:0, ss_x:13.3772, ss_y:0.3, ss_z:23.8092, is_anchor:false, radius_km:0, planet_type:'', station_id:'', au_distance:27.31, connects_to:'struve', parent:''},
+    {id:'g1', name:'Gate to Struve', type:'gate', x:0, y:0, z:0, ss_x:4.5, ss_y:0.1, ss_z:2.5, is_anchor:false, radius_km:0, planet_type:'', station_id:'', au_distance:5.15, connects_to:'struve', parent:''},
     {id:'g2', name:'Gate to Regulus', type:'gate', x:0, y:0, z:0, ss_x:-23.888, ss_y:0.1, ss_z:17.0175, is_anchor:false, radius_km:0, planet_type:'', station_id:'', au_distance:29.33, connects_to:'regulus', parent:''},
+    {id:'belt1', name:'Rigel Belt Alpha', type:'belt', x:0, y:0, z:0, ss_x:3.2, ss_y:0.05, ss_z:-3.8, is_anchor:false, radius_km:0, planet_type:'', station_id:'', au_distance:4.97, connects_to:'', parent:''},
   ],
   ships: [],
   player: {x:0, y:0, z:0, vx:0, vy:0, vz:0, speed:0, max_speed:100, align_time:5, heading:[0,0,1], state:'idle', is_player:true, name:'Player', ship_class:'Frigate', role:'pilot', faction:'terran_fed', ship_name:'Pinto Runner', credits:50000, ship_stats:{hull_class:'Frigate'}, cargo:{}, docked:false}
@@ -654,19 +655,42 @@ function setFlightScene(){
   asteroidModels = {};
   planetModels = {};
   
-  // ── STANDALONE: create station model at anchor from INLINE_MODELS ──
+  // ── STANDALONE: create models for all stations and gates ──
   if(STANDALONE_MODE && localState){
-    const anchor = localState.objects.find(o => o.is_anchor);
-    if(anchor && anchor.station_id){
+    // Build station models
+    localState.objects.filter(o => o.station_id).forEach(obj => {
       const stGroup = new THREE.Group();
       buildShipFromData(stGroup, INLINE_MODELS.station, {showHardpoints:false});
       const box = new THREE.Box3().setFromObject(stGroup);
       const sz = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
-      stGroup.scale.setScalar(150 / maxDim); // trade_hub = 15km = 150 units
-      stGroup.position.set(anchor.x || 0, anchor.y || 0, anchor.z || 100);
-      lsgGroup.add(stGroup);
-      stationModels[anchor.station_id] = stGroup;
+      stGroup.scale.setScalar(150 / maxDim); // 15km station
+      stGroup.visible = false;
+      stationModels[obj.station_id] = stGroup;
+    });
+    // Build gate models
+    localState.objects.filter(o => o.type === 'gate').forEach(obj => {
+      const gGroup = new THREE.Group();
+      buildShipFromData(gGroup, INLINE_MODELS.gate, {showHardpoints:false});
+      const box = new THREE.Box3().setFromObject(gGroup);
+      const sz = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
+      gGroup.scale.setScalar(20 / maxDim); // 2km gate
+      gGroup.visible = false;
+      gateModels[obj.id] = gGroup;
+    });
+    // Show anchor model in lsgGroup
+    const anchor = localState.objects.find(o => o.is_anchor);
+    if(anchor && anchor.station_id && stationModels[anchor.station_id]){
+      const m = stationModels[anchor.station_id];
+      m.position.set(0, 0, 100);
+      m.visible = true;
+      lsgGroup.add(m);
+    } else if(anchor && anchor.type === 'gate' && gateModels[anchor.id]){
+      const m = gateModels[anchor.id];
+      m.position.set(0, 0, 100);
+      m.visible = true;
+      lsgGroup.add(m);
     }
   }
   // Load fresh models into the clean group
@@ -1044,22 +1068,25 @@ function animate(now){
         const decelDist = wp.peakSpeed * wp.decelTime * (1 - Math.pow(1 - dt_norm, 5)) / 5;
         dist = accelFullDist + cruiseFullDist + decelDist;
       }
-      // Position: dead reckoning far, course correction close
+      // Position: dead reckoning with smooth correction blend near destination
       const clampedDist = Math.min(dist, window._warpTotalDist);
+      // Dead reckoning position (always computed)
+      const drX = window._warpFromSS.x + warpHeading.x * clampedDist;
+      const drY = (window._warpFromSS.y || 0) + warpHeading.y * clampedDist;
+      const drZ = window._warpFromSS.z + warpHeading.z * clampedDist;
+      // Course correction position (from destination backward)
       const remaining = window._warpTotalDist - clampedDist;
-      if(remaining < 0.01 && remaining > 0){ // within 1.5M km: navigate from destination
-        window._playerSS.x = window._warpToSS.x - warpHeading.x * remaining;
-        window._playerSS.y = (window._warpToSS.y || 0) - warpHeading.y * remaining;
-        window._playerSS.z = window._warpToSS.z - warpHeading.z * remaining;
-      } else if(remaining <= 0){
-        window._playerSS.x = window._warpToSS.x;
-        window._playerSS.y = window._warpToSS.y || 0;
-        window._playerSS.z = window._warpToSS.z;
-      } else { // long range: dead reckoning from start
-        window._playerSS.x = window._warpFromSS.x + warpHeading.x * clampedDist;
-        window._playerSS.y = (window._warpFromSS.y || 0) + warpHeading.y * clampedDist;
-        window._playerSS.z = window._warpFromSS.z + warpHeading.z * clampedDist;
-      }
+      const ccX = window._warpToSS.x - warpHeading.x * remaining;
+      const ccY = (window._warpToSS.y||0) - warpHeading.y * remaining;
+      const ccZ = window._warpToSS.z - warpHeading.z * remaining;
+      // Blend: 0 = pure dead reckoning, 1 = pure course correction
+      // Smooth blend over last 0.01 AU (1.5M km)
+      const blendStart = 0.01; // AU
+      const blend = remaining < blendStart ? Math.min(1, 1 - remaining / blendStart) : 0;
+      const smoothBlend = blend * blend * (3 - 2 * blend); // smoothstep
+      window._playerSS.x = drX + (ccX - drX) * smoothBlend;
+      window._playerSS.y = drY + (ccY - drY) * smoothBlend;
+      window._playerSS.z = drZ + (ccZ - drZ) * smoothBlend;
       
       // LSG departure: t^4 * 500000 from current lsgGroup position
       const hasLSGModel = lsgGroup && lsgGroup.children.length > 0;
@@ -1091,12 +1118,21 @@ function animate(now){
         
         if(distToDest < 10000){
           window._approachStarted = true;
-          if(lsgGroup){
-            lsgGroup.position.set(warpHeading.x * WARP_APPROACH_SPAWN_DIST, warpHeading.y * WARP_APPROACH_SPAWN_DIST, warpHeading.z * WARP_APPROACH_SPAWN_DIST);
+          if(!lsgGroup){ lsgGroup = new THREE.Group(); scene.add(lsgGroup); }
+          lsgGroup.position.set(warpHeading.x * WARP_APPROACH_SPAWN_DIST, warpHeading.y * WARP_APPROACH_SPAWN_DIST, warpHeading.z * WARP_APPROACH_SPAWN_DIST);
+          // Add target model to lsgGroup
+          const targetObj = localState.objects.find(o => o.id === warpTargetId);
+          if(targetObj && targetObj.station_id && stationModels[targetObj.station_id]){
+            const m = stationModels[targetObj.station_id];
+            m.position.set(0, 0, 0);
+            m.visible = true;
+            lsgGroup.add(m);
+          } else if(targetObj && targetObj.type === 'gate' && gateModels[targetObj.id]){
+            const m = gateModels[targetObj.id];
+            m.position.set(0, 0, 0);
+            m.visible = true;
+            lsgGroup.add(m);
           }
-          // Show destination objects
-          Object.values(stationModels).forEach(m => m.visible = true);
-          Object.values(gateModels).forEach(m => m.visible = true);
         }
       }
       
@@ -1107,7 +1143,7 @@ function animate(now){
         const toDestZ = window._warpToSS.z - window._playerSS.z;
         const distToDest = Math.sqrt(toDestX*toDestX + toDestY*toDestY + toDestZ*toDestZ) * AU_KM;
         const approachT = 1 - Math.min(1, distToDest / 10000);
-        const pos = WARP_APPROACH_SPAWN_DIST + (5 - WARP_APPROACH_SPAWN_DIST) * approachT;
+        const pos = WARP_APPROACH_SPAWN_DIST + (80 - WARP_APPROACH_SPAWN_DIST) * approachT; // stop at 8km
         lsgGroup.position.set(warpHeading.x * pos, warpHeading.y * pos, warpHeading.z * pos);
       }
       
@@ -1643,9 +1679,11 @@ window.showCtx = function(e, objId, name, type){
   const obj = localState && localState.objects && localState.objects.find(o => o.id === objId);
   const isAnchor = obj && obj.is_anchor;
   
-  // isLocal = physically present at this object (anchor, or station/gate/belt with model in LSG)
-  // Planets/moons are NOT local unless they are the anchor - they're always warp targets
-  const isLocal = isAnchor || (obj && (obj.type === 'station' || obj.type === 'gate' || obj.type === 'belt') && (stationModels[obj.station_id] || gateModels[obj.id] || asteroidModels[obj.id]));
+  // isLocal = physically present at this object (anchor, or within same local area)
+  // An object is local if it's the anchor OR if it's in the same LSG (anchor's vicinity)
+  const anchorObj = localState && localState.objects && localState.objects.find(o => o.is_anchor);
+  const isLocal = isAnchor || (obj && anchorObj && obj.type !== 'planet' && obj.type !== 'moon' && 
+    Math.sqrt(Math.pow(obj.ss_x - anchorObj.ss_x, 2) + Math.pow(obj.ss_z - anchorObj.ss_z, 2)) < 0.001);
   
   // Compute distance to object (for range checks)
   let distToObj = Infinity;
