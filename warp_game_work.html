@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Warp Game Work - Rigel System</title>
+<title>Warp Game Work - Rigel System v2</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -675,7 +675,7 @@ function setFlightScene(){
       const box = new THREE.Box3().setFromObject(gGroup);
       const sz = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
-      gGroup.scale.setScalar(20 / maxDim); // 2km gate
+      gGroup.scale.setScalar(40 / maxDim); // gate ~4km for visibility
       gGroup.visible = false;
       gateModels[obj.id] = gGroup;
     });
@@ -1118,6 +1118,7 @@ function animate(now){
         
         if(distToDest < 10000){
           window._approachStarted = true;
+          console.log('[APPROACH] triggered, target:', warpTargetId, 'distToDest:', distToDest);
           if(!lsgGroup){ lsgGroup = new THREE.Group(); scene.add(lsgGroup); }
           lsgGroup.position.set(warpHeading.x * WARP_APPROACH_SPAWN_DIST, warpHeading.y * WARP_APPROACH_SPAWN_DIST, warpHeading.z * WARP_APPROACH_SPAWN_DIST);
           // Add target model to lsgGroup
@@ -1143,7 +1144,7 @@ function animate(now){
         const toDestZ = window._warpToSS.z - window._playerSS.z;
         const distToDest = Math.sqrt(toDestX*toDestX + toDestY*toDestY + toDestZ*toDestZ) * AU_KM;
         const approachT = 1 - Math.min(1, distToDest / 10000);
-        const pos = WARP_APPROACH_SPAWN_DIST + (80 - WARP_APPROACH_SPAWN_DIST) * approachT; // stop at 8km
+        const pos = WARP_APPROACH_SPAWN_DIST + (5 - WARP_APPROACH_SPAWN_DIST) * approachT; // stop close
         lsgGroup.position.set(warpHeading.x * pos, warpHeading.y * pos, warpHeading.z * pos);
       }
       
@@ -1151,6 +1152,7 @@ function animate(now){
       if(t >= wp.totalTime){
         // _playerSS already at correct position from analytical computation - no snap
         console.log('[SSG] Warp complete, playerSS:', window._playerSS);
+        console.log('[SSG] lsgGroup pos:', lsgGroup ? {x:lsgGroup.position.x, y:lsgGroup.position.y, z:lsgGroup.position.z} : 'null');
         
         // Update localState anchor
         if(localState && localState.objects){
@@ -1161,7 +1163,7 @@ function animate(now){
         
         // lsgGroup stays where approach left it (no snap)
         
-        playerPos.set(0, 0, 0);
+        // playerPos stays where it is - no reset
         playerHeading.copy(warpHeading);
         playerSpeed = 0;
         warpState = 'none';
@@ -1169,7 +1171,6 @@ function animate(now){
         warpTargetPos = null;
         warpBuildReady = false;
         warpLock = false;
-        window._approachStarted = false;
         window._departDespawned = false;
         window._lsgStartPos = null;
         window._warpPhases = null;
@@ -2730,7 +2731,10 @@ function updateDirectionalLabels(){
     
     // For anchor object (when NOT warping), use its actual model position + group offset. Otherwise project from SS direction.
     let labelX, labelY, labelZ;
-    const useLocal = obj.is_anchor && warpState !== 'warping' && warpState !== 'aligning' && obj.type !== 'planet' && obj.type !== 'moon';
+    // Use local model position for stations/gates that have a visible model in lsgGroup
+    const hasVisibleModel = (obj.station_id && stationModels[obj.station_id] && stationModels[obj.station_id].visible && stationModels[obj.station_id].parent === lsgGroup) ||
+                           (obj.type === 'gate' && gateModels[obj.id] && gateModels[obj.id].visible && gateModels[obj.id].parent === lsgGroup);
+    const useLocal = hasVisibleModel && obj.type !== 'planet' && obj.type !== 'moon';
     if(useLocal){
       // Find the actual model position from the dicts (more reliable than localState.objects)
       const gOff = lsgGroup ? lsgGroup.position : new THREE.Vector3(0,0,0);
