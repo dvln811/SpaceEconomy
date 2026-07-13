@@ -1075,18 +1075,17 @@ function animate(now){
       const LSG_SPAWN_DIST = 500000; // 50,000 km
       const LSG_STOP_DIST = 100;     // 10 km
 
-      // DEPARTURE: slide current LSG away
+      // DEPARTURE: slide current LSG away (SSG updates independently)
       if(!window._departDone){
         if(!window._lsgDepartStart) window._lsgDepartStart = t;
         const departT = (t - window._lsgDepartStart) / 3.0;
         if(departT < 1.0 && lsgGroup && lsgGroup.children.length > 0){
-          window._ssgFrozen = true;
+          // NO SSG freeze - planet rendering updates independently
           const d = Math.pow(departT, 4) * LSG_SPAWN_DIST;
           if(!window._lsgStartPos) window._lsgStartPos = lsgGroup.position.clone();
           lsgGroup.position.copy(window._lsgStartPos).addScaledVector(warpHeading, -d);
         } else {
           window._departDone = true;
-          window._ssgFrozen = false;
           window._lsgStartPos = null;
           if(lsgGroup) while(lsgGroup.children.length) lsgGroup.remove(lsgGroup.children[0]);
         }
@@ -1098,6 +1097,20 @@ function animate(now){
         window._playerSS.x = window._warpFromSS.x + warpHeading.x * cd;
         window._playerSS.y = (window._warpFromSS.y||0) + warpHeading.y * cd;
         window._playerSS.z = window._warpFromSS.z + warpHeading.z * cd;
+      }
+
+      // DEBUG: log SSG state every 30 frames during first 5 seconds
+      if(!window._warpDbgCount) window._warpDbgCount = 0;
+      window._warpDbgCount++;
+      if(window._warpDbgCount % 30 === 0 && t < 5){
+        const ps = window._playerSS;
+        // Find nearest planet distance
+        const planets = localState.objects.filter(o => o.type === 'planet' || o.type === 'moon');
+        const nearest = planets.map(p => {
+          const d = Math.sqrt((p.ss_x-ps.x)**2 + ((p.ss_y||0)-ps.y)**2 + (p.ss_z-ps.z)**2);
+          return {name: p.name, distKm: Math.round(d * 150000000)};
+        }).sort((a,b) => a.distKm - b.distKm)[0];
+        console.log(`[DEPART-DBG] t=${t.toFixed(2)} frozen=${window._ssgFrozen} departDone=${window._departDone} playerSS=(${ps.x.toFixed(6)},${ps.z.toFixed(6)}) nearest=${nearest?.name} ${nearest?.distKm}km lsgChildren=${lsgGroup?lsgGroup.children.length:'null'}`);
       }
 
       // APPROACH: distance-based (matching warp_test logic)
