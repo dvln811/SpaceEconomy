@@ -1108,50 +1108,44 @@ function animate(now){
         window._playerSS.z = window._warpFromSS.z + warpHeading.z * cd;
       }
 
-      // APPROACH: spawn LSG when we're within 50,000 km (LSG edge)
+      // APPROACH: distance-based (like warp_test). Spawns while SSG still moving.
+      const approachTriggerKm = Math.max(10000, (window._warpOrbitOffsetKm || 50000) * 3);
+      const approachSpawnUnits = approachTriggerKm * 10;
       const remainingAU = window._warpTotalDist - Math.min(dist, window._warpTotalDist);
       const remainingKm = remainingAU * 150000000;
-      if(!window._approachStarted && window._departDone && remainingKm <= 50000){
+      
+      if(!window._approachStarted && window._departDone && remainingKm <= approachTriggerKm){
         window._approachStarted = true;
-        window._approachStart = t;
         if(!lsgGroup){ lsgGroup = new THREE.Group(); scene.add(lsgGroup); }
-        // Spawn ALL objects at correct scale
         const targetObj = localState.objects.find(o => o.id === warpTargetId);
-        console.log('[LSG] Approach spawn. target:', warpTargetId, 'targetObj:', targetObj ? targetObj.type : 'NULL', 'gateModels:', Object.keys(gateModels), 'stationModels:', Object.keys(stationModels));
         if(targetObj && targetObj.station_id && stationModels[targetObj.station_id]){
           const m = stationModels[targetObj.station_id];
           m.position.set(0, 0, 0); m.visible = true; lsgGroup.add(m);
-          console.log('[LSG] Station model added. scale:', m.scale.x, 'children:', m.children.length, 'inScene:', m.parent === lsgGroup);
         } else if(targetObj && targetObj.type === 'gate' && gateModels[targetObj.id]){
           const m = gateModels[targetObj.id];
           m.position.set(0, 0, 0); m.visible = true; lsgGroup.add(m);
-          console.log('[LSG] Gate model added. scale:', m.scale.x, 'children:', m.children.length, 'inScene:', m.parent === lsgGroup);
         }
-        // Place LSG along actual direction to target (matches SS label direction)
-        const toTargetX = localState.objects.find(o=>o.id===warpTargetId).ss_x - window._playerSS.x;
-        const toTargetY = (localState.objects.find(o=>o.id===warpTargetId).ss_y||0) - (window._playerSS.y||0);
-        const toTargetZ = localState.objects.find(o=>o.id===warpTargetId).ss_z - window._playerSS.z;
-        const toTargetLen = Math.sqrt(toTargetX*toTargetX + toTargetY*toTargetY + toTargetZ*toTargetZ);
-        const lsgDirX = toTargetLen > 0 ? toTargetX/toTargetLen : warpHeading.x;
-        const lsgDirY = toTargetLen > 0 ? toTargetY/toTargetLen : warpHeading.y;
-        const lsgDirZ = toTargetLen > 0 ? toTargetZ/toTargetLen : warpHeading.z;
-        lsgGroup.position.set(lsgDirX * LSG_SPAWN_DIST, lsgDirY * LSG_SPAWN_DIST, lsgDirZ * LSG_SPAWN_DIST);
-        // Store direction for slide
-        window._lsgApproachDir = {x: lsgDirX, y: lsgDirY, z: lsgDirZ};
-        console.log('[LSG] lsgGroup pos:', lsgGroup.position.x.toFixed(0), lsgGroup.position.y.toFixed(0), lsgGroup.position.z.toFixed(0), 'lsgGroup.parent===scene:', lsgGroup.parent === scene);
+        const toX = targetObj.ss_x - window._playerSS.x;
+        const toY = (targetObj.ss_y||0) - (window._playerSS.y||0);
+        const toZ = targetObj.ss_z - window._playerSS.z;
+        const toLen = Math.sqrt(toX*toX + toY*toY + toZ*toZ) || 1;
+        window._lsgApproachDir = {x:toX/toLen, y:toY/toLen, z:toZ/toLen};
+        window._approachTriggerKm = approachTriggerKm;
+        window._approachSpawnUnits = approachSpawnUnits;
+      }
+      
+      // SLIDE LSG based on remaining distance
+      if(window._approachStarted && lsgGroup){
+        const trigKm = window._approachTriggerKm || 10000;
+        const spawnU = window._approachSpawnUnits || 100000;
+        const t2 = 1 - Math.min(1, remainingKm / trigKm);
+        const pos = spawnU + (LSG_STOP_DIST - spawnU) * t2;
+        const dir = window._lsgApproachDir || {x:warpHeading.x, y:warpHeading.y, z:warpHeading.z};
+        lsgGroup.position.set(dir.x * pos, dir.y * pos, dir.z * pos);
       }
 
-      // SLIDE LSG to ship
-      if(window._approachStarted && lsgGroup){
-        const at = Math.min(1, (t - window._approachStart) / 8.0); // 8 seconds approach
-        const pos = LSG_SPAWN_DIST * Math.pow(1 - at, 4) + LSG_STOP_DIST; // exponential approach - gets close fast, slows near end
-        const dir = window._lsgApproachDir || warpHeading;
-        lsgGroup.position.set(dir.x * pos, dir.y * pos, dir.z * pos);
-        if(!window._slideLog) window._slideLog = 0;
-        if(t - window._slideLog > 0.5){window._slideLog = t; console.log('[SLIDE] pos=', Math.round(pos), 'at=', at.toFixed(2));}
-
-        // COMPLETION
-        if(at >= 1.0){
+        // COMPLETION: when remaining distance is essentially zero
+        if(remainingKm < 100){
           if(localState && localState.objects){
             localState.objects.forEach(o => o.is_anchor = false);
             const d2 = localState.objects.find(o => o.id === warpTargetId);
@@ -1562,6 +1556,7 @@ window.warpTo = function(objId){
   
   // Store warp phases
   window._warpPhases = {peakSpeed, accelTime, cruiseTime, decelTime, totalTime};
+  window._warpOrbitOffsetKm = (len - totalDist) * 150000000; // km short of target we stop
   window._warpTotalDist = totalDist;
   window._warpFromSS = {x: from.x, y: from.y || 0, z: from.z};
   window._warpToSS = {x: warpDestX, y: warpDestY, z: warpDestZ};
