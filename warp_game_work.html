@@ -1144,28 +1144,6 @@ function animate(now){
         lsgGroup.position.set(dir.x * pos, dir.y * pos, dir.z * pos);
       }
 
-        // COMPLETION: when remaining distance is essentially zero
-        if(remainingKm < 100){
-          if(localState && localState.objects){
-            localState.objects.forEach(o => o.is_anchor = false);
-            const d2 = localState.objects.find(o => o.id === warpTargetId);
-            if(d2) d2.is_anchor = true;
-          }
-          playerHeading.copy(warpHeading);
-          playerSpeed = 0;
-          warpState = 'none';
-          warpTargetId = null;
-          warpTargetPos = null;
-          window._ssgFrozen = false;
-          window._approachStarted = false;
-          window._approachStart = null;
-          window._departDone = false;
-          window._lsgDepartStart = null;
-          window._warpPhases = null;
-          document.getElementById('warpTarget').textContent = '';
-          if(warpStreaks) warpStreaks.visible = false;
-        }
-      }
 
       // Progress and HUD
       const progress = Math.min(1.0, t / wp.totalTime);
@@ -1195,8 +1173,29 @@ function animate(now){
         }
         warpStreaks.material.opacity = 0.3 + streakIntensity * 0.5;
       }
-    }
 
+        // COMPLETION: when remaining distance is essentially zero
+        if(remainingKm < 100){
+          if(localState && localState.objects){
+            localState.objects.forEach(o => o.is_anchor = false);
+            const d2 = localState.objects.find(o => o.id === warpTargetId);
+            if(d2) d2.is_anchor = true;
+          }
+          playerHeading.copy(warpHeading);
+          playerSpeed = 0;
+          warpState = 'none';
+          warpTargetId = null;
+          warpTargetPos = null;
+          window._ssgFrozen = false;
+          window._approachStarted = false;
+          window._approachStart = null;
+          window._departDone = false;
+          window._lsgDepartStart = null;
+          window._warpPhases = null;
+          document.getElementById('warpTarget').textContent = '';
+          if(warpStreaks) warpStreaks.visible = false;
+        }
+      }
     // ── Player Ship Physics (CLIENT-AUTHORITATIVE, ship moves in world space) ──
     if(warpState === 'none'){
       checkApproachArrival();
