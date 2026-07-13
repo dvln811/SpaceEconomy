@@ -1071,14 +1071,6 @@ function animate(now){
         const decelDist = wp.peakSpeed * wp.decelTime * (1 - Math.pow(1 - dt_norm, 5)) / 5;
         dist = accelFullDist + cruiseFullDist + decelDist;
       }
-      // Position: dead reckoning (only when SSG not frozen)
-      if(!window._ssgFrozen){
-        const clampedDist2 = Math.min(dist, window._warpTotalDist);
-        window._playerSS.x = window._warpFromSS.x + warpHeading.x * clampedDist2;
-        window._playerSS.y = (window._warpFromSS.y || 0) + warpHeading.y * clampedDist2;
-        window._playerSS.z = window._warpFromSS.z + warpHeading.z * clampedDist2;
-      }
-      
       // ── LSG (departure, approach, completion) ──
       const LSG_SPAWN_DIST = 500000; // 50,000 km
       const LSG_STOP_DIST = 100;     // 10 km
@@ -1108,13 +1100,13 @@ function animate(now){
         window._playerSS.z = window._warpFromSS.z + warpHeading.z * cd;
       }
 
-      // APPROACH: distance-based (like warp_test). Spawns while SSG still moving.
-      const approachTriggerKm = Math.max(10000, (window._warpOrbitOffsetKm || 50000) * 3);
-      const approachSpawnUnits = approachTriggerKm * 10;
+      // APPROACH: distance-based (matching warp_test logic)
+      const APPROACH_TRIGGER_KM = 10000;   // 10,000 km - same as warp_test
+      const APPROACH_SPAWN_UNITS = 2500;   // model visible immediately at this distance
       const remainingAU = window._warpTotalDist - Math.min(dist, window._warpTotalDist);
       const remainingKm = remainingAU * 150000000;
       
-      if(!window._approachStarted && window._departDone && remainingKm <= approachTriggerKm){
+      if(!window._approachStarted && window._departDone && remainingKm <= APPROACH_TRIGGER_KM){
         window._approachStarted = true;
         if(!lsgGroup){ lsgGroup = new THREE.Group(); scene.add(lsgGroup); }
         const targetObj = localState.objects.find(o => o.id === warpTargetId);
@@ -1125,23 +1117,23 @@ function animate(now){
           const m = gateModels[targetObj.id];
           m.position.set(0, 0, 0); m.visible = true; lsgGroup.add(m);
         }
-        const toX = targetObj.ss_x - window._playerSS.x;
-        const toY = (targetObj.ss_y||0) - (window._playerSS.y||0);
-        const toZ = targetObj.ss_z - window._playerSS.z;
-        const toLen = Math.sqrt(toX*toX + toY*toY + toZ*toZ) || 1;
-        window._lsgApproachDir = {x:toX/toLen, y:toY/toLen, z:toZ/toLen};
-        window._approachTriggerKm = approachTriggerKm;
-        window._approachSpawnUnits = approachSpawnUnits;
+        // Position group ahead of PLAYER (not world origin)
+        lsgGroup.position.set(
+          playerPos.x + warpHeading.x * APPROACH_SPAWN_UNITS,
+          playerPos.y + warpHeading.y * APPROACH_SPAWN_UNITS,
+          playerPos.z + warpHeading.z * APPROACH_SPAWN_UNITS
+        );
       }
       
-      // SLIDE LSG based on remaining distance
+      // SLIDE LSG toward player based on remaining distance
       if(window._approachStarted && lsgGroup){
-        const trigKm = window._approachTriggerKm || 10000;
-        const spawnU = window._approachSpawnUnits || 100000;
-        const t2 = 1 - Math.min(1, remainingKm / trigKm);
-        const pos = spawnU + (LSG_STOP_DIST - spawnU) * t2;
-        const dir = window._lsgApproachDir || {x:warpHeading.x, y:warpHeading.y, z:warpHeading.z};
-        lsgGroup.position.set(dir.x * pos, dir.y * pos, dir.z * pos);
+        const t2 = 1 - Math.min(1, remainingKm / APPROACH_TRIGGER_KM);
+        const pos = APPROACH_SPAWN_UNITS + (LSG_STOP_DIST - APPROACH_SPAWN_UNITS) * t2;
+        lsgGroup.position.set(
+          playerPos.x + warpHeading.x * pos,
+          playerPos.y + warpHeading.y * pos,
+          playerPos.z + warpHeading.z * pos
+        );
       }
 
 
@@ -1517,16 +1509,24 @@ window.warpTo = function(objId){
     const orbitOffsetAU = ((obj.radius_km || 5000) * orbitMult) / AU_KM;
     totalDist = Math.max(0, len - orbitOffsetAU);
   } else if(obj.parent && localState){
-    // Orbital station/gate: use parent planet's radius for offset
+    // Orbital station/gate: warp toward PARENT PLANET, stop at orbit offset (same as planet warp)
     const parentObj = localState.objects.find(o => o.id === obj.parent);
     if(parentObj && parentObj.radius_km){
+      // Recalculate heading toward parent planet (not the station)
+      const pdx = parentObj.ss_x - from.x;
+      const pdy = (parentObj.ss_y || 0) - (from.y || 0);
+      const pdz = parentObj.ss_z - from.z;
+      const plen = Math.sqrt(pdx*pdx + pdy*pdy + pdz*pdz);
+      if(plen > 0.00001){
+        warpHeading.set(pdx/plen, pdy/plen, pdz/plen).normalize();
+      }
       let orbitMult;
       if(parentObj.radius_km < 1000) orbitMult = 3;
       else if(parentObj.radius_km < 5000) orbitMult = 2;
       else if(parentObj.radius_km < 20000) orbitMult = 1.5;
       else orbitMult = 1.2;
       const orbitOffsetAU = (parentObj.radius_km * orbitMult) / AU_KM;
-      totalDist = Math.max(0, len - orbitOffsetAU);
+      totalDist = Math.max(0, plen - orbitOffsetAU);
     }
   }
   
