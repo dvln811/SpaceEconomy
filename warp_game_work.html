@@ -682,6 +682,40 @@ function setFlightScene(){
       gGroup.visible = false;
       gateModels[obj.id] = gGroup;
     });
+    // Build asteroid field models (procedural)
+    localState.objects.filter(o => o.type === 'belt' || o.type === 'asteroid_belt').forEach(obj => {
+      const rocks = [];
+      // Seeded random for consistent layout
+      let seed = 0;
+      for(let c = 0; c < obj.id.length; c++) seed = ((seed << 5) - seed) + obj.id.charCodeAt(c);
+      const rand = (function(s){return function(){s=(s*1664525+1013904223)&0xFFFFFFFF;return(s>>>0)/4294967296;};})(Math.abs(seed));
+      const rockCount = 20 + Math.floor(rand() * 15);
+      for(let i = 0; i < rockCount; i++){
+        // Displaced icosahedron
+        const geo = new THREE.IcosahedronGeometry(1, 1);
+        const posAttr = geo.attributes.position;
+        for(let v = 0; v < posAttr.count; v++){
+          posAttr.setX(v, posAttr.getX(v) * (0.7 + rand() * 0.6));
+          posAttr.setY(v, posAttr.getY(v) * (0.7 + rand() * 0.6));
+          posAttr.setZ(v, posAttr.getZ(v) * (0.7 + rand() * 0.6));
+        }
+        geo.computeVertexNormals();
+        const radius = 0.3 + rand() * 1.2;
+        const mat = new THREE.MeshPhongMaterial({color:0x2a2018, emissive:0x0a0805, shininess:2, transparent:true, opacity:0.85});
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.scale.setScalar(radius);
+        mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25), new THREE.LineBasicMaterial({color:0x8d6e4a, transparent:true, opacity:0.4})));
+        // Spread in a disk
+        const angle = rand() * Math.PI * 2;
+        const dist = rand() * 150;
+        const vert = (rand() - 0.5) * 30;
+        mesh.position.set(Math.cos(angle) * dist, vert, Math.sin(angle) * dist);
+        mesh.rotation.set(rand()*6.28, rand()*6.28, rand()*6.28);
+        mesh.visible = false;
+        rocks.push(mesh);
+      }
+      asteroidModels[obj.id] = rocks;
+    });
     // Show anchor model in lsgGroup
     const anchor = localState.objects.find(o => o.is_anchor);
     if(anchor && anchor.station_id && stationModels[anchor.station_id]){
@@ -1078,16 +1112,21 @@ function animate(now){
       // DEPARTURE: slide current LSG away (SSG updates independently)
       if(!window._departDone){
         if(!window._lsgDepartStart) window._lsgDepartStart = t;
-        const departT = (t - window._lsgDepartStart) / 3.0;
+        const departT = (t - window._lsgDepartStart) / 2.25;
         if(departT < 1.0 && lsgGroup && lsgGroup.children.length > 0){
           // NO SSG freeze - planet rendering updates independently
-          const d = Math.pow(departT, 4) * LSG_SPAWN_DIST;
+          const d = Math.pow(departT, 2) * LSG_SPAWN_DIST;
           if(!window._lsgStartPos) window._lsgStartPos = lsgGroup.position.clone();
           lsgGroup.position.copy(window._lsgStartPos).addScaledVector(warpHeading, -d);
+          // Hide when too small to see
+          const camDist = camera.position.distanceTo(lsgGroup.position);
+          if(camDist > 0 && (150 / camDist) < 0.002){
+            lsgGroup.visible = false;
+          }
         } else {
           window._departDone = true;
           window._lsgStartPos = null;
-          if(lsgGroup) while(lsgGroup.children.length) lsgGroup.remove(lsgGroup.children[0]);
+          if(lsgGroup){ lsgGroup.visible = true; while(lsgGroup.children.length) lsgGroup.remove(lsgGroup.children[0]); }
         }
       }
 
@@ -1129,6 +1168,9 @@ function animate(now){
         } else if(targetObj && targetObj.type === 'gate' && gateModels[targetObj.id]){
           const m = gateModels[targetObj.id];
           m.position.set(0, 0, 0); m.visible = true; lsgGroup.add(m);
+        } else if(targetObj && (targetObj.type === 'belt' || targetObj.type === 'asteroid_belt') && asteroidModels[targetObj.id]){
+          const rocks = asteroidModels[targetObj.id];
+          rocks.forEach(r => { r.visible = true; lsgGroup.add(r); });
         }
         // Position group ahead of PLAYER (not world origin)
         lsgGroup.position.set(
