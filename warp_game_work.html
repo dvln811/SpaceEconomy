@@ -1153,10 +1153,11 @@ function animate(now){
       }
 
       // APPROACH: distance-based (matching warp_test logic)
-      const APPROACH_TRIGGER_KM = 10000;   // 10,000 km - same as warp_test
-      const APPROACH_SPAWN_UNITS = 2500;   // model visible immediately at this distance
+      const APPROACH_TRIGGER_KM = 10000;   // 10,000 km
+      const APPROACH_SPAWN_UNITS = 2500;   // visible immediately
       const remainingAU = window._warpTotalDist - Math.min(dist, window._warpTotalDist);
       const remainingKm = remainingAU * 150000000;
+      window._approachRemainingKm = remainingKm; // expose to label system
       
       if(!window._approachStarted && window._departDone && remainingKm <= APPROACH_TRIGGER_KM){
         window._approachStarted = true;
@@ -1235,6 +1236,7 @@ function animate(now){
           warpTargetPos = null;
           window._ssgFrozen = false;
           window._approachStarted = false;
+          window._approachRemainingKm = undefined;
           window._approachStart = null;
           window._departDone = false;
           window._lsgDepartStart = null;
@@ -2765,11 +2767,25 @@ function updateDirectionalLabels(){
     let labelX, labelY, labelZ;
     // Use local model position for stations/gates that have a visible model in lsgGroup
     const hasVisibleModel = (obj.station_id && stationModels[obj.station_id] && stationModels[obj.station_id].visible && stationModels[obj.station_id].parent === lsgGroup) ||
-                           (obj.type === 'gate' && gateModels[obj.id] && gateModels[obj.id].visible && gateModels[obj.id].parent === lsgGroup);
+                           (obj.type === 'gate' && gateModels[obj.id] && gateModels[obj.id].visible && gateModels[obj.id].parent === lsgGroup) ||
+                           ((obj.type === 'belt' || obj.type === 'asteroid_belt') && asteroidModels[obj.id] && asteroidModels[obj.id].length > 0 && asteroidModels[obj.id][0].parent === lsgGroup);
     const isApproachTarget = window._approachStarted && obj.id === warpTargetId;
+    const isWarpTarget = (warpState === 'warping' || warpState === 'aligning') && obj.id === warpTargetId;
     const useLocal = (hasVisibleModel || isApproachTarget) && obj.type !== 'planet' && obj.type !== 'moon';
-    if(obj.id === warpTargetId && window._approachStarted && !window._labelDbg2){window._labelDbg2=true; console.log('[LABEL-APPROACH] target:', obj.id, 'hasVisibleModel:', hasVisibleModel, 'isApproachTarget:', isApproachTarget, 'useLocal:', useLocal);}
-    if(useLocal){
+    if(isWarpTarget){
+      // Warp target: project along warpHeading from player position
+      if(isApproachTarget && lsgGroup){
+        // During approach: use actual lsgGroup position (model is there, no snap at completion)
+        labelX = lsgGroup.position.x;
+        labelY = lsgGroup.position.y;
+        labelZ = lsgGroup.position.z;
+      } else {
+        // During warp travel: project at approach spawn distance along heading (matches where group will appear)
+        labelX = playerPos.x + warpHeading.x * 2500;
+        labelY = playerPos.y + warpHeading.y * 2500;
+        labelZ = playerPos.z + warpHeading.z * 2500;
+      }
+    } else if(useLocal){
       // Find the actual model position from the dicts (more reliable than localState.objects)
       const gOff = lsgGroup ? lsgGroup.position : new THREE.Vector3(0,0,0);
       let modelPos = null;
@@ -2864,7 +2880,15 @@ function updateDirectionalLabels(){
     const displayName = obj.name;
     // Format distance
     let distLabel;
-    if(useLocal){
+    if(isWarpTarget && window._approachRemainingKm !== undefined){
+      // Warp target: use warp system's remainingKm for smooth distance display
+      const dKm = window._approachRemainingKm;
+      if(dKm > 150000000) distLabel = (dKm / 150000000).toFixed(2) + ' AU';
+      else if(dKm > 1000000) distLabel = (dKm/1000000).toFixed(1) + 'M km';
+      else if(dKm > 1000) distLabel = Math.round(dKm/1000) + 'k km';
+      else if(dKm > 1) distLabel = Math.round(dKm) + ' km';
+      else distLabel = Math.round(dKm * 1000) + ' m';
+    } else if(useLocal){
       // Local distance in meters (dist is in cm-scale units)
       const distM = dist * 100;
       distLabel = distM < 1000 ? Math.round(distM) + 'm' : (distM/1000).toFixed(1) + 'km';
