@@ -931,6 +931,141 @@ const WARP_SCALE_FACTOR = 4;
 const WARP_APPROACH_SPAWN_DIST = 2500;
 const AU_KM = 150000000;
 
+// ── Procedural Warp Audio ──
+let audioCtx = null;
+let warpAudio = null;
+function initWarpAudio(){
+  if(warpAudio) return;
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const ctx = audioCtx;
+  
+  // Master compressor to glue it together
+  const compressor = ctx.createDynamicsCompressor();
+  compressor.threshold.value = -20;
+  compressor.knee.value = 10;
+  compressor.ratio.value = 4;
+  compressor.connect(ctx.destination);
+  
+  // Sub-bass sine (gut punch, felt more than heard)
+  const subOsc = ctx.createOscillator();
+  subOsc.type = 'sine';
+  subOsc.frequency.value = 12;
+  const subGain = ctx.createGain();
+  subGain.gain.value = 0;
+  subOsc.connect(subGain);
+  subGain.connect(compressor);
+  subOsc.start();
+  
+  // Turbine noise layer 1: low roar (like air rushing)
+  const noiseLen = ctx.sampleRate * 2;
+  const noiseBuf1 = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
+  const nd1 = noiseBuf1.getChannelData(0);
+  for(let i = 0; i < noiseLen; i++) nd1[i] = Math.random() * 2 - 1;
+  const turbine1 = ctx.createBufferSource();
+  turbine1.buffer = noiseBuf1; turbine1.loop = true;
+  const turb1Filter = ctx.createBiquadFilter();
+  turb1Filter.type = 'bandpass';
+  turb1Filter.frequency.value = 25;
+  turb1Filter.Q.value = 0.8;
+  const turb1Gain = ctx.createGain();
+  turb1Gain.gain.value = 0;
+  turbine1.connect(turb1Filter);
+  turb1Filter.connect(turb1Gain);
+  turb1Gain.connect(compressor);
+  turbine1.start();
+  
+  // Turbine noise layer 2: mid howl (the "wind tunnel" sound)
+  const noiseBuf2 = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
+  const nd2 = noiseBuf2.getChannelData(0);
+  for(let i = 0; i < noiseLen; i++) nd2[i] = Math.random() * 2 - 1;
+  const turbine2 = ctx.createBufferSource();
+  turbine2.buffer = noiseBuf2; turbine2.loop = true;
+  const turb2Filter = ctx.createBiquadFilter();
+  turb2Filter.type = 'bandpass';
+  turb2Filter.frequency.value = 60;
+  turb2Filter.Q.value = 1.5;
+  const turb2Gain = ctx.createGain();
+  turb2Gain.gain.value = 0;
+  turbine2.connect(turb2Filter);
+  turb2Filter.connect(turb2Gain);
+  turb2Gain.connect(compressor);
+  turbine2.start();
+  
+  // Turbine noise layer 3: high hiss (speed texture)
+  const noiseBuf3 = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
+  const nd3 = noiseBuf3.getChannelData(0);
+  for(let i = 0; i < noiseLen; i++) nd3[i] = Math.random() * 2 - 1;
+  const turbine3 = ctx.createBufferSource();
+  turbine3.buffer = noiseBuf3; turbine3.loop = true;
+  const turb3Filter = ctx.createBiquadFilter();
+  turb3Filter.type = 'lowpass';
+  turb3Filter.frequency.value = 100;
+  turb3Filter.Q.value = 1.0;
+  const turb3Gain = ctx.createGain();
+  turb3Gain.gain.value = 0;
+  turbine3.connect(turb3Filter);
+  turb3Filter.connect(turb3Gain);
+  turb3Gain.connect(compressor);
+  turbine3.start();
+  
+  // Resonant throb (gives the "mechanical" feel - pulsing filter on noise)
+  const noiseBuf4 = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
+  const nd4 = noiseBuf4.getChannelData(0);
+  for(let i = 0; i < noiseLen; i++) nd4[i] = Math.random() * 2 - 1;
+  const throb = ctx.createBufferSource();
+  throb.buffer = noiseBuf4; throb.loop = true;
+  const throbFilter = ctx.createBiquadFilter();
+  throbFilter.type = 'bandpass';
+  throbFilter.frequency.value = 18;
+  throbFilter.Q.value = 8; // high resonance = tonal quality from noise
+  const throbGain = ctx.createGain();
+  throbGain.gain.value = 0;
+  throb.connect(throbFilter);
+  throbFilter.connect(throbGain);
+  throbGain.connect(compressor);
+  throb.start();
+  
+  warpAudio = {ctx, compressor, subOsc, subGain, turb1Filter, turb1Gain, turb2Filter, turb2Gain, turb3Filter, turb3Gain, throbFilter, throbGain};
+}
+
+function updateWarpAudio(intensity){
+  if(!warpAudio) return;
+  const t = audioCtx.currentTime;
+  const s = 0.15; // smooth ramp time
+  
+  // Sub-bass: always present when moving, 12-22 Hz
+  warpAudio.subOsc.frequency.setTargetAtTime(12 + intensity * 10, t, s);
+  warpAudio.subGain.gain.setTargetAtTime(intensity * 0.3, t, s);
+  
+  // Low turbine roar: 25-60 Hz, main body of sound
+  warpAudio.turb1Filter.frequency.setTargetAtTime(25 + intensity * 35, t, s);
+  warpAudio.turb1Gain.gain.setTargetAtTime(intensity * 0.25, t, s);
+  
+  // Mid: 40-100 Hz only, low growl
+  const midInt = Math.max(0, (intensity - 0.15) / 0.85);
+  warpAudio.turb2Filter.frequency.setTargetAtTime(40 + midInt * 60, t, s);
+  warpAudio.turb2Gain.gain.setTargetAtTime(midInt * 0.08, t, s);
+  
+  // High layer: 100-200 Hz, barely there
+  const hiInt = Math.max(0, (intensity - 0.5) / 0.5);
+  warpAudio.turb3Filter.frequency.setTargetAtTime(100 + hiInt * 100, t, s);
+  warpAudio.turb3Gain.gain.setTargetAtTime(hiInt * 0.01, t, s);
+  
+  // Resonant throb: 18-35 Hz, pulsing mechanical
+  warpAudio.throbFilter.frequency.setTargetAtTime(18 + intensity * 17, t, s);
+  warpAudio.throbGain.gain.setTargetAtTime(intensity * 0.2, t, s);
+}
+
+function stopWarpAudio(){
+  if(!warpAudio) return;
+  const t = audioCtx.currentTime;
+  warpAudio.subGain.gain.setTargetAtTime(0, t, 0.8);
+  warpAudio.turb1Gain.gain.setTargetAtTime(0, t, 0.6);
+  warpAudio.turb2Gain.gain.setTargetAtTime(0, t, 0.5);
+  warpAudio.turb3Gain.gain.setTargetAtTime(0, t, 0.4);
+  warpAudio.throbGain.gain.setTargetAtTime(0, t, 1.0);
+}
+
 // Engine trail
 let trailLine = null;
 let trailDrawCount = 0;
@@ -1061,6 +1196,7 @@ function animate(now){
         // (no freeze logic needed - SSG renders from live data)
         warpLock = false;
         window._approachStarted = false;
+        initWarpAudio();
         window._departDespawned = false;
         window._objDepartTimer = 0;
         // Don't reset lsgGroup position - departure moves it from wherever it is
@@ -1224,10 +1360,12 @@ function animate(now){
       const warpHudEl = document.getElementById('warpTarget');
       warpHudEl.textContent = t < WARP_LSG_DEPART_TIME ? 'Departing' : t >= wp.accelTime + wp.cruiseTime ? 'Arriving' : 'Warping';
       
-      // Warp streaks: progress-based visibility
-      const streakIntensity = Math.min(1.0, speed / wp.peakSpeed);
+      // Warp streaks: speed + time based visibility (start early, linger late)
+      const speedFraction = speed / wp.peakSpeed;
+      const timeFraction = Math.min(1.0, t / 2.0); // ramp up over first 2 seconds regardless of speed
+      const streakIntensity = Math.min(1.0, Math.max(speedFraction, timeFraction * 0.3));
       if(warpStreaks){
-        warpStreaks.visible = streakIntensity > 0.05;
+        warpStreaks.visible = streakIntensity > 0.02;
         if(warpStreaks.visible){
           warpStreaks.position.copy(camera.position);
           const lookMat = new THREE.Matrix4().lookAt(new THREE.Vector3(0,0,0), warpHeading, new THREE.Vector3(0,1,0));
@@ -1236,6 +1374,11 @@ function animate(now){
         }
         warpStreaks.material.opacity = 0.3 + streakIntensity * 0.5;
       }
+      // Update warp audio - boost intensity so it starts/ends with more presence
+      const audioTimeBias = Math.min(1.0, t / 1.5) * 0.4; // ramps to 40% floor in 1.5s
+      const audioDecelBias = (t >= wp.accelTime + wp.cruiseTime) ? Math.max(0, 1.0 - ((t - wp.accelTime - wp.cruiseTime) / wp.decelTime)) * 0.3 : 0;
+      const audioIntensity = Math.min(1.0, Math.max(speedFraction, audioTimeBias, audioDecelBias));
+      updateWarpAudio(audioIntensity);
 
         // COMPLETION: when remaining distance is essentially zero
         if(remainingKm < 100){
@@ -1259,6 +1402,7 @@ function animate(now){
           window._warpPhases = null;
           document.getElementById('warpTarget').textContent = '';
           if(warpStreaks) warpStreaks.visible = false;
+          stopWarpAudio();
         }
       }
     // ── Player Ship Physics (CLIENT-AUTHORITATIVE, ship moves in world space) ──
@@ -2944,6 +3088,16 @@ function updateDirectionalLabels(){
 
     label.el.style.left = sx + 'px';
     label.el.style.top = sy + 'px';
+    // Warp jitter: labels vibrate slightly at high speed
+    if(warpState === 'warping' && warpSpeed > 0){
+      const jitterAmt = Math.min(3.0, (warpSpeed / WARP_TOP_SPEED) * 3.0);
+      if(jitterAmt > 0.2){
+        const jx = (Math.random() - 0.5) * jitterAmt;
+        const jy = (Math.random() - 0.5) * jitterAmt;
+        label.el.style.left = (sx + jx) + 'px';
+        label.el.style.top = (sy + jy) + 'px';
+      }
+    }
     label.el.style.color = color;
     label.el.style.opacity = onScreen ? '0.85' : '1.0';
     label.el.style.textShadow = '0 0 4px rgba(0,0,0,0.9)';
