@@ -2919,9 +2919,11 @@ function updateDirectionalLabels(){
     const displayName = obj.name;
     // Format distance
     let distLabel;
-    if((isWarpTarget || isWarpSibling) && window._approachRemainingKm !== undefined){
-      // Warp target: use warp system's remainingKm for smooth distance display
-      const dKm = window._approachRemainingKm;
+    if((isWarpTarget || isWarpSibling) && (warpState === 'warping' || warpState === 'aligning')){
+      // Warp target: use real SS distance to object (no snap at completion)
+      const ps = window._playerSS;
+      const dxSS = obj.ss_x - ps.x, dySS = (obj.ss_y||0) - (ps.y||0), dzSS = obj.ss_z - ps.z;
+      const dKm = Math.sqrt(dxSS*dxSS + dySS*dySS + dzSS*dzSS) * 150000000;
       if(dKm > 150000000) distLabel = (dKm / 150000000).toFixed(2) + ' AU';
       else if(dKm > 1000000) distLabel = (dKm/1000000).toFixed(1) + 'M km';
       else if(dKm > 1000) distLabel = Math.round(dKm/1000) + 'k km';
