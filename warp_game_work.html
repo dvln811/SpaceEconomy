@@ -1130,12 +1130,12 @@ function animate(now){
         }
       }
 
-      // SSG POSITION (only when not frozen)
+      // SSG POSITION: interpolate between from and to (no heading drift)
       if(!window._ssgFrozen){
-        const cd = Math.min(dist, window._warpTotalDist);
-        window._playerSS.x = window._warpFromSS.x + warpHeading.x * cd;
-        window._playerSS.y = (window._warpFromSS.y||0) + warpHeading.y * cd;
-        window._playerSS.z = window._warpFromSS.z + warpHeading.z * cd;
+        const progress = Math.min(1.0, dist / window._warpTotalDist);
+        window._playerSS.x = window._warpFromSS.x + (window._warpToSS.x - window._warpFromSS.x) * progress;
+        window._playerSS.y = (window._warpFromSS.y||0) + ((window._warpToSS.y||0) - (window._warpFromSS.y||0)) * progress;
+        window._playerSS.z = window._warpFromSS.z + (window._warpToSS.z - window._warpFromSS.z) * progress;
       }
 
       // DEBUG: log SSG state every 30 frames during first 5 seconds
