@@ -37,7 +37,7 @@ h2{color:#4fc3f7;font-size:12px;letter-spacing:1px;text-transform:uppercase;marg
 ::-webkit-scrollbar-thumb{background:#1a3050;border-radius:3px}
 *{scrollbar-width:thin;scrollbar-color:#1a3050 #0a0e18}
 </style></head><body>
-<div class="layout docked" id="layout">
+<div class="layout flight" id="layout">
   <div class="viewport" id="viewport" oncontextmenu="event.preventDefault()">
     <div class="location-bar" id="locationBar">
       <span class="sys" id="sysName">Loading...</span>
@@ -53,7 +53,7 @@ h2{color:#4fc3f7;font-size:12px;letter-spacing:1px;text-transform:uppercase;marg
       <span id="warpTarget" style="color:#ffd54f"></span>
     </div>
     <div class="ctx-menu" id="ctxMenu"></div>
-    <div id="fadeOverlay" style="position:absolute;inset:0;background:#020308;z-index:50;pointer-events:none;transition:opacity 2s;opacity:1"></div>
+    <div id="fadeOverlay" style="position:absolute;inset:0;background:#020308;z-index:50;pointer-events:none;transition:opacity 2s;opacity:0"></div>
   </div>
   <div class="panel-handle" id="panelHandle"></div>
   <div class="panel" id="panel">
@@ -80,12 +80,187 @@ h2{color:#4fc3f7;font-size:12px;letter-spacing:1px;text-transform:uppercase;marg
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three';
-import { buildShipFromData } from '/static/ship_renderer.js';
-import { generatePlanetTexture as genPlanetTex, pregenPlanetTextures, clearPlanetTextureCache } from '/static/planet_textures.js';
+
+// ──── INLINED MODULES (swap back to imports when integrating with server) ────
+
+// Ship renderer (full inline from /static/ship_renderer.js)
+/**
+ * Ship Renderer - builds Three.js geometry from ship component data.
+ * Usage: import { buildShipFromData, MATERIALS } from '/static/ship_renderer.js';
+ * Requires Three.js to be available via importmap.
+ */
+// THREE already available
+
+const MATERIALS = {
+  hull: () => new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1428, shininess:0, transparent:true, opacity:0.7}),
+  engine: () => new THREE.MeshPhongMaterial({color:0x0a1428, emissive:0x0a1020, shininess:0, transparent:true, opacity:0.7}),
+  cargo: () => new THREE.MeshPhongMaterial({color:0x1a1808, emissive:0x0a0a05, shininess:0, transparent:true, opacity:0.7}),
+  mining: () => new THREE.MeshPhongMaterial({color:0x1a1028, emissive:0x0a0818, shininess:0, transparent:true, opacity:0.7}),
+  weapon: () => new THREE.MeshPhongMaterial({color:0x1a1018, emissive:0x100508, shininess:0, transparent:true, opacity:0.7}),
+  shield: () => new THREE.MeshPhongMaterial({color:0x0a1a0a, emissive:0x050a05, shininess:0, transparent:true, opacity:0.7}),
+  accent: () => new THREE.MeshPhongMaterial({color:0x1a2040, emissive:0x0a0a1a, shininess:0, transparent:true, opacity:0.7}),
+};
+
+const EDGE_COLOR = {hull:0x4fc3f7, engine:0x5a7a9a, cargo:0xffd54f, mining:0xab47bc, weapon:0xef5350, shield:0x66bb6a, accent:0xef5350};
+const HP_COLORS = {defense:0x66bb6a, utility:0x4fc3f7, industrial:0xffd54f, mining:0xab47bc, weapon:0xef5350, shield:0x66bb6a};
+
+function addEdges(mesh, material) {
+  if (!mesh.geometry) return;
+  const col = EDGE_COLOR[material] || 0x4fc3f7;
+  const edges = new THREE.EdgesGeometry(mesh.geometry, 15);
+  const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color:col, transparent:true, opacity:0.5}));
+  mesh.add(line);
+}
+
+function buildShipFromData(scene, data, options = {}) {
+  const showHardpoints = options.showHardpoints !== false;
+  const group = new THREE.Group();
+
+  for (const comp of data.components) {
+    const mat = (MATERIALS[comp.material] || MATERIALS.hull)();
+    const [px, py, pz] = comp.pos;
+    const [rx, ry, rz] = comp.rot || [0,0,0];
+    let mesh = null;
+
+    switch(comp.type) {
+      case 'pod': {
+        const {length, height, width} = comp.params;
+        const b=0.04, hw=width/2, hh=height/2;
+        const s = new THREE.Shape();
+        s.moveTo(-hh+b,-hw); s.lineTo(hh-b,-hw); s.lineTo(hh,-hw+b);
+        s.lineTo(hh,hw-b); s.lineTo(hh-b,hw); s.lineTo(-hh+b,hw);
+        s.lineTo(-hh,hw-b); s.lineTo(-hh,-hw+b); s.closePath();
+        const g = new THREE.ExtrudeGeometry(s, {depth:length, bevelEnabled:true, bevelThickness:0.01, bevelSize:0.01});
+        g.center();
+        mesh = new THREE.Mesh(g, mat);
+        if (rx === 0 && ry === 0 && rz === 0) mesh.rotation.y = Math.PI/2;
+        break;
+      }
+      case 'cylinder': {
+        const {r_top, r_bot, length} = comp.params;
+        const g = new THREE.CylinderGeometry(r_top, r_bot, length, 8);
+        mesh = new THREE.Mesh(g, mat);
+        if (rx === 0 && ry === 0 && rz === 0 && !comp.params.vertical) mesh.rotation.z = Math.PI/2;
+        break;
+      }
+      case 'cone': {
+        const {radius, length} = comp.params;
+        const g = new THREE.ConeGeometry(radius, length, 8);
+        mesh = new THREE.Mesh(g, mat);
+        if (rx === 0 && ry === 0 && rz === 0 && !comp.params.vertical) mesh.rotation.z = Math.PI/2;
+        break;
+      }
+      case 'spine': {
+        const {length, radius, flange_r} = comp.params;
+        const grp = new THREE.Group();
+        const s = new THREE.Shape();
+        for(let i=0;i<=6;i++){const a=Math.PI*2*i/6; if(i===0)s.moveTo(Math.cos(a)*radius,Math.sin(a)*radius); else s.lineTo(Math.cos(a)*radius,Math.sin(a)*radius);}
+        const bg = new THREE.ExtrudeGeometry(s,{depth:length,bevelEnabled:false}); bg.center();
+        const body = new THREE.Mesh(bg, mat); body.rotation.y=Math.PI/2; grp.add(body);
+        const fg = new THREE.CylinderGeometry(flange_r,flange_r,0.04,8);
+        const fA = new THREE.Mesh(fg, mat); fA.rotation.z=Math.PI/2; fA.position.x=-length/2-0.02; grp.add(fA);
+        const fB = new THREE.Mesh(fg.clone(), mat); fB.rotation.z=Math.PI/2; fB.position.x=length/2+0.02; grp.add(fB);
+        grp.position.set(px, py, pz);
+        group.add(grp);
+        grp.traverse(child => { if(child.isMesh) addEdges(child, comp.material); });
+        continue;
+      }
+      case 'box': {
+        const {x, y, z} = comp.params;
+        mesh = new THREE.Mesh(new THREE.BoxGeometry(x, y, z), mat);
+        break;
+      }
+      case 'sphere': {
+        const {radius, half} = comp.params;
+        const g = half ? new THREE.SphereGeometry(radius, 8, 6, 0, Math.PI*2, 0, Math.PI/2) : new THREE.SphereGeometry(radius, 8, 6);
+        mesh = new THREE.Mesh(g, mat);
+        break;
+      }
+      case 'torus': {
+        const {radius, tube} = comp.params;
+        mesh = new THREE.Mesh(new THREE.TorusGeometry(radius, tube, 6, 12), mat);
+        if (rx === 0 && ry === 0 && rz === 0) mesh.rotation.y = Math.PI/2;
+        break;
+      }
+      case 'wedge': {
+        const {profile, depth} = comp.params;
+        const s = new THREE.Shape();
+        profile.forEach((p,i) => i===0 ? s.moveTo(p[0],p[1]) : s.lineTo(p[0],p[1]));
+        s.closePath();
+        const g = new THREE.ExtrudeGeometry(s, {depth, bevelEnabled:true, bevelThickness:0.01, bevelSize:0.01});
+        g.center();
+        mesh = new THREE.Mesh(g, mat);
+        break;
+      }
+      case 'hardpoint': {
+        if (!showHardpoints) continue;
+        const {slot_type} = comp.params;
+        const col = HP_COLORS[slot_type] || 0xffffff;
+        const g = new THREE.OctahedronGeometry(0.05);
+        mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({color:col, wireframe:true, transparent:true, opacity:0.8}));
+        break;
+      }
+      default: continue;
+    }
+    if (mesh) {
+      mesh.position.set(px, py, pz);
+      mesh.rotation.x += rx; mesh.rotation.y += ry; mesh.rotation.z += rz;
+      group.add(mesh);
+      if (comp.type !== 'hardpoint') addEdges(mesh, comp.material);
+    }
+  }
+  scene.add(group);
+  return group;
+}
+
+
+// Planet texture generator (simple inline version - no worker needed)
+function genPlanetTex(THREE, planetId, planetType, isPlanet){
+  const colors = {terrestrial:'#1a5c3a', ocean:'#0a2050', desert:'#c4956a', rocky:'#6a5a4a', ice:'#8aa8c0', volcanic:'#401008', gas_giant:'#c49060', ice_giant:'#4a6888', super_earth:'#2a5a3a', rocky_moon:'#5a5a5a', ice_moon:'#8aa8c0', volcanic_moon:'#5a3020'};
+  const base = colors[planetType] || '#404040';
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = base; ctx.fillRect(0,0,256,128);
+  // Add noise
+  const seed = planetId.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
+  for(let i=0;i<100;i++){
+    const x=((seed*17+i*31)%256), y=((seed*13+i*23)%128);
+    const r=3+((seed+i*7)%8);
+    ctx.fillStyle=`rgba(${(seed+i)%60},${(seed+i*3)%60},${(seed+i*5)%40},0.3)`;
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+  }
+  if(planetType==='gas_giant'||planetType==='ice_giant'){
+    for(let y=0;y<128;y+=8){ ctx.fillStyle=`rgba(0,0,0,${0.05+Math.sin(y*0.2)*0.08})`; ctx.fillRect(0,y,256,4); }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.ClampToEdgeWrapping;
+  return tex;
+}
+function pregenPlanetTextures(THREE, objects, priorityId, onDone){ if(onDone) onDone(); }
+function clearPlanetTextureCache(){}
+
+// ──── END INLINED MODULES ────
+
+// Stub fetch for standalone mode (no server)
+const _realFetch = window.fetch;
+const STANDALONE_MODE = false;
+
+// -- INLINE MODEL DATA (extracted from server, swap back to fetch when integrating) --
+const INLINE_MODELS = {"pinto_runner":{"bounds":{"height":68.0,"length":420.4,"width":79.2},"components":[{"material":"hull","params":{"length":0.7200000000000001,"r_bot":0.18000000000000002,"r_top":0.14400000000000002},"pos":[0,0,0],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"radius":0.18000000000000002,"tube":0.014400000000000001},"pos":[0.18000000000000002,0,0],"rot":[0,0,0],"type":"torus"},{"material":"hull","params":{"radius":0.18000000000000002,"tube":0.014400000000000001},"pos":[-0.18000000000000002,0,0],"rot":[0,0,0],"type":"torus"},{"material":"hull","params":{"height":0.17144120689818088,"length":0.3673740147818161,"width":0.2449160098545441},"pos":[-0.05415766604042329,0,0.143764807021976],"rot":[0,0,0],"type":"pod"},{"material":"hull","params":{"height":0.11021220443454482,"length":0.18368700739090804,"width":0.15919540640545365},"pos":[0.15402094233593916,0,0.143764807021976],"rot":[0,0,0],"type":"pod"},{"material":"hull","params":{"flange_r":0.06300000000000001,"length":0.108,"radius":0.036000000000000004},"pos":[0.36000000000000004,0,0],"type":"spine"},{"material":"hull","params":{"x":0.014400000000000001,"y":0.09000000000000001,"z":0.014400000000000001},"pos":[0.10799999999999998,0.234,0],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"x":0.054,"y":0.0108,"z":0.0108},"pos":[0.10799999999999998,0.27,0],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"height":0.25200000000000006,"length":0.54,"width":0.36000000000000004},"pos":[0.378,0,0],"rot":[0,0,0],"type":"pod"},{"material":"hull","params":{"height":0.162,"length":0.27,"width":0.234},"pos":[0.684,0,0],"rot":[0,0,0],"type":"pod"},{"material":"hull","params":{"height":0.13461764989070069,"length":0.28846639262293,"width":0.19231092841528669},"pos":[0.43653161327173795,0.14001692263378632,0],"rot":[0,0,0],"type":"pod"},{"material":"hull","params":{"height":0.086539917786879,"length":0.144233196311465,"width":0.12500210346993634},"pos":[0.5999959024247317,0.14001692263378632,0],"rot":[0,0,0],"type":"pod"},{"material":"hull","params":{"flange_r":0.06300000000000001,"length":0.108,"radius":0.036000000000000004},"pos":[0.8280000000000001,0,0],"type":"spine"},{"material":"hull","params":{"x":0.014400000000000001,"y":0.09000000000000001,"z":0.014400000000000001},"pos":[0.5760000000000001,0.198,0],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"x":0.054,"y":0.0108,"z":0.0108},"pos":[0.5760000000000001,0.23400000000000004,0],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"height":0.108,"length":0.81,"width":0.5040000000000001},"pos":[0.936,0,0],"rot":[0,0,0],"type":"pod"},{"material":"hull","params":{"height":0.07200000000000001,"length":0.36000000000000004,"width":0.324},"pos":[1.08,0,0],"rot":[0,0,0],"type":"pod"},{"material":"hull","params":{"length":0.40845039551571505,"r_bot":0.10211259887892876,"r_top":0.081690079103143},"pos":[0.9057279479585368,-0.05392556720721239,0],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"radius":0.10211259887892876,"tube":0.0081690079103143},"pos":[1.0078405468374656,-0.05392556720721239,0],"rot":[0,0,0],"type":"torus"},{"material":"hull","params":{"radius":0.10211259887892876,"tube":0.0081690079103143},"pos":[0.8036153490796081,-0.05392556720721239,0],"rot":[0,0,0],"type":"torus"},{"material":"hull","params":{"x":0.014400000000000001,"y":0.09000000000000001,"z":0.014400000000000001},"pos":[0.936,0.126,0],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"x":0.054,"y":0.0108,"z":0.0108},"pos":[0.936,0.16200000000000003,0],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"height":0.108,"length":0.18000000000000002,"width":0.18000000000000002},"pos":[1.368,0,0],"rot":[0,0,0],"type":"pod"},{"material":"hull","params":{"height":0.108,"length":0.12600000000000003,"width":0.12600000000000003},"pos":[1.368,0.09000000000000001,0],"rot":[0,0,0],"type":"pod"},{"material":"hull","params":{"x":0.007200000000000001,"y":0.027,"z":0.108},"pos":[1.431,0.117,0],"rot":[0,0,0],"type":"box"},{"material":"engine","params":{"length":0.216,"r_bot":0.0504,"r_top":0.027},"pos":[-0.396,0,0.06300000000000001],"rot":[0,0,0],"type":"cylinder"},{"material":"engine","params":{"length":0.216,"r_bot":0.0504,"r_top":0.027},"pos":[-0.396,0.05455960043841964,-0.03149999999999999],"rot":[0,0,0],"type":"cylinder"},{"material":"engine","params":{"length":0.216,"r_bot":0.0504,"r_top":0.027},"pos":[-0.396,-0.05455960043841963,-0.03150000000000003],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.07200000000000001,"r_bot":0.07200000000000001,"r_top":0.07200000000000001},"pos":[-0.306,0,0],"rot":[0,0,0],"type":"cylinder"}],"faction":"","hull_class":"Industrial","name":"Pinto Runner","role":"industrial","tier":2},"station":{"components":[{"material":"hull","params":{"half":false,"radius":0.36},"pos":[0,0,0],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"length":0.048,"r_bot":0.18,"r_top":0.18},"pos":[0,-0.384,0],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.048,"r_bot":0.18,"r_top":0.18},"pos":[0,0.384,0],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.5399736611777707,"r_bot":0.0384,"r_top":0.0384},"pos":[0.6,0,0.0],"rot":[0,0.0,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.06720000000000001,"r_top":0.06720000000000001},"pos":[0.32999999999999996,0,0.0],"rot":[0,0.0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.06720000000000001,"r_top":0.06720000000000001},"pos":[0.87,0,0.0],"rot":[0,0.0,0],"type":"cylinder"},{"material":"hull","params":{"half":false,"radius":0.216},"pos":[0.8699868305888854,0,0.0],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"length":0.0288,"r_bot":0.108,"r_top":0.108},"pos":[0.8699868305888854,-0.2304,0.0],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.108,"r_top":0.108},"pos":[0.8699868305888854,0.2304,0.0],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.5562019739981964,"r_bot":0.0384,"r_top":0.0384},"pos":[4.4087284769304716e-17,0,0.72],"rot":[0,1.5707963267948966,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.06720000000000001,"r_top":0.06720000000000001},"pos":[4.4087284769304716e-17,0,0.44189999999999996],"rot":[0,1.5707963267948966,0],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.06720000000000001,"r_top":0.06720000000000001},"pos":[4.4087284769304716e-17,0,0.9981],"rot":[0,1.5707963267948966,0],"type":"cylinder"},{"material":"hull","params":{"length":0.324,"r_bot":0.2016,"r_top":0.2016},"pos":[6.111605894771299e-17,0,0.9981009869990982],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.108,"radius":0.2016},"pos":[6.111605894771299e-17,0.2016,0.9981009869990982],"rot":[0,0,0],"type":"cone"},{"material":"hull","params":{"length":0.108,"radius":0.2016},"pos":[6.111605894771299e-17,-0.2016,0.9981009869990982],"rot":[3.141592653589793,0,0],"type":"cone"},{"material":"hull","params":{"length":0.5684419408903142,"r_bot":0.0384,"r_top":0.0384},"pos":[-0.84,0,1.0287033112837766e-16],"rot":[0,3.141592653589793,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.06720000000000001,"r_top":0.06720000000000001},"pos":[-0.5558,0,1.0287033112837766e-16],"rot":[0,3.141592653589793,0],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.06720000000000001,"r_top":0.06720000000000001},"pos":[-1.1242,0,1.0287033112837766e-16],"rot":[0,3.141592653589793,0],"type":"cylinder"},{"material":"hull","params":{"length":0.504,"r_bot":0.15839999999999999,"r_top":0.15839999999999999},"pos":[-1.1242209704451571,0,1.376773612989993e-16],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.2016,"r_top":0.2016},"pos":[-1.1242209704451571,-0.26639999999999997,1.376773612989993e-16],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.2016,"r_top":0.2016},"pos":[-1.1242209704451571,0.26639999999999997,1.376773612989993e-16],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"radius":0.15839999999999999,"tube":0.0144},"pos":[-1.1242209704451571,0,1.376773612989993e-16],"rot":[1.5707963267948966,0,0],"type":"torus"},{"material":"hull","params":{"length":0.6505247682918119,"r_bot":0.0384,"r_top":0.0384},"pos":[-1.7634913907721884e-16,0,-0.96],"rot":[0,4.71238898038469,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.06720000000000001,"r_top":0.06720000000000001},"pos":[-1.7634913907721884e-16,0,-0.6347],"rot":[0,4.71238898038469,0],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.06720000000000001,"r_top":0.06720000000000001},"pos":[-1.7634913907721884e-16,0,-1.2852999999999999],"rot":[0,4.71238898038469,0],"type":"cylinder"},{"material":"hull","params":{"length":0.504,"r_bot":0.15839999999999999,"r_top":0.15839999999999999},"pos":[-2.3609886972131693e-16,0,-1.2852623841459059],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.2016,"r_top":0.2016},"pos":[-2.3609886972131693e-16,-0.26639999999999997,-1.2852623841459059],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.0288,"r_bot":0.2016,"r_top":0.2016},"pos":[-2.3609886972131693e-16,0.26639999999999997,-1.2852623841459059],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"radius":0.15839999999999999,"tube":0.0144},"pos":[-2.3609886972131693e-16,0,-1.2852623841459059],"rot":[1.5707963267948966,0,0],"type":"torus"},{"material":"hull","params":{"radius":0.792,"tube":0.1008},"pos":[0,-0.09,0],"rot":[1.5707963267948966,0,0],"type":"torus"},{"material":"hull","params":{"x":0.72,"y":0.021599999999999998,"z":0.021599999999999998},"pos":[0.38880000000000003,-0.09,0.0],"rot":[0,0.0,1.5707963267948966],"type":"box"},{"material":"hull","params":{"x":0.72,"y":0.021599999999999998,"z":0.021599999999999998},"pos":[0.19440000000000004,-0.09,0.33671067699138973],"rot":[0,1.0471975511965976,1.5707963267948966],"type":"box"},{"material":"hull","params":{"x":0.72,"y":0.021599999999999998,"z":0.021599999999999998},"pos":[-0.19439999999999993,-0.09,0.3367106769913898],"rot":[0,2.0943951023931953,1.5707963267948966],"type":"box"},{"material":"hull","params":{"x":0.72,"y":0.021599999999999998,"z":0.021599999999999998},"pos":[-0.38880000000000003,-0.09,4.7614267550849093e-17],"rot":[0,3.141592653589793,1.5707963267948966],"type":"box"},{"material":"hull","params":{"x":0.72,"y":0.021599999999999998,"z":0.021599999999999998},"pos":[-0.19440000000000016,-0.09,-0.3367106769913897],"rot":[0,4.1887902047863905,1.5707963267948966],"type":"box"},{"material":"hull","params":{"x":0.72,"y":0.021599999999999998,"z":0.021599999999999998},"pos":[0.19440000000000004,-0.09,-0.33671067699138973],"rot":[0,5.235987755982989,1.5707963267948966],"type":"box"},{"material":"hull","params":{"height":0.1512,"length":0.378,"width":0.23520000000000002},"pos":[1.3499868305888854,0,0.0],"rot":[0,0.0,0],"type":"pod"},{"material":"hull","params":{"x":0.025199999999999997,"y":0.10079999999999999,"z":0.0168},"pos":[1.5431868305888854,0,-0.1344],"rot":[0,0.0,0],"type":"box"},{"material":"hull","params":{"x":0.025199999999999997,"y":0.10079999999999999,"z":0.0168},"pos":[1.5431868305888854,0,0.1344],"rot":[0,0.0,0],"type":"box"},{"material":"hull","params":{"x":0.336,"y":0.0084,"z":0.0084},"pos":[1.3499868305888854,-0.05039999999999999,0.126],"rot":[0,0.0,0],"type":"box"},{"material":"hull","params":{"x":0.336,"y":0.0084,"z":0.0084},"pos":[1.3499868305888854,0.05039999999999999,0.126],"rot":[0,0.0,0],"type":"box"},{"material":"hull","params":{"height":0.1512,"length":0.378,"width":0.23520000000000002},"pos":[9.050758212724947e-17,0,1.4781009869990982],"rot":[0,1.5707963267948966,0],"type":"pod"},{"material":"hull","params":{"x":0.025199999999999997,"y":0.10079999999999999,"z":0.0168},"pos":[0.13440000000000007,0,1.6713009869990982],"rot":[0,1.5707963267948966,0],"type":"box"},{"material":"hull","params":{"x":0.025199999999999997,"y":0.10079999999999999,"z":0.0168},"pos":[-0.1343999999999999,0,1.6713009869990982],"rot":[0,1.5707963267948966,0],"type":"box"},{"material":"hull","params":{"x":0.336,"y":0.0084,"z":0.0084},"pos":[-0.12599999999999992,-0.05039999999999999,1.4781009869990982],"rot":[0,1.5707963267948966,0],"type":"box"},{"material":"hull","params":{"x":0.336,"y":0.0084,"z":0.0084},"pos":[-0.12599999999999992,0.05039999999999999,1.4781009869990982],"rot":[0,1.5707963267948966,0],"type":"box"},{"material":"hull","params":{"height":0.1512,"length":0.378,"width":0.23520000000000002},"pos":[-1.604220970445157,0,1.9646040765807226e-16],"rot":[0,3.141592653589793,0],"type":"pod"},{"material":"hull","params":{"x":0.025199999999999997,"y":0.10079999999999999,"z":0.0168},"pos":[-1.7974209704451571,0,0.13440000000000019],"rot":[0,3.141592653589793,0],"type":"box"},{"material":"hull","params":{"x":0.025199999999999997,"y":0.10079999999999999,"z":0.0168},"pos":[-1.7974209704451571,0,-0.1343999999999998],"rot":[0,3.141592653589793,0],"type":"box"},{"material":"hull","params":{"x":0.336,"y":0.0084,"z":0.0084},"pos":[-1.604220970445157,-0.05039999999999999,-0.1259999999999998],"rot":[0,3.141592653589793,0],"type":"box"},{"material":"hull","params":{"x":0.336,"y":0.0084,"z":0.0084},"pos":[-1.604220970445157,0.05039999999999999,-0.1259999999999998],"rot":[0,3.141592653589793,0],"type":"box"},{"material":"hull","params":{"radius":0.1512,"tube":0.029400000000000003},"pos":[-3.2427343925992636e-16,0,-1.7652623841459059],"rot":[0,4.71238898038469,0],"type":"torus"},{"material":"hull","params":{"length":0.0672,"r_bot":0.11760000000000001,"r_top":0.11760000000000001},"pos":[-3.2427343925992636e-16,0,-1.7652623841459059],"rot":[0,4.71238898038469,0],"type":"cylinder"},{"material":"hull","params":{"x":0.05039999999999999,"y":0.025199999999999997,"z":0.012599999999999998},"pos":[-3.2427343925992636e-16,0,-1.9332623841459058],"rot":[0,4.71238898038469,0],"type":"box"},{"material":"hull","params":{"x":0.05039999999999999,"y":0.025199999999999997,"z":0.012599999999999998},"pos":[0.14549999999999966,0,-1.6812623841459058],"rot":[0,6.8067840827778845,0],"type":"box"},{"material":"hull","params":{"x":0.05039999999999999,"y":0.025199999999999997,"z":0.012599999999999998},"pos":[-0.14550000000000032,0,-1.6812623841459058],"rot":[0,8.901179185171081,0],"type":"box"},{"material":"hull","params":{"length":0.2849434321198607,"r_bot":0.0672,"r_top":0.0672},"pos":[0.9590822850183903,-0.36,0.08909545442950498],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"half":true,"radius":0.0672},"pos":[0.9590822850183903,-0.21752828394006965,0.08909545442950498],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"length":0.3242579445349813,"r_bot":0.0672,"r_top":0.0672},"pos":[0.7808913761593804,-0.36,0.08909545442950498],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"half":true,"radius":0.0672},"pos":[0.7808913761593804,-0.19787102773250934,0.08909545442950498],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"length":0.2356833789564258,"r_bot":0.0672,"r_top":0.0672},"pos":[0.7808913761593803,-0.36,-0.08909545442950498],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"half":true,"radius":0.0672},"pos":[0.7808913761593803,-0.2421583105217871,-0.08909545442950498],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"length":0.2955830744665577,"r_bot":0.0672,"r_top":0.0672},"pos":[0.9590822850183903,-0.36,-0.089095454429505],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"half":true,"radius":0.0672},"pos":[0.9590822850183903,-0.21220846276672115,-0.089095454429505],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.336,"y":0.025199999999999997,"z":0.336},"pos":[0.8699868305888854,-0.486,0.0],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[-0.48,0.6,-0.1152],"rot":[-0.5,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[-0.48,0.6,-0.0576],"rot":[-0.25,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[-0.48,0.6,0.0],"rot":[0.0,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[-0.48,0.6,0.0576],"rot":[0.25,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[-0.48,0.6,0.1152],"rot":[0.5,0,0],"type":"box"},{"material":"hull","params":{"length":0.288,"r_bot":0.010799999999999999,"r_top":0.010799999999999999},"pos":[-0.48,0.6,0],"rot":[1.5707963267948966,0,0],"type":"cylinder"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.0,0.6,-0.1152],"rot":[-0.5,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.0,0.6,-0.0576],"rot":[-0.25,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.0,0.6,0.0],"rot":[0.0,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.0,0.6,0.0576],"rot":[0.25,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.0,0.6,0.1152],"rot":[0.5,0,0],"type":"box"},{"material":"hull","params":{"length":0.288,"r_bot":0.010799999999999999,"r_top":0.010799999999999999},"pos":[0.0,0.6,0],"rot":[1.5707963267948966,0,0],"type":"cylinder"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.48,0.6,-0.1152],"rot":[-0.5,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.48,0.6,-0.0576],"rot":[-0.25,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.48,0.6,0.0],"rot":[0.0,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.48,0.6,0.0576],"rot":[0.25,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.48,0.6,0.1152],"rot":[0.5,0,0],"type":"box"},{"material":"hull","params":{"length":0.288,"r_bot":0.010799999999999999,"r_top":0.010799999999999999},"pos":[0.48,0.6,0],"rot":[1.5707963267948966,0,0],"type":"cylinder"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[-0.48,-0.6,-0.1152],"rot":[-0.5,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[-0.48,-0.6,-0.0576],"rot":[-0.25,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[-0.48,-0.6,0.0],"rot":[0.0,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[-0.48,-0.6,0.0576],"rot":[0.25,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[-0.48,-0.6,0.1152],"rot":[0.5,0,0],"type":"box"},{"material":"hull","params":{"length":0.288,"r_bot":0.010799999999999999,"r_top":0.010799999999999999},"pos":[-0.48,-0.6,0],"rot":[1.5707963267948966,0,0],"type":"cylinder"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.0,-0.6,-0.1152],"rot":[-0.5,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.0,-0.6,-0.0576],"rot":[-0.25,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.0,-0.6,0.0],"rot":[0.0,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.0,-0.6,0.0576],"rot":[0.25,0,0],"type":"box"},{"material":"hull","params":{"x":0.36,"y":0.00216,"z":0.0504},"pos":[0.0,-0.6,0.1152],"rot":[0.5,0,0],"type":"box"},{"material":"hull","params":{"length":0.288,"r_bot":0.010799999999999999,"r_top":0.010799999999999999},"pos":[0.0,-0.6,0],"rot":[1.5707963267948966,0,0],"type":"cylinder"},{"material":"hull","params":{"x":0.108,"y":0.072,"z":0.072},"pos":[0.6132021506806232,0.39427995832679996,0.1386888113135731],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"length":0.048,"r_bot":0.009,"r_top":0.009},"pos":[0.6732021506806232,0.37627995832679995,0.1206888113135731],"rot":[0,0,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"length":0.048,"r_bot":0.009,"r_top":0.009},"pos":[0.6732021506806232,0.37627995832679995,0.1566888113135731],"rot":[0,0,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"length":0.048,"r_bot":0.009,"r_top":0.009},"pos":[0.6732021506806232,0.4122799583268,0.1206888113135731],"rot":[0,0,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"length":0.048,"r_bot":0.009,"r_top":0.009},"pos":[0.6732021506806232,0.4122799583268,0.1566888113135731],"rot":[0,0,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"length":0.036,"r_bot":0.054,"r_top":0.036},"pos":[-0.672185065880267,0.36568203796565163,-0.022470724850298787],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"half":true,"radius":0.033},"pos":[-0.672185065880267,0.38968203796565165,-0.022470724850298787],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"length":0.072,"r_bot":0.0072,"r_top":0.006},"pos":[-0.624185065880267,0.38968203796565165,-0.034470724850298784],"rot":[0,0,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"length":0.072,"r_bot":0.0072,"r_top":0.006},"pos":[-0.624185065880267,0.38968203796565165,-0.010470724850298787],"rot":[0,0,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"length":0.36,"r_bot":0.012,"r_top":0.006},"pos":[0,0.93,0],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"half":false,"radius":0.03},"pos":[0,1.11,0],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.072,"y":0.0048,"z":0.0048},"pos":[0,0.9,0],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"x":0.072,"y":0.0048,"z":0.0048},"pos":[0,0.99,0],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"x":0.072,"y":0.0048,"z":0.0048},"pos":[0,1.068,0],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"height":0.08639999999999999,"length":0.2016,"width":0.08639999999999999},"pos":[0.9779868305888854,0.3,0.0],"rot":[0,0.0,0],"type":"pod"},{"material":"hull","params":{"height":0.08639999999999999,"length":0.2016,"width":0.08639999999999999},"pos":[0.9033606659813797,0.3,0.10271410375987657],"rot":[0,1.2566370614359172,0],"type":"pod"},{"material":"hull","params":{"height":0.08639999999999999,"length":0.2016,"width":0.08639999999999999},"pos":[0.782612995196391,0.3,0.0634808072475871],"rot":[0,2.5132741228718345,0],"type":"pod"},{"material":"hull","params":{"height":0.08639999999999999,"length":0.2016,"width":0.08639999999999999},"pos":[0.782612995196391,0.3,-0.06348080724758709],"rot":[0,3.7699111843077517,0],"type":"pod"},{"material":"hull","params":{"height":0.08639999999999999,"length":0.2016,"width":0.08639999999999999},"pos":[0.9033606659813797,0.3,-0.10271410375987658],"rot":[0,5.026548245743669,0],"type":"pod"},{"material":"hull","params":{"length":0.108,"r_bot":0.0576,"r_top":0.0576},"pos":[0.8699868305888854,0.3,0.0],"rot":[0,0,0],"type":"cylinder"},{"material":"hull","params":{"length":0.396,"r_bot":0.1152,"r_top":0.1152},"pos":[6.111605894771299e-17,0.3,0.9981009869990982],"rot":[0,0,1.5707963267948966],"type":"cylinder"},{"material":"hull","params":{"half":true,"radius":0.1152},"pos":[-0.20159999999999995,0.3,0.9981009869990982],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":true,"radius":0.1152},"pos":[0.20160000000000006,0.3,0.9981009869990982],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"radius":0.1152,"tube":0.0057599999999999995},"pos":[-0.08639999999999994,0.3,0.9981009869990982],"rot":[0,0,1.5707963267948966],"type":"torus"},{"material":"hull","params":{"radius":0.1152,"tube":0.0057599999999999995},"pos":[6.111605894771299e-17,0.3,0.9981009869990982],"rot":[0,0,1.5707963267948966],"type":"torus"},{"material":"hull","params":{"radius":0.1152,"tube":0.0057599999999999995},"pos":[0.08640000000000005,0.3,0.9981009869990982],"rot":[0,0,1.5707963267948966],"type":"torus"}],"faction":"terran","meta":{"component_count":121,"faction":"terran","seed":null,"station_type":"trade_hub"},"name":"terran/trade_hub/None","seed":null,"station_type":"trade_hub"},"gate":{"components":[{"material":"hull","params":{"radius":0.8459,"tube":0.0293},"pos":[-0.4143,0,0],"rot":[0,1.5707963267948966,0],"type":"torus"},{"material":"hull","params":{"radius":0.8719,"tube":0.0307},"pos":[-0.2071,0,0],"rot":[0,1.5707963267948966,0],"type":"torus"},{"material":"hull","params":{"radius":0.8762,"tube":0.0485},"pos":[0.0,0,0],"rot":[0,1.5707963267948966,0],"type":"torus"},{"material":"hull","params":{"radius":0.8433,"tube":0.0283},"pos":[0.2071,0,0],"rot":[0,1.5707963267948966,0],"type":"torus"},{"material":"hull","params":{"radius":0.833,"tube":0.0283},"pos":[0.4143,0,0],"rot":[0,1.5707963267948966,0],"type":"torus"},{"material":"hull","params":{"half":false,"radius":0.027},"pos":[0.4143,0.9245,-0.0165],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0319},"pos":[0.4143,0.9981,-0.0179],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0213},"pos":[0.4143,1.0716,-0.0192],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0269},"pos":[0.4143,1.1452,-0.0205],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.04823578637734396,"y":0.028941471826406374,"z":0.028941471826406374},"pos":[0.4143,1.1452,-0.0205],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0215},"pos":[-0.2071,0.8353,0.3966],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0142},"pos":[-0.2071,1.0031,0.4763],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.06301707077747158,"y":0.03781024246648295,"z":0.03781024246648295},"pos":[-0.2071,1.0031,0.4763],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0351},"pos":[-0.4143,0.5844,0.7166],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0224},"pos":[-0.4143,0.687,0.8425],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0211},"pos":[-0.4143,0.7897,0.9683],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.03917515891882455,"y":0.02350509535129473,"z":0.02350509535129473},"pos":[-0.4143,0.7897,0.9683],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0308},"pos":[0.0,0.2673,0.8852],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0305},"pos":[0.0,0.2836,0.9393],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0157},"pos":[0.0,0.3,0.9935],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0188},"pos":[0.0,0.3163,1.0476],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.04790836139511405,"y":0.028745016837068427,"z":0.028745016837068427},"pos":[0.0,0.3163,1.0476],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0327},"pos":[-0.4143,-0.0601,0.9227],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0184},"pos":[-0.4143,-0.0641,0.9832],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0176},"pos":[-0.4143,-0.068,1.0437],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0185},"pos":[-0.4143,-0.072,1.1043],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.04198305874224094,"y":0.02518983524534456,"z":0.02518983524534456},"pos":[-0.4143,-0.072,1.1043],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0288},"pos":[0.2071,-0.5011,0.7771],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0192},"pos":[0.2071,-0.5363,0.8316],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0251},"pos":[0.2071,-0.5714,0.8861],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0214},"pos":[0.2071,-0.6066,0.9406],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.05632742729526326,"y":0.03379645637715795,"z":0.03379645637715795},"pos":[0.2071,-0.6066,0.9406],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0369},"pos":[-0.4143,-0.7735,0.5066],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0189},"pos":[-0.4143,-0.8256,0.5407],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0286},"pos":[-0.4143,-0.8777,0.5748],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0202},"pos":[-0.4143,-0.9298,0.6089],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.06765588922753805,"y":0.040593533536522834,"z":0.040593533536522834},"pos":[-0.4143,-0.9298,0.6089],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0322},"pos":[0.4143,-0.9116,0.1549],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0311},"pos":[0.4143,-1.0451,0.1776],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0211},"pos":[0.4143,-1.1786,0.2003],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.04527215599811288,"y":0.027163293598867728,"z":0.027163293598867728},"pos":[0.4143,-1.1786,0.2003],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0235},"pos":[-0.2071,-0.9006,-0.2094],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0265},"pos":[-0.2071,-0.9942,-0.2312],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.03},"pos":[-0.2071,-1.0878,-0.2529],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.017},"pos":[-0.2071,-1.1814,-0.2747],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.06096204412479555,"y":0.03657722647487733,"z":0.03657722647487733},"pos":[-0.2071,-1.1814,-0.2747],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.037},"pos":[-0.2071,-0.7728,-0.5078],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0143},"pos":[-0.2071,-0.9997,-0.6569],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.05464941672381372,"y":0.03278965003428823,"z":0.03278965003428823},"pos":[-0.2071,-0.9997,-0.6569],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0199},"pos":[-0.4143,-0.4745,-0.7936],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0299},"pos":[-0.4143,-0.4977,-0.8325],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0232},"pos":[-0.4143,-0.5209,-0.8714],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0258},"pos":[-0.4143,-0.5442,-0.9103],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.044195510980429654,"y":0.02651730658825779,"z":0.02651730658825779},"pos":[-0.4143,-0.5442,-0.9103],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0299},"pos":[0.2071,-0.0576,-0.9228],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0239},"pos":[0.2071,-0.0671,-1.0749],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0225},"pos":[0.2071,-0.0766,-1.227],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.0487184545798624,"y":0.02923107274791744,"z":0.02923107274791744},"pos":[0.2071,-0.0766,-1.227],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0233},"pos":[-0.4143,0.2909,-0.8777],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0227},"pos":[-0.4143,0.3454,-1.042],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.05391117380647203,"y":0.03234670428388321,"z":0.03234670428388321},"pos":[-0.4143,0.3454,-1.042],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0382},"pos":[-0.2071,0.6249,-0.6815],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0279},"pos":[-0.2071,0.6705,-0.7312],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0199},"pos":[-0.2071,0.7161,-0.7809],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.018},"pos":[-0.2071,0.7617,-0.8306],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.05045362746553747,"y":0.030272176479322482,"z":0.030272176479322482},"pos":[-0.2071,0.7617,-0.8306],"rot":[0,0,0],"type":"box"},{"material":"hull","params":{"half":false,"radius":0.0345},"pos":[0.4143,0.8523,-0.3585],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0196},"pos":[0.4143,0.908,-0.3819],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0176},"pos":[0.4143,0.9636,-0.4053],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"half":false,"radius":0.0254},"pos":[0.4143,1.0193,-0.4287],"rot":[0,0,0],"type":"sphere"},{"material":"hull","params":{"x":0.0686140725410226,"y":0.04116844352461356,"z":0.04116844352461356},"pos":[0.4143,1.0193,-0.4287],"rot":[0,0,0],"type":"box"}],"connects_to":"","faction":"terran","meta":{"component_count":71,"faction":"terran","ring_count":5,"ring_radius":0.8761811258176812},"name":"terran/gate","obj_type":"gate"}};
+
+window.fetch = function(url, opts){
+  if(STANDALONE_MODE && typeof url === 'string' && url.startsWith('/api')){
+    return Promise.resolve({ok:false, status:404, json:()=>Promise.resolve({}), text:()=>Promise.resolve('')});
+  }
+  return _realFetch(url, opts);
+};
 
 // ── State ──
 let player = null;
 let localState = null;  // from SSE stream
+// localState populated by SSE stream
+window._playerSS = null;
 let shipGroup = null;
 let hangarPedestal = null;
 let stationModel = null;
@@ -95,7 +270,7 @@ let npcMeshes = {};  // id -> THREE.Group (merged ship models)
 let npcShipCache = {};  // ship_class -> {mesh: THREE.BufferGeometry, edges: THREE.EdgesGeometry}
 let allShipGeos = null;  // loaded from /api/ship_model/all
 let objectSprites = {};  // id -> THREE.Sprite/label
-let isDocked = true;
+let isDocked = true; // server mode starts docked, SSE will update
 let lastTickTime = 0;
 let displaySpeed = 0;
 
@@ -368,6 +543,7 @@ function buildStarfield(){
   starField.scale.setScalar(45000000); // stays inside far plane
 }
 buildStarfield();
+scene.add(starField); // add immediately for standalone
 
 // ── Scene Switching ──
 function setDockedScene(){
@@ -455,6 +631,82 @@ function setFlightScene(){
   gateModels = {};
   asteroidModels = {};
   planetModels = {};
+  
+  // ── STANDALONE: create models for all stations and gates ──
+  if(STANDALONE_MODE && localState){
+    // Build station models
+    localState.objects.filter(o => o.station_id).forEach(obj => {
+      const stGroup = new THREE.Group();
+      buildShipFromData(stGroup, INLINE_MODELS.station, {showHardpoints:false});
+      const box = new THREE.Box3().setFromObject(stGroup);
+      const sz = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
+      stGroup.scale.setScalar(150 / maxDim); // 15km station
+      stGroup.userData._origScale = 150 / maxDim;
+      stGroup.visible = false;
+      stationModels[obj.station_id] = stGroup;
+    });
+    // Build gate models
+    localState.objects.filter(o => o.type === 'gate').forEach(obj => {
+      const gGroup = new THREE.Group();
+      buildShipFromData(gGroup, INLINE_MODELS.gate, {showHardpoints:false});
+      const box = new THREE.Box3().setFromObject(gGroup);
+      const sz = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
+      console.log('[GATE-BUILD] maxDim:', maxDim, 'size:', sz.x.toFixed(2), sz.y.toFixed(2), sz.z.toFixed(2));
+      gGroup.scale.setScalar(40 / maxDim); // gate ~4km for visibility
+      gGroup.userData._origScale = 40 / maxDim;
+      gGroup.visible = false;
+      gateModels[obj.id] = gGroup;
+    });
+    // Build asteroid field models (procedural)
+    localState.objects.filter(o => o.type === 'belt' || o.type === 'asteroid_belt').forEach(obj => {
+      const rocks = [];
+      // Seeded random for consistent layout
+      let seed = 0;
+      for(let c = 0; c < obj.id.length; c++) seed = ((seed << 5) - seed) + obj.id.charCodeAt(c);
+      const rand = (function(s){return function(){s=(s*1664525+1013904223)&0xFFFFFFFF;return(s>>>0)/4294967296;};})(Math.abs(seed));
+      const rockCount = 20 + Math.floor(rand() * 15);
+      for(let i = 0; i < rockCount; i++){
+        // Displaced icosahedron
+        const geo = new THREE.IcosahedronGeometry(1, 1);
+        const posAttr = geo.attributes.position;
+        for(let v = 0; v < posAttr.count; v++){
+          posAttr.setX(v, posAttr.getX(v) * (0.7 + rand() * 0.6));
+          posAttr.setY(v, posAttr.getY(v) * (0.7 + rand() * 0.6));
+          posAttr.setZ(v, posAttr.getZ(v) * (0.7 + rand() * 0.6));
+        }
+        geo.computeVertexNormals();
+        const radius = 0.3 + rand() * 1.2;
+        const mat = new THREE.MeshPhongMaterial({color:0x2a2018, emissive:0x0a0805, shininess:2, transparent:true, opacity:0.85});
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.scale.setScalar(radius);
+        mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25), new THREE.LineBasicMaterial({color:0x8d6e4a, transparent:true, opacity:0.4})));
+        // Spread in a disk
+        const angle = rand() * Math.PI * 2;
+        const dist = rand() * 150;
+        const vert = (rand() - 0.5) * 30;
+        mesh.position.set(Math.cos(angle) * dist, vert, Math.sin(angle) * dist);
+        mesh.rotation.set(rand()*6.28, rand()*6.28, rand()*6.28);
+        mesh.visible = false;
+        rocks.push(mesh);
+      }
+      asteroidModels[obj.id] = rocks;
+    });
+    // Show anchor model in lsgGroup
+    const anchor = localState.objects.find(o => o.is_anchor);
+    if(anchor && anchor.station_id && stationModels[anchor.station_id]){
+      const m = stationModels[anchor.station_id];
+      m.position.set(0, 0, 100);
+      m.visible = true;
+      lsgGroup.add(m);
+    } else if(anchor && anchor.type === 'gate' && gateModels[anchor.id]){
+      const m = gateModels[anchor.id];
+      m.position.set(0, 0, 100);
+      m.visible = true;
+      lsgGroup.add(m);
+    }
+  }
   // Load fresh models into the clean group
   loadAllStations();
   loadAllGates();
@@ -462,14 +714,9 @@ function setFlightScene(){
   loadPlanetsAndMoons();
   initSSGPlanets();
   initSun();
-  // Pre-generate planet textures during fade-in, then reveal
+  // Standalone: no pregeneration needed, just ensure overlay is hidden
   const overlay = document.getElementById('fadeOverlay');
-  overlay.style.opacity = '1';
-  const anchorId = localState && localState.objects && localState.objects.find(o => o.is_anchor);
-  const objs = (localState && localState.objects) || [];
-  pregenPlanetTextures(THREE, objs, anchorId ? anchorId.id : '', ()=>{
-    setTimeout(()=>{ overlay.style.opacity = '0'; }, 200);
-  });
+  overlay.style.opacity = '0';
 }
 
 // ── SSE Stream Connection ──
@@ -482,21 +729,20 @@ function connectStream(){
     const firstState = !localState;
     localState = state;
     lastTickTime = performance.now();
-    // Keep _playerSS in sync with current anchor
+    // Keep _playerSS in sync with current anchor (only when not warping)
     const currentAnchor = state.objects.find(o => o.is_anchor);
     if(currentAnchor && warpState === 'none'){
       window._playerSS = {x: currentAnchor.ss_x, y: currentAnchor.ss_y || 0, z: currentAnchor.ss_z};
     }
-    // On first state received, load 3D objects (they need localState to work)
+    // On first state received, load 3D objects
     if(firstState && !isDocked){
-      // Create LSG group for initial load
       if(!lsgGroup){ lsgGroup = new THREE.Group(); scene.add(lsgGroup); }
       loadAllStations();
       loadAllGates();
       loadAsteroidFields();
       loadPlanetsAndMoons();
+      initSSGPlanets();
       initSun();
-      // Initialize player SS position from anchor
       const anchor = state.objects.find(o => o.is_anchor);
       if(anchor) window._playerSS = {x: anchor.ss_x, y: anchor.ss_y || 0, z: anchor.ss_z};
     }
@@ -632,7 +878,7 @@ function updateFromState(state){
   if(!p) return;
 
   // Update player ship stats from server
-  if(p.max_speed) playerMaxSpeed = p.max_speed;
+  if(p.max_speed) playerMaxSpeed = p.max_speed / 100; // m/s to units/s
   if(p.align_time) playerAlignTime = p.align_time;
 
   // Set initial player position from server if not yet set
@@ -680,7 +926,7 @@ function updateFromState(state){
 // ── Player Ship Local Physics ──
 let flyDirection = null;  // THREE.Vector3 or null
 let playerSpeed = 0;
-let playerMaxSpeed = 0.95;  // from ship stats, updated on load
+let playerMaxSpeed = 1.30;  // Pinto Runner: 130 m/s
 let playerAlignTime = 5;
 let playerPos = new THREE.Vector3(0, 0, 0);
 let playerPosInitialized = false;  // world position
@@ -701,14 +947,149 @@ let warpTravelDuration = 0; // total warp time in seconds
 let warpSpeed = 0; // current speed in PU/s (for group movement & display)
 let warpBuildReady = false; // true when destination models are built
 let warpGroup = null; // isolated THREE.Group for destination models during build
-// Warp phase timing (fixed departure/arrival, variable cruise)
-const WARP_DEPART_TIME = 4.0;  // seconds for departure acceleration phase
-const WARP_ARRIVE_TIME = 6.0;  // seconds for arrival phase
-let warpCruiseTime = 0;        // variable: auDist / shipWarpSpeed
-let warpShipAUSpeed = 2.0;    // ship's warp speed in AU/s (from ship stats later)
-// Speed constants (PU/s)
-const WARP_LSG_SPEED = 10000;     // max speed during LSG phase (stations fly away)
-const WARP_AU_SPEED = 500000;     // max speed during AU phase (planets fly away)
+// Warp phase timing (analytical warp system)
+const WARP_TOP_SPEED = 2.0;
+const WARP_ACCEL_TIME = 8;
+const WARP_DECEL_TIME = 15;
+const WARP_LSG_DEPART_TIME = 3;
+const WARP_SCALE_FACTOR = 4;
+const WARP_APPROACH_SPAWN_DIST = 2500;
+const AU_KM = 150000000;
+
+// ── Procedural Warp Audio ──
+let audioCtx = null;
+let warpAudio = null;
+function initWarpAudio(){
+  if(warpAudio) return;
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const ctx = audioCtx;
+  
+  // Master compressor to glue it together
+  const compressor = ctx.createDynamicsCompressor();
+  compressor.threshold.value = -20;
+  compressor.knee.value = 10;
+  compressor.ratio.value = 4;
+  compressor.connect(ctx.destination);
+  
+  // Sub-bass sine (gut punch, felt more than heard)
+  const subOsc = ctx.createOscillator();
+  subOsc.type = 'sine';
+  subOsc.frequency.value = 12;
+  const subGain = ctx.createGain();
+  subGain.gain.value = 0;
+  subOsc.connect(subGain);
+  subGain.connect(compressor);
+  subOsc.start();
+  
+  // Turbine noise layer 1: low roar (like air rushing)
+  const noiseLen = ctx.sampleRate * 2;
+  const noiseBuf1 = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
+  const nd1 = noiseBuf1.getChannelData(0);
+  for(let i = 0; i < noiseLen; i++) nd1[i] = Math.random() * 2 - 1;
+  const turbine1 = ctx.createBufferSource();
+  turbine1.buffer = noiseBuf1; turbine1.loop = true;
+  const turb1Filter = ctx.createBiquadFilter();
+  turb1Filter.type = 'bandpass';
+  turb1Filter.frequency.value = 25;
+  turb1Filter.Q.value = 0.8;
+  const turb1Gain = ctx.createGain();
+  turb1Gain.gain.value = 0;
+  turbine1.connect(turb1Filter);
+  turb1Filter.connect(turb1Gain);
+  turb1Gain.connect(compressor);
+  turbine1.start();
+  
+  // Turbine noise layer 2: mid howl (the "wind tunnel" sound)
+  const noiseBuf2 = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
+  const nd2 = noiseBuf2.getChannelData(0);
+  for(let i = 0; i < noiseLen; i++) nd2[i] = Math.random() * 2 - 1;
+  const turbine2 = ctx.createBufferSource();
+  turbine2.buffer = noiseBuf2; turbine2.loop = true;
+  const turb2Filter = ctx.createBiquadFilter();
+  turb2Filter.type = 'bandpass';
+  turb2Filter.frequency.value = 60;
+  turb2Filter.Q.value = 1.5;
+  const turb2Gain = ctx.createGain();
+  turb2Gain.gain.value = 0;
+  turbine2.connect(turb2Filter);
+  turb2Filter.connect(turb2Gain);
+  turb2Gain.connect(compressor);
+  turbine2.start();
+  
+  // Turbine noise layer 3: high hiss (speed texture)
+  const noiseBuf3 = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
+  const nd3 = noiseBuf3.getChannelData(0);
+  for(let i = 0; i < noiseLen; i++) nd3[i] = Math.random() * 2 - 1;
+  const turbine3 = ctx.createBufferSource();
+  turbine3.buffer = noiseBuf3; turbine3.loop = true;
+  const turb3Filter = ctx.createBiquadFilter();
+  turb3Filter.type = 'lowpass';
+  turb3Filter.frequency.value = 100;
+  turb3Filter.Q.value = 1.0;
+  const turb3Gain = ctx.createGain();
+  turb3Gain.gain.value = 0;
+  turbine3.connect(turb3Filter);
+  turb3Filter.connect(turb3Gain);
+  turb3Gain.connect(compressor);
+  turbine3.start();
+  
+  // Resonant throb (gives the "mechanical" feel - pulsing filter on noise)
+  const noiseBuf4 = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
+  const nd4 = noiseBuf4.getChannelData(0);
+  for(let i = 0; i < noiseLen; i++) nd4[i] = Math.random() * 2 - 1;
+  const throb = ctx.createBufferSource();
+  throb.buffer = noiseBuf4; throb.loop = true;
+  const throbFilter = ctx.createBiquadFilter();
+  throbFilter.type = 'bandpass';
+  throbFilter.frequency.value = 18;
+  throbFilter.Q.value = 8; // high resonance = tonal quality from noise
+  const throbGain = ctx.createGain();
+  throbGain.gain.value = 0;
+  throb.connect(throbFilter);
+  throbFilter.connect(throbGain);
+  throbGain.connect(compressor);
+  throb.start();
+  
+  warpAudio = {ctx, compressor, subOsc, subGain, turb1Filter, turb1Gain, turb2Filter, turb2Gain, turb3Filter, turb3Gain, throbFilter, throbGain};
+}
+
+function updateWarpAudio(intensity){
+  if(!warpAudio) return;
+  const t = audioCtx.currentTime;
+  const s = 0.15; // smooth ramp time
+  
+  // Sub-bass: always present when moving, 12-22 Hz
+  warpAudio.subOsc.frequency.setTargetAtTime(12 + intensity * 10, t, s);
+  warpAudio.subGain.gain.setTargetAtTime(intensity * 0.3, t, s);
+  
+  // Low turbine roar: 25-60 Hz, main body of sound
+  warpAudio.turb1Filter.frequency.setTargetAtTime(25 + intensity * 35, t, s);
+  warpAudio.turb1Gain.gain.setTargetAtTime(intensity * 0.25, t, s);
+  
+  // Mid: 40-100 Hz only, low growl
+  const midInt = Math.max(0, (intensity - 0.15) / 0.85);
+  warpAudio.turb2Filter.frequency.setTargetAtTime(40 + midInt * 60, t, s);
+  warpAudio.turb2Gain.gain.setTargetAtTime(midInt * 0.08, t, s);
+  
+  // High layer: 100-200 Hz, barely there
+  const hiInt = Math.max(0, (intensity - 0.5) / 0.5);
+  warpAudio.turb3Filter.frequency.setTargetAtTime(100 + hiInt * 100, t, s);
+  warpAudio.turb3Gain.gain.setTargetAtTime(hiInt * 0.01, t, s);
+  
+  // Resonant throb: 18-35 Hz, pulsing mechanical
+  warpAudio.throbFilter.frequency.setTargetAtTime(18 + intensity * 17, t, s);
+  warpAudio.throbGain.gain.setTargetAtTime(intensity * 0.2, t, s);
+}
+
+function stopWarpAudio(){
+  if(!warpAudio) return;
+  const t = audioCtx.currentTime;
+  warpAudio.subGain.gain.setTargetAtTime(0, t, 0.8);
+  warpAudio.turb1Gain.gain.setTargetAtTime(0, t, 0.6);
+  warpAudio.turb2Gain.gain.setTargetAtTime(0, t, 0.5);
+  warpAudio.turb3Gain.gain.setTargetAtTime(0, t, 0.4);
+  warpAudio.throbGain.gain.setTargetAtTime(0, t, 1.0);
+}
 
 // Engine trail
 let trailLine = null;
@@ -797,6 +1178,60 @@ function updateWarpStreaks(dt, speedFactor){
 }
 createWarpStreaks();
 
+// ── Impulse Particles (local flight, directional dust) ──
+const IMPULSE_COUNT = 12;
+let impulsePoints = null;
+let impulseVelocities = null;
+function createImpulseParticles(){
+  const geo = new THREE.BufferGeometry();
+  const positions = new Float32Array(IMPULSE_COUNT * 3);
+  const colors = new Float32Array(IMPULSE_COUNT * 3);
+  impulseVelocities = new Float32Array(IMPULSE_COUNT * 3);
+  for(let i = 0; i < IMPULSE_COUNT; i++){
+    resetImpulseParticle(i, positions, colors);
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  const mat = new THREE.PointsMaterial({size: 0.004, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 1.0, blending: THREE.AdditiveBlending, depthWrite: false});
+  impulsePoints = new THREE.Points(geo, mat);
+  impulsePoints.frustumCulled = false;
+  impulsePoints.visible = false;
+  scene.add(impulsePoints);
+}
+function resetImpulseParticle(i, pos, col){
+  // Spawn in a cylinder ahead/around the ship
+  const lateral = 0.05 + Math.random() * 0.8;
+  const angle = Math.random() * Math.PI * 2;
+  const ahead = (Math.random() - 0.3) * 3;
+  pos[i*3+0] = Math.cos(angle) * lateral;
+  pos[i*3+1] = Math.sin(angle) * lateral;
+  pos[i*3+2] = ahead;
+  // Faint blue-white
+  const b = 0.5 + Math.random() * 0.5;
+  col[i*3+0] = b * 0.6; col[i*3+1] = b * 0.8; col[i*3+2] = b;
+  // Velocity: primarily backward (z+)
+  impulseVelocities[i*3+0] = (Math.random() - 0.5) * 0.002;
+  impulseVelocities[i*3+1] = (Math.random() - 0.5) * 0.002;
+  impulseVelocities[i*3+2] = 0.1 + Math.random() * 0.15;
+}
+function updateImpulseParticles(dt, speedNorm){
+  if(!impulsePoints) return;
+  const pos = impulsePoints.geometry.attributes.position.array;
+  const col = impulsePoints.geometry.attributes.color.array;
+  for(let i = 0; i < IMPULSE_COUNT; i++){
+    pos[i*3+0] += impulseVelocities[i*3+0] * speedNorm * dt * 10;
+    pos[i*3+1] += impulseVelocities[i*3+1] * speedNorm * dt * 10;
+    pos[i*3+2] += impulseVelocities[i*3+2] * speedNorm * dt * 10;
+    // Reset if too far behind
+    if(pos[i*3+2] > 4){
+      resetImpulseParticle(i, pos, col);
+      pos[i*3+2] = -(Math.random() * 2); // spawn ahead
+    }
+  }
+  impulsePoints.geometry.attributes.position.needsUpdate = true;
+}
+createImpulseParticles();
+
 // ── Animation Loop ──
 let lastFrameTime = 0;
 function animate(now){
@@ -806,6 +1241,7 @@ function animate(now){
   lastFrameTime = now;
 
   if(!isDocked && shipGroup){
+    if(!window._animDbg){window._animDbg=true; console.log('[ANIM] running, shipGroup exists, scene children:', scene.children.length);}
     // ── Warp Logic (overrides normal flight when active) ──
     if(warpState === 'aligning'){
       // Turn ship toward warp target using ship's align_time spec
@@ -839,217 +1275,200 @@ function animate(now){
         // (no freeze logic needed - SSG renders from live data)
         warpLock = false;
         window._approachStarted = false;
+        initWarpAudio();
         window._departDespawned = false;
         window._objDepartTimer = 0;
         // Don't reset lsgGroup position - departure moves it from wherever it is
       }
     } else if(warpState === 'warping'){
-      // ── 5-PHASE WARP: LSG depart → AU depart → cruise → AU arrive → LSG arrive ──
+      // ── ANALYTICAL WARP SYSTEM ──
       warpTravelTimer += dt;
-      const elapsed = warpTravelTimer;
-      const departEnd = WARP_DEPART_TIME;
-      const cruiseEnd = WARP_DEPART_TIME + warpCruiseTime;
-      let arriveStart = cruiseEnd;
-      const arriveEnd = cruiseEnd + WARP_ARRIVE_TIME;
+      const t = warpTravelTimer;
+      const wp = window._warpPhases;
+      if(!wp){ warpState = 'none'; return; }
       
-      // Update player SS position during warp (for SSG planet rendering)
-      if(window._warpFromSS && window._warpToSS){
-        const progress = Math.min(1.0, elapsed / arriveEnd);
-        window._playerSS = {
-          x: window._warpFromSS.x + (window._warpToSS.x - window._warpFromSS.x) * progress,
-          y: (window._warpFromSS.y||0) + ((window._warpToSS.y||0) - (window._warpFromSS.y||0)) * progress,
-          z: window._warpFromSS.z + (window._warpToSS.z - window._warpFromSS.z) * progress
-        };
-      }
-
-      // Pause arrival if destination isn't built yet
-      if(elapsed >= arriveStart && !warpBuildReady){
-        warpTravelTimer = arriveStart;
-      }
-
-      // Determine which phase we're in and compute speed
-      if(elapsed < departEnd){
-        // ── DEPARTURE (0 to departEnd): two sub-phases ──
-        const t = elapsed / departEnd; // 0→1 over departure
-        if(t < 0.4){
-          // LSG phase: 0→LSG_SPEED (stations fly away)
-          const st = t / 0.4;
-          warpSpeed = WARP_LSG_SPEED * st * st; // quadratic ramp
-        } else {
-          // AU phase: LSG_SPEED→AU_SPEED (planets fly away)
-          const st = (t - 0.4) / 0.6;
-          warpSpeed = WARP_LSG_SPEED + (WARP_AU_SPEED - WARP_LSG_SPEED) * st * st;
-        }
-      } else if(elapsed < cruiseEnd){
-        // ── CRUISE: hold at AU speed ──
-        warpSpeed = WARP_AU_SPEED;
+      // Compute speed analytically
+      let speed = 0;
+      if(t < wp.accelTime){
+        const at = t / wp.accelTime;
+        speed = wp.peakSpeed * Math.pow(at, 4);
+      } else if(t < wp.accelTime + wp.cruiseTime){
+        speed = wp.peakSpeed;
+      } else if(t < wp.totalTime){
+        const decelElapsed = t - wp.accelTime - wp.cruiseTime;
+        const dt_norm = decelElapsed / wp.decelTime;
+        speed = wp.peakSpeed * Math.pow(1 - dt_norm, 4);
       } else {
-        // ── ARRIVAL (cruiseEnd to arriveEnd): two sub-phases (mirror of departure) ──
-        const arriveElapsed = elapsed - arriveStart;
-        const t = Math.min(1.0, arriveElapsed / WARP_ARRIVE_TIME); // 0→1 over arrival
-        if(t < 0.6){
-          // AU phase: AU_SPEED→LSG_SPEED (planets approach)
-          const st = t / 0.6;
-          warpSpeed = WARP_AU_SPEED - (WARP_AU_SPEED - WARP_LSG_SPEED) * st * st;
+        speed = 0;
+      }
+      
+      // Analytical distance: integral of speed curve from 0 to t
+      let dist = 0;
+      const clampedT = Math.min(t, wp.totalTime); // don't exceed total time
+      if(clampedT <= wp.accelTime){
+        const at = clampedT / wp.accelTime;
+        dist = wp.peakSpeed * Math.pow(clampedT, 5) / (5 * Math.pow(wp.accelTime, 4));
+      } else if(clampedT <= wp.accelTime + wp.cruiseTime){
+        const accelFullDist = wp.peakSpeed * wp.accelTime / 5;
+        const cruiseElapsed = clampedT - wp.accelTime;
+        dist = accelFullDist + wp.peakSpeed * cruiseElapsed;
+      } else {
+        const accelFullDist = wp.peakSpeed * wp.accelTime / 5;
+        const cruiseFullDist = wp.peakSpeed * wp.cruiseTime;
+        const decelElapsed = Math.min(clampedT - wp.accelTime - wp.cruiseTime, wp.decelTime);
+        const dt_norm = decelElapsed / wp.decelTime;
+        const decelDist = wp.peakSpeed * wp.decelTime * (1 - Math.pow(1 - dt_norm, 5)) / 5;
+        dist = accelFullDist + cruiseFullDist + decelDist;
+      }
+      // ── LSG (departure, approach, completion) ──
+      const LSG_SPAWN_DIST = 500000; // 50,000 km
+      const LSG_STOP_DIST = 100;     // 10 km
+
+      // DEPARTURE: slide current LSG away (SSG updates independently)
+      if(!window._departDone){
+        if(!window._lsgDepartStart) window._lsgDepartStart = t;
+        const departT = (t - window._lsgDepartStart) / 2.25;
+        if(departT < 1.0 && lsgGroup && lsgGroup.children.length > 0){
+          // NO SSG freeze - planet rendering updates independently
+          const d = Math.pow(departT, 2) * LSG_SPAWN_DIST;
+          if(!window._lsgStartPos) window._lsgStartPos = lsgGroup.position.clone();
+          lsgGroup.position.copy(window._lsgStartPos).addScaledVector(warpHeading, -d);
+          // Hide when too small to see
+          const camDist = camera.position.distanceTo(lsgGroup.position);
+          if(camDist > 0 && (150 / camDist) < 0.002){
+            lsgGroup.visible = false;
+          }
         } else {
-          // LSG phase: LSG_SPEED→0 (stations slide in)
-          const st = (t - 0.6) / 0.4;
-          warpSpeed = WARP_LSG_SPEED * Math.pow(1.0 - st, 2);
+          window._departDone = true;
+          window._lsgStartPos = null;
+          if(lsgGroup){ lsgGroup.visible = true; while(lsgGroup.children.length) lsgGroup.remove(lsgGroup.children[0]); }
         }
       }
 
-      // ── DEPARTURE MOVEMENT: move old group backward until despawned ──
-      if(!window._departDespawned && !window._approachStarted && lsgGroup){
-        lsgGroup.position.x -= warpHeading.x * warpSpeed * dt;
-        lsgGroup.position.z -= warpHeading.z * warpSpeed * dt;
+      // SSG POSITION: interpolate between from and to (no heading drift)
+      if(!window._ssgFrozen){
+        const progress = Math.min(1.0, dist / window._warpTotalDist);
+        window._playerSS.x = window._warpFromSS.x + (window._warpToSS.x - window._warpFromSS.x) * progress;
+        window._playerSS.y = (window._warpFromSS.y||0) + ((window._warpToSS.y||0) - (window._warpFromSS.y||0)) * progress;
+        window._playerSS.z = window._warpFromSS.z + (window._warpToSS.z - window._warpFromSS.z) * progress;
       }
 
-      // ── DISCONNECT SSE + START FETCH early in departure ──
-      if(elapsed >= 1.0 && !warpLock){
-        warpLock = true;
-        if(evtSource){ evtSource.close(); evtSource = null; }
-        // Start building destination
-        warpGroup = new THREE.Group();
-        buildWarpDestination(warpTargetId, warpGroup).then(result => {
-          if(!result){
-            console.error('[WARP] Build failed');
-            warpBuildReady = false;
-            return;
-          }
-          window._warpBuildResult = result;
-          warpBuildReady = true;
-          console.log('[WARP] Destination built:', warpGroup.children.length, 'objects');
-        });
-      }
-
-      // ── DESPAWN old group at end of departure ──
-      if(elapsed >= arriveStart && !window._departDespawned){
-        window._departDespawned = true;
-        if(lsgGroup){
-          scene.remove(lsgGroup);
-          lsgGroup.traverse(c => {
-            if(c.geometry) c.geometry.dispose();
-            if(c.material){
-              if(c.material.map) c.material.map.dispose();
-              c.material.dispose();
+      // APPROACH: distance-based (matching warp_test logic)
+      const APPROACH_TRIGGER_KM = 10000;   // 10,000 km
+      const APPROACH_SPAWN_UNITS = 2500;   // visible immediately
+      const remainingAU = window._warpTotalDist - Math.min(dist, window._warpTotalDist);
+      const remainingKm = remainingAU * 150000000;
+      window._approachRemainingKm = remainingKm; // expose to label system
+      
+      if(!window._approachStarted && window._departDone && remainingKm <= APPROACH_TRIGGER_KM){
+        window._approachStarted = true;
+        if(!lsgGroup){ lsgGroup = new THREE.Group(); scene.add(lsgGroup); }
+        const targetObj = localState.objects.find(o => o.id === warpTargetId);
+        if(targetObj && targetObj.station_id && stationModels[targetObj.station_id]){
+          const m = stationModels[targetObj.station_id];
+          m.position.set(0, 0, 0); m.visible = true; lsgGroup.add(m);
+        } else if(targetObj && targetObj.type === 'gate' && gateModels[targetObj.id]){
+          const m = gateModels[targetObj.id];
+          m.position.set(0, 0, 0); m.visible = true; lsgGroup.add(m);
+        } else if(targetObj && (targetObj.type === 'belt' || targetObj.type === 'asteroid_belt') && asteroidModels[targetObj.id]){
+          const rocks = asteroidModels[targetObj.id];
+          rocks.forEach(r => { r.visible = true; lsgGroup.add(r); });
+        }
+        // Also spawn orbital structures that share this body's orbit
+        // If target is a planet/moon, spawn any stations/gates with parent === target
+        // If target is an orbital station, spawn siblings (other structures at same parent)
+        const parentId = (targetObj.type === 'planet' || targetObj.type === 'moon') ? targetObj.id : targetObj.parent;
+        if(parentId){
+          localState.objects.filter(o => o.parent === parentId && o.id !== warpTargetId).forEach(sib => {
+            if(sib.station_id && stationModels[sib.station_id]){
+              const m = stationModels[sib.station_id];
+              m.position.set(50, 0, 50); m.visible = true; lsgGroup.add(m);
+            } else if(sib.type === 'gate' && gateModels[sib.id]){
+              const m = gateModels[sib.id];
+              m.position.set(50, 0, 50); m.visible = true; lsgGroup.add(m);
             }
           });
         }
-        stationModels = {};
-        gateModels = {};
-        asteroidModels = {};
-        planetModels = {};
-        lsgGroup = null;
+        // Position group ahead of PLAYER (not world origin)
+        lsgGroup.position.set(
+          playerPos.x + warpHeading.x * APPROACH_SPAWN_UNITS,
+          playerPos.y + warpHeading.y * APPROACH_SPAWN_UNITS,
+          playerPos.z + warpHeading.z * APPROACH_SPAWN_UNITS
+        );
+      }
+      
+      // SLIDE LSG toward player based on remaining distance
+      if(window._approachStarted && lsgGroup){
+        const t2 = 1 - Math.min(1, remainingKm / APPROACH_TRIGGER_KM);
+        const pos = APPROACH_SPAWN_UNITS + (LSG_STOP_DIST - APPROACH_SPAWN_UNITS) * t2;
+        lsgGroup.position.set(
+          playerPos.x + warpHeading.x * pos,
+          playerPos.y + warpHeading.y * pos,
+          playerPos.z + warpHeading.z * pos
+        );
       }
 
-      // ── ARRIVAL: spawn new group and decelerate toward player ──
-      if(elapsed >= arriveStart && warpBuildReady){
-        if(!window._approachStarted){
-          window._approachStarted = true;
-          // Compute spawn distance from farthest object in new group
-          let maxChildDist = 0;
-          warpGroup.children.forEach(c => {
-            const d = Math.sqrt(c.position.x*c.position.x + c.position.z*c.position.z);
-            if(d > maxChildDist) maxChildDist = d;
-          });
-          // arrDist preview (need it to ensure spawnDist > arrDist)
-          const arrDistPreview = (window._warpBuildResult && window._warpBuildResult.lsgData && window._warpBuildResult.lsgData.arrival_dist) || 100;
-          const spawnDist = Math.max(arrDistPreview * 20, maxChildDist * 5, 500000);
-          window._approachSpawnDist = spawnDist;
 
-          // Swap in new group
-          lsgGroup = warpGroup;
-          warpGroup = null;
-          scene.add(lsgGroup);
-          lsgGroup.position.set(warpHeading.x * spawnDist, 0, warpHeading.z * spawnDist);
-          lsgGroup.visible = true;
-
-          // Adopt build result into module-level dicts
-          const result = window._warpBuildResult;
-          if(result){
-            stationModels = result.stations;
-            gateModels = result.gates;
-            asteroidModels = result.asteroids;
-            planetModels = result.planets;
-            window._warpLsgData = result.lsgData;
-          }
-        }
-
-        // Position group based on deceleration curve (interpolation, not accumulation)
-        // t goes from 0→1 over the arrival phase
-        const arriveElapsed = elapsed - arriveStart;
-        const t = Math.min(1.0, arriveElapsed / WARP_ARRIVE_TIME);
-        const arrDist = (window._warpLsgData && window._warpLsgData.arrival_dist) || 100;
-        const spawnDist = window._approachSpawnDist;
-        // Ease curve: fast at start (planets), slow at end (stations)
-        // Use cubic ease-out: starts fast, decelerates smoothly
-        const eased = 1 - Math.pow(1 - t, 3);
-        const currentDist = spawnDist + (arrDist - spawnDist) * eased;
-        lsgGroup.position.set(warpHeading.x * currentDist, 0, warpHeading.z * currentDist);
+      // Progress and HUD
+      const progress = Math.min(1.0, t / wp.totalTime);
+      warpSpeed = speed;
+      const speedKmS = speed * AU_KM;
+      document.getElementById('speedBar').style.width = (progress * 100) + '%';
+      if(speed > 0.01){
+        document.getElementById('shipSpeed').textContent = speed.toFixed(2) + ' AU/s';
+      } else if(speedKmS > 1000){
+        document.getElementById('shipSpeed').textContent = Math.round(speedKmS) + ' km/s';
+      } else {
+        document.getElementById('shipSpeed').textContent = Math.round(speedKmS * 1000) + ' m/s';
       }
-
-      // ── FINALIZE ──
-      if(elapsed >= arriveEnd){
-        // Ensure group is exactly at arrDist (interpolation may not have hit t=1.0 exactly)
-        const arrDist = (window._warpLsgData && window._warpLsgData.arrival_dist) || 100;
-        if(lsgGroup) lsgGroup.position.set(warpHeading.x * arrDist, 0, warpHeading.z * arrDist);
-        playerPos.set(0, 0, 0);
-        playerHeading.copy(warpHeading);
-        playerSpeed = 0;
-
-        // Update localState
-        const lsgData = window._warpLsgData;
-        if(lsgData){
-          localState = {system_id: lsgData.system_id, objects: lsgData.objects, ships: lsgData.ships, player: localState?.player};
-        }
-
-        // Clean up
-        warpState = 'none';
-        warpTargetId = null;
-        warpTargetPos = null;
-        warpBuildReady = false;
-        warpLock = false;
-        window._approachStarted = false;
-        window._departDespawned = false;
-        window._warpBuildResult = null;
-        window._warpLsgData = null;
-        // Set player SS to destination
-        if(window._warpToSS) {
-          window._playerSS = {x: window._warpToSS.x, y: window._warpToSS.y || 0, z: window._warpToSS.z};
-          console.log('[SSG] Warp complete, playerSS set to:', window._playerSS);
-        }
-
-        document.getElementById('warpTarget').textContent = '';
-        if(warpStreaks) warpStreaks.visible = false;
-        fetch('/api/player/position', {method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({x:playerPos.x, y:playerPos.y, z:playerPos.z, speed:0,
-            hx:playerHeading.x, hy:playerHeading.y, hz:playerHeading.z, state:'idle'})
-        }).catch(()=>{});
-        setTimeout(()=> connectStream(), 1000);
-      }
-
-      // ── HUD ──
-      displaySpeed = warpSpeed;
-      const displayMs = warpSpeed * 100; // PU/s → m/s
-      document.getElementById('speedBar').style.width = Math.min(100, (elapsed / arriveEnd) * 100) + '%';
-      document.getElementById('shipSpeed').textContent = displayMs > 1000000 ? (displayMs/1000000).toFixed(1) + ' Mm/s' : displayMs > 1000 ? (displayMs/1000).toFixed(1) + ' km/s' : Math.round(displayMs) + ' m/s';
-      document.getElementById('warpTarget').textContent = elapsed < departEnd ? 'Departing' : elapsed < cruiseEnd ? 'Warping' : 'Arriving';
-      // Warp streaks: visible during transit, intensity based on speed
-      const streakIntensity = Math.min(1.0, warpSpeed / WARP_AU_SPEED);
+      // Warp target HUD: just show phase
+      const warpHudEl = document.getElementById('warpTarget');
+      warpHudEl.textContent = t < WARP_LSG_DEPART_TIME ? 'Departing' : t >= wp.accelTime + wp.cruiseTime ? 'Arriving' : 'Warping';
+      
+      // Warp streaks: speed + time based visibility (start early, linger late)
+      const speedFraction = speed / wp.peakSpeed;
+      const timeFraction = Math.min(1.0, t / 2.0); // ramp up over first 2 seconds regardless of speed
+      const streakIntensity = Math.min(1.0, Math.max(speedFraction, timeFraction * 0.3));
       if(warpStreaks){
-        warpStreaks.visible = streakIntensity > 0.05;
+        warpStreaks.visible = streakIntensity > 0.02;
         if(warpStreaks.visible){
-          // Keep streaks centered on camera, oriented along warp heading (not camera look)
           warpStreaks.position.copy(camera.position);
-          // Build quaternion from warp heading direction
           const lookMat = new THREE.Matrix4().lookAt(new THREE.Vector3(0,0,0), warpHeading, new THREE.Vector3(0,1,0));
           warpStreaks.quaternion.setFromRotationMatrix(lookMat);
           updateWarpStreaks(dt, streakIntensity);
         }
         warpStreaks.material.opacity = 0.3 + streakIntensity * 0.5;
       }
-    }
+      // Update warp audio - boost intensity so it starts/ends with more presence
+      const audioTimeBias = Math.min(1.0, t / 1.5) * 0.4; // ramps to 40% floor in 1.5s
+      const audioDecelBias = (t >= wp.accelTime + wp.cruiseTime) ? Math.max(0, 1.0 - ((t - wp.accelTime - wp.cruiseTime) / wp.decelTime)) * 0.3 : 0;
+      const audioIntensity = Math.min(1.0, Math.max(speedFraction, audioTimeBias, audioDecelBias));
+      updateWarpAudio(audioIntensity);
 
+        // COMPLETION: when remaining distance is essentially zero
+        if(remainingKm < 100){
+          if(localState && localState.objects){
+            localState.objects.forEach(o => o.is_anchor = false);
+            const d2 = localState.objects.find(o => o.id === warpTargetId);
+            if(d2) d2.is_anchor = true;
+          }
+          playerHeading.copy(warpHeading);
+          playerSpeed = 0;
+          warpState = 'none';
+          warpTargetId = null;
+          warpTargetPos = null;
+          window._ssgFrozen = false;
+          window._approachStarted = false;
+          window._approachRemainingKm = undefined;
+          window._approachStart = null;
+          window._departDone = false;
+          window._lsgDepartStart = null;
+          window._warpPhases = null;
+          document.getElementById('warpTarget').textContent = '';
+          if(warpStreaks) warpStreaks.visible = false;
+          stopWarpAudio();
+        }
+      }
     // ── Player Ship Physics (CLIENT-AUTHORITATIVE, ship moves in world space) ──
     if(warpState === 'none'){
       checkApproachArrival();
@@ -1079,6 +1498,22 @@ function animate(now){
     const offsetQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI/2);
     targetQuat.multiply(offsetQuat);
     shipGroup.quaternion.slerp(targetQuat, 0.15);
+
+    // Impulse particles (local flight only)
+    if(impulsePoints){
+      const speedNorm = playerSpeed / playerMaxSpeed;
+      if(warpState === 'none' && speedNorm > 0.05){
+        impulsePoints.visible = true;
+        // Position at ship, orient opposite to heading
+        impulsePoints.position.copy(playerPos);
+        const lookMat2 = new THREE.Matrix4().lookAt(new THREE.Vector3(0,0,0), playerHeading, new THREE.Vector3(0,1,0));
+        impulsePoints.quaternion.setFromRotationMatrix(lookMat2);
+        updateImpulseParticles(dt, speedNorm);
+        impulsePoints.material.opacity = Math.min(0.5, speedNorm * 0.6);
+      } else {
+        impulsePoints.visible = false;
+      }
+    }
 
     // Camera follows ship (maintain relative offset) - skip during freelook
     if(!isFreelooking){
@@ -1125,11 +1560,16 @@ function animate(now){
       trailDrawCount = 0;
     }
 
-    // Speed UI
+    // Speed UI (skip during warp - warp has its own display)
+    if(warpState !== 'warping'){
     displaySpeed += (playerSpeed - displaySpeed) * 0.1;
     document.getElementById('speedBar').style.width = (displaySpeed / playerMaxSpeed * 100) + '%';
-    document.getElementById('shipSpeed').textContent = Math.round(displaySpeed * 100) + ' m/s';
+    const speedMs = Math.round(displaySpeed * 100);
+    if(speedMs > 1000000) document.getElementById('shipSpeed').textContent = (speedMs/1000000).toFixed(1) + ' Mm/s';
+    else if(speedMs > 1000) document.getElementById('shipSpeed').textContent = (speedMs/1000).toFixed(1) + ' km/s';
+    else document.getElementById('shipSpeed').textContent = speedMs + ' m/s';
     document.getElementById('shipState').textContent = warpState === 'warping' ? 'Warping' : warpState === 'aligning' ? 'Aligning' : flyDirection ? (displaySpeed > playerMaxSpeed*0.9 ? 'Full Speed' : 'Aligning') : (playerSpeed > 0.01 ? 'Decelerating' : 'Idle');
+    } // end warpState !== 'warping' guard
 
     // ── Starfield: follow camera (skybox behavior, no parallax) ──
     if(starField){
@@ -1181,15 +1621,7 @@ function animate(now){
         const gy = lsgGroup ? lsgGroup.position.y : 0;
         const gz = lsgGroup ? lsgGroup.position.z : 0;
         // Reset scales from any previous warp departure (restore original scale)
-        for(const [id, mesh] of Object.entries(stationModels)){
-          if(mesh.userData._origScale) mesh.scale.setScalar(mesh.userData._origScale);
-        }
-        for(const [id, mesh] of Object.entries(gateModels)){
-          if(mesh.userData._origScale) mesh.scale.setScalar(mesh.userData._origScale);
-        }
-        for(const [id, rocks] of Object.entries(asteroidModels)) rocks.forEach(r => {
-          if(r.userData._origScale) r.scale.setScalar(r.userData._origScale);
-        });
+        // (no individual model scaling needed - LSG group movement handles everything)
         for(const [id, mesh] of Object.entries(stationModels)){
           const obj = localState.objects.find(o => o.station_id === id);
           if(!obj){ mesh.visible = false; continue; }
@@ -1212,23 +1644,7 @@ function animate(now){
         // During warping DEPARTURE ONLY: shrink all visible stations/gates/asteroids
         // Skip this during approach (when _approachStarted is true)
         if(!window._approachStarted){
-          if(!window._objDepartTimer) window._objDepartTimer = 0;
-          window._objDepartTimer += dt;
-          const ot = Math.min(1.0, window._objDepartTimer / 1.5);
-          const objScale = Math.max(0.02, 1.0 - ot * 0.98);
-          for(const [id, mesh] of Object.entries(stationModels)){
-            const os = mesh.userData._origScale || 1;
-            mesh.scale.setScalar(os * objScale);
-            if(ot >= 1.0) mesh.visible = false;
-          }
-          for(const [id, mesh] of Object.entries(gateModels)){
-            const os = mesh.userData._origScale || 1;
-            mesh.scale.setScalar(os * objScale);
-            if(ot >= 1.0) mesh.visible = false;
-          }
-          for(const [id, rocks] of Object.entries(asteroidModels)){
-            rocks.forEach(r => { const os = r.userData._origScale || 1; r.scale.setScalar(os * objScale); if(ot >= 1.0) r.visible = false; });
-          }
+          // Models just ride the LSG group - no individual scaling
         }
       }
       // Reset departure timer when not warping
@@ -1359,34 +1775,152 @@ window.warpTo = function(objId){
   closeCtx();
   if(warpState !== 'none') return;
   if(!localState || !localState.objects) return;
+  console.log('[WARP-V2] warpTo called, NEW code running');
+  window._flog = false;
+  window._labelDbg = false;
   const obj = localState.objects.find(o => o.id === objId);
   if(!obj) return;
   // Don't warp if this is the anchor (we're already here)
   if(obj.is_anchor) return;
-  // Compute warp direction from SS coordinates (current anchor -> target)
-  const anchorObj = localState.objects.find(o => o.is_anchor);
-  if(!anchorObj) return;
-  const ssDx = obj.ss_x - anchorObj.ss_x;
-  const ssDy = (obj.ss_y || 0) - (anchorObj.ss_y || 0);
-  const ssDz = obj.ss_z - anchorObj.ss_z;
-  const ssLen = Math.sqrt(ssDx*ssDx + ssDy*ssDy + ssDz*ssDz) || 0.01;
-  // Set warp heading from SS direction (full 3D)
-  warpHeading.set(ssDx/ssLen, ssDy/ssLen, ssDz/ssLen).normalize();
-  // Set warp target position far away in that direction (for departure animation)
+  
+  // Use _playerSS as start position
+  const from = window._playerSS || {x:0, y:0, z:0};
+  let destX = obj.ss_x, destY = obj.ss_y || 0, destZ = obj.ss_z;
+  
+  // Compute destination: for planets/moons, we stop 1.5x radius short
+  // Heading from player to target
+  const dx = destX - from.x, dy = destY - (from.y||0), dz = destZ - from.z;
+  const len = Math.sqrt(dx*dx + dy*dy + dz*dz);
+  if(len < 0.00001) return;
+  warpHeading.set(dx/len, dy/len, dz/len).normalize();
+  
+  // Total distance, shortened by orbit offset for planets/moons/orbital stations
+  let totalDist = len;
+  if(obj.type === 'planet' || obj.type === 'moon'){
+    // Orbit offset scales with body size: small bodies need more margin
+    let orbitMult;
+    if(obj.radius_km < 1000) orbitMult = 3;       // tiny moons
+    else if(obj.radius_km < 5000) orbitMult = 2;   // small planets/large moons
+    else if(obj.radius_km < 20000) orbitMult = 1.5; // medium planets
+    else orbitMult = 1.2;                           // gas giants
+    const orbitOffsetAU = ((obj.radius_km || 5000) * orbitMult) / AU_KM;
+    totalDist = Math.max(0, len - orbitOffsetAU);
+  } else if(obj.parent && localState){
+    // Orbital station/gate: warp toward PARENT PLANET, stop at orbit offset (same as planet warp)
+    const parentObj = localState.objects.find(o => o.id === obj.parent);
+    if(parentObj && parentObj.radius_km){
+      // Recalculate heading toward parent planet (not the station)
+      const pdx = parentObj.ss_x - from.x;
+      const pdy = (parentObj.ss_y || 0) - (from.y || 0);
+      const pdz = parentObj.ss_z - from.z;
+      const plen = Math.sqrt(pdx*pdx + pdy*pdy + pdz*pdz);
+      if(plen > 0.00001){
+        warpHeading.set(pdx/plen, pdy/plen, pdz/plen).normalize();
+      }
+      let orbitMult;
+      if(parentObj.radius_km < 1000) orbitMult = 3;
+      else if(parentObj.radius_km < 5000) orbitMult = 2;
+      else if(parentObj.radius_km < 20000) orbitMult = 1.5;
+      else orbitMult = 1.2;
+      const orbitOffsetAU = (parentObj.radius_km * orbitMult) / AU_KM;
+      totalDist = Math.max(0, plen - orbitOffsetAU);
+    }
+  }
+  
+  // _warpToSS = the point we stop at (from + heading * totalDist)
+  const warpDestX = from.x + warpHeading.x * totalDist;
+  const warpDestY = (from.y||0) + warpHeading.y * totalDist;
+  const warpDestZ = from.z + warpHeading.z * totalDist;
+  
+  // Calculate accelDist, decelDist, short trip handling
+  const accelDist = WARP_TOP_SPEED * WARP_ACCEL_TIME / 5;
+  const decelDist = WARP_TOP_SPEED * WARP_DECEL_TIME / 5;
+  let peakSpeed, accelTime, cruiseTime, decelTime, totalTime;
+  if(accelDist + decelDist > totalDist){
+    peakSpeed = totalDist / (WARP_ACCEL_TIME / 5 + WARP_DECEL_TIME / 5);
+    accelTime = WARP_ACCEL_TIME;
+    cruiseTime = 0;
+    decelTime = WARP_DECEL_TIME;
+    totalTime = accelTime + decelTime;
+  } else {
+    peakSpeed = WARP_TOP_SPEED;
+    accelTime = WARP_ACCEL_TIME;
+    decelTime = WARP_DECEL_TIME;
+    cruiseTime = (totalDist - accelDist - decelDist) / WARP_TOP_SPEED;
+    totalTime = accelTime + cruiseTime + decelTime;
+  }
+  
+  // Store warp phases
+  window._warpPhases = {peakSpeed, accelTime, cruiseTime, decelTime, totalTime};
+  window._warpOrbitOffsetKm = (len - totalDist) * 150000000; // km short of target we stop
+  window._warpTotalDist = totalDist;
+  window._warpFromSS = {x: from.x, y: from.y || 0, z: from.z};
+  window._warpToSS = {x: warpDestX, y: warpDestY, z: warpDestZ};
+  console.log(`[WARP] len=${len.toFixed(10)} totalDist=${totalDist.toFixed(10)} offset=${((obj.radius_km||5000)*1.5/AU_KM).toFixed(10)}`);
+  console.log(`[WARP] warpDest=(${warpDestX.toFixed(8)},${warpDestY.toFixed(8)},${warpDestZ.toFixed(8)}) moon=(${obj.ss_x},${obj.ss_y},${obj.ss_z})`);
+  
+  // Set warp target info
   warpTargetId = objId;
   warpTargetPos = new THREE.Vector3(warpHeading.x * 100000, warpHeading.y * 100000, warpHeading.z * 100000);
   warpTargetType = obj.type;
-  // Compute warp duration from AU distance between objects
-  const auDist = ssLen;
-  warpCruiseTime = auDist / warpShipAUSpeed; // time at warp speed to cover the distance
-  warpTravelDuration = WARP_DEPART_TIME + warpCruiseTime + WARP_ARRIVE_TIME;
   warpTravelTimer = 0;
+  warpTravelDuration = totalTime;
   warpState = 'aligning';
   warpAlignTimer = 0;
-  // Save departure SS coords for label interpolation throughout warp
-  window._warpFromSS = {x: anchorObj.ss_x, y: anchorObj.ss_y || 0, z: anchorObj.ss_z};
-  window._warpToSS = {x: obj.ss_x, y: obj.ss_y || 0, z: obj.ss_z};
+  window._approachStarted = false;
+  window._departDespawned = false;
+  window._lsgStartPos = null;
   document.getElementById('warpTarget').textContent = 'Aligning...';
+  
+  // Pre-fetch target model for approach (server mode)
+  if(!STANDALONE_MODE){
+    if(obj.station_id && !stationModels[obj.station_id]){
+      fetch('/api/station_model/'+obj.station_id).then(r=>r.ok?r.json():null).then(data=>{
+        if(!data) return;
+        const model = buildStationMesh(data);
+        if(!model) return;
+        const box = new THREE.Box3().setFromObject(model);
+        const sz = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
+        const typeScale = {'trade_hub':150,'military_base':120,'shipyard':180,'factory':80,'refinery':70,'component_works':50,'mining_colony':40};
+        model.scale.setScalar((typeScale[data.station_type]||50) / maxDim);
+        model.visible = false;
+        stationModels[obj.station_id] = model;
+      }).catch(()=>{});
+    }
+    if(obj.type === 'gate' && !gateModels[obj.id]){
+      const sysId = localState.system_id || '';
+      fetch(`/api/gate_model/${sysId}/${obj.id}`).then(r=>r.ok?r.json():null).then(data=>{
+        if(!data) return;
+        const model = buildStationMesh(data);
+        if(!model) return;
+        const box = new THREE.Box3().setFromObject(model);
+        const sz = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
+        model.scale.setScalar(20 / maxDim);
+        model.traverse(c => { if(c.isLineSegments && c.material){ c.material.color.setHex(0xd066f0); c.material.opacity = 0.7; }});
+        model.visible = false;
+        gateModels[obj.id] = model;
+      }).catch(()=>{});
+    }
+    // Also pre-fetch orbital siblings
+    const parentId = (obj.type === 'planet' || obj.type === 'moon') ? obj.id : obj.parent;
+    if(parentId && localState){
+      localState.objects.filter(o => o.parent === parentId && o.id !== obj.id && o.station_id && !stationModels[o.station_id]).forEach(sib => {
+        fetch('/api/station_model/'+sib.station_id).then(r=>r.ok?r.json():null).then(data=>{
+          if(!data) return;
+          const model = buildStationMesh(data);
+          if(!model) return;
+          const box = new THREE.Box3().setFromObject(model);
+          const sz = box.getSize(new THREE.Vector3());
+          const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
+          model.scale.setScalar((({'trade_hub':150,'military_base':120,'shipyard':180,'factory':80,'refinery':70,'component_works':50,'mining_colony':40})[data.station_type]||50) / maxDim);
+          model.visible = false;
+          stationModels[sib.station_id] = model;
+        }).catch(()=>{});
+      });
+    }
+  }
 };
 
 // ── Jump Gate (system transition) ──
@@ -1470,9 +2004,13 @@ window.showCtx = function(e, objId, name, type){
   const obj = localState && localState.objects && localState.objects.find(o => o.id === objId);
   const isAnchor = obj && obj.is_anchor;
   
-  // isLocal = physically present at this object (anchor, or station/gate/belt with model in LSG)
-  // Planets/moons are NOT local unless they are the anchor - they're always warp targets
-  const isLocal = isAnchor || (obj && (obj.type === 'station' || obj.type === 'gate' || obj.type === 'belt') && (stationModels[obj.station_id] || gateModels[obj.id] || asteroidModels[obj.id]));
+  // isLocal = physically present in current LSG (anchor, or has a model in lsgGroup, or parent body of current anchor)
+  const anchorObj = localState && localState.objects && localState.objects.find(o => o.is_anchor);
+  const isParentBody = obj && anchorObj && anchorObj.parent && obj.id === anchorObj.parent;
+  const isLocal = isAnchor || isParentBody ||
+    (obj && obj.station_id && stationModels[obj.station_id] && stationModels[obj.station_id].parent === lsgGroup) ||
+    (obj && obj.type === 'gate' && gateModels[obj.id] && gateModels[obj.id].parent === lsgGroup) ||
+    (obj && (obj.type === 'belt' || obj.type === 'asteroid_belt') && asteroidModels[obj.id] && asteroidModels[obj.id].length > 0 && asteroidModels[obj.id][0].parent === lsgGroup);
   
   // Compute distance to object (for range checks)
   let distToObj = Infinity;
@@ -1480,21 +2018,34 @@ window.showCtx = function(e, objId, name, type){
     const gOff = lsgGroup.position;
     // Use model position if available, else obj.x/y/z
     let ox = obj.x, oy = obj.y, oz = obj.z;
-    if(obj.station_id && stationModels[obj.station_id]){
+    let hasModel = false;
+    if(obj.station_id && stationModels[obj.station_id] && stationModels[obj.station_id].parent === lsgGroup){
       const mp = stationModels[obj.station_id].position;
       ox = mp.x; oy = mp.y; oz = mp.z;
-    } else if(gateModels[obj.id]){
+      hasModel = true;
+    } else if(gateModels[obj.id] && gateModels[obj.id].parent === lsgGroup){
       const mp = gateModels[obj.id].position;
       ox = mp.x; oy = mp.y; oz = mp.z;
+      hasModel = true;
     }
-    const dx = (ox + gOff.x) - playerPos.x;
-    const dy = (oy + gOff.y) - playerPos.y;
-    const dz = (oz + gOff.z) - playerPos.z;
-    distToObj = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    if(hasModel){
+      const dx = (ox + gOff.x) - playerPos.x;
+      const dy = (oy + gOff.y) - playerPos.y;
+      const dz = (oz + gOff.z) - playerPos.z;
+      distToObj = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    } else {
+      // No model in lsgGroup - use SS distance (in scene units: km / 0.1)
+      const ps = window._playerSS || {x:0, y:0, z:0};
+      const ssDistAU = Math.sqrt(Math.pow(obj.ss_x - ps.x, 2) + Math.pow((obj.ss_y||0) - (ps.y||0), 2) + Math.pow(obj.ss_z - ps.z, 2));
+      distToObj = ssDistAU * 150000000 / 100; // convert km to scene units (1 unit = 100m)
+    }
   }
   
-  // Warp To (for objects NOT in local space)
+  // Warp To (for objects NOT in local space, OR local but far away)
   if(!isLocal){
+    items += `<div class="ctx-item" onclick="warpTo('${objId}')">Warp to ${name}</div>`;
+  } else if(distToObj > 1000){
+    // Local but > 100km - offer warp as option (disables weapons)
     items += `<div class="ctx-item" onclick="warpTo('${objId}')">Warp to ${name}</div>`;
   }
   
@@ -1635,7 +2186,7 @@ function renderNavList(objects, playerShip){
     let distVal, distStr;
     const isWarping = (warpState === 'warping' || warpState === 'aligning');
     const isApproaching = isWarping && window._approachStarted && lsgGroup;
-    const useLocal = (o.is_anchor && !isWarping && lsgGroup) || isApproaching;
+    const useLocal = ((o.is_anchor && !isWarping && lsgGroup) || isApproaching) && o.type !== 'planet' && o.type !== 'moon';
     
     if(useLocal){
       // Use local/group-based distance
@@ -1654,21 +2205,26 @@ function renderNavList(objects, playerShip){
         distStr = Math.round(distM) + ' m';
       }
     } else {
-      // SS AU distance
-      let curX = 0, curZ = 0;
-      if(isWarping && window._warpFromSS){
-        const progress = Math.min(1.0, warpTravelTimer / warpTravelDuration);
-        curX = window._warpFromSS.x + (window._warpToSS.x - window._warpFromSS.x) * progress;
-        curZ = window._warpFromSS.z + (window._warpToSS.z - window._warpFromSS.z) * progress;
+      // SS distance - use _playerSS (same source as SSG rendering)
+      let curX = 0, curY = 0, curZ = 0;
+      if(window._playerSS){
+        curX = window._playerSS.x;
+        curY = window._playerSS.y || 0;
+        curZ = window._playerSS.z;
       } else {
         const anchorObj = objects.find(a => a.is_anchor);
         curX = anchorObj ? anchorObj.ss_x : 0;
+        curY = anchorObj ? (anchorObj.ss_y || 0) : 0;
         curZ = anchorObj ? anchorObj.ss_z : 0;
       }
-      const adx = o.ss_x - curX, adz = o.ss_z - curZ;
-      const auDist = Math.sqrt(adx*adx + adz*adz);
-      distVal = auDist * 150000000000;
-      distStr = auDist.toFixed(2) + ' AU';
+      const adx = o.ss_x - curX, ady = (o.ss_y||0) - curY, adz = o.ss_z - curZ;
+      const auDist = Math.sqrt(adx*adx + ady*ady + adz*adz);
+      const distKm = auDist * 150000000;
+      distVal = distKm * 1000; // meters for sorting
+      if(auDist > 0.1) distStr = auDist.toFixed(2) + ' AU';
+      else if(distKm > 1000000) distStr = (distKm/1000000).toFixed(1) + 'M km';
+      else if(distKm > 1000) distStr = Math.round(distKm/1000) + 'k km';
+      else distStr = Math.round(distKm) + ' km';
     }
     return {...o, distVal, distStr};
   });
@@ -1776,16 +2332,10 @@ document.getElementById('dockBtn').addEventListener('click', async()=>{
 
 // ── Load Ship Model ──
 async function loadShipModel(){
-  const r = await fetch('/api/ship_model/all');
-  if(!r.ok) return;
-  const models = await r.json();
-  allShipGeos = models;  // Store for NPC ship building
-  // Get player ship class from player API
-  const pr = await fetch('/api/player');
-  if(!pr.ok) return;
-  player = await pr.json();
-  const geo = models[player.ship_class];
-  if(!geo) return;
+  console.log('[INIT] loadShipModel called');
+  // Use real Pinto Runner model from INLINE_MODELS
+  allShipGeos = {pinto_runner: INLINE_MODELS.pinto_runner, Frigate: INLINE_MODELS.pinto_runner};
+  const geo = INLINE_MODELS.pinto_runner;
   if(shipGroup) scene.remove(shipGroup);
   shipGroup = new THREE.Group();
   buildShipFromData(shipGroup, geo, {showHardpoints:false});
@@ -1795,15 +2345,22 @@ async function loadShipModel(){
   shipGroup.scale.setScalar(0.6/maxDim); // Pinto Runner = 60m, 1 unit = 100m
   scene.add(shipGroup);
 
-  // Update docked UI with player info
-  updatePlayerUI();
-
-  // Determine initial state
-  if(player.docked){
-    setDockedScene();
+  // In server mode: connect SSE, first message will trigger scene setup
+  if(!STANDALONE_MODE){
+    connectStream();
   } else {
-    setFlightScene();
+    player = localState.player;
+    if(player.docked){
+      setDockedScene();
+    } else {
+      console.log('[INIT] calling setFlightScene');
+      setFlightScene();
+    }
+    if(localState) updateUI(localState);
   }
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  camera.aspect = container.clientWidth / container.clientHeight;
+  camera.updateProjectionMatrix();
 }
 
 function updatePlayerUI(){
@@ -2343,12 +2900,6 @@ function hash(str){
 // ── SSG Planet Rendering (planets positioned by SS coords, separate from LSG) ──
 let ssgPlanetMeshes = {}; // id -> THREE.Mesh
 let ssgPlanetGroup = null;
-const SSG_VISIBILITY_THRESHOLD = 0.0008; // radians (~0.05 degrees) - below this, planet is just a label
-const AU_TO_PU = 1500000000; // 1 AU = 1.5 billion PU (150M km * 10 PU/m / 1000 m/km... wait)
-// Actually: 1 AU = 150,000,000 km. 1 km = 10,000 PU (1km = 1000m, 1m = 10 PU? No. 1PU = 100m. So 1km = 10 PU.)
-// 1 AU = 150,000,000 km * 10 PU/km = 1,500,000,000 PU
-const AU_PU = 1500000000;
-
 function initSSGPlanets(){
   if(ssgPlanetGroup){ scene.remove(ssgPlanetGroup); }
   ssgPlanetGroup = new THREE.Group();
@@ -2377,15 +2928,12 @@ function buildSSGPlanetMeshes(){
 
 function updateSSGPlanets(){
   if(!localState || !localState.objects) return;
-  // Build meshes if needed
+  // Build meshes if needed (init ssgPlanetGroup if null)
   const planetCount = localState.objects.filter(o => o.type === 'planet' || o.type === 'moon').length;
   if(!ssgPlanetGroup || Object.keys(ssgPlanetMeshes).length === 0 || window._ssgLastPlanetCount !== planetCount){
     window._ssgLastPlanetCount = planetCount;
     clearSSGPlanets(); initSSGPlanets(); buildSSGPlanetMeshes();
   }
-  
-  const SSG_SCALE_FACTOR = 4; // 1 scene unit = 4 km
-  const AU_KM_SSG = 150000000;
   
   // Player SS position
   let playerSSx, playerSSy = 0, playerSSz;
@@ -2400,25 +2948,20 @@ function updateSSGPlanets(){
     playerSSz = anchorSS ? anchorSS.ss_z : 0;
   }
   
-  // Render all bodies: position and scale proportional to real distance
-  if(!window._ssgDebugDone && Object.keys(ssgPlanetMeshes).length > 0){
-    window._ssgDebugDone = true;
-    const obj0 = localState.objects.find(o => o.type === 'planet');
-    if(obj0) console.log('[SSG] First planet:', obj0.name, 'ss=', obj0.ss_x, obj0.ss_y, obj0.ss_z, 'playerSS=', playerSSx, playerSSy, playerSSz);
-  }
   for(const [id, mesh] of Object.entries(ssgPlanetMeshes)){
     const obj = localState.objects.find(o => o.id === id);
     if(!obj){ mesh.visible = false; continue; }
-    // Don't render the planet we're anchored at (distance=0, we're in orbit)
-    if(obj.is_anchor){ mesh.visible = false; continue; }
+    // Skip anchor planet (is_anchor && warpState === 'none')
+    // Planet always renders based on distance (even if anchor - we're at orbit offset, not center)
     
     const radiusKm = obj.radius_km || 5000;
     const dxAU = obj.ss_x - playerSSx;
     const dyAU = (obj.ss_y || 0) - playerSSy;
     const dzAU = obj.ss_z - playerSSz;
     const distAU = Math.sqrt(dxAU*dxAU + dyAU*dyAU + dzAU*dzAU);
-    const distKm = distAU * AU_KM_SSG;
+    const distKm = distAU * AU_KM;
     
+    // visibleDistKm = radius_km * 100
     const visibleDistKm = radiusKm * 100;
     
     if(distKm > visibleDistKm){
@@ -2428,9 +2971,11 @@ function updateSSGPlanets(){
       const dirX = (distAU > 0.00001) ? dxAU / distAU : 0;
       const dirY = (distAU > 0.00001) ? dyAU / distAU : 0;
       const dirZ = (distAU > 0.00001) ? dzAU / distAU : 1;
-      const renderDist = distKm / SSG_SCALE_FACTOR;
+      // renderDist = distKm / SCALE_FACTOR
+      const renderDist = distKm / WARP_SCALE_FACTOR;
       mesh.position.set(dirX * renderDist, dirY * renderDist, dirZ * renderDist);
-      mesh.scale.setScalar(radiusKm / SSG_SCALE_FACTOR);
+      // scale = radius_km / SCALE_FACTOR
+      mesh.scale.setScalar(radiusKm / WARP_SCALE_FACTOR);
     }
   }
 }
@@ -2510,14 +3055,12 @@ function updateDirectionalLabels(){
     const icon = DIR_LABEL_ICONS[obj.type] || '\u2022';
 
     // Direction from current SS position to this object's SS position
-    // During warp, interpolate our SS position toward the warp target
-    // Current SS position: interpolate from departure to destination during warp
+    // Use _playerSS (analytical position - single source of truth)
     let curSSx = 0, curSSy = 0, curSSz = 0;
-    if((warpState === 'warping' || warpState === 'aligning') && window._warpFromSS){
-      const progress = (warpState === 'warping') ? Math.min(1.0, warpTravelTimer / warpTravelDuration) : 0;
-      curSSx = window._warpFromSS.x + (window._warpToSS.x - window._warpFromSS.x) * progress;
-      curSSy = (window._warpFromSS.y || 0) + ((window._warpToSS.y || 0) - (window._warpFromSS.y || 0)) * progress;
-      curSSz = window._warpFromSS.z + (window._warpToSS.z - window._warpFromSS.z) * progress;
+    if(window._playerSS){
+      curSSx = window._playerSS.x;
+      curSSy = window._playerSS.y || 0;
+      curSSz = window._playerSS.z;
     } else {
       const anchorSS = localState.objects.find(o => o.is_anchor);
       curSSx = anchorSS ? anchorSS.ss_x : 0;
@@ -2529,8 +3072,35 @@ function updateDirectionalLabels(){
     
     // For anchor object (when NOT warping), use its actual model position + group offset. Otherwise project from SS direction.
     let labelX, labelY, labelZ;
-    const useLocal = obj.is_anchor && warpState !== 'warping' && warpState !== 'aligning';
-    if(useLocal){
+    // Use local model position for stations/gates that have a visible model in lsgGroup
+    const hasVisibleModel = (obj.station_id && stationModels[obj.station_id] && stationModels[obj.station_id].visible && stationModels[obj.station_id].parent === lsgGroup) ||
+                           (obj.type === 'gate' && gateModels[obj.id] && gateModels[obj.id].visible && gateModels[obj.id].parent === lsgGroup) ||
+                           ((obj.type === 'belt' || obj.type === 'asteroid_belt') && asteroidModels[obj.id] && asteroidModels[obj.id].length > 0 && asteroidModels[obj.id][0].parent === lsgGroup);
+    const isApproachTarget = window._approachStarted && obj.id === warpTargetId;
+    const isWarpTarget = (warpState === 'warping' || warpState === 'aligning') && obj.id === warpTargetId;
+    // Orbital child of warp target (e.g. station orbiting the planet we're warping to)
+    const isWarpSibling = (warpState === 'warping' || warpState === 'aligning') && obj.parent === warpTargetId && obj.type !== 'planet' && obj.type !== 'moon';
+    const useLocal = (hasVisibleModel || isApproachTarget) && obj.type !== 'planet' && obj.type !== 'moon';
+    if(isWarpTarget || isWarpSibling){
+      // Warp target (or its orbital child): project along warpHeading from player position
+      if((isApproachTarget || (window._approachStarted && isWarpSibling)) && lsgGroup){
+        // During approach: use model's world position if available, else group center
+        const gOff = lsgGroup.position;
+        let modelPos = null;
+        if(obj.station_id && stationModels[obj.station_id] && stationModels[obj.station_id].parent === lsgGroup) modelPos = stationModels[obj.station_id].position;
+        else if(obj.type === 'gate' && gateModels[obj.id] && gateModels[obj.id].parent === lsgGroup) modelPos = gateModels[obj.id].position;
+        if(modelPos){
+          labelX = modelPos.x + gOff.x; labelY = modelPos.y + gOff.y; labelZ = modelPos.z + gOff.z;
+        } else {
+          labelX = gOff.x; labelY = gOff.y; labelZ = gOff.z;
+        }
+      } else {
+        // During warp travel: project at approach spawn distance along heading (matches where group will appear)
+        labelX = playerPos.x + warpHeading.x * 2500;
+        labelY = playerPos.y + warpHeading.y * 2500;
+        labelZ = playerPos.z + warpHeading.z * 2500;
+      }
+    } else if(useLocal){
       // Find the actual model position from the dicts (more reliable than localState.objects)
       const gOff = lsgGroup ? lsgGroup.position : new THREE.Vector3(0,0,0);
       let modelPos = null;
@@ -2542,18 +3112,24 @@ function updateDirectionalLabels(){
       } else {
         labelX = obj.x + gOff.x; labelY = obj.y + gOff.y; labelZ = obj.z + gOff.z;
       }
-    } else if(ssDirLen > 0.001){
-      // Place label point very far away in the SS direction (effectively at infinity)
-      labelX = (ssDirX / ssDirLen) * 100000;
-      labelY = (ssDirY / ssDirLen) * 100000;
-      labelZ = (ssDirZ / ssDirLen) * 100000;
+    } else if(ssDirLen > 0){
+      // Place label at planet mesh position if visible, otherwise at far direction
+      const ssgMesh = ssgPlanetMeshes[obj.id];
+      if(ssgMesh && ssgMesh.visible){
+        labelX = ssgMesh.position.x;
+        labelY = ssgMesh.position.y;
+        labelZ = ssgMesh.position.z;
+      } else {
+        labelX = (ssDirX / ssDirLen) * 100000;
+        labelY = (ssDirY / ssDirLen) * 100000;
+        labelZ = (ssDirZ / ssDirLen) * 100000;
+      }
     } else {
       label.el.style.display = 'none'; continue;
     }
     const toObj = new THREE.Vector3(labelX - camera.position.x, labelY - camera.position.y, labelZ - camera.position.z);
     // Distance: for local anchors, measure from player position to anchor world position
     const dist = useLocal ? new THREE.Vector3(labelX - playerPos.x, labelY - playerPos.y, labelZ - playerPos.z).length() : ssDirLen;
-    if(dist < 0.001 && !useLocal) { label.el.style.display = 'none'; continue; }
     toObj.normalize();
 
     // Dot product: positive = in front of camera, negative = behind
@@ -2619,17 +3195,41 @@ function updateDirectionalLabels(){
     const displayName = obj.name;
     // Format distance
     let distLabel;
-    if(useLocal){
+    if((isWarpTarget || isWarpSibling) && (warpState === 'warping' || warpState === 'aligning')){
+      // Warp target: use real SS distance to object (no snap at completion)
+      const ps = window._playerSS;
+      const dxSS = obj.ss_x - ps.x, dySS = (obj.ss_y||0) - (ps.y||0), dzSS = obj.ss_z - ps.z;
+      const dKm = Math.sqrt(dxSS*dxSS + dySS*dySS + dzSS*dzSS) * 150000000;
+      if(dKm > 150000000) distLabel = (dKm / 150000000).toFixed(2) + ' AU';
+      else if(dKm > 1000000) distLabel = (dKm/1000000).toFixed(1) + 'M km';
+      else if(dKm > 1000) distLabel = Math.round(dKm/1000) + 'k km';
+      else if(dKm > 1) distLabel = Math.round(dKm) + ' km';
+      else distLabel = Math.round(dKm * 1000) + ' m';
+    } else if(useLocal){
       // Local distance in meters (dist is in cm-scale units)
       const distM = dist * 100;
       distLabel = distM < 1000 ? Math.round(distM) + 'm' : (distM/1000).toFixed(1) + 'km';
     } else {
-      // dist is AU
-      distLabel = dist.toFixed(2) + 'AU';
+      // dist is AU - format adaptively
+      const dKm = dist * 150000000;
+      if(dist > 0.1) distLabel = dist.toFixed(2) + ' AU';
+      else if(dKm > 1000000) distLabel = (dKm/1000000).toFixed(1) + 'M km';
+      else if(dKm > 1000) distLabel = Math.round(dKm/1000) + 'k km';
+      else distLabel = Math.round(dKm) + ' km';
     }
 
     label.el.style.left = sx + 'px';
     label.el.style.top = sy + 'px';
+    // Warp jitter: labels vibrate slightly at high speed
+    if(warpState === 'warping' && warpSpeed > 0){
+      const jitterAmt = Math.min(3.0, (warpSpeed / WARP_TOP_SPEED) * 3.0);
+      if(jitterAmt > 0.2){
+        const jx = (Math.random() - 0.5) * jitterAmt;
+        const jy = (Math.random() - 0.5) * jitterAmt;
+        label.el.style.left = (sx + jx) + 'px';
+        label.el.style.top = (sy + jy) + 'px';
+      }
+    }
     label.el.style.color = color;
     label.el.style.opacity = onScreen ? '0.85' : '1.0';
     label.el.style.textShadow = '0 0 4px rgba(0,0,0,0.9)';
@@ -2666,11 +3266,15 @@ function updateDirectionalLabels(){
   // For each cluster: hide individual labels, show a cluster indicator
   // Only remove clusters that aren't being hovered
   dirLabelContainer.querySelectorAll('.label-cluster').forEach(el => {
-    if(!el._hovered) el.remove();
+    if(!el._hovered && !el._warpExpanded) el.remove();
   });
   for(const cluster of clusters){
-    // Hide individual labels in this cluster
-    cluster.forEach(lp => { lp.el.style.display = 'none'; });
+    // Hide individual labels in this cluster (but never hide anchor)
+    cluster.forEach(lp => { 
+      const obj = objs[lp.idx];
+      if(obj && obj.is_anchor) return; // never hide anchor label
+      lp.el.style.display = 'none'; 
+    });
     // Skip creating new cluster element if one is currently hovered at similar position
     const avgX = cluster.reduce((s,lp)=>s+lp.x, 0) / cluster.length;
     const avgY = cluster.reduce((s,lp)=>s+lp.y, 0) / cluster.length;
@@ -2701,6 +3305,32 @@ function updateDirectionalLabels(){
     clusterEl.appendChild(expandEl);
     clusterEl.addEventListener('mouseenter', ()=>{ expandEl.style.display = ''; clusterEl._hovered = true; clusterEl.classList.add('_hovered'); });
     clusterEl.addEventListener('mouseleave', ()=>{ expandEl.style.display = 'none'; clusterEl._hovered = false; clusterEl.classList.remove('_hovered'); });
+    // Auto-expand if cluster contains warp target
+    if(warpState === 'warping' && warpTargetId){
+      const containsTarget = cluster.some(lp => objs[lp.idx].id === warpTargetId);
+      if(containsTarget){
+        // Just show individual labels stacked vertically instead of clustered
+        cluster.forEach((lp, ci) => {
+          lp.el.style.display = '';
+          lp.el.style.top = (lp.y + ci * 16) + 'px'; // stack with 16px spacing
+          // Add distance to label text
+          const obj = objs[lp.idx];
+          const dx = obj.ss_x - (window._playerSS?window._playerSS.x:0);
+          const dy = (obj.ss_y||0) - (window._playerSS?window._playerSS.y||0:0);
+          const dz = obj.ss_z - (window._playerSS?window._playerSS.z:0);
+          const distKm = Math.sqrt(dx*dx+dy*dy+dz*dz) * 150000000;
+          let ds;
+          if(distKm>15000000) ds=(distKm/150000000).toFixed(2)+' AU';
+          else if(distKm>1000000) ds=(distKm/1000000).toFixed(1)+'M km';
+          else if(distKm>1000) ds=Math.round(distKm/1000)+'k km';
+          else ds=Math.round(distKm)+' km';
+          const marker = obj.id===warpTargetId?'► ':'  ';
+          lp.el.textContent = marker + obj.name + '  ' + ds;
+        });
+        clusterEl.remove();
+        continue; // skip adding cluster element
+      }
+    }
     dirLabelContainer.appendChild(clusterEl);
   }
 }
