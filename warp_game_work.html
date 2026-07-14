@@ -1173,6 +1173,21 @@ function animate(now){
           const rocks = asteroidModels[targetObj.id];
           rocks.forEach(r => { r.visible = true; lsgGroup.add(r); });
         }
+        // Also spawn orbital structures that share this body's orbit
+        // If target is a planet/moon, spawn any stations/gates with parent === target
+        // If target is an orbital station, spawn siblings (other structures at same parent)
+        const parentId = (targetObj.type === 'planet' || targetObj.type === 'moon') ? targetObj.id : targetObj.parent;
+        if(parentId){
+          localState.objects.filter(o => o.parent === parentId && o.id !== warpTargetId).forEach(sib => {
+            if(sib.station_id && stationModels[sib.station_id]){
+              const m = stationModels[sib.station_id];
+              m.position.set(50, 0, 50); m.visible = true; lsgGroup.add(m);
+            } else if(sib.type === 'gate' && gateModels[sib.id]){
+              const m = gateModels[sib.id];
+              m.position.set(50, 0, 50); m.visible = true; lsgGroup.add(m);
+            }
+          });
+        }
         // Position group ahead of PLAYER (not world origin)
         lsgGroup.position.set(
           playerPos.x + warpHeading.x * APPROACH_SPAWN_UNITS,
@@ -1715,8 +1730,10 @@ window.showCtx = function(e, objId, name, type){
   const obj = localState && localState.objects && localState.objects.find(o => o.id === objId);
   const isAnchor = obj && obj.is_anchor;
   
-  // isLocal = physically present in current LSG (anchor, or has a model in lsgGroup)
-  const isLocal = isAnchor || 
+  // isLocal = physically present in current LSG (anchor, or has a model in lsgGroup, or parent body of current anchor)
+  const anchorObj = localState && localState.objects && localState.objects.find(o => o.is_anchor);
+  const isParentBody = obj && anchorObj && anchorObj.parent && obj.id === anchorObj.parent;
+  const isLocal = isAnchor || isParentBody ||
     (obj && obj.station_id && stationModels[obj.station_id] && stationModels[obj.station_id].parent === lsgGroup) ||
     (obj && obj.type === 'gate' && gateModels[obj.id] && gateModels[obj.id].parent === lsgGroup) ||
     (obj && (obj.type === 'belt' || obj.type === 'asteroid_belt') && asteroidModels[obj.id] && asteroidModels[obj.id].length > 0 && asteroidModels[obj.id][0].parent === lsgGroup);
@@ -2785,14 +2802,22 @@ function updateDirectionalLabels(){
                            ((obj.type === 'belt' || obj.type === 'asteroid_belt') && asteroidModels[obj.id] && asteroidModels[obj.id].length > 0 && asteroidModels[obj.id][0].parent === lsgGroup);
     const isApproachTarget = window._approachStarted && obj.id === warpTargetId;
     const isWarpTarget = (warpState === 'warping' || warpState === 'aligning') && obj.id === warpTargetId;
+    // Orbital child of warp target (e.g. station orbiting the planet we're warping to)
+    const isWarpSibling = (warpState === 'warping' || warpState === 'aligning') && obj.parent === warpTargetId && obj.type !== 'planet' && obj.type !== 'moon';
     const useLocal = (hasVisibleModel || isApproachTarget) && obj.type !== 'planet' && obj.type !== 'moon';
-    if(isWarpTarget){
-      // Warp target: project along warpHeading from player position
-      if(isApproachTarget && lsgGroup){
-        // During approach: use actual lsgGroup position (model is there, no snap at completion)
-        labelX = lsgGroup.position.x;
-        labelY = lsgGroup.position.y;
-        labelZ = lsgGroup.position.z;
+    if(isWarpTarget || isWarpSibling){
+      // Warp target (or its orbital child): project along warpHeading from player position
+      if((isApproachTarget || (window._approachStarted && isWarpSibling)) && lsgGroup){
+        // During approach: use model's world position if available, else group center
+        const gOff = lsgGroup.position;
+        let modelPos = null;
+        if(obj.station_id && stationModels[obj.station_id] && stationModels[obj.station_id].parent === lsgGroup) modelPos = stationModels[obj.station_id].position;
+        else if(obj.type === 'gate' && gateModels[obj.id] && gateModels[obj.id].parent === lsgGroup) modelPos = gateModels[obj.id].position;
+        if(modelPos){
+          labelX = modelPos.x + gOff.x; labelY = modelPos.y + gOff.y; labelZ = modelPos.z + gOff.z;
+        } else {
+          labelX = gOff.x; labelY = gOff.y; labelZ = gOff.z;
+        }
       } else {
         // During warp travel: project at approach spawn distance along heading (matches where group will appear)
         labelX = playerPos.x + warpHeading.x * 2500;
@@ -2894,7 +2919,7 @@ function updateDirectionalLabels(){
     const displayName = obj.name;
     // Format distance
     let distLabel;
-    if(isWarpTarget && window._approachRemainingKm !== undefined){
+    if((isWarpTarget || isWarpSibling) && window._approachRemainingKm !== undefined){
       // Warp target: use warp system's remainingKm for smooth distance display
       const dKm = window._approachRemainingKm;
       if(dKm > 150000000) distLabel = (dKm / 150000000).toFixed(2) + ' AU';
