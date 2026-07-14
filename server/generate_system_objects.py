@@ -279,27 +279,71 @@ def generate():
                     (mid, mname, sid, 'moon', round(mdist, 4), round(mangle, 4), round(moon_incl, 4), pid, '', mtype, mstats['radius_km'], json.dumps(mstats))
                 )
 
-        # Stations (placed at mid-range distances)
+        # Stations (placed at mid-range distances, ~20% orbital around planets/moons)
         stations = conn.execute("SELECT id, name FROM stations WHERE system_id=?", (sid,)).fetchall()
+        # Collect possible parent bodies (planets + moons) for orbital assignment
+        orbital_parents = []  # (id, radius_km)
+        for pd in planet_data:
+            # Get radius from DB
+            row = conn.execute("SELECT radius_km FROM system_objects WHERE id=?", (pd[0],)).fetchone()
+            if row and row[0]:
+                orbital_parents.append((pd[0], row[0]))
+        # Also moons
+        for pd in planet_data:
+            moons = conn.execute("SELECT id, radius_km FROM system_objects WHERE parent=? AND obj_type='moon'", (pd[0],)).fetchall()
+            for m in moons:
+                if m[1] and m[1] > 500:
+                    orbital_parents.append((m[0], m[1]))
+        
+        used_parents = set()  # limit 1 orbital station per body
         for si, st in enumerate(stations):
             obj_count += 1
-            dist = 3.0 + si * 2.0 + random.uniform(0, 1.0)
-            angle = random.uniform(0, 2 * math.pi)
-            conn.execute(
-                "INSERT INTO system_objects (id, name, system_id, obj_type, distance, angle, inclination, parent, connects_to, station_id) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                (f"obj_{obj_count:06d}", st['name'], sid, 'station', round(dist, 2), round(angle, 4), round(random.uniform(-0.08, 0.08), 4), '', '', st['id'])
-            )
+            available_parents = [p for p in orbital_parents if p[0] not in used_parents]
+            is_orbital = random.random() < 0.20 and len(available_parents) > 0
+            if is_orbital:
+                # Pick a parent body, place in close orbit
+                parent_id, parent_radius = random.choice(available_parents)
+                used_parents.add(parent_id)
+                # Orbit at 2-4x parent radius (close but outside)
+                orbit_mult = 2.0 + random.random() * 2.0
+                dist = (parent_radius * orbit_mult) / 150000000  # convert km to AU
+                angle = random.uniform(0, 2 * math.pi)
+                conn.execute(
+                    "INSERT INTO system_objects (id, name, system_id, obj_type, distance, angle, inclination, parent, connects_to, station_id) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    (f"obj_{obj_count:06d}", st['name'], sid, 'station', dist, round(angle, 4), round(random.uniform(-0.05, 0.05), 4), parent_id, '', st['id'])
+                )
+            else:
+                dist = 3.0 + si * 2.0 + random.uniform(0, 1.0)
+                angle = random.uniform(0, 2 * math.pi)
+                conn.execute(
+                    "INSERT INTO system_objects (id, name, system_id, obj_type, distance, angle, inclination, parent, connects_to, station_id) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    (f"obj_{obj_count:06d}", st['name'], sid, 'station', round(dist, 2), round(angle, 4), round(random.uniform(-0.08, 0.08), 4), '', '', st['id'])
+                )
 
-        # Asteroid belts
+        # Asteroid belts (~15% orbital around planets, 1 per body)
         sys_fields = fields.get(sid, [])
+        used_belt_parents = set()
         for fi, f in enumerate(sys_fields):
             obj_count += 1
-            dist = 5.0 + fi * 1.5 + random.uniform(0, 1.5)
-            angle = random.uniform(0, 2 * math.pi)
-            conn.execute(
-                "INSERT INTO system_objects (id, name, system_id, obj_type, distance, angle, parent, connects_to) VALUES (?,?,?,?,?,?,?,?)",
-                (f"obj_{obj_count:06d}", f['name'], sid, 'belt', round(dist, 2), round(angle, 4), '', f['id'])
-            )
+            available_belt_parents = [p for p in orbital_parents if p[0] not in used_belt_parents]
+            is_orbital = random.random() < 0.15 and len(available_belt_parents) > 0
+            if is_orbital:
+                parent_id, parent_radius = random.choice(available_belt_parents)
+                used_belt_parents.add(parent_id)
+                orbit_mult = 3.0 + random.random() * 3.0
+                dist = (parent_radius * orbit_mult) / 150000000
+                angle = random.uniform(0, 2 * math.pi)
+                conn.execute(
+                    "INSERT INTO system_objects (id, name, system_id, obj_type, distance, angle, inclination, parent, connects_to) VALUES (?,?,?,?,?,?,?,?,?)",
+                    (f"obj_{obj_count:06d}", f['name'], sid, 'belt', dist, round(angle, 4), round(random.uniform(-0.05, 0.05), 4), parent_id, f['id'])
+                )
+            else:
+                dist = 5.0 + fi * 1.5 + random.uniform(0, 1.5)
+                angle = random.uniform(0, 2 * math.pi)
+                conn.execute(
+                    "INSERT INTO system_objects (id, name, system_id, obj_type, distance, angle, parent, connects_to) VALUES (?,?,?,?,?,?,?,?)",
+                    (f"obj_{obj_count:06d}", f['name'], sid, 'belt', round(dist, 2), round(angle, 4), '', f['id'])
+                )
 
         # Jump gates (one per connection, outer ring)
         sys_conns = connections.get(sid, [])

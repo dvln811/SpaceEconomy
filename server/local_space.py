@@ -321,17 +321,18 @@ class LocalSpaceWorker:
             self.objects = []
             # First pass: compute all SS positions (need parent positions for moons)
             obj_ss = {}  # id -> (ss_x, ss_y, ss_z)
+            # First pass: compute SS positions for objects WITHOUT parents
             for obj in system_objects:
-                if obj.obj_type == 'moon' and obj.parent:
+                if obj.parent:
                     continue  # handle in second pass
                 ss_x = obj.distance * math.cos(obj.angle)
                 ss_z = obj.distance * math.sin(obj.angle)
                 incl = getattr(obj, 'inclination', 0) or 0
                 ss_y = obj.distance * math.sin(incl)
                 obj_ss[obj.id] = (ss_x, ss_y, ss_z)
-            # Second pass: moons relative to parent
+            # Second pass: objects with parents (moons, orbital stations, orbital belts)
             for obj in system_objects:
-                if obj.obj_type == 'moon' and obj.parent:
+                if obj.parent:
                     parent_ss = obj_ss.get(obj.parent, (0, 0, 0))
                     ss_x = parent_ss[0] + obj.distance * math.cos(obj.angle)
                     ss_z = parent_ss[2] + obj.distance * math.sin(obj.angle)
@@ -589,7 +590,7 @@ class LocalSpaceWorker:
                              'au_distance': round(o.au_distance, 4),
                              'connects_to': o.connects_to,
                              'parent': o.parent,
-                             'ss_x': round(o.ss_x, 4), 'ss_y': round(o.ss_y, 4), 'ss_z': round(o.ss_z, 4),
+                             'ss_x': round(o.ss_x, 8), 'ss_y': round(o.ss_y, 8), 'ss_z': round(o.ss_z, 8),
                              'is_anchor': (o.id == self._anchor_id),
                              'radius_km': o.radius_km,
                              'planet_type': o.planet_type} for o in self.objects],

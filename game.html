@@ -1841,7 +1841,10 @@ function svBuildScene(){
     if(obj.type === 'moon') continue;
     // Position calculation
     let wp;
-    if(obj.type==='moon' && obj.parent){
+    if(obj.ss_x !== undefined && obj.ss_x !== null){
+      // Use pre-computed SS coordinates (handles orbital stations/belts correctly)
+      wp = {x: obj.ss_x * 40, y: (obj.ss_y || 0) * 40 * 0.3, z: obj.ss_z * 40};
+    } else if(obj.type==='moon' && obj.parent){
       const par = svData.objects.find(p=>p.id===obj.parent);
       if(par){
         const pc = svPolar(par.distance, par.angle, par.name);
@@ -1904,17 +1907,14 @@ function svBuildBodiesList(){
   const anchor = svData.objects.find(o=>o.is_anchor);
   let anchorSS = {x:0, z:0};
   if(anchor){
-    if(anchor.type==='moon'){
-      const par = svData.objects.find(p=>p.id===anchor.parent);
-      if(par){ anchorSS = {x: par.distance*Math.cos(par.angle), z: par.distance*Math.sin(par.angle)}; }
-    } else {
-      anchorSS = {x: anchor.distance*Math.cos(anchor.angle), z: anchor.distance*Math.sin(anchor.angle)};
-    }
+    anchorSS = {x: anchor.ss_x || anchor.distance*Math.cos(anchor.angle), z: anchor.ss_z || anchor.distance*Math.sin(anchor.angle)};
   }
   // Position player marker at anchor
   if(anchor){
     let pp;
-    if(anchor.type==='moon' && anchor.parent){
+    if(anchor.ss_x !== undefined){
+      pp = {x: anchor.ss_x * 40, y: (anchor.ss_y || 0) * 40 * 0.3, z: anchor.ss_z * 40};
+    } else if(anchor.type==='moon' && anchor.parent){
       const par = svData.objects.find(p=>p.id===anchor.parent);
       if(par){ pp = svPolar(par.distance, par.angle, par.name); }
       else { pp = {x:0,y:0,z:0}; }
@@ -1928,14 +1928,7 @@ function svBuildBodiesList(){
   }
   // Compute distances and sort
   const sorted = svData.objects.filter(o=>o.type!=='star').map(o=>{
-    let ss;
-    if(o.type==='moon' && o.parent){
-      const par = svData.objects.find(p=>p.id===o.parent);
-      if(par){ ss={x: par.distance*Math.cos(par.angle)+o.distance*Math.cos(o.angle), z: par.distance*Math.sin(par.angle)+o.distance*Math.sin(o.angle)}; }
-      else { ss={x:o.distance*Math.cos(o.angle), z:o.distance*Math.sin(o.angle)}; }
-    } else {
-      ss={x: o.distance*Math.cos(o.angle), z: o.distance*Math.sin(o.angle)};
-    }
+    const ss = {x: o.ss_x !== undefined ? o.ss_x : o.distance*Math.cos(o.angle), z: o.ss_z !== undefined ? o.ss_z : o.distance*Math.sin(o.angle)};
     const dx=ss.x-anchorSS.x, dz=ss.z-anchorSS.z;
     const auDist = Math.sqrt(dx*dx+dz*dz);
     return {obj:o, auDist};

@@ -882,7 +882,7 @@ def api_lsg_data(target_obj_id):
                     'au_distance': round(o.au_distance, 4),
                     'connects_to': o.connects_to,
                     'parent': o.parent,
-                    'ss_x': round(o.ss_x, 4), 'ss_z': round(o.ss_z, 4),
+                    'ss_x': round(o.ss_x, 8), 'ss_y': round(o.ss_y, 8), 'ss_z': round(o.ss_z, 8),
                     'is_anchor': is_anchor,
                     'radius_km': getattr(o, 'radius_km', 0) or 0,
                     'planet_type': getattr(o, 'planet_type', '') or ''})
@@ -911,7 +911,7 @@ def api_lsg_data(target_obj_id):
                     'au_distance': round(o.au_distance, 4),
                     'connects_to': o.connects_to,
                     'parent': o.parent,
-                    'ss_x': round(o.ss_x, 4), 'ss_z': round(o.ss_z, 4),
+                    'ss_x': round(o.ss_x, 8), 'ss_y': round(o.ss_y, 8), 'ss_z': round(o.ss_z, 8),
                     'is_anchor': False,
                     'radius_km': getattr(o, 'radius_km', 0) or 0,
                     'planet_type': getattr(o, 'planet_type', '') or ''})
@@ -1298,7 +1298,30 @@ def api_system(system_id):
                 return jsonify({"tick": sim.tick_count, "changed": False})
 
     sys_obj = sim.universe[system_id]
-    objects = [{"id": o.id, "name": o.name, "type": o.obj_type, "distance": o.distance, "angle": round(o.angle, 4), "inclination": getattr(o, 'inclination', 0), "connects_to": o.connects_to, "parent": o.parent, "station_id": getattr(o, 'station_id', ''), "is_anchor": (o.id == local_space._anchor_id), "planet_type": getattr(o, 'planet_type', ''), "radius_km": getattr(o, 'radius_km', 0), "stats": getattr(o, 'stats', '')} for o in sys_obj.objects]
+    # Compute SS coordinates (same logic as local_space.py)
+    import math as _math
+    obj_ss = {}
+    for o in sys_obj.objects:
+        if o.parent:
+            continue
+        sx = o.distance * _math.cos(o.angle)
+        sz = o.distance * _math.sin(o.angle)
+        incl = getattr(o, 'inclination', 0) or 0
+        sy = o.distance * _math.sin(incl)
+        obj_ss[o.id] = (sx, sy, sz)
+    for o in sys_obj.objects:
+        if o.parent:
+            pss = obj_ss.get(o.parent, (0, 0, 0))
+            sx = pss[0] + o.distance * _math.cos(o.angle)
+            sz = pss[2] + o.distance * _math.sin(o.angle)
+            incl = getattr(o, 'inclination', 0) or 0
+            sy = pss[1] + o.distance * _math.sin(incl)
+            obj_ss[o.id] = (sx, sy, sz)
+    
+    objects = []
+    for o in sys_obj.objects:
+        ss = obj_ss.get(o.id, (0, 0, 0))
+        objects.append({"id": o.id, "name": o.name, "type": o.obj_type, "distance": o.distance, "angle": round(o.angle, 4), "inclination": getattr(o, 'inclination', 0), "connects_to": o.connects_to, "parent": o.parent, "station_id": getattr(o, 'station_id', ''), "is_anchor": (o.id == local_space._anchor_id), "planet_type": getattr(o, 'planet_type', ''), "radius_km": getattr(o, 'radius_km', 0), "stats": getattr(o, 'stats', ''), "ss_x": round(ss[0], 8), "ss_y": round(ss[1], 8), "ss_z": round(ss[2], 8)})
     # Ships in this system
     ships_here = []
     for s in sim.ships:

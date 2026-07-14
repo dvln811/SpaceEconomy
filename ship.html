@@ -729,10 +729,28 @@ function connectStream(){
     const firstState = !localState;
     localState = state;
     lastTickTime = performance.now();
-    // Keep _playerSS in sync with current anchor (only when not warping)
+    // Keep _playerSS in sync with current anchor (only when not warping and not just arrived)
     const currentAnchor = state.objects.find(o => o.is_anchor);
-    if(currentAnchor && warpState === 'none'){
+    if(currentAnchor && warpState === 'none' && !window._warpArrivalGrace){
       window._playerSS = {x: currentAnchor.ss_x, y: currentAnchor.ss_y || 0, z: currentAnchor.ss_z};
+    }
+    if(window._warpArrivalGrace) window._warpArrivalGrace--;
+    // Log state on first connect - write to file via server
+    if(firstState){
+      const anchor = state.objects.find(o => o.is_anchor);
+      const lines = [];
+      lines.push('[SSE-INIT] anchor: ' + anchor?.name + ' id: ' + anchor?.id + ' type: ' + anchor?.type + ' parent: ' + anchor?.parent);
+      lines.push('[SSE-INIT] anchor SS: ' + anchor?.ss_x + ', ' + anchor?.ss_y + ', ' + anchor?.ss_z);
+      if(anchor?.parent){
+        const parent = state.objects.find(o => o.id === anchor.parent);
+        lines.push('[SSE-INIT] parent: ' + parent?.name + ' SS: ' + parent?.ss_x + ', ' + parent?.ss_y + ', ' + parent?.ss_z + ' radius_km: ' + parent?.radius_km);
+        const dx = anchor.ss_x - parent.ss_x, dy = (anchor.ss_y||0) - (parent.ss_y||0), dz = anchor.ss_z - parent.ss_z;
+        lines.push('[SSE-INIT] anchor-to-parent dist AU: ' + Math.sqrt(dx*dx+dy*dy+dz*dz).toFixed(8) + ' = km: ' + (Math.sqrt(dx*dx+dy*dy+dz*dz)*150000000).toFixed(0));
+      }
+      lines.push('[SSE-INIT] playerSS: ' + JSON.stringify(window._playerSS));
+      lines.push('[SSE-INIT] all objects: ' + JSON.stringify(state.objects.map(o=>({id:o.id,name:o.name,type:o.type,ss_x:o.ss_x,ss_y:o.ss_y,ss_z:o.ss_z,radius_km:o.radius_km,parent:o.parent,station_id:o.station_id}))));
+      fetch('/api/debug_log', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({lines})}).catch(()=>{});
+      console.log(lines.join('\n'));
     }
     // On first state received, load 3D objects
     if(firstState && !isDocked){
@@ -1467,6 +1485,7 @@ function animate(now){
           document.getElementById('warpTarget').textContent = '';
           if(warpStreaks) warpStreaks.visible = false;
           stopWarpAudio();
+          window._warpArrivalGrace = 5; // ignore SSE anchor override for 5 ticks
         }
       }
     // ── Player Ship Physics (CLIENT-AUTHORITATIVE, ship moves in world space) ──
@@ -1874,6 +1893,8 @@ window.warpTo = function(objId){
   
   // Pre-fetch target model for approach (server mode)
   if(!STANDALONE_MODE){
+    // Tell server we're warping to this target (updates anchor)
+    fetch('/api/lsg_data/' + objId).catch(()=>{});
     if(obj.station_id && !stationModels[obj.station_id]){
       fetch('/api/station_model/'+obj.station_id).then(r=>r.ok?r.json():null).then(data=>{
         if(!data) return;
