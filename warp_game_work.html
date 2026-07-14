@@ -1224,6 +1224,7 @@ function animate(now){
 
         // COMPLETION: when remaining distance is essentially zero
         if(remainingKm < 100){
+          console.log(`[WARP-END] playerSS=(${window._playerSS.x.toFixed(6)},${window._playerSS.y.toFixed(6)},${window._playerSS.z.toFixed(6)}) warpToSS=(${window._warpToSS?.x.toFixed(6)},${window._warpToSS?.y.toFixed(6)},${window._warpToSS?.z.toFixed(6)}) remainKm=${remainingKm.toFixed(1)}`);
           if(localState && localState.objects){
             localState.objects.forEach(o => o.is_anchor = false);
             const d2 = localState.objects.find(o => o.id === warpTargetId);
@@ -1714,11 +1715,11 @@ window.showCtx = function(e, objId, name, type){
   const obj = localState && localState.objects && localState.objects.find(o => o.id === objId);
   const isAnchor = obj && obj.is_anchor;
   
-  // isLocal = physically present at this object (anchor, or within same local area)
-  // An object is local if it's the anchor OR if it's in the same LSG (anchor's vicinity)
-  const anchorObj = localState && localState.objects && localState.objects.find(o => o.is_anchor);
-  const isLocal = isAnchor || (obj && anchorObj && obj.type !== 'planet' && obj.type !== 'moon' && 
-    Math.sqrt(Math.pow(obj.ss_x - anchorObj.ss_x, 2) + Math.pow(obj.ss_z - anchorObj.ss_z, 2)) < 0.001);
+  // isLocal = physically present in current LSG (anchor, or has a model in lsgGroup)
+  const isLocal = isAnchor || 
+    (obj && obj.station_id && stationModels[obj.station_id] && stationModels[obj.station_id].parent === lsgGroup) ||
+    (obj && obj.type === 'gate' && gateModels[obj.id] && gateModels[obj.id].parent === lsgGroup) ||
+    (obj && (obj.type === 'belt' || obj.type === 'asteroid_belt') && asteroidModels[obj.id] && asteroidModels[obj.id].length > 0 && asteroidModels[obj.id][0].parent === lsgGroup);
   
   // Compute distance to object (for range checks)
   let distToObj = Infinity;
@@ -1726,21 +1727,34 @@ window.showCtx = function(e, objId, name, type){
     const gOff = lsgGroup.position;
     // Use model position if available, else obj.x/y/z
     let ox = obj.x, oy = obj.y, oz = obj.z;
-    if(obj.station_id && stationModels[obj.station_id]){
+    let hasModel = false;
+    if(obj.station_id && stationModels[obj.station_id] && stationModels[obj.station_id].parent === lsgGroup){
       const mp = stationModels[obj.station_id].position;
       ox = mp.x; oy = mp.y; oz = mp.z;
-    } else if(gateModels[obj.id]){
+      hasModel = true;
+    } else if(gateModels[obj.id] && gateModels[obj.id].parent === lsgGroup){
       const mp = gateModels[obj.id].position;
       ox = mp.x; oy = mp.y; oz = mp.z;
+      hasModel = true;
     }
-    const dx = (ox + gOff.x) - playerPos.x;
-    const dy = (oy + gOff.y) - playerPos.y;
-    const dz = (oz + gOff.z) - playerPos.z;
-    distToObj = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    if(hasModel){
+      const dx = (ox + gOff.x) - playerPos.x;
+      const dy = (oy + gOff.y) - playerPos.y;
+      const dz = (oz + gOff.z) - playerPos.z;
+      distToObj = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    } else {
+      // No model in lsgGroup - use SS distance (in scene units: km / 0.1)
+      const ps = window._playerSS || {x:0, y:0, z:0};
+      const ssDistAU = Math.sqrt(Math.pow(obj.ss_x - ps.x, 2) + Math.pow((obj.ss_y||0) - (ps.y||0), 2) + Math.pow(obj.ss_z - ps.z, 2));
+      distToObj = ssDistAU * 150000000 / 100; // convert km to scene units (1 unit = 100m)
+    }
   }
   
-  // Warp To (for objects NOT in local space)
+  // Warp To (for objects NOT in local space, OR local but far away)
   if(!isLocal){
+    items += `<div class="ctx-item" onclick="warpTo('${objId}')">Warp to ${name}</div>`;
+  } else if(distToObj > 1000){
+    // Local but > 100km - offer warp as option (disables weapons)
     items += `<div class="ctx-item" onclick="warpTo('${objId}')">Warp to ${name}</div>`;
   }
   
