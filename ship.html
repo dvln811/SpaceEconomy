@@ -1433,23 +1433,8 @@ function animate(now){
       updateWarpAudio(audioIntensity);
 
         // Track last few frames before completion
-        if(!window._preCompFrames) window._preCompFrames = [];
-        window._preCompFrames.push({t: t.toFixed(3), progress: (dist/window._warpTotalDist).toFixed(8), px: window._playerSS.x.toFixed(8), py: window._playerSS.y.toFixed(8), pz: window._playerSS.z.toFixed(8), remainKm: remainingKm.toFixed(1), ppx: playerPos.x.toFixed(4), ppy: playerPos.y.toFixed(4), ppz: playerPos.z.toFixed(4)});
-        if(window._preCompFrames.length > 5) window._preCompFrames.shift();
-        
         // COMPLETION: when remaining distance is essentially zero
         if(remainingKm < 100){
-          if(!window._frozeWarp){
-            window._frozeWarp = true;
-            warpState = 'none';
-            playerSpeed = 0;
-          }
-          // Do NOTHING else - no anchor change, no variable resets
-        }
-        if(false){ // disabled for snap test
-          // Log the last frames leading to completion
-          fetch('/api/debug_log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:['[PRE-COMP-FRAMES] ' + JSON.stringify(window._preCompFrames)]})}).catch(()=>{});
-          window._preCompFrames = null;
           if(localState && localState.objects){
             localState.objects.forEach(o => o.is_anchor = false);
             const d2 = localState.objects.find(o => o.id === warpTargetId);
@@ -1458,43 +1443,6 @@ function animate(now){
           // playerHeading stays as-is (no orientation snap)
           playerSpeed = 0;
           warpState = 'none';
-          window._skipSSGUntil = performance.now() + 500; // freeze planets for 500ms
-          // Log everything at completion
-          const _compLines = [];
-          _compLines.push(`[WARP-COMPLETE] progress=${(dist/window._warpTotalDist).toFixed(8)} dist=${dist.toFixed(10)} totalDist=${window._warpTotalDist.toFixed(10)} remainKm=${remainingKm.toFixed(2)}`);
-          _compLines.push(`[WARP-COMPLETE] playerSS=(${window._playerSS.x.toFixed(8)},${window._playerSS.y.toFixed(8)},${window._playerSS.z.toFixed(8)})`);
-          _compLines.push(`[WARP-COMPLETE] warpToSS=(${window._warpToSS?.x.toFixed(8)},${window._warpToSS?.y.toFixed(8)},${window._warpToSS?.z.toFixed(8)})`);
-          _compLines.push(`[WARP-COMPLETE] warpFromSS=(${window._warpFromSS?.x.toFixed(8)},${window._warpFromSS?.y.toFixed(8)},${window._warpFromSS?.z.toFixed(8)})`);
-          if(localState && localState.objects){
-            localState.objects.filter(o=>o.type==='planet'||o.type==='moon').forEach(o=>{
-              const d = Math.sqrt((o.ss_x-window._playerSS.x)**2+((o.ss_y||0)-window._playerSS.y)**2+(o.ss_z-window._playerSS.z)**2)*150000000;
-              _compLines.push(`[WARP-COMPLETE] ${o.name} ss=(${o.ss_x},${o.ss_y},${o.ss_z}) dist=${Math.round(d)}km`);
-            });
-          }
-          fetch('/api/debug_log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:_compLines})}).catch(()=>{});
-          // Log moon mesh position immediately and after a few frames
-          if(ssgPlanetMeshes){
-            const moonId = localState.objects.find(o=>o.type==='moon')?.id;
-            const moonMesh = moonId && ssgPlanetMeshes[moonId];
-            if(moonMesh){
-              fetch('/api/debug_log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:[`[MOON-POS-AT-COMP] mesh=(${moonMesh.position.x.toFixed(2)},${moonMesh.position.y.toFixed(2)},${moonMesh.position.z.toFixed(2)}) visible=${moonMesh.visible} camPos=(${camera.position.x.toFixed(2)},${camera.position.y.toFixed(2)},${camera.position.z.toFixed(2)}) playerPos=(${playerPos.x.toFixed(4)},${playerPos.y.toFixed(4)},${playerPos.z.toFixed(4)})`]})}).catch(()=>{});
-              setTimeout(()=>{
-                fetch('/api/debug_log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:[`[MOON-POS-100MS] mesh=(${moonMesh.position.x.toFixed(2)},${moonMesh.position.y.toFixed(2)},${moonMesh.position.z.toFixed(2)}) visible=${moonMesh.visible} camPos=(${camera.position.x.toFixed(2)},${camera.position.y.toFixed(2)},${camera.position.z.toFixed(2)}) playerPos=(${playerPos.x.toFixed(4)},${playerPos.y.toFixed(4)},${playerPos.z.toFixed(4)})`]})}).catch(()=>{});
-              }, 100);
-            }
-          }
-          // Log again 2 seconds later to see what changed
-          setTimeout(()=>{
-            const _postLines = [];
-            _postLines.push(`[WARP-POST-2S] playerSS=(${window._playerSS.x.toFixed(8)},${window._playerSS.y.toFixed(8)},${window._playerSS.z.toFixed(8)})`);
-            if(localState && localState.objects){
-              localState.objects.filter(o=>o.type==='planet'||o.type==='moon').forEach(o=>{
-                const d = Math.sqrt((o.ss_x-window._playerSS.x)**2+((o.ss_y||0)-window._playerSS.y)**2+(o.ss_z-window._playerSS.z)**2)*150000000;
-                _postLines.push(`[WARP-POST-2S] ${o.name} ss=(${o.ss_x},${o.ss_y},${o.ss_z}) dist=${Math.round(d)}km`);
-              });
-            }
-            fetch('/api/debug_log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:_postLines})}).catch(()=>{});
-          }, 2000);
           warpTargetId = null;
           warpTargetPos = null;
           window._ssgFrozen = false;
@@ -1513,7 +1461,7 @@ function animate(now){
               body: JSON.stringify({ss_x: window._playerSS.x, ss_y: window._playerSS.y, ss_z: window._playerSS.z, anchor_id: warpTargetId})
             }).catch(()=>{});
           }
-        } // end if(false) snap test
+        }
       }
     // ── Player Ship Physics (CLIENT-AUTHORITATIVE, ship moves in world space) ──
     if(warpState === 'none'){
@@ -1700,8 +1648,8 @@ function animate(now){
 
     // ── Directional labels for distant objects ──
     updateDirectionalLabels();
-    if(!window._skipSSGUntil || performance.now() > window._skipSSGUntil) updateSSGPlanets();
-    //updateSunPosition(); // disabled for snap test
+    updateSSGPlanets();
+    updateSunPosition();
 
     // ── Update nav card distances every 2s during flight ──
     if(!window._navRefreshTimer) window._navRefreshTimer = 0;
@@ -1742,26 +1690,6 @@ function animate(now){
   }
 
   if(isDocked) updateCameraOrbit();
-  // SNAP TRACKER: log moon mesh position every frame around completion
-  if(window._frozeWarp || warpState === 'warping' || (warpState === 'none' && window._snapLog && window._snapLog.length < 300)){
-    if(!window._snapLog) window._snapLog = [];
-    // Find the moon mesh
-    let moonMeshPos = null;
-    if(ssgPlanetMeshes){
-      for(const [id, mesh] of Object.entries(ssgPlanetMeshes)){
-        const obj = localState && localState.objects && localState.objects.find(o=>o.id===id);
-        if(obj && obj.type === 'moon' && obj.name && obj.name.includes('II-a') && mesh.visible){
-          moonMeshPos = {x: mesh.position.x.toFixed(1), y: mesh.position.y.toFixed(1), z: mesh.position.z.toFixed(1)};
-          break;
-        }
-      }
-    }
-    window._snapLog.push({frame: window._snapLog.length, ws: warpState, moonPos: moonMeshPos, camX: camera.position.x.toFixed(2), camY: camera.position.y.toFixed(2), camZ: camera.position.z.toFixed(2), ppX: playerPos.x.toFixed(4), ppY: playerPos.y.toFixed(4), ppZ: playerPos.z.toFixed(4)});
-    if(window._snapLog.length === 300){
-      fetch('/api/debug_log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:['[SNAP-TRACK] ' + JSON.stringify(window._snapLog)]})}).catch(()=>{});
-      window._snapLog = null;
-    }
-  }
   renderer.render(scene, camera);
 }
 
@@ -3030,14 +2958,6 @@ function updateSSGPlanets(){
     const dzAU = obj.ss_z - playerSSz;
     const distAU = Math.sqrt(dxAU*dxAU + dyAU*dyAU + dzAU*dzAU);
     const distKm = distAU * AU_KM;
-    // Snap detector
-    if(!mesh.userData._lastDistKm) mesh.userData._lastDistKm = distKm;
-    const distDelta = Math.abs(distKm - mesh.userData._lastDistKm);
-    if(distDelta > 10000 && mesh.visible){
-      fetch('/api/debug_log', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({lines:[`[SSG-SNAP] ${obj.name} jumped ${Math.round(distDelta)}km | old=${Math.round(mesh.userData._lastDistKm)}km new=${Math.round(distKm)}km | playerSS=(${playerSSx.toFixed(6)},${playerSSy.toFixed(6)},${playerSSz.toFixed(6)}) obj_ss=(${obj.ss_x},${obj.ss_y},${obj.ss_z})`]})}).catch(()=>{});
-    }
-    mesh.userData._lastDistKm = distKm;
-    
     // visibleDistKm = radius_km * 100
     const visibleDistKm = radiusKm * 100;
     
@@ -3045,9 +2965,9 @@ function updateSSGPlanets(){
       mesh.visible = false;
     } else {
       mesh.visible = true;
-      const dirX = (distAU > 0.00001) ? dxAU / distAU : 0;
-      const dirY = (distAU > 0.00001) ? dyAU / distAU : 0;
-      const dirZ = (distAU > 0.00001) ? dzAU / distAU : 1;
+      const dirX = (distAU > 0.0000000001) ? dxAU / distAU : 0;
+      const dirY = (distAU > 0.0000000001) ? dyAU / distAU : 0;
+      const dirZ = (distAU > 0.0000000001) ? dzAU / distAU : 1;
       // renderDist = distKm / SCALE_FACTOR
       const renderDist = distKm / WARP_SCALE_FACTOR;
       mesh.position.set(dirX * renderDist, dirY * renderDist, dirZ * renderDist);
