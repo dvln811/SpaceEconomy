@@ -7,3 +7,4 @@ data/game.db-wal
 data/game.db-shm
 _sandbox*.html
 _ship_data.js
+static/skyboxes/*.HDR
