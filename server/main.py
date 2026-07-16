@@ -239,7 +239,12 @@ def chain_page():
 
 @app.route("/ship")
 def ship_page():
-    return send_from_directory(BASE_DIR, "ship.html")
+    from flask import make_response
+    resp = make_response(send_from_directory(BASE_DIR, "ship.html"))
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    resp.headers['Pragma'] = 'no-cache'
+    resp.headers['Expires'] = '0'
+    return resp
 
 @app.route("/warp_work")
 def warp_work_page():

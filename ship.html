@@ -712,7 +712,7 @@ function setFlightScene(){
   loadAllGates();
   loadAsteroidFields();
   loadPlanetsAndMoons();
-  initSSGPlanets();
+  // SSG planets built on demand by updateSSGPlanets()
   initSun();
   // Standalone: no pregeneration needed, just ensure overlay is hidden
   const overlay = document.getElementById('fadeOverlay');
@@ -727,30 +727,41 @@ function connectStream(){
   evtSource.onmessage = (e) => {
     const state = JSON.parse(e.data);
     const firstState = !localState;
+    // Don't replace localState during warp - client owns the scene
+    if(!firstState && !window._systemJustChanged && (warpState === 'warping' || warpState === 'aligning')){
+      // Only update ship interpolation data during warp, not objects
+      if(state.ships){
+        for(const ship of state.ships){
+          interpShips[ship.id] = {x:ship.x,y:ship.y,z:ship.z,vx:ship.vx,vy:ship.vy,vz:ship.vz,speed:ship.speed,state:ship.state,heading:ship.heading,name:ship.name,is_player:ship.is_player,ship_class:ship.ship_class,max_speed:ship.max_speed,target_obj:ship.target_obj,role:ship.role};
+        }
+      }
+      lastTickTime = performance.now();
+      return;
+    }
+    // After first load: never replace objects, only update ships
+    if(!firstState && !window._systemJustChanged){
+      if(state.ships){
+        for(const ship of state.ships){
+          interpShips[ship.id] = {x:ship.x,y:ship.y,z:ship.z,vx:ship.vx,vy:ship.vy,vz:ship.vz,speed:ship.speed,state:ship.state,heading:ship.heading,name:ship.name,is_player:ship.is_player,ship_class:ship.ship_class,max_speed:ship.max_speed,target_obj:ship.target_obj,role:ship.role};
+        }
+        const ids = new Set(state.ships.map(s=>s.id));
+        for(const id of Object.keys(interpShips)){
+          if(!ids.has(id)){ delete interpShips[id]; if(npcMeshes[id]){ npcMeshes[id].removeFromParent(); delete npcMeshes[id]; } }
+        }
+      }
+      lastTickTime = performance.now();
+      return;
+    }
+    // First state or system jump: full replacement
     localState = state;
     lastTickTime = performance.now();
-    // Keep _playerSS in sync with current anchor (only when not warping and not just arrived)
-    const currentAnchor = state.objects.find(o => o.is_anchor);
-    if(currentAnchor && warpState === 'none' && !window._warpArrivalGrace){
-      window._playerSS = {x: currentAnchor.ss_x, y: currentAnchor.ss_y || 0, z: currentAnchor.ss_z};
-    }
-    if(window._warpArrivalGrace) window._warpArrivalGrace--;
-    // Log state on first connect - write to file via server
-    if(firstState){
-      const anchor = state.objects.find(o => o.is_anchor);
-      const lines = [];
-      lines.push('[SSE-INIT] anchor: ' + anchor?.name + ' id: ' + anchor?.id + ' type: ' + anchor?.type + ' parent: ' + anchor?.parent);
-      lines.push('[SSE-INIT] anchor SS: ' + anchor?.ss_x + ', ' + anchor?.ss_y + ', ' + anchor?.ss_z);
-      if(anchor?.parent){
-        const parent = state.objects.find(o => o.id === anchor.parent);
-        lines.push('[SSE-INIT] parent: ' + parent?.name + ' SS: ' + parent?.ss_x + ', ' + parent?.ss_y + ', ' + parent?.ss_z + ' radius_km: ' + parent?.radius_km);
-        const dx = anchor.ss_x - parent.ss_x, dy = (anchor.ss_y||0) - (parent.ss_y||0), dz = anchor.ss_z - parent.ss_z;
-        lines.push('[SSE-INIT] anchor-to-parent dist AU: ' + Math.sqrt(dx*dx+dy*dy+dz*dz).toFixed(8) + ' = km: ' + (Math.sqrt(dx*dx+dy*dy+dz*dz)*150000000).toFixed(0));
+    // Only set _playerSS on first connection or system jump - client owns this value during flight/warp
+    if(firstState || window._systemJustChanged){
+      const currentAnchor = state.objects.find(o => o.is_anchor);
+      if(currentAnchor){
+        window._playerSS = {x: currentAnchor.ss_x, y: currentAnchor.ss_y || 0, z: currentAnchor.ss_z};
       }
-      lines.push('[SSE-INIT] playerSS: ' + JSON.stringify(window._playerSS));
-      lines.push('[SSE-INIT] all objects: ' + JSON.stringify(state.objects.map(o=>({id:o.id,name:o.name,type:o.type,ss_x:o.ss_x,ss_y:o.ss_y,ss_z:o.ss_z,radius_km:o.radius_km,parent:o.parent,station_id:o.station_id}))));
-      fetch('/api/debug_log', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({lines})}).catch(()=>{});
-      console.log(lines.join('\n'));
+      window._systemJustChanged = false;
     }
     // On first state received, load 3D objects
     if(firstState && !isDocked){
@@ -929,7 +940,8 @@ function updateFromState(state){
   if(isDockedNow && !wasDockedBefore){
     setDockedScene();
   } else if(!isDockedNow && wasDockedBefore){
-    setFlightScene();
+    if(!window._flightSceneReady) setFlightScene();
+    window._flightSceneReady = true;
   }
 
   // Update UI
@@ -977,137 +989,9 @@ const AU_KM = 150000000;
 // ── Procedural Warp Audio ──
 let audioCtx = null;
 let warpAudio = null;
-function initWarpAudio(){
-  if(warpAudio) return;
-  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const ctx = audioCtx;
-  
-  // Master compressor to glue it together
-  const compressor = ctx.createDynamicsCompressor();
-  compressor.threshold.value = -20;
-  compressor.knee.value = 10;
-  compressor.ratio.value = 4;
-  compressor.connect(ctx.destination);
-  
-  // Sub-bass sine (gut punch, felt more than heard)
-  const subOsc = ctx.createOscillator();
-  subOsc.type = 'sine';
-  subOsc.frequency.value = 12;
-  const subGain = ctx.createGain();
-  subGain.gain.value = 0;
-  subOsc.connect(subGain);
-  subGain.connect(compressor);
-  subOsc.start();
-  
-  // Turbine noise layer 1: low roar (like air rushing)
-  const noiseLen = ctx.sampleRate * 2;
-  const noiseBuf1 = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
-  const nd1 = noiseBuf1.getChannelData(0);
-  for(let i = 0; i < noiseLen; i++) nd1[i] = Math.random() * 2 - 1;
-  const turbine1 = ctx.createBufferSource();
-  turbine1.buffer = noiseBuf1; turbine1.loop = true;
-  const turb1Filter = ctx.createBiquadFilter();
-  turb1Filter.type = 'bandpass';
-  turb1Filter.frequency.value = 25;
-  turb1Filter.Q.value = 0.8;
-  const turb1Gain = ctx.createGain();
-  turb1Gain.gain.value = 0;
-  turbine1.connect(turb1Filter);
-  turb1Filter.connect(turb1Gain);
-  turb1Gain.connect(compressor);
-  turbine1.start();
-  
-  // Turbine noise layer 2: mid howl (the "wind tunnel" sound)
-  const noiseBuf2 = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
-  const nd2 = noiseBuf2.getChannelData(0);
-  for(let i = 0; i < noiseLen; i++) nd2[i] = Math.random() * 2 - 1;
-  const turbine2 = ctx.createBufferSource();
-  turbine2.buffer = noiseBuf2; turbine2.loop = true;
-  const turb2Filter = ctx.createBiquadFilter();
-  turb2Filter.type = 'bandpass';
-  turb2Filter.frequency.value = 60;
-  turb2Filter.Q.value = 1.5;
-  const turb2Gain = ctx.createGain();
-  turb2Gain.gain.value = 0;
-  turbine2.connect(turb2Filter);
-  turb2Filter.connect(turb2Gain);
-  turb2Gain.connect(compressor);
-  turbine2.start();
-  
-  // Turbine noise layer 3: high hiss (speed texture)
-  const noiseBuf3 = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
-  const nd3 = noiseBuf3.getChannelData(0);
-  for(let i = 0; i < noiseLen; i++) nd3[i] = Math.random() * 2 - 1;
-  const turbine3 = ctx.createBufferSource();
-  turbine3.buffer = noiseBuf3; turbine3.loop = true;
-  const turb3Filter = ctx.createBiquadFilter();
-  turb3Filter.type = 'lowpass';
-  turb3Filter.frequency.value = 100;
-  turb3Filter.Q.value = 1.0;
-  const turb3Gain = ctx.createGain();
-  turb3Gain.gain.value = 0;
-  turbine3.connect(turb3Filter);
-  turb3Filter.connect(turb3Gain);
-  turb3Gain.connect(compressor);
-  turbine3.start();
-  
-  // Resonant throb (gives the "mechanical" feel - pulsing filter on noise)
-  const noiseBuf4 = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
-  const nd4 = noiseBuf4.getChannelData(0);
-  for(let i = 0; i < noiseLen; i++) nd4[i] = Math.random() * 2 - 1;
-  const throb = ctx.createBufferSource();
-  throb.buffer = noiseBuf4; throb.loop = true;
-  const throbFilter = ctx.createBiquadFilter();
-  throbFilter.type = 'bandpass';
-  throbFilter.frequency.value = 18;
-  throbFilter.Q.value = 8; // high resonance = tonal quality from noise
-  const throbGain = ctx.createGain();
-  throbGain.gain.value = 0;
-  throb.connect(throbFilter);
-  throbFilter.connect(throbGain);
-  throbGain.connect(compressor);
-  throb.start();
-  
-  warpAudio = {ctx, compressor, subOsc, subGain, turb1Filter, turb1Gain, turb2Filter, turb2Gain, turb3Filter, turb3Gain, throbFilter, throbGain};
-}
-
-function updateWarpAudio(intensity){
-  if(!warpAudio) return;
-  const t = audioCtx.currentTime;
-  const s = 0.15; // smooth ramp time
-  
-  // Sub-bass: always present when moving, 12-22 Hz
-  warpAudio.subOsc.frequency.setTargetAtTime(12 + intensity * 10, t, s);
-  warpAudio.subGain.gain.setTargetAtTime(intensity * 0.3, t, s);
-  
-  // Low turbine roar: 25-60 Hz, main body of sound
-  warpAudio.turb1Filter.frequency.setTargetAtTime(25 + intensity * 35, t, s);
-  warpAudio.turb1Gain.gain.setTargetAtTime(intensity * 0.25, t, s);
-  
-  // Mid: 40-100 Hz only, low growl
-  const midInt = Math.max(0, (intensity - 0.15) / 0.85);
-  warpAudio.turb2Filter.frequency.setTargetAtTime(40 + midInt * 60, t, s);
-  warpAudio.turb2Gain.gain.setTargetAtTime(midInt * 0.08, t, s);
-  
-  // High layer: 100-200 Hz, barely there
-  const hiInt = Math.max(0, (intensity - 0.5) / 0.5);
-  warpAudio.turb3Filter.frequency.setTargetAtTime(100 + hiInt * 100, t, s);
-  warpAudio.turb3Gain.gain.setTargetAtTime(hiInt * 0.01, t, s);
-  
-  // Resonant throb: 18-35 Hz, pulsing mechanical
-  warpAudio.throbFilter.frequency.setTargetAtTime(18 + intensity * 17, t, s);
-  warpAudio.throbGain.gain.setTargetAtTime(intensity * 0.2, t, s);
-}
-
-function stopWarpAudio(){
-  if(!warpAudio) return;
-  const t = audioCtx.currentTime;
-  warpAudio.subGain.gain.setTargetAtTime(0, t, 0.8);
-  warpAudio.turb1Gain.gain.setTargetAtTime(0, t, 0.6);
-  warpAudio.turb2Gain.gain.setTargetAtTime(0, t, 0.5);
-  warpAudio.turb3Gain.gain.setTargetAtTime(0, t, 0.4);
-  warpAudio.throbGain.gain.setTargetAtTime(0, t, 1.0);
-}
+function initWarpAudio(){ return; }
+function updateWarpAudio(intensity){ return; }
+function stopWarpAudio(){ return; }
 
 // Engine trail
 let trailLine = null;
@@ -1294,6 +1178,7 @@ function animate(now){
         warpLock = false;
         window._approachStarted = false;
         initWarpAudio();
+        window._ssgLastProgress = 0;
         window._departDespawned = false;
         window._objDepartTimer = 0;
         // Don't reset lsgGroup position - departure moves it from wherever it is
@@ -1473,6 +1358,31 @@ function animate(now){
           playerHeading.copy(warpHeading);
           playerSpeed = 0;
           warpState = 'none';
+          // Log everything at completion
+          const _compLines = [];
+          _compLines.push(`[WARP-COMPLETE] progress=${(dist/window._warpTotalDist).toFixed(8)} dist=${dist.toFixed(10)} totalDist=${window._warpTotalDist.toFixed(10)} remainKm=${remainingKm.toFixed(2)}`);
+          _compLines.push(`[WARP-COMPLETE] playerSS=(${window._playerSS.x.toFixed(8)},${window._playerSS.y.toFixed(8)},${window._playerSS.z.toFixed(8)})`);
+          _compLines.push(`[WARP-COMPLETE] warpToSS=(${window._warpToSS?.x.toFixed(8)},${window._warpToSS?.y.toFixed(8)},${window._warpToSS?.z.toFixed(8)})`);
+          _compLines.push(`[WARP-COMPLETE] warpFromSS=(${window._warpFromSS?.x.toFixed(8)},${window._warpFromSS?.y.toFixed(8)},${window._warpFromSS?.z.toFixed(8)})`);
+          if(localState && localState.objects){
+            localState.objects.filter(o=>o.type==='planet'||o.type==='moon').forEach(o=>{
+              const d = Math.sqrt((o.ss_x-window._playerSS.x)**2+((o.ss_y||0)-window._playerSS.y)**2+(o.ss_z-window._playerSS.z)**2)*150000000;
+              _compLines.push(`[WARP-COMPLETE] ${o.name} ss=(${o.ss_x},${o.ss_y},${o.ss_z}) dist=${Math.round(d)}km`);
+            });
+          }
+          fetch('/api/debug_log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:_compLines})}).catch(()=>{});
+          // Log again 2 seconds later to see what changed
+          setTimeout(()=>{
+            const _postLines = [];
+            _postLines.push(`[WARP-POST-2S] playerSS=(${window._playerSS.x.toFixed(8)},${window._playerSS.y.toFixed(8)},${window._playerSS.z.toFixed(8)})`);
+            if(localState && localState.objects){
+              localState.objects.filter(o=>o.type==='planet'||o.type==='moon').forEach(o=>{
+                const d = Math.sqrt((o.ss_x-window._playerSS.x)**2+((o.ss_y||0)-window._playerSS.y)**2+(o.ss_z-window._playerSS.z)**2)*150000000;
+                _postLines.push(`[WARP-POST-2S] ${o.name} ss=(${o.ss_x},${o.ss_y},${o.ss_z}) dist=${Math.round(d)}km`);
+              });
+            }
+            fetch('/api/debug_log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:_postLines})}).catch(()=>{});
+          }, 2000);
           warpTargetId = null;
           warpTargetPos = null;
           window._ssgFrozen = false;
@@ -1485,7 +1395,12 @@ function animate(now){
           document.getElementById('warpTarget').textContent = '';
           if(warpStreaks) warpStreaks.visible = false;
           stopWarpAudio();
-          window._warpArrivalGrace = 5; // ignore SSE anchor override for 5 ticks
+          // Report final position to server
+          if(!STANDALONE_MODE){
+            fetch('/api/player/position', {method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ss_x: window._playerSS.x, ss_y: window._playerSS.y, ss_z: window._playerSS.z, anchor_id: warpTargetId})
+            }).catch(()=>{});
+          }
         }
       }
     // ── Player Ship Physics (CLIENT-AUTHORITATIVE, ship moves in world space) ──
@@ -1961,6 +1876,7 @@ window.jumpGate = async function(gateId){
     const data = await r.json();
     if(data.status === 'jumped'){
       // Clear current scene objects
+      window._systemJustChanged = true; // SSE will set _playerSS from new anchor
       Object.values(stationModels).forEach(m => m.removeFromParent());
       stationModels = {};
       Object.values(gateModels).forEach(m => m.removeFromParent());
@@ -2922,7 +2838,7 @@ function hash(str){
 let ssgPlanetMeshes = {}; // id -> THREE.Mesh
 let ssgPlanetGroup = null;
 function initSSGPlanets(){
-  if(ssgPlanetGroup){ scene.remove(ssgPlanetGroup); }
+  if(ssgPlanetGroup) return; // never destroy existing planets
   ssgPlanetGroup = new THREE.Group();
   scene.add(ssgPlanetGroup);
   ssgPlanetMeshes = {};
@@ -2949,11 +2865,12 @@ function buildSSGPlanetMeshes(){
 
 function updateSSGPlanets(){
   if(!localState || !localState.objects) return;
-  // Build meshes if needed (init ssgPlanetGroup if null)
-  const planetCount = localState.objects.filter(o => o.type === 'planet' || o.type === 'moon').length;
-  if(!ssgPlanetGroup || Object.keys(ssgPlanetMeshes).length === 0 || window._ssgLastPlanetCount !== planetCount){
-    window._ssgLastPlanetCount = planetCount;
-    clearSSGPlanets(); initSSGPlanets(); buildSSGPlanetMeshes();
+  // Create group if needed (once only)
+  if(!ssgPlanetGroup){
+    ssgPlanetGroup = new THREE.Group();
+    scene.add(ssgPlanetGroup);
+    ssgPlanetMeshes = {};
+    buildSSGPlanetMeshes();
   }
   
   // Player SS position
@@ -2981,6 +2898,13 @@ function updateSSGPlanets(){
     const dzAU = obj.ss_z - playerSSz;
     const distAU = Math.sqrt(dxAU*dxAU + dyAU*dyAU + dzAU*dzAU);
     const distKm = distAU * AU_KM;
+    // Snap detector
+    if(!mesh.userData._lastDistKm) mesh.userData._lastDistKm = distKm;
+    const distDelta = Math.abs(distKm - mesh.userData._lastDistKm);
+    if(distDelta > 10000 && mesh.visible){
+      fetch('/api/debug_log', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({lines:[`[SSG-SNAP] ${obj.name} jumped ${Math.round(distDelta)}km | old=${Math.round(mesh.userData._lastDistKm)}km new=${Math.round(distKm)}km | playerSS=(${playerSSx.toFixed(6)},${playerSSy.toFixed(6)},${playerSSz.toFixed(6)}) obj_ss=(${obj.ss_x},${obj.ss_y},${obj.ss_z})`]})}).catch(()=>{});
+    }
+    mesh.userData._lastDistKm = distKm;
     
     // visibleDistKm = radius_km * 100
     const visibleDistKm = radiusKm * 100;
@@ -3002,8 +2926,11 @@ function updateSSGPlanets(){
 }
 
 function clearSSGPlanets(){
+  // Only used during system jumps
   if(ssgPlanetGroup){
     ssgPlanetGroup.clear();
+    scene.remove(ssgPlanetGroup);
+    ssgPlanetGroup = null;
   }
   ssgPlanetMeshes = {};
 }
