@@ -80,6 +80,7 @@ h2{color:#4fc3f7;font-size:12px;letter-spacing:1px;text-transform:uppercase;marg
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 
 // ──── INLINED MODULES (swap back to imports when integrating with server) ────
 
@@ -285,6 +286,8 @@ const camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.c
 camera.position.set(0.3, 0.2, 0.3);
 const renderer = new THREE.WebGLRenderer({antialias:true, logarithmicDepthBuffer:true});
 renderer.setSize(container.clientWidth, container.clientHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.9;
 container.appendChild(renderer.domElement);
 
 // ── Custom Camera Controller (replaces OrbitControls) ──
@@ -543,7 +546,88 @@ function buildStarfield(){
   starField.scale.setScalar(45000000); // stays inside far plane
 }
 buildStarfield();
-scene.add(starField); // add immediately for standalone
+scene.add(starField); // add immediately (fallback until HDR loads)
+
+// ── HDR Skybox (replaces procedural starfield once loaded) ──
+let skyboxMesh = null;
+function loadHDRSkybox(){
+  const loader = new RGBELoader();
+  const textures = {};
+  const files = {
+    starsFar: '/static/skyboxes/T_Stars_Far_Colorful_2k.hdr',
+    starsNear: '/static/skyboxes/T_Stars_Near_Mixed_2k.hdr',
+    noise: '/static/skyboxes/T_Skybox_11_HybridNoise_2k.hdr',
+    alpha: '/static/skyboxes/T_Skybox_11_Alpha_2k.hdr',
+  };
+  let loaded = 0;
+  const total = Object.keys(files).length;
+  for(const [key, url] of Object.entries(files)){
+    loader.load(url, (tex) => {
+      tex.mapping = THREE.EquirectangularReflectionMapping;
+      textures[key] = tex;
+      loaded++;
+      if(loaded === total) buildHDRSkybox(textures);
+    });
+  }
+}
+function buildHDRSkybox(textures){
+  const mat = new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    depthWrite: false,
+    uniforms: {
+      tStarsFar: {value: textures.starsFar},
+      tStarsNear: {value: textures.starsNear},
+      tNoise: {value: textures.noise},
+      tAlpha: {value: textures.alpha},
+      uStarsFar: {value: 5.0},
+      uStarsNear: {value: 3.0},
+      uNoise: {value: 0.7},
+      uAlphaMask: {value: 0.8},
+    },
+    vertexShader: `
+      varying vec3 vWorldDir;
+      void main(){
+        vWorldDir = normalize(position);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D tStarsFar;
+      uniform sampler2D tStarsNear;
+      uniform sampler2D tNoise;
+      uniform sampler2D tAlpha;
+      uniform float uStarsFar;
+      uniform float uStarsNear;
+      uniform float uNoise;
+      uniform float uAlphaMask;
+      varying vec3 vWorldDir;
+      vec2 equirectUV(vec3 dir){
+        float phi = atan(dir.z, dir.x);
+        float theta = asin(clamp(dir.y, -1.0, 1.0));
+        return vec2(phi / (2.0 * 3.14159265) + 0.5, theta / 3.14159265 + 0.5);
+      }
+      void main(){
+        vec2 uv = equirectUV(normalize(vWorldDir));
+        vec4 sf = texture2D(tStarsFar, uv);
+        vec4 sn = texture2D(tStarsNear, uv);
+        vec4 ns = texture2D(tNoise, uv);
+        vec4 al = texture2D(tAlpha, uv);
+        vec3 stars = sf.rgb * uStarsFar + sn.rgb * uStarsNear;
+        float mask = mix(1.0, al.r, uAlphaMask);
+        vec3 nebula = ns.rgb * uNoise * mask;
+        gl_FragColor = vec4(stars + nebula, 1.0);
+      }
+    `
+  });
+  const geo = new THREE.SphereGeometry(40000000, 64, 32);
+  skyboxMesh = new THREE.Mesh(geo, mat);
+  skyboxMesh.renderOrder = -1000;
+  skyboxMesh.frustumCulled = false;
+  scene.add(skyboxMesh);
+  // Remove old starfield
+  if(starField){ starField.removeFromParent(); starField = null; }
+}
+loadHDRSkybox();
 
 // ── Scene Switching ──
 function setDockedScene(){
@@ -1348,16 +1432,33 @@ function animate(now){
       const audioIntensity = Math.min(1.0, Math.max(speedFraction, audioTimeBias, audioDecelBias));
       updateWarpAudio(audioIntensity);
 
+        // Track last few frames before completion
+        if(!window._preCompFrames) window._preCompFrames = [];
+        window._preCompFrames.push({t: t.toFixed(3), progress: (dist/window._warpTotalDist).toFixed(8), px: window._playerSS.x.toFixed(8), py: window._playerSS.y.toFixed(8), pz: window._playerSS.z.toFixed(8), remainKm: remainingKm.toFixed(1), ppx: playerPos.x.toFixed(4), ppy: playerPos.y.toFixed(4), ppz: playerPos.z.toFixed(4)});
+        if(window._preCompFrames.length > 5) window._preCompFrames.shift();
+        
         // COMPLETION: when remaining distance is essentially zero
         if(remainingKm < 100){
+          if(!window._frozeWarp){
+            window._frozeWarp = true;
+            warpState = 'none';
+            playerSpeed = 0;
+          }
+          // Do NOTHING else - no anchor change, no variable resets
+        }
+        if(false){ // disabled for snap test
+          // Log the last frames leading to completion
+          fetch('/api/debug_log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:['[PRE-COMP-FRAMES] ' + JSON.stringify(window._preCompFrames)]})}).catch(()=>{});
+          window._preCompFrames = null;
           if(localState && localState.objects){
             localState.objects.forEach(o => o.is_anchor = false);
             const d2 = localState.objects.find(o => o.id === warpTargetId);
             if(d2) d2.is_anchor = true;
           }
-          playerHeading.copy(warpHeading);
+          // playerHeading stays as-is (no orientation snap)
           playerSpeed = 0;
           warpState = 'none';
+          window._skipSSGUntil = performance.now() + 500; // freeze planets for 500ms
           // Log everything at completion
           const _compLines = [];
           _compLines.push(`[WARP-COMPLETE] progress=${(dist/window._warpTotalDist).toFixed(8)} dist=${dist.toFixed(10)} totalDist=${window._warpTotalDist.toFixed(10)} remainKm=${remainingKm.toFixed(2)}`);
@@ -1371,6 +1472,17 @@ function animate(now){
             });
           }
           fetch('/api/debug_log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:_compLines})}).catch(()=>{});
+          // Log moon mesh position immediately and after a few frames
+          if(ssgPlanetMeshes){
+            const moonId = localState.objects.find(o=>o.type==='moon')?.id;
+            const moonMesh = moonId && ssgPlanetMeshes[moonId];
+            if(moonMesh){
+              fetch('/api/debug_log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:[`[MOON-POS-AT-COMP] mesh=(${moonMesh.position.x.toFixed(2)},${moonMesh.position.y.toFixed(2)},${moonMesh.position.z.toFixed(2)}) visible=${moonMesh.visible} camPos=(${camera.position.x.toFixed(2)},${camera.position.y.toFixed(2)},${camera.position.z.toFixed(2)}) playerPos=(${playerPos.x.toFixed(4)},${playerPos.y.toFixed(4)},${playerPos.z.toFixed(4)})`]})}).catch(()=>{});
+              setTimeout(()=>{
+                fetch('/api/debug_log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:[`[MOON-POS-100MS] mesh=(${moonMesh.position.x.toFixed(2)},${moonMesh.position.y.toFixed(2)},${moonMesh.position.z.toFixed(2)}) visible=${moonMesh.visible} camPos=(${camera.position.x.toFixed(2)},${camera.position.y.toFixed(2)},${camera.position.z.toFixed(2)}) playerPos=(${playerPos.x.toFixed(4)},${playerPos.y.toFixed(4)},${playerPos.z.toFixed(4)})`]})}).catch(()=>{});
+              }, 100);
+            }
+          }
           // Log again 2 seconds later to see what changed
           setTimeout(()=>{
             const _postLines = [];
@@ -1401,7 +1513,7 @@ function animate(now){
               body: JSON.stringify({ss_x: window._playerSS.x, ss_y: window._playerSS.y, ss_z: window._playerSS.z, anchor_id: warpTargetId})
             }).catch(()=>{});
           }
-        }
+        } // end if(false) snap test
       }
     // ── Player Ship Physics (CLIENT-AUTHORITATIVE, ship moves in world space) ──
     if(warpState === 'none'){
@@ -1588,8 +1700,8 @@ function animate(now){
 
     // ── Directional labels for distant objects ──
     updateDirectionalLabels();
-    updateSSGPlanets();
-    updateSunPosition();
+    if(!window._skipSSGUntil || performance.now() > window._skipSSGUntil) updateSSGPlanets();
+    //updateSunPosition(); // disabled for snap test
 
     // ── Update nav card distances every 2s during flight ──
     if(!window._navRefreshTimer) window._navRefreshTimer = 0;
@@ -1630,6 +1742,26 @@ function animate(now){
   }
 
   if(isDocked) updateCameraOrbit();
+  // SNAP TRACKER: log moon mesh position every frame around completion
+  if(window._frozeWarp || warpState === 'warping' || (warpState === 'none' && window._snapLog && window._snapLog.length < 300)){
+    if(!window._snapLog) window._snapLog = [];
+    // Find the moon mesh
+    let moonMeshPos = null;
+    if(ssgPlanetMeshes){
+      for(const [id, mesh] of Object.entries(ssgPlanetMeshes)){
+        const obj = localState && localState.objects && localState.objects.find(o=>o.id===id);
+        if(obj && obj.type === 'moon' && obj.name && obj.name.includes('II-a') && mesh.visible){
+          moonMeshPos = {x: mesh.position.x.toFixed(1), y: mesh.position.y.toFixed(1), z: mesh.position.z.toFixed(1)};
+          break;
+        }
+      }
+    }
+    window._snapLog.push({frame: window._snapLog.length, ws: warpState, moonPos: moonMeshPos, camX: camera.position.x.toFixed(2), camY: camera.position.y.toFixed(2), camZ: camera.position.z.toFixed(2), ppX: playerPos.x.toFixed(4), ppY: playerPos.y.toFixed(4), ppZ: playerPos.z.toFixed(4)});
+    if(window._snapLog.length === 300){
+      fetch('/api/debug_log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:['[SNAP-TRACK] ' + JSON.stringify(window._snapLog)]})}).catch(()=>{});
+      window._snapLog = null;
+    }
+  }
   renderer.render(scene, camera);
 }
 

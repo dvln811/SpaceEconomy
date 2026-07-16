@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8"><title>Skybox Blender Viewer</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0a;color:#ccc;font-family:monospace;font-size:12px;height:100vh;overflow:hidden}
+#viewport{width:100%;height:100%;position:relative}
+#controls{position:absolute;top:10px;left:10px;z-index:10;background:rgba(10,14,24,0.9);padding:12px;border:1px solid #1a2844;border-radius:4px;display:flex;flex-direction:column;gap:8px;min-width:280px}
+label{display:flex;justify-content:space-between;align-items:center;gap:8px}
+input[type=range]{width:120px}
+select{background:#0a0e18;color:#ccc;border:1px solid #1a2844;padding:3px 6px;font:inherit}
+h3{color:#4fc3f7;margin-bottom:4px}
+</style>
+</head><body>
+<div id="viewport">
+  <div id="controls">
+    <h3>Skybox Blender</h3>
+    <label>Variant: <select id="variant">
+      <option value="11">Skybox 11</option>
+      <option value="13">Skybox 13</option>
+    </select></label>
+    <label>Stars Far: <input type="range" id="starsFar" min="0" max="5" step="0.05" value="1"></label>
+    <label>Stars Near: <input type="range" id="starsNear" min="0" max="5" step="0.05" value="0.5"></label>
+    <label>Noise: <input type="range" id="noise" min="0" max="2" step="0.05" value="0.3"></label>
+    <label>Alpha Mask: <input type="range" id="alphaMask" min="0" max="1" step="0.05" value="0.5"></label>
+    <label>Exposure: <input type="range" id="exposure" min="0.1" max="3" step="0.1" value="1"></label>
+    <label>Pole Squish: <input type="range" id="poleSquish" min="0" max="0.3" step="0.01" value="0.05"></label>
+    <label>Rotation Speed: <input type="range" id="rotSpeed" min="0" max="0.5" step="0.01" value="0.05"></label>
+    <button id="exportBtn" style="margin-top:6px;padding:5px 10px;background:#0d1a2f;border:1px solid #4fc3f7;color:#4fc3f7;cursor:pointer;font:inherit">Export Settings</button>
+    <pre id="exportOutput" style="color:#66bb6a;font-size:9px;max-height:80px;overflow-y:auto;display:none;margin-top:4px;white-space:pre-wrap"></pre>
+    <div id="info" style="color:#5a7a9a;font-size:10px">Drag to look around. Scroll to zoom.</div>
+  </div>
+</div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const container = document.getElementById('viewport');
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+camera.position.set(0, 0, 0.01);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+container.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableZoom = true;
+controls.enablePan = false;
+controls.rotateSpeed = 0.3;
+
+// Load all HDR textures
+const loader = new RGBELoader();
+const textures = {};
+const files = {
+  starsFar: '/static/skyboxes/T_Stars_Far_Colorful_2k.hdr',
+  starsNear: '/static/skyboxes/T_Stars_Near_Mixed_2k.hdr',
+  noise11: '/static/skyboxes/T_Skybox_11_HybridNoise_2k.hdr',
+  alpha11: '/static/skyboxes/T_Skybox_11_Alpha_2k.hdr',
+  noise13: '/static/skyboxes/T_Skybox_13_HybridNoise_2k.hdr',
+  alpha13: '/static/skyboxes/T_Skybox_13_Alpha_2k.hdr',
+};
+
+let loaded = 0;
+const total = Object.keys(files).length;
+for(const [key, url] of Object.entries(files)){
+  loader.load(url, (tex) => {
+    tex.mapping = THREE.EquirectangularReflectionMapping;
+    textures[key] = tex;
+    loaded++;
+    document.getElementById('info').textContent = `Loading... ${loaded}/${total}`;
+    if(loaded === total) buildSkybox();
+  });
+}
+
+// Custom shader to blend textures
+let skyMesh = null;
+const skyMat = new THREE.ShaderMaterial({
+  side: THREE.BackSide,
+  uniforms: {
+    tStarsFar: {value: null},
+    tStarsNear: {value: null},
+    tNoise: {value: null},
+    tAlpha: {value: null},
+    uStarsFar: {value: 1.0},
+    uStarsNear: {value: 0.5},
+    uNoise: {value: 0.3},
+    uAlphaMask: {value: 0.5},
+    uPoleSquish: {value: 0.05},
+  },
+  vertexShader: `
+    varying vec3 vWorldDir;
+    void main(){
+      vWorldDir = normalize(position);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform sampler2D tStarsFar;
+    uniform sampler2D tStarsNear;
+    uniform sampler2D tNoise;
+    uniform sampler2D tAlpha;
+    uniform float uStarsFar;
+    uniform float uStarsNear;
+    uniform float uNoise;
+    uniform float uAlphaMask;
+    uniform float uPoleSquish;
+    varying vec3 vWorldDir;
+    
+    vec2 equirectUV(vec3 dir){
+      float phi = atan(dir.z, dir.x);
+      float theta = asin(clamp(dir.y, -1.0, 1.0));
+      float u = phi / (2.0 * 3.14159265) + 0.5;
+      float v = theta / 3.14159265 + 0.5;
+      // Squish poles: compress v range to avoid pole pinching
+      v = uPoleSquish + v * (1.0 - 2.0 * uPoleSquish);
+      return vec2(u, v);
+    }
+    
+    void main(){
+      vec2 uv = equirectUV(normalize(vWorldDir));
+      vec4 sf = texture2D(tStarsFar, uv);
+      vec4 sn = texture2D(tStarsNear, uv);
+      vec4 ns = texture2D(tNoise, uv);
+      vec4 al = texture2D(tAlpha, uv);
+      
+      // Blend: stars as base, noise masked by alpha
+      vec3 stars = sf.rgb * uStarsFar + sn.rgb * uStarsNear;
+      float mask = mix(1.0, al.r, uAlphaMask);
+      vec3 nebula = ns.rgb * uNoise * mask;
+      vec3 color = stars + nebula;
+      
+      gl_FragColor = vec4(color, 1.0);
+    }
+  `
+});
+
+function buildSkybox(){
+  const geo = new THREE.SphereGeometry(100, 64, 32);
+  skyMesh = new THREE.Mesh(geo, skyMat);
+  scene.add(skyMesh);
+  
+  skyMat.uniforms.tStarsFar.value = textures.starsFar;
+  skyMat.uniforms.tStarsNear.value = textures.starsNear;
+  skyMat.uniforms.tNoise.value = textures.noise11;
+  skyMat.uniforms.tAlpha.value = textures.alpha11;
+  
+  document.getElementById('info').textContent = 'Ready. Drag to look around.';
+}
+
+// Controls
+document.getElementById('variant').addEventListener('change', e => {
+  const v = e.target.value;
+  skyMat.uniforms.tNoise.value = textures['noise'+v];
+  skyMat.uniforms.tAlpha.value = textures['alpha'+v];
+});
+document.getElementById('starsFar').addEventListener('input', e => { skyMat.uniforms.uStarsFar.value = parseFloat(e.target.value); });
+document.getElementById('starsNear').addEventListener('input', e => { skyMat.uniforms.uStarsNear.value = parseFloat(e.target.value); });
+document.getElementById('noise').addEventListener('input', e => { skyMat.uniforms.uNoise.value = parseFloat(e.target.value); });
+document.getElementById('alphaMask').addEventListener('input', e => { skyMat.uniforms.uAlphaMask.value = parseFloat(e.target.value); });
+document.getElementById('poleSquish').addEventListener('input', e => { skyMat.uniforms.uPoleSquish.value = parseFloat(e.target.value); });
+document.getElementById('exposure').addEventListener('input', e => { renderer.toneMappingExposure = parseFloat(e.target.value); });
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const settings = {
+    variant: document.getElementById('variant').value,
+    starsFar: parseFloat(document.getElementById('starsFar').value),
+    starsNear: parseFloat(document.getElementById('starsNear').value),
+    noise: parseFloat(document.getElementById('noise').value),
+    alphaMask: parseFloat(document.getElementById('alphaMask').value),
+    poleSquish: parseFloat(document.getElementById('poleSquish').value),
+    exposure: parseFloat(document.getElementById('exposure').value),
+    textures: {
+      starsFar: 'T_Stars_Far_Colorful_2k.hdr',
+      starsNear: 'T_Stars_Near_Mixed_2k.hdr',
+      noise: `T_Skybox_${document.getElementById('variant').value}_HybridNoise_2k.hdr`,
+      alpha: `T_Skybox_${document.getElementById('variant').value}_Alpha_2k.hdr`,
+    }
+  };
+  const output = document.getElementById('exportOutput');
+  output.style.display = 'block';
+  output.textContent = JSON.stringify(settings, null, 2);
+  navigator.clipboard.writeText(JSON.stringify(settings, null, 2)).catch(()=>{});
+});
+
+let autoRotate = true;
+function animate(){
+  requestAnimationFrame(animate);
+  const rotSpeed = parseFloat(document.getElementById('rotSpeed').value);
+  if(skyMesh && rotSpeed > 0) skyMesh.rotation.y += rotSpeed * 0.01;
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', ()=>{
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body></html>

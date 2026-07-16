@@ -250,6 +250,9 @@ def ship_page():
 def warp_work_page():
     return send_from_directory(BASE_DIR, "warp_game_work.html")
 
+@app.route("/skybox_viewer")
+def skybox_viewer_page():
+    return send_from_directory(os.path.join(BASE_DIR, "tools"), "skybox_viewer.html")
 
 @app.route("/inventory")
 def inventory_page():
