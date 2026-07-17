@@ -254,6 +254,10 @@ def warp_work_page():
 def skybox_viewer_page():
     return send_from_directory(os.path.join(BASE_DIR, "tools"), "skybox_viewer.html")
 
+@app.route("/planet_viewer")
+def planet_viewer_page():
+    return send_from_directory(os.path.join(BASE_DIR, "tools"), "planet_viewer.html")
+
 @app.route("/inventory")
 def inventory_page():
     return send_from_directory(BASE_DIR, "inventory.html")

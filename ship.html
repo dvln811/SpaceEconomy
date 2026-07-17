@@ -81,6 +81,7 @@ h2{color:#4fc3f7;font-size:12px;letter-spacing:1px;text-transform:uppercase;marg
 <script type="module">
 import * as THREE from 'three';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { generatePlanetTexture as genPlanetTexWorker, pregenPlanetTextures as pregenPlanetTexturesWorker, clearPlanetTextureCache as clearPlanetTextureCacheWorker, getNormalMap, getRoughnessMap } from '/static/planet_textures.js';
 
 // ──── INLINED MODULES (swap back to imports when integrating with server) ────
 
@@ -215,31 +216,12 @@ function buildShipFromData(scene, data, options = {}) {
 }
 
 
-// Planet texture generator (simple inline version - no worker needed)
+// Planet texture generator - uses Web Worker module from /static/planet_textures.js
 function genPlanetTex(THREE, planetId, planetType, isPlanet){
-  const colors = {terrestrial:'#1a5c3a', ocean:'#0a2050', desert:'#c4956a', rocky:'#6a5a4a', ice:'#8aa8c0', volcanic:'#401008', gas_giant:'#c49060', ice_giant:'#4a6888', super_earth:'#2a5a3a', rocky_moon:'#5a5a5a', ice_moon:'#8aa8c0', volcanic_moon:'#5a3020'};
-  const base = colors[planetType] || '#404040';
-  const c = document.createElement('canvas');
-  c.width = 256; c.height = 128;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = base; ctx.fillRect(0,0,256,128);
-  // Add noise
-  const seed = planetId.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
-  for(let i=0;i<100;i++){
-    const x=((seed*17+i*31)%256), y=((seed*13+i*23)%128);
-    const r=3+((seed+i*7)%8);
-    ctx.fillStyle=`rgba(${(seed+i)%60},${(seed+i*3)%60},${(seed+i*5)%40},0.3)`;
-    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
-  }
-  if(planetType==='gas_giant'||planetType==='ice_giant'){
-    for(let y=0;y<128;y+=8){ ctx.fillStyle=`rgba(0,0,0,${0.05+Math.sin(y*0.2)*0.08})`; ctx.fillRect(0,y,256,4); }
-  }
-  const tex = new THREE.CanvasTexture(c);
-  tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.ClampToEdgeWrapping;
-  return tex;
+  return genPlanetTexWorker(THREE, planetId, planetType, isPlanet);
 }
-function pregenPlanetTextures(THREE, objects, priorityId, onDone){ if(onDone) onDone(); }
-function clearPlanetTextureCache(){}
+function pregenPlanetTextures(THREE, objects, priorityId, onDone){ pregenPlanetTexturesWorker(THREE, objects, priorityId, onDone); }
+function clearPlanetTextureCache(){ clearPlanetTextureCacheWorker(); }
 
 // ──── END INLINED MODULES ────
 
@@ -436,26 +418,28 @@ function updateSunPosition(){
   if(!localState || !localState.objects) return;
   
   // Compute direction to star from current SS position
-  let curSSx = 0, curSSz = 0;
+  let curSSx = 0, curSSy = 0, curSSz = 0;
   if((warpState === 'warping' || warpState === 'aligning') && window._warpFromSS){
     const progress = (warpState === 'warping') ? Math.min(1.0, warpTravelTimer / warpTravelDuration) : 0;
     curSSx = window._warpFromSS.x + (window._warpToSS.x - window._warpFromSS.x) * progress;
+    curSSy = (window._warpFromSS.y||0) + ((window._warpToSS.y||0) - (window._warpFromSS.y||0)) * progress;
     curSSz = window._warpFromSS.z + (window._warpToSS.z - window._warpFromSS.z) * progress;
   } else {
     const anchorSS = localState.objects.find(o => o.is_anchor);
     curSSx = anchorSS ? anchorSS.ss_x : 0;
+    curSSy = anchorSS ? (anchorSS.ss_y || 0) : 0;
     curSSz = anchorSS ? anchorSS.ss_z : 0;
   }
   
-  // Star is at SS (0,0). Direction from player to star:
-  const toStarX = -curSSx, toStarZ = -curSSz;
-  const starDist = Math.sqrt(toStarX*toStarX + toStarZ*toStarZ);
+  // Star is at SS (0,0,0). Direction from player to star:
+  const toStarX = -curSSx, toStarY = -curSSy, toStarZ = -curSSz;
+  const starDist = Math.sqrt(toStarX*toStarX + toStarY*toStarY + toStarZ*toStarZ);
   if(starDist < 0.001) return; // at the star? skip
   
   const dirX = toStarX / starDist;
+  const dirY = toStarY / starDist;
   const dirZ = toStarZ / starDist;
-  // Small Y component for variety
-  sunDirection.set(dirX, 0.05, dirZ).normalize();
+  sunDirection.set(dirX, dirY, dirZ).normalize();
   
   const sunDist = 20000;
   const sunPos = sunDirection.clone().multiplyScalar(sunDist);
@@ -508,16 +492,49 @@ function updateSunPosition(){
 
 // ── Hangar (docked view) ──
 function buildHangar(){
-  const floorGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.005, 32);
-  const floorMat = new THREE.MeshPhongMaterial({color:0x0a0e18, emissive:0x050810, shininess:0});
-  hangarPedestal = new THREE.Mesh(floorGeo, floorMat);
-  hangarPedestal.position.y = -0.08;
-  const ringGeo = new THREE.TorusGeometry(0.25, 0.002, 8, 64);
+  // Octagonal hangar room
+  hangarPedestal = new THREE.Group();
+  
+  // Floor
+  const floorGeo = new THREE.CylinderGeometry(2.0, 2.0, 0.02, 8);
+  const floorMat = new THREE.MeshPhongMaterial({color:0x0a0e18, emissive:0x030508, shininess:10});
+  const floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.position.y = -0.35;
+  hangarPedestal.add(floor);
+  
+  // Walls - octagonal cylinder, viewed from inside
+  const wallGeo = new THREE.CylinderGeometry(2.0, 2.0, 1.5, 8, 1, true);
+  const wallMat = new THREE.MeshPhongMaterial({color:0x0c1220, emissive:0x040810, shininess:5, side: THREE.BackSide});
+  const walls = new THREE.Mesh(wallGeo, wallMat);
+  walls.position.y = 0.4;
+  hangarPedestal.add(walls);
+  
+  // Ceiling
+  const ceilGeo = new THREE.CylinderGeometry(2.0, 2.0, 0.02, 8);
+  const ceilMat = new THREE.MeshPhongMaterial({color:0x080c14, emissive:0x020406, shininess:0});
+  const ceil = new THREE.Mesh(ceilGeo, ceilMat);
+  ceil.position.y = 1.15;
+  hangarPedestal.add(ceil);
+  
+  // Floor ring (landing pad marker)
+  const ringGeo = new THREE.TorusGeometry(0.6, 0.005, 8, 64);
   const ringMat = new THREE.MeshBasicMaterial({color:0x1a3050, transparent:true, opacity:0.6});
   const ring = new THREE.Mesh(ringGeo, ringMat);
   ring.rotation.x = Math.PI/2;
-  ring.position.y = 0.003;
+  ring.position.y = -0.34;
   hangarPedestal.add(ring);
+  
+  // Subtle wall lights (emissive strips)
+  for(let i = 0; i < 8; i++){
+    const angle = (i / 8) * Math.PI * 2;
+    const lightGeo = new THREE.BoxGeometry(0.5, 0.04, 0.01);
+    const lightMat = new THREE.MeshBasicMaterial({color:0x1a3050, transparent:true, opacity:0.8});
+    const light = new THREE.Mesh(lightGeo, lightMat);
+    light.position.set(Math.cos(angle) * 1.95, 0.7, Math.sin(angle) * 1.95);
+    light.lookAt(0, 0.7, 0);
+    hangarPedestal.add(light);
+  }
+  
   scene.add(hangarPedestal);
 }
 
@@ -550,23 +567,48 @@ scene.add(starField); // add immediately (fallback until HDR loads)
 
 // ── HDR Skybox (replaces procedural starfield once loaded) ──
 let skyboxMesh = null;
+const HDR_CACHE_NAME = 'skybox-hdr-v1';
+async function getCachedBlobURL(url){
+  if(!('caches' in window)) return url;
+  const cache = await caches.open(HDR_CACHE_NAME);
+  const cached = await cache.match(url);
+  if(cached){
+    const blob = await cached.blob();
+    return URL.createObjectURL(blob);
+  }
+  const resp = await fetch(url);
+  if(resp.ok) cache.put(url, resp.clone());
+  const blob = await resp.blob();
+  return URL.createObjectURL(blob);
+}
 function loadHDRSkybox(){
   const loader = new RGBELoader();
   const textures = {};
   const files = {
-    starsFar: '/static/skyboxes/T_Stars_Far_Colorful_2k.hdr',
-    starsNear: '/static/skyboxes/T_Stars_Near_Mixed_2k.hdr',
-    noise: '/static/skyboxes/T_Skybox_11_HybridNoise_2k.hdr',
-    alpha: '/static/skyboxes/T_Skybox_11_Alpha_2k.hdr',
+    starsFar: '/static/skyboxes/T_Stars_Far_Colorful_4k.hdr',
+    starsNear: '/static/skyboxes/T_Stars_Near_Mixed_4k.hdr',
+    noise: '/static/skyboxes/T_Skybox_11_HybridNoise_4k.hdr',
+    alpha: '/static/skyboxes/T_Skybox_11_Alpha_4k.hdr',
   };
   let loaded = 0;
   const total = Object.keys(files).length;
   for(const [key, url] of Object.entries(files)){
-    loader.load(url, (tex) => {
-      tex.mapping = THREE.EquirectangularReflectionMapping;
-      textures[key] = tex;
-      loaded++;
-      if(loaded === total) buildHDRSkybox(textures);
+    getCachedBlobURL(url).then(blobUrl => {
+      loader.load(blobUrl, (tex) => {
+        tex.mapping = THREE.EquirectangularReflectionMapping;
+        textures[key] = tex;
+        loaded++;
+        if(blobUrl !== url) URL.revokeObjectURL(blobUrl);
+        if(loaded === total) buildHDRSkybox(textures);
+      });
+    }).catch(() => {
+      // Fallback: load directly without cache
+      loader.load(url, (tex) => {
+        tex.mapping = THREE.EquirectangularReflectionMapping;
+        textures[key] = tex;
+        loaded++;
+        if(loaded === total) buildHDRSkybox(textures);
+      });
     });
   }
 }
@@ -624,6 +666,7 @@ function buildHDRSkybox(textures){
   skyboxMesh.renderOrder = -1000;
   skyboxMesh.frustumCulled = false;
   scene.add(skyboxMesh);
+  if(isDocked) skyboxMesh.visible = false;
   // Remove old starfield
   if(starField){ starField.removeFromParent(); starField = null; }
 }
@@ -633,6 +676,7 @@ loadHDRSkybox();
 function setDockedScene(){
   scene.background = new THREE.Color(0x020305);
   if(starField) starField.removeFromParent();
+  if(skyboxMesh) skyboxMesh.visible = false;
   if(!hangarPedestal) buildHangar();
   else scene.add(hangarPedestal);
   if(stationModel){ stationModel.removeFromParent(); stationModel=null; }
@@ -687,6 +731,7 @@ function setDockedScene(){
 function setFlightScene(){
   scene.background = new THREE.Color(0x020308);
   if(hangarPedestal) hangarPedestal.removeFromParent();
+  if(skyboxMesh) skyboxMesh.visible = true;
   scene.add(starField);
   camMaxRadius = 20;
   camTargetRadius = Math.min(camTargetRadius, 2);
@@ -833,6 +878,7 @@ function connectStream(){
           if(!ids.has(id)){ delete interpShips[id]; if(npcMeshes[id]){ npcMeshes[id].removeFromParent(); delete npcMeshes[id]; } }
         }
       }
+      updateFromState(state);
       lastTickTime = performance.now();
       return;
     }
@@ -991,8 +1037,9 @@ function updateFromState(state){
   if(!p) return;
 
   // Update player ship stats from server
-  if(p.max_speed) playerMaxSpeed = p.max_speed / 100; // m/s to units/s
+  if(p.max_speed) playerMaxSpeed = p.max_speed; // already in units/s from server
   if(p.align_time) playerAlignTime = p.align_time;
+  console.log('[PLAYER] max_speed='+p.max_speed+' align_time='+p.align_time+' -> playerMaxSpeed='+playerMaxSpeed+' playerAlignTime='+playerAlignTime);
 
   // Set initial player position from server if not yet set
   // Restore player position from server on first connect (page switch recovery)
@@ -1073,9 +1120,55 @@ const AU_KM = 150000000;
 // ── Procedural Warp Audio ──
 let audioCtx = null;
 let warpAudio = null;
-function initWarpAudio(){ return; }
-function updateWarpAudio(intensity){ return; }
-function stopWarpAudio(){ return; }
+function initWarpAudio(){
+  if(warpAudio && warpAudio.playing) return;
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const gainNode = ctx.createGain();
+  const source = ctx.createBufferSource();
+  gainNode.connect(ctx.destination);
+  gainNode.gain.value = 0;
+  warpAudio = { ctx, gainNode, source, playing: false, buffer: null };
+  // Load the WAV file (cached by browser after first load)
+  fetch('/static/sound_fx/Flying_a_spaceship_5.WAV')
+    .then(r => r.arrayBuffer())
+    .then(buf => ctx.decodeAudioData(buf))
+    .then(decoded => {
+      warpAudio.buffer = decoded;
+      const src = ctx.createBufferSource();
+      src.buffer = decoded;
+      src.loop = true;
+      src.playbackRate.value = 0.6; // start low pitch
+      src.connect(warpAudio.gainNode);
+      src.start();
+      warpAudio.source = src;
+      warpAudio.playing = true;
+      // Fade in from 0
+      warpAudio.gainNode.gain.setValueAtTime(0, ctx.currentTime);
+      warpAudio.gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 1.0);
+    }).catch(() => {});
+}
+function updateWarpAudio(intensity){
+  if(!warpAudio || !warpAudio.playing) return;
+  // intensity 0-1: control pitch (0.6 - 1.2) and volume (0.1 - 0.5)
+  const pitch = 0.6 + intensity * 0.6;
+  const vol = 0.1 + intensity * 0.4;
+  warpAudio.source.playbackRate.value = pitch;
+  warpAudio.gainNode.gain.value = vol;
+}
+function stopWarpAudio(){
+  if(!warpAudio || !warpAudio.playing) return;
+  const ctx = warpAudio.ctx;
+  // Fade out over 1.5 seconds then stop
+  warpAudio.gainNode.gain.setValueAtTime(warpAudio.gainNode.gain.value, ctx.currentTime);
+  warpAudio.gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.5);
+  const src = warpAudio.source;
+  setTimeout(() => {
+    try { src.stop(); } catch(e){}
+    try { ctx.close(); } catch(e){}
+  }, 2000);
+  warpAudio.playing = false;
+  warpAudio = null;
+}
 
 // Engine trail
 let trailLine = null;
@@ -1649,6 +1742,7 @@ function animate(now){
     // ── Directional labels for distant objects ──
     updateDirectionalLabels();
     updateSSGPlanets();
+    updateClouds(dt);
     updateSunPosition();
 
     // ── Update nav card distances every 2s during flight ──
@@ -2255,14 +2349,14 @@ function renderNavList(objects, playerShip){
   const gx2 = lsgGroup ? lsgGroup.position.x : 0;
   const gy2 = lsgGroup ? lsgGroup.position.y : 0;
   const gz2 = lsgGroup ? lsgGroup.position.z : 0;
-  const nearStation = (warpState === 'none') && objects.find(o=>{
-    if(o.type!=='station' || !o.is_anchor) return false;
+  const nearStation = !isDocked && (warpState === 'none') && objects.find(o=>{
+    if(o.type!=='station') return false;
     const dx=(o.x+gx2)-px, dy=(o.y+gy2)-py, dz=(o.z+gz2)-pz;
     return Math.sqrt(dx*dx+dy*dy+dz*dz) < 30;
   });
   document.getElementById('dockBtn').style.display = nearStation ? '' : 'none';
   // Show jump button if near a gate with connection (within 10km)
-  const nearGate = (warpState === 'none') && objects.find(o=>{
+  const nearGate = !isDocked && (warpState === 'none') && objects.find(o=>{
     if(o.type!=='gate' || !o.connects_to) return false;
     const dx=(o.x+gx2)-px, dy=(o.y+gy2)-py, dz=(o.z+gz2)-pz;
     return Math.sqrt(dx*dx+dy*dy+dz*dz) < 20;
@@ -2302,6 +2396,8 @@ document.getElementById('undockBtn').addEventListener('click', async()=>{
     playerPosInitialized = false;
     // Set 25% speed on next position init
     window._undockSpeedPending = true;
+    // Immediately switch to flight scene
+    setFlightScene();
   }
 });
 
@@ -2311,7 +2407,7 @@ document.getElementById('dockBtn').addEventListener('click', async()=>{
   const gy2d = lsgGroup ? lsgGroup.position.y : 0;
   const gz2d = lsgGroup ? lsgGroup.position.z : 0;
   const dockStation = localState && localState.objects && localState.objects.find(o=>{
-    if(o.type!=='station' || !o.is_anchor) return false;
+    if(o.type!=='station') return false;
     const dx=(o.x+gx2d)-playerPos.x, dy=(o.y+gy2d)-playerPos.y, dz=(o.z+gz2d)-playerPos.z;
     return Math.sqrt(dx*dx+dy*dy+dz*dz) < 30;
   });
@@ -2902,6 +2998,7 @@ function initSSGPlanets(){
   ssgPlanetGroup = new THREE.Group();
   scene.add(ssgPlanetGroup);
   ssgPlanetMeshes = {};
+  buildSSGPlanetMeshes();
 }
 
 function buildSSGPlanetMeshes(){
@@ -2915,11 +3012,44 @@ function buildSSGPlanetMeshes(){
     // Create sphere with unit radius 1, scaled at render time
     const geo = new THREE.SphereGeometry(1, isPlanet ? 48 : 24, isPlanet ? 36 : 18);
     const tex = genPlanetTex(THREE, obj.id, obj.planet_type || '', isPlanet);
-    const mat = new THREE.MeshPhongMaterial({map: tex, shininess: isPlanet ? 15 : 5});
+    const mat = new THREE.MeshStandardMaterial({
+      map: tex,
+      roughness: isPlanet ? 0.8 : 0.9,
+      metalness: 0.0,
+      transparent: false,
+      depthWrite: true,
+      normalScale: new THREE.Vector2(1.0, 1.0)
+    });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.visible = false;
+    mesh.userData._planetId = obj.id;
+    mesh.userData._isPlanet = isPlanet;
+    mesh.userData._planetType = obj.planet_type || '';
     ssgPlanetGroup.add(mesh);
-    ssgPlanetMeshes[obj.id] = mesh; // just the mesh, data comes from localState
+    ssgPlanetMeshes[obj.id] = mesh;
+  }
+  // Check for normal/roughness maps periodically (worker delivers them async)
+  if(!window._normalMapChecker){
+    window._normalMapChecker = setInterval(()=>{
+      for(const [id, mesh] of Object.entries(ssgPlanetMeshes)){
+        if(!mesh.material.normalMap){
+          const nmap = getNormalMap(id);
+          if(nmap){
+            mesh.material.normalMap = nmap;
+            mesh.material.needsUpdate = true;
+          }
+        }
+        if(!mesh.material.roughnessMap){
+          const rmap = getRoughnessMap(id);
+          if(rmap){
+            mesh.material.roughnessMap = rmap;
+            mesh.material.roughness = 1.0;
+            mesh.material.metalness = 0.0;
+            mesh.material.needsUpdate = true;
+          }
+        }
+      }
+    }, 500);
   }
 }
 
@@ -2976,6 +3106,34 @@ function updateSSGPlanets(){
     }
   }
 }
+
+// ── Animated Cloud Layers ──
+const _cloudMeshes = {}; // planetId -> cloudMesh
+const _cloudMaterial = null; // not used - created inline in addCloudLayer
+
+function addCloudLayer(planetId, mesh, planetType){
+  if(_cloudMeshes[planetId]) return;
+  // Only terrestrial, ocean, super_earth get clouds
+  // if(!['terrestrial','ocean','super_earth'].includes(planetType)) return; // TEMP disabled for testing
+  console.log('[CLOUDS] Adding cloud layer for', planetId, 'type='+planetType);
+  const cloudMat = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    side: THREE.FrontSide,
+    uniforms: {},
+    vertexShader: `void main(){ gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `void main(){ gl_FragColor = vec4(1.0, 1.0, 1.0, 0.5); }`
+  });
+  const cloudGeo = new THREE.SphereGeometry(1, 36, 24);
+  const cloudMesh = new THREE.Mesh(cloudGeo, cloudMat);
+  cloudMesh.renderOrder = 0;
+  cloudMesh.visible = false;
+  cloudMesh.userData._parentPlanetId = planetId;
+  ssgPlanetGroup.add(cloudMesh);
+  _cloudMeshes[planetId] = cloudMesh;
+}
+
+function updateClouds(dt){ return; }
 
 function clearSSGPlanets(){
   // Only used during system jumps

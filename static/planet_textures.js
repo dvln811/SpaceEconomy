@@ -19,24 +19,61 @@ const _texCache = new Map();       // id -> THREE.CanvasTexture (completed)
 const _pendingCallbacks = new Map(); // id -> [{resolve}]
 let _THREE = null;
 
+let _normalCache = new Map(); // id -> THREE.CanvasTexture (normal map)
+let _roughnessCache = new Map(); // id -> THREE.CanvasTexture (roughness map)
+
+export function getNormalMap(planetId) {
+  return _normalCache.get(planetId) || null;
+}
+
+export function getRoughnessMap(planetId) {
+  return _roughnessCache.get(planetId) || null;
+}
+
 function getWorker() {
   if (!_worker) {
     _worker = new Worker('/static/planet_texture_worker.js');
     _worker.onmessage = function(e) {
-      const { id, width, height, pixels } = e.data;
-      // Create canvas from pixel data
+      const { id, width, height, pixels, normalPixels, roughnessPixels } = e.data;
+      // Create color canvas
       const canvas = document.createElement('canvas');
       canvas.width = width; canvas.height = height;
       const ctx = canvas.getContext('2d');
       const imgData = new ImageData(new Uint8ClampedArray(pixels), width, height);
       ctx.putImageData(imgData, 0, 0);
       
-      // Create Three.js texture
+      // Create Three.js textures
       if (_THREE) {
         const tex = new _THREE.CanvasTexture(canvas);
         tex.wrapS = _THREE.RepeatWrapping;
         tex.wrapT = _THREE.ClampToEdgeWrapping;
         _texCache.set(id, tex);
+        
+        // Create normal map texture
+        if (normalPixels) {
+          const nCanvas = document.createElement('canvas');
+          nCanvas.width = width; nCanvas.height = height;
+          const nCtx = nCanvas.getContext('2d');
+          const nImgData = new ImageData(new Uint8ClampedArray(normalPixels), width, height);
+          nCtx.putImageData(nImgData, 0, 0);
+          const normalTex = new _THREE.CanvasTexture(nCanvas);
+          normalTex.wrapS = _THREE.RepeatWrapping;
+          normalTex.wrapT = _THREE.ClampToEdgeWrapping;
+          _normalCache.set(id, normalTex);
+        }
+        
+        // Create roughness map texture
+        if (roughnessPixels) {
+          const rCanvas = document.createElement('canvas');
+          rCanvas.width = width; rCanvas.height = height;
+          const rCtx = rCanvas.getContext('2d');
+          const rImgData = new ImageData(new Uint8ClampedArray(roughnessPixels), width, height);
+          rCtx.putImageData(rImgData, 0, 0);
+          const roughTex = new _THREE.CanvasTexture(rCanvas);
+          roughTex.wrapS = _THREE.RepeatWrapping;
+          roughTex.wrapT = _THREE.ClampToEdgeWrapping;
+          _roughnessCache.set(id, roughTex);
+        }
         
         // Update any meshes waiting for this texture
         if (_pendingCallbacks.has(id)) {
@@ -141,5 +178,9 @@ export function pregenPlanetTextures(THREE, objects, priorityId, onDone) {
 export function clearPlanetTextureCache() {
   _texCache.forEach(tex => { if (tex.dispose) tex.dispose(); });
   _texCache.clear();
+  _normalCache.forEach(tex => { if (tex.dispose) tex.dispose(); });
+  _normalCache.clear();
+  _roughnessCache.forEach(tex => { if (tex.dispose) tex.dispose(); });
+  _roughnessCache.clear();
   _pendingCallbacks.clear();
 }

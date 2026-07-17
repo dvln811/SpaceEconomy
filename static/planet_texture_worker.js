@@ -54,6 +54,10 @@ const RAMPS = {
   volcanic:[[0,[20,8,2]],[.2,[40,15,5]],[.4,[70,25,8]],[.55,[50,18,5]],[.7,[100,35,10]],[.82,[180,60,0]],[.9,[255,100,0]],[1,[255,180,40]]],
   gas_giant:[[0,[120,70,25]],[.15,[180,115,45]],[.3,[140,85,35]],[.45,[200,140,60]],[.55,[160,95,40]],[.7,[220,160,75]],[.8,[150,90,35]],[.9,[190,130,55]],[1,[240,180,90]]],
   ice_giant:[[0,[20,45,100]],[.2,[35,70,140]],[.35,[25,55,115]],[.5,[50,95,165]],[.65,[35,75,130]],[.8,[60,110,180]],[.9,[40,85,150]],[1,[75,130,200]]],
+  rocky_moon:[[0,[40,38,35]],[.2,[60,55,50]],[.35,[80,75,68]],[.5,[65,60,55]],[.65,[95,88,80]],[.8,[75,70,62]],[.9,[110,102,92]],[1,[90,85,78]]],
+  ice_moon:[[0,[100,115,130]],[.2,[130,145,160]],[.4,[150,168,185]],[.55,[120,135,155]],[.7,[165,185,200]],[.85,[180,195,215]],[1,[200,215,230]]],
+  volcanic_moon:[[0,[15,5,2]],[.2,[35,12,4]],[.4,[55,20,6]],[.55,[40,14,4]],[.7,[80,28,8]],[.82,[150,50,0]],[.9,[220,80,0]],[1,[200,140,30]]],
+  super_earth:[[0,[10,25,60]],[.3,[20,45,100]],[.45,[30,55,120]],[.5,[120,110,70]],[.55,[35,80,35]],[.65,[25,65,25]],[.75,[50,45,25]],[.85,[90,80,70]],[.9,[160,155,145]],[1,[230,235,240]]],
 };
 
 function sampleRamp(ramp, t) {
@@ -79,10 +83,10 @@ self.onmessage = function(e) {
   const isGas = (planetType === 'gas_giant' || planetType === 'ice_giant');
   const isOcean = (planetType === 'ocean');
   const pr = isGas ? PRESETS.gas : isOcean ? PRESETS.ocean : PRESETS.terrestrial;
-  const ramp = RAMPS[planetType] || RAMPS[isGas ? 'gas_giant' : 'terrestrial'];
+  const ramp = RAMPS[planetType] || RAMPS[isGas ? 'gas_giant' : isPlanet ? 'terrestrial' : 'rocky_moon'];
 
-  const W = isPlanet ? 2048 : 512;
-  const H = isPlanet ? 1024 : 256;
+  const W = 2048;
+  const H = 1024;
 
   const na = new PlanetNoise(seed), nb = new PlanetNoise(seed+57), nc = new PlanetNoise(seed+137), nd = new PlanetNoise(seed+200);
   const heights = new Float32Array(W * H);
@@ -111,9 +115,41 @@ self.onmessage = function(e) {
 
   const hR = hMax - hMin || 1;
   const pixels = new Uint8ClampedArray(W * H * 4);
+  const normalPixels = new Uint8ClampedArray(W * H * 4);
 
+  // Normalize heights to 0-1
   for (let i = 0; i < heights.length; i++) {
-    let h = (heights[i] - hMin) / hR;
+    heights[i] = (heights[i] - hMin) / hR;
+  }
+
+  // Generate normal map from heightmap using Sobel filter
+  const strength = isGas ? 0.5 : 2.0;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const idx = y * W + x;
+      // Sample neighbors (wrap x, clamp y)
+      const xL = (x - 1 + W) % W, xR = (x + 1) % W;
+      const yU = Math.max(0, y - 1), yD = Math.min(H - 1, y + 1);
+      const hL = heights[y * W + xL], hR2 = heights[y * W + xR];
+      const hU = heights[yU * W + x], hD = heights[yD * W + x];
+      // Tangent-space normal from height differences
+      const dx = (hR2 - hL) * strength;
+      const dy = (hD - hU) * strength;
+      // Normal in tangent space: (-dx, -dy, 1) normalized
+      const len = Math.sqrt(dx*dx + dy*dy + 1);
+      normalPixels[idx*4]   = ((-dx/len) * 0.5 + 0.5) * 255;
+      normalPixels[idx*4+1] = ((-dy/len) * 0.5 + 0.5) * 255;
+      normalPixels[idx*4+2] = ((1.0/len) * 0.5 + 0.5) * 255;
+      normalPixels[idx*4+3] = 255;
+    }
+  }
+
+  // Generate color pixels and roughness map from heightmap
+  const roughnessPixels = new Uint8ClampedArray(W * H * 4);
+  const hasSea = !isGas && pr.sea > 0.1;
+  for (let i = 0; i < heights.length; i++) {
+    let h = heights[i];
+    const rawH = h; // keep raw for roughness check
     if (!isGas) {
       const sl = pr.sea;
       if (h < sl) h = (h/sl) * 0.45;
@@ -125,7 +161,23 @@ self.onmessage = function(e) {
     pixels[i*4+1] = c[1] | 0;
     pixels[i*4+2] = c[2] | 0;
     pixels[i*4+3] = 255;
+    // Roughness: water = low (shiny), land = high (matte)
+    let roughness;
+    if (hasSea && rawH < pr.sea) {
+      roughness = 0.15; // shiny water
+    } else if (hasSea && rawH < pr.sea + 0.02) {
+      // Shoreline blend
+      const t = (rawH - pr.sea) / 0.02;
+      roughness = 0.15 + t * 0.7;
+    } else {
+      roughness = 0.85; // matte land
+    }
+    const rv = (roughness * 255) | 0;
+    roughnessPixels[i*4]   = rv;
+    roughnessPixels[i*4+1] = rv;
+    roughnessPixels[i*4+2] = rv;
+    roughnessPixels[i*4+3] = 255;
   }
 
-  self.postMessage({ id, width: W, height: H, pixels }, [pixels.buffer]);
+  self.postMessage({ id, width: W, height: H, pixels, normalPixels, roughnessPixels }, [pixels.buffer, normalPixels.buffer, roughnessPixels.buffer]);
 };

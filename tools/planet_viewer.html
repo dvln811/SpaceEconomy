@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8"><title>Planet & Cloud Viewer</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0a;color:#ccc;font-family:monospace;font-size:12px;height:100vh;overflow:hidden}
+#viewport{width:100%;height:100%;position:relative}
+#controls{position:absolute;top:10px;left:10px;z-index:10;background:rgba(10,14,24,0.92);padding:12px;border:1px solid #1a2844;border-radius:4px;display:flex;flex-direction:column;gap:6px;min-width:300px;max-height:95vh;overflow-y:auto}
+label{display:flex;justify-content:space-between;align-items:center;gap:8px}
+input[type=range]{width:120px}
+select{background:#0a0e18;color:#ccc;border:1px solid #1a2844;padding:3px 6px;font:inherit}
+h3{color:#4fc3f7;margin-bottom:4px}
+.section{border-top:1px solid #1a2844;padding-top:6px;margin-top:4px}
+.val{color:#66bb6a;min-width:35px;text-align:right}
+button{padding:5px 10px;background:#0d1a2f;border:1px solid #4fc3f7;color:#4fc3f7;cursor:pointer;font:inherit}
+</style>
+</head><body>
+<div id="viewport">
+  <div id="controls">
+    <h3>Planet Viewer</h3>
+    <label>Planet Type: <select id="planetType">
+      <option value="terrestrial">Terrestrial</option>
+      <option value="ocean">Ocean</option>
+      <option value="desert">Desert</option>
+      <option value="rocky">Rocky</option>
+      <option value="ice">Ice</option>
+      <option value="volcanic">Volcanic</option>
+      <option value="gas_giant">Gas Giant</option>
+      <option value="ice_giant">Ice Giant</option>
+      <option value="super_earth">Super Earth</option>
+      <option value="rocky_moon">Rocky Moon</option>
+      <option value="ice_moon">Ice Moon</option>
+      <option value="volcanic_moon">Volcanic Moon</option>
+    </select></label>
+    <label>Seed: <input type="range" id="seed" min="0" max="999" step="1" value="42"> <span class="val" id="seedVal">42</span></label>
+    <button id="regenBtn">Regenerate</button>
+    
+    <div class="section">
+      <h3>Clouds</h3>
+      <label>Enabled: <input type="checkbox" id="cloudEnabled" checked></label>
+      <label>Opacity: <input type="range" id="cloudOpacity" min="0" max="1" step="0.05" value="0.4"> <span class="val" id="cloudOpacityVal">0.40</span></label>
+      <label>Scale: <input type="range" id="cloudScale" min="1" max="8" step="0.1" value="3.5"> <span class="val" id="cloudScaleVal">3.5</span></label>
+      <label>Threshold Low: <input type="range" id="cloudThreshLow" min="0" max="0.8" step="0.01" value="0.35"> <span class="val" id="cloudThreshLowVal">0.35</span></label>
+      <label>Threshold High: <input type="range" id="cloudThreshHigh" min="0.2" max="1" step="0.01" value="0.6"> <span class="val" id="cloudThreshHighVal">0.60</span></label>
+      <label>Speed: <input type="range" id="cloudSpeed" min="0" max="0.2" step="0.001" value="0.005"> <span class="val" id="cloudSpeedVal">0.005</span></label>
+      <label>Rim Fade: <input type="range" id="cloudRim" min="0" max="0.5" step="0.01" value="0.3"> <span class="val" id="cloudRimVal">0.30</span></label>
+      <label>Height: <input type="range" id="cloudHeight" min="1.01" max="1.08" step="0.005" value="1.02"> <span class="val" id="cloudHeightVal">1.02</span></label>
+      <label>Color: <input type="color" id="cloudColor" value="#ffffff"></label>
+    </div>
+
+    <div class="section">
+      <h3>Lighting</h3>
+      <label>Intensity: <input type="range" id="lightInt" min="0" max="5" step="0.1" value="2"> <span class="val" id="lightIntVal">2.0</span></label>
+      <label>Ambient: <input type="range" id="ambInt" min="0" max="1" step="0.05" value="0.3"> <span class="val" id="ambIntVal">0.3</span></label>
+      <label>Normal Strength: <input type="range" id="normalStr" min="0" max="3" step="0.1" value="1"> <span class="val" id="normalStrVal">1.0</span></label>
+    </div>
+    
+    <div class="section">
+      <button id="exportBtn">Export Cloud Settings</button>
+      <pre id="exportOutput" style="color:#66bb6a;font-size:10px;margin-top:4px;white-space:pre-wrap;display:none"></pre>
+    </div>
+  </div>
+</div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const container = document.getElementById('viewport');
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 1000);
+camera.position.set(0, 0, 3.5);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+container.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+
+// Lighting
+const ambLight = new THREE.AmbientLight(0x8aa8cc, 0.3);
+scene.add(ambLight);
+const dirLight = new THREE.DirectionalLight(0xfff5e0, 2.0);
+dirLight.position.set(3, 2, 4);
+scene.add(dirLight);
+
+// Planet
+let planetMesh = null;
+let cloudMesh = null;
+let planetWorker = null;
+let normalMap = null;
+
+const planetGeo = new THREE.SphereGeometry(1, 64, 48);
+const planetMat = new THREE.MeshStandardMaterial({roughness:0.8, metalness:0.0});
+planetMesh = new THREE.Mesh(planetGeo, planetMat);
+scene.add(planetMesh);
+
+// Cloud shader
+const cloudMat = new THREE.ShaderMaterial({
+  transparent: true,
+  depthWrite: false,
+  side: THREE.FrontSide,
+  uniforms: {
+    uTime: {value: 0},
+    uSeed: {value: 42},
+    uOpacity: {value: 0.4},
+    uScale: {value: 3.5},
+    uThreshLow: {value: 0.35},
+    uThreshHigh: {value: 0.6},
+    uSpeed: {value: 0.03},
+    uRimFade: {value: 0.3},
+    uCloudColor: {value: new THREE.Color(1,1,1)},
+    uLightDir: {value: new THREE.Vector3(0.6, 0.4, 0.7).normalize()},
+  },
+  vertexShader: `
+    varying vec3 vPos;
+    varying vec3 vWorldNormal;
+    varying vec3 vViewNormal;
+    void main(){
+      vPos = position;
+      vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
+      vViewNormal = normalize((modelViewMatrix * vec4(normal, 0.0)).xyz);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform float uTime;
+    uniform float uSeed;
+    uniform float uOpacity;
+    uniform float uScale;
+    uniform float uThreshLow;
+    uniform float uThreshHigh;
+    uniform float uSpeed;
+    uniform float uRimFade;
+    uniform vec3 uCloudColor;
+    uniform vec3 uLightDir;
+    varying vec3 vPos;
+    varying vec3 vWorldNormal;
+    varying vec3 vViewNormal;
+    
+    float hash3(vec3 p){
+      p = fract(p * vec3(443.897, 441.423, 437.195));
+      p += dot(p, p.yzx + 19.19);
+      return fract((p.x + p.y) * p.z);
+    }
+    float noise(vec3 p){
+      vec3 i = floor(p), f = fract(p);
+      f = f*f*(3.0-2.0*f);
+      return mix(mix(mix(hash3(i),hash3(i+vec3(1,0,0)),f.x),
+                     mix(hash3(i+vec3(0,1,0)),hash3(i+vec3(1,1,0)),f.x),f.y),
+                 mix(mix(hash3(i+vec3(0,0,1)),hash3(i+vec3(1,0,1)),f.x),
+                     mix(hash3(i+vec3(0,1,1)),hash3(i+vec3(1,1,1)),f.x),f.y),f.z);
+    }
+    float fbm(vec3 p, int octaves){
+      float v=0.0, a=0.5;
+      for(int i=0;i<8;i++){
+        if(i>=octaves) break;
+        v+=a*noise(p);
+        p=p*2.1+vec3(1.7,2.3,1.1);
+        a*=0.5;
+      }
+      return v;
+    }
+    void main(){
+      vec3 pos = normalize(vPos) * uScale;
+      float drift = uTime * uSpeed;
+      // Large-scale cloud shape
+      float n = fbm(pos + vec3(drift, uSeed * 0.1, drift * 0.7), 5);
+      // Fine detail noise to break up edges
+      float detail = fbm(pos * 4.0 + vec3(drift * 2.0, uSeed * 0.3 + 50.0, drift * 1.5), 5);
+      float wispy = fbm(pos * 8.0 + vec3(drift * 3.0, uSeed * 0.7 + 100.0, drift * 2.5), 4);
+      // Erode cloud edges with detail noise
+      float eroded = n - detail * 0.25 - wispy * 0.1;
+      float cloud = smoothstep(uThreshLow, uThreshHigh, eroded);
+      // Additional breakup within the cloud body
+      cloud *= smoothstep(0.0, 0.3, detail + 0.1);
+      cloud = clamp(cloud, 0.0, 1.0);
+      // Rim fade
+      float rim = max(0.0, vViewNormal.z);
+      cloud *= smoothstep(0.0, uRimFade, rim);
+      // Lighting - clouds should be dark on the dark side
+      float NdotL = dot(vWorldNormal, uLightDir);
+      float lighting = clamp(NdotL * 0.6 + 0.4, 0.0, 1.0);
+      vec3 col = uCloudColor * lighting;
+      gl_FragColor = vec4(col, cloud * uOpacity);
+    }
+  `
+});
+
+const cloudGeo = new THREE.SphereGeometry(1, 48, 32);
+cloudMesh = new THREE.Mesh(cloudGeo, cloudMat);
+cloudMesh.scale.setScalar(1.02);
+scene.add(cloudMesh);
+
+// Worker for planet texture
+function regeneratePlanet(){
+  const type = document.getElementById('planetType').value;
+  const seed = parseInt(document.getElementById('seed').value);
+  if(planetWorker) planetWorker.terminate();
+  planetWorker = new Worker('/static/planet_texture_worker.js');
+  planetWorker.onmessage = function(e){
+    const {width, height, pixels, normalPixels} = e.data;
+    // Color texture
+    const canvas = document.createElement('canvas');
+    canvas.width = width; canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.putImageData(new ImageData(new Uint8ClampedArray(pixels), width, height), 0, 0);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+    planetMat.map = tex;
+    planetMat.needsUpdate = true;
+    // Normal map
+    if(normalPixels){
+      const nCanvas = document.createElement('canvas');
+      nCanvas.width = width; nCanvas.height = height;
+      const nCtx = nCanvas.getContext('2d');
+      nCtx.putImageData(new ImageData(new Uint8ClampedArray(normalPixels), width, height), 0, 0);
+      normalMap = new THREE.CanvasTexture(nCanvas);
+      normalMap.wrapS = THREE.RepeatWrapping;
+      normalMap.wrapT = THREE.ClampToEdgeWrapping;
+      planetMat.normalMap = normalMap;
+      planetMat.normalScale.set(parseFloat(document.getElementById('normalStr').value), parseFloat(document.getElementById('normalStr').value));
+      planetMat.needsUpdate = true;
+    }
+  };
+  const isPlanet = !type.includes('moon');
+  planetWorker.postMessage({id: 'viewer_'+seed, planetType: type, isPlanet});
+}
+
+// Controls binding
+function bindSlider(id, cb){
+  const el = document.getElementById(id);
+  const valEl = document.getElementById(id+'Val');
+  const update = ()=>{ if(valEl) valEl.textContent = parseFloat(el.value).toFixed(2); cb(parseFloat(el.value)); };
+  el.addEventListener('input', update);
+  update();
+}
+
+bindSlider('seed', v => { document.getElementById('seedVal').textContent = Math.round(v); });
+bindSlider('cloudOpacity', v => { cloudMat.uniforms.uOpacity.value = v; });
+bindSlider('cloudScale', v => { cloudMat.uniforms.uScale.value = v; });
+bindSlider('cloudThreshLow', v => { cloudMat.uniforms.uThreshLow.value = v; });
+bindSlider('cloudThreshHigh', v => { cloudMat.uniforms.uThreshHigh.value = v; });
+bindSlider('cloudSpeed', v => { cloudMat.uniforms.uSpeed.value = v; });
+bindSlider('cloudRim', v => { cloudMat.uniforms.uRimFade.value = v; });
+bindSlider('cloudHeight', v => { cloudMesh.scale.setScalar(v); });
+bindSlider('lightInt', v => { dirLight.intensity = v; });
+bindSlider('ambInt', v => { ambLight.intensity = v; });
+bindSlider('normalStr', v => { if(planetMat.normalMap) planetMat.normalScale.set(v, v); });
+
+document.getElementById('cloudColor').addEventListener('input', e => {
+  cloudMat.uniforms.uCloudColor.value.set(e.target.value);
+});
+
+document.getElementById('cloudEnabled').addEventListener('change', e => {
+  cloudMesh.visible = e.target.checked;
+});
+
+document.getElementById('planetType').addEventListener('change', regeneratePlanet);
+document.getElementById('regenBtn').addEventListener('click', regeneratePlanet);
+
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const out = {
+    opacity: cloudMat.uniforms.uOpacity.value,
+    scale: cloudMat.uniforms.uScale.value,
+    threshLow: cloudMat.uniforms.uThreshLow.value,
+    threshHigh: cloudMat.uniforms.uThreshHigh.value,
+    speed: cloudMat.uniforms.uSpeed.value,
+    rimFade: cloudMat.uniforms.uRimFade.value,
+    height: cloudMesh.scale.x,
+    color: '#'+cloudMat.uniforms.uCloudColor.value.getHexString(),
+  };
+  const el = document.getElementById('exportOutput');
+  el.style.display = 'block';
+  el.textContent = JSON.stringify(out, null, 2);
+});
+
+// Initial generation
+regeneratePlanet();
+
+// Animate
+function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+  cloudMat.uniforms.uTime.value += 0.016;
+  // Update light direction uniform to match dirLight
+  cloudMat.uniforms.uLightDir.value.copy(dirLight.position).normalize();
+  // Slow rotation - clouds rotate with the planet
+  planetMesh.rotation.y += 0.00005;
+  cloudMesh.rotation.y = planetMesh.rotation.y;
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', ()=>{
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body></html>
