@@ -1980,6 +1980,20 @@ def api_player_jump():
     })
 
 
+# ── Admin: Regenerate game data (non-destructive to player state) ──
+@app.route("/api/admin/regenerate", methods=["POST"])
+def api_admin_regenerate():
+    """Regenerate system objects (planets, moons, gates, stations, belts).
+    Does NOT touch player state, inventory, credits, ship fittings, etc.
+    Use after deploying new generation code or system layout changes."""
+    try:
+        from server.generate_system_objects import generate
+        generate()
+        return jsonify({"status": "ok", "message": "System objects regenerated. Restart server to pick up changes."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 if __name__ == "__main__":
     import webbrowser
     port = int(os.getenv("PORT", "8000"))
