@@ -1989,7 +1989,9 @@ def api_admin_regenerate():
     try:
         from server.generate_system_objects import generate
         generate()
-        return jsonify({"status": "ok", "message": "System objects regenerated. Restart server to pick up changes."})
+        # Reinitialize local_space from fresh DB
+        threading.Thread(target=_init_local_space, daemon=True).start()
+        return jsonify({"status": "ok", "message": "System objects regenerated and local_space reinitialized."})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
