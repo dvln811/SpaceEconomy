@@ -108,6 +108,7 @@ body{background:#05080f;color:#c8d4e0;font-family:'JetBrains Mono',monospace;fon
   <a href="/docs">Docs</a>
   <a href="/combat">Combat Sim</a>
   <a href="/ship_designer">Ship Designer</a>
+  <button class="tab-btn" id="regenBtn" style="margin-left:8px;color:#ff9800;border-color:#ff9800;background:#1a1400">Regenerate</button>
   <button class="tab-btn nuke-btn" id="nukeBtn">Nuke</button>
 </div>
 <div class="main">
@@ -780,6 +781,14 @@ function loadSystemDetail() {
 document.getElementById('sysSelect').addEventListener('change', e => {
   selectedSystem = e.target.value;
   loadSystemDetail();
+});
+
+// ── Regenerate ──────────────────────────────────────────────────────────────
+document.getElementById('regenBtn').addEventListener('click', async () => {
+  if (!confirm('Regenerate system objects? (planets, moons, gates, stations, belts)\nPlayer state will NOT be affected.')) return;
+  const r = await fetch('/api/admin/regenerate', {method: 'POST'});
+  const d = await r.json();
+  alert(d.message || d.error || 'Done');
 });
 
 // ── Nuke ────────────────────────────────────────────────────────────────────
