@@ -2345,20 +2345,25 @@ function renderNavList(objects, playerShip){
     </div>`;
   }).join('');
   // Show dock button if near a station (within ~3km of any station)
-  // Account for lsgGroup offset and hide during warp
-  const gx2 = lsgGroup ? lsgGroup.position.x : 0;
-  const gy2 = lsgGroup ? lsgGroup.position.y : 0;
-  const gz2 = lsgGroup ? lsgGroup.position.z : 0;
-  const nearStation = !isDocked && (warpState === 'none') && objects.find(o=>{
-    if(o.type!=='station') return false;
-    const dx=(o.x+gx2)-px, dy=(o.y+gy2)-py, dz=(o.z+gz2)-pz;
+  // Use actual rendered model positions for accurate distance
+  const nearStation = (warpState === 'none') && objects.find(o=>{
+    if(o.type!=='station' || !o.station_id) return false;
+    const model = stationModels[o.station_id];
+    if(!model || !model.visible) return false;
+    const wp = new THREE.Vector3();
+    model.getWorldPosition(wp);
+    const dx=wp.x-px, dy=wp.y-py, dz=wp.z-pz;
     return Math.sqrt(dx*dx+dy*dy+dz*dz) < 30;
   });
   document.getElementById('dockBtn').style.display = nearStation ? '' : 'none';
-  // Show jump button if near a gate with connection (within 10km)
-  const nearGate = !isDocked && (warpState === 'none') && objects.find(o=>{
+  // Show jump button if near a gate with connection (within 2km)
+  const nearGate = (warpState === 'none') && objects.find(o=>{
     if(o.type!=='gate' || !o.connects_to) return false;
-    const dx=(o.x+gx2)-px, dy=(o.y+gy2)-py, dz=(o.z+gz2)-pz;
+    const model = gateModels[o.id];
+    if(!model || !model.visible) return false;
+    const wp = new THREE.Vector3();
+    model.getWorldPosition(wp);
+    const dx=wp.x-px, dy=wp.y-py, dz=wp.z-pz;
     return Math.sqrt(dx*dx+dy*dy+dz*dz) < 20;
   });
   let jumpBtn = document.getElementById('jumpBtn');
@@ -2396,6 +2401,9 @@ document.getElementById('undockBtn').addEventListener('click', async()=>{
     playerPosInitialized = false;
     // Set 25% speed on next position init
     window._undockSpeedPending = true;
+    // Grace period - don't show dock/jump buttons for 2 seconds after undock
+    window._undockGrace = true;
+    setTimeout(()=>{ window._undockGrace = false; }, 2000);
     // Immediately switch to flight scene
     setFlightScene();
   }
