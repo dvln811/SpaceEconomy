@@ -80,7 +80,6 @@ h2{color:#4fc3f7;font-size:12px;letter-spacing:1px;text-transform:uppercase;marg
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three';
-import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { generatePlanetTexture as genPlanetTexWorker, pregenPlanetTextures as pregenPlanetTexturesWorker, clearPlanetTextureCache as clearPlanetTextureCacheWorker, getNormalMap, getRoughnessMap } from '/static/planet_textures.js';
 
 // ──── INLINED MODULES (swap back to imports when integrating with server) ────
@@ -568,47 +567,77 @@ scene.add(starField); // add immediately (fallback until HDR loads)
 // ── HDR Skybox (replaces procedural starfield once loaded) ──
 let skyboxMesh = null;
 const HDR_CACHE_NAME = 'skybox-hdr-v1';
-async function getCachedBlobURL(url){
-  if(!('caches' in window)) return url;
-  const cache = await caches.open(HDR_CACHE_NAME);
-  const cached = await cache.match(url);
-  if(cached){
-    const blob = await cached.blob();
-    return URL.createObjectURL(blob);
-  }
-  const resp = await fetch(url);
-  if(resp.ok) cache.put(url, resp.clone());
-  const blob = await resp.blob();
-  return URL.createObjectURL(blob);
+
+const SKYBOX_VARIANTS = ['11','13','14','16','17','18','20','Cube1','Cube2'];
+let _skyboxPresets = null;
+let _currentSkyboxVariant = null;
+
+function getSystemSkyboxVariant(systemId){
+  // Deterministic hash of system ID to pick a variant
+  let h = 0;
+  for(let i = 0; i < systemId.length; i++){ h = ((h << 5) - h) + systemId.charCodeAt(i); h |= 0; }
+  return SKYBOX_VARIANTS[Math.abs(h) % SKYBOX_VARIANTS.length];
 }
+
+function loadSkyboxForSystem(systemId){
+  const variant = getSystemSkyboxVariant(systemId);
+  if(variant === _currentSkyboxVariant) return; // already showing this one
+  _currentSkyboxVariant = variant;
+
+  // Load presets if not loaded
+  const applyPreset = (preset) => {
+    if(!skyboxMesh) return;
+    const mat = skyboxMesh.material;
+    if(preset.starsFar !== undefined) mat.uniforms.uStarsFar.value = preset.starsFar;
+    if(preset.starsNear !== undefined) mat.uniforms.uStarsNear.value = preset.starsNear;
+    if(preset.noise !== undefined) mat.uniforms.uNoise.value = preset.noise;
+    if(preset.alphaMask !== undefined) mat.uniforms.uAlphaMask.value = preset.alphaMask;
+    if(preset.exposure !== undefined) renderer.toneMappingExposure = preset.exposure;
+  };
+
+  const loadVariantTextures = (preset) => {
+    const texLoader = new THREE.TextureLoader();
+    const noiseFile = preset && preset.textures ? preset.textures.noise : `T_Skybox_${variant}_HybridNoise_4k.png`;
+    const alphaFile = preset && preset.textures ? preset.textures.alpha : `T_Skybox_${variant}_Alpha_4k.png`;
+    texLoader.load('/static/skyboxes/cached/' + noiseFile, (tex) => {
+      tex.mapping = THREE.EquirectangularReflectionMapping;
+      if(skyboxMesh) skyboxMesh.material.uniforms.tNoise.value = tex;
+    });
+    texLoader.load('/static/skyboxes/cached/' + alphaFile, (tex) => {
+      tex.mapping = THREE.EquirectangularReflectionMapping;
+      if(skyboxMesh) skyboxMesh.material.uniforms.tAlpha.value = tex;
+    });
+    if(preset) applyPreset(preset);
+  };
+
+  if(_skyboxPresets){
+    loadVariantTextures(_skyboxPresets[variant]);
+  } else {
+    fetch('/skybox_presets.json').then(r=>r.ok?r.json():null).then(d=>{
+      _skyboxPresets = d || {};
+      loadVariantTextures(_skyboxPresets[variant]);
+    }).catch(()=>loadVariantTextures(null));
+  }
+}
+
 function loadHDRSkybox(){
-  const loader = new RGBELoader();
+  // Load stars (shared across all systems) and default variant
+  const texLoader = new THREE.TextureLoader();
   const textures = {};
   const files = {
-    starsFar: '/static/skyboxes/T_Stars_Far_Colorful_4k.hdr',
-    starsNear: '/static/skyboxes/T_Stars_Near_Mixed_4k.hdr',
-    noise: '/static/skyboxes/T_Skybox_11_HybridNoise_4k.hdr',
-    alpha: '/static/skyboxes/T_Skybox_11_Alpha_4k.hdr',
+    starsFar: '/static/skyboxes/cached/T_Stars_Far_Colorful_4k.png',
+    starsNear: '/static/skyboxes/cached/T_Stars_Near_Mixed_4k.png',
+    noise: '/static/skyboxes/cached/T_Skybox_11_HybridNoise_4k.png',
+    alpha: '/static/skyboxes/cached/T_Skybox_11_Alpha_4k.png',
   };
   let loaded = 0;
   const total = Object.keys(files).length;
   for(const [key, url] of Object.entries(files)){
-    getCachedBlobURL(url).then(blobUrl => {
-      loader.load(blobUrl, (tex) => {
-        tex.mapping = THREE.EquirectangularReflectionMapping;
-        textures[key] = tex;
-        loaded++;
-        if(blobUrl !== url) URL.revokeObjectURL(blobUrl);
-        if(loaded === total) buildHDRSkybox(textures);
-      });
-    }).catch(() => {
-      // Fallback: load directly without cache
-      loader.load(url, (tex) => {
-        tex.mapping = THREE.EquirectangularReflectionMapping;
-        textures[key] = tex;
-        loaded++;
-        if(loaded === total) buildHDRSkybox(textures);
-      });
+    texLoader.load(url, (tex) => {
+      tex.mapping = THREE.EquirectangularReflectionMapping;
+      textures[key] = tex;
+      loaded++;
+      if(loaded === total) buildHDRSkybox(textures);
     });
   }
 }
@@ -621,9 +650,9 @@ function buildHDRSkybox(textures){
       tStarsNear: {value: textures.starsNear},
       tNoise: {value: textures.noise},
       tAlpha: {value: textures.alpha},
-      uStarsFar: {value: 5.0},
-      uStarsNear: {value: 3.0},
-      uNoise: {value: 0.7},
+      uStarsFar: {value: 10.0},
+      uStarsNear: {value: 6.0},
+      uNoise: {value: 1.4},
       uAlphaMask: {value: 0.8},
     },
     vertexShader: `
@@ -732,7 +761,7 @@ function setFlightScene(){
   scene.background = new THREE.Color(0x020308);
   if(hangarPedestal) hangarPedestal.removeFromParent();
   if(skyboxMesh) skyboxMesh.visible = true;
-  scene.add(starField);
+  if(starField) scene.add(starField);
   camMaxRadius = 20;
   camTargetRadius = Math.min(camTargetRadius, 2);
   camRadius = Math.min(camRadius, 2);
@@ -1036,10 +1065,12 @@ function updateFromState(state){
   const p = state.player;
   if(!p) return;
 
+  // Load system-specific skybox
+  if(state.system_id) loadSkyboxForSystem(state.system_id);
+
   // Update player ship stats from server
   if(p.max_speed) playerMaxSpeed = p.max_speed; // already in units/s from server
   if(p.align_time) playerAlignTime = p.align_time;
-  console.log('[PLAYER] max_speed='+p.max_speed+' align_time='+p.align_time+' -> playerMaxSpeed='+playerMaxSpeed+' playerAlignTime='+playerAlignTime);
 
   // Set initial player position from server if not yet set
   // Restore player position from server on first connect (page switch recovery)
@@ -2061,12 +2092,12 @@ window.jumpGate = async function(gateId){
         loadAllGates();
         loadAsteroidFields();
         loadPlanetsAndMoons();
-        // Pre-gen textures then fade in
+        // Pre-gen textures then fade in (max 3s wait)
         const jumpObjs = (localState && localState.objects) || [];
-        pregenPlanetTextures(THREE, jumpObjs, '', ()=>{
-          overlay.style.transition = 'opacity 2s';
-          overlay.style.opacity = '0';
-        });
+        let faded = false;
+        const doFade = ()=>{ if(faded) return; faded = true; overlay.style.transition = 'opacity 2s'; overlay.style.opacity = '0'; };
+        pregenPlanetTextures(THREE, jumpObjs, '', doFade);
+        setTimeout(doFade, 3000);
       }, 1500);
     } else {
       // Failed

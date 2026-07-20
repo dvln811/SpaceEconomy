@@ -1,0 +1,47 @@
+{
+  "11": {
+    "variant": "11",
+    "starsFar": 9.4, "starsNear": 9.6, "noise": 3.5, "alphaMask": 0.9, "poleSquish": 0.05, "exposure": 2.8,
+    "textures": {"noise": "T_Skybox_11_HybridNoise_4k.png", "alpha": "T_Skybox_11_Alpha_4k.png"}
+  },
+  "13": {
+    "variant": "13",
+    "starsFar": 9, "starsNear": 6.9, "noise": 3.2, "alphaMask": 0.85, "poleSquish": 0.05, "exposure": 2.9,
+    "textures": {"noise": "T_Skybox_13_HybridNoise_4k.png", "alpha": "T_Skybox_13_Alpha_4k.png"}
+  },
+  "14": {
+    "variant": "14",
+    "starsFar": 9, "starsNear": 6.9, "noise": 3.3, "alphaMask": 0.75, "poleSquish": 0.05, "exposure": 2.9,
+    "textures": {"noise": "T_Skybox_14_HybrydNoise_4k.png", "alpha": "T_Skybox_14_Alpha_4k.png"}
+  },
+  "16": {
+    "variant": "16",
+    "starsFar": 9, "starsNear": 6.9, "noise": 4.5, "alphaMask": 0.1, "poleSquish": 0.05, "exposure": 2.9,
+    "textures": {"noise": "T_Skybox_16_HybrydNoise_4k.png", "alpha": "T_Skybox_16_Alpha_4k.png"}
+  },
+  "17": {
+    "variant": "17",
+    "starsFar": 9, "starsNear": 6.9, "noise": 5, "alphaMask": 0.2, "poleSquish": 0.05, "exposure": 2.9,
+    "textures": {"noise": "T_Skybox_17_HybridNoise_4k.png", "alpha": "T_Skybox_17_Alpha_4k.png"}
+  },
+  "18": {
+    "variant": "18",
+    "starsFar": 9, "starsNear": 6.9, "noise": 4.2, "alphaMask": 0.85, "poleSquish": 0.05, "exposure": 2.9,
+    "textures": {"noise": "T_Skaybox_18_HybridNoise_4k.png", "alpha": "T_Skaybox_18_Alpha_4k.png"}
+  },
+  "20": {
+    "variant": "20",
+    "starsFar": 9, "starsNear": 6.9, "noise": 4.9, "alphaMask": 0.15, "poleSquish": 0.05, "exposure": 2.9,
+    "textures": {"noise": "T_Skaybox_20_HybridNoise_4k.png", "alpha": "T_Skaybox_20_Alpha_4k.png"}
+  },
+  "Cube1": {
+    "variant": "Cube1",
+    "starsFar": 9, "starsNear": 5.6, "noise": 5, "alphaMask": 0.1, "poleSquish": 0.05, "exposure": 3.3,
+    "textures": {"noise": "T_Cube_Skybox_1_4k.png", "alpha": "T_Cube_Skybox_1_Alpha_4k.png"}
+  },
+  "Cube2": {
+    "variant": "Cube2",
+    "starsFar": 9, "starsNear": 5.6, "noise": 4.4, "alphaMask": 0, "poleSquish": 0.05, "exposure": 3.3,
+    "textures": {"noise": "T_Cube_Skybox_2_4k.png", "alpha": "T_Cube_Skybox_2_Alpha_4k.png"}
+  }
+}

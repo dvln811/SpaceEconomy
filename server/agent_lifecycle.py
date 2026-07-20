@@ -100,6 +100,10 @@ def _spawn_replacement(conn, faction_id, role, system_id, station_id, tick):
     titles = POP_TITLES.get(role, ['Officer'])
     title = random.choice(titles)
     agent_id = f"{faction_id}_{role}_{random.randint(10000,99999)}"
+    # Avoid ID collision with existing/dead agents
+    existing = set(r[0] for r in conn.execute("SELECT id FROM faction_agents WHERE id LIKE ?", (f"{faction_id}_{role}_%",)).fetchall())
+    while agent_id in existing:
+        agent_id = f"{faction_id}_{role}_{random.randint(100000,999999)}"
 
     conn.execute("""INSERT INTO faction_agents
         (id, name, title, faction_id, role, aggression, caution, competence,

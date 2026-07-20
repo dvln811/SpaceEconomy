@@ -194,7 +194,11 @@ def sandbox_page():
 
 @app.route("/static/<path:filename>")
 def static_files(filename):
-    return send_from_directory(os.path.join(BASE_DIR, "static"), filename)
+    resp = send_from_directory(os.path.join(BASE_DIR, "static"), filename)
+    # Cache large assets (skyboxes, sounds) for 7 days
+    if filename.endswith(('.hdr', '.WAV', '.wav', '.png')):
+        resp.headers['Cache-Control'] = 'public, max-age=604800, immutable'
+    return resp
 
 
 @app.route("/market")
@@ -1994,6 +1998,31 @@ def api_admin_regenerate():
         return jsonify({"status": "ok", "message": "System objects regenerated and local_space reinitialized."})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/admin/save_skybox_preset", methods=["POST"])
+def api_admin_save_skybox_preset():
+    """Save a skybox preset to skybox_presets.json. Appends or overwrites by variant."""
+    import json
+    data = request.get_json()
+    if not data or 'variant' not in data:
+        return jsonify({"error": "missing variant"}), 400
+    preset_file = os.path.join(BASE_DIR, "skybox_presets.json")
+    presets = {}
+    if os.path.exists(preset_file):
+        with open(preset_file, 'r') as f:
+            presets = json.load(f)
+    presets[data['variant']] = data
+    with open(preset_file, 'w') as f:
+        json.dump(presets, f, indent=2)
+    return jsonify({"status": "ok", "message": f"Saved preset for variant {data['variant']}"})
+
+@app.route("/skybox_presets.json")
+def skybox_presets_file():
+    preset_file = os.path.join(BASE_DIR, "skybox_presets.json")
+    if os.path.exists(preset_file):
+        return send_from_directory(BASE_DIR, "skybox_presets.json")
+    return jsonify({})
 
 
 if __name__ == "__main__":
